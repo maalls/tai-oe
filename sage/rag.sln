@@ -4,7 +4,7 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sage", "sage", "{994D4509-AFFC-57E1-3FE9-F861B5DAD0D7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AiOe.SageService", "sage\AiOe.SageService\AiOe.SageService.csproj", "{57F8FC58-9FE3-3D96-0992-B55536AFF1BE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AiOe.SageService", "AiOe.SageService\AiOe.SageService.csproj", "{57F8FC58-9FE3-3D96-0992-B55536AFF1BE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -31,6 +31,7 @@ Actions:
 
 1. ~~Confirm target project name: `AiOe.SageService`.~~
 2. ~~Confirm target path under `sage/`.~~
+3. ~~Move solution file to `sage/rag.sln` and fix project relative path.~~
 
 Checkpoint:
 
