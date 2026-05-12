@@ -11,6 +11,7 @@ import pickle
 import base64
 import json
 import os
+from urllib.parse import urlparse
 from email.utils import parsedate_to_datetime
 from email.header import decode_header
 from cryptography.fernet import Fernet, InvalidToken
@@ -78,6 +79,23 @@ class EmailDatabaseHandler:
 
     def __init__(self):
         self.supabase = get_supabase_service()
+
+    def _resolve_gmail_callback_url(self, redirect_url: Optional[str]) -> str:
+        """Resolve OAuth callback URL from frontend redirect URL origin.
+
+        This avoids hardcoded backend ports in local environments.
+        """
+        env_callback = os.getenv("GMAIL_OAUTH_CALLBACK_URL")
+        if env_callback:
+            return env_callback
+
+        default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
+        candidate = redirect_url or default_origin
+        parsed = urlparse(candidate)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}/api/google/oauth/callback"
+
+        return "http://localhost:7153/api/google/oauth/callback"
 
     
     def _parse_email_date(self, date_string: str) -> Optional[str]:
@@ -1009,7 +1027,8 @@ class EmailRepository:
             if not user_id:
                 return {"status": "error", "message": "Missing user_id"}
 
-            callback_url = "http://localhost:8088/api/google/oauth/callback"
+            resolved_redirect_url = redirect_url or os.getenv("FRONTEND_BASE_URL", "http://localhost:7153/settings")
+            callback_url = self._resolve_gmail_callback_url(resolved_redirect_url)
             flow = Flow.from_client_secrets_file(
                 str(credentials_path),
                 scopes=GmailClient(
@@ -1020,7 +1039,8 @@ class EmailRepository:
             )
 
             state_payload = {
-                "redirect_url": redirect_url or "http://localhost:5173/settings",
+                "redirect_url": resolved_redirect_url,
+                "callback_url": callback_url,
                 "user_id": user_id,
             }
             state = base64.urlsafe_b64encode(json.dumps(state_payload).encode()).decode()
@@ -1048,7 +1068,19 @@ class EmailRepository:
                     "message": "Gmail credentials.json not found. Please add it to var/credentials.json"
                 }
 
-            callback_url = "http://localhost:8088/api/google/oauth/callback"
+            redirect_url = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153/settings")
+            callback_url = self._resolve_gmail_callback_url(redirect_url)
+            user_id = None
+            if state:
+                try:
+                    decoded = base64.urlsafe_b64decode(state.encode()).decode()
+                    payload = json.loads(decoded)
+                    redirect_url = payload.get("redirect_url") or redirect_url
+                    callback_url = payload.get("callback_url") or self._resolve_gmail_callback_url(redirect_url)
+                    user_id = payload.get("user_id")
+                except Exception:
+                    pass
+
             flow = Flow.from_client_secrets_file(
                 str(credentials_path),
                 scopes=GmailClient(
@@ -1060,17 +1092,6 @@ class EmailRepository:
 
             flow.fetch_token(code=code)
             creds = flow.credentials
-
-            redirect_url = "http://localhost:5173/settings"
-            user_id = None
-            if state:
-                try:
-                    decoded = base64.urlsafe_b64decode(state.encode()).decode()
-                    payload = json.loads(decoded)
-                    redirect_url = payload.get("redirect_url") or redirect_url
-                    user_id = payload.get("user_id")
-                except Exception:
-                    pass
 
             if user_id:
                 self._save_profile_token(user_id, creds)
