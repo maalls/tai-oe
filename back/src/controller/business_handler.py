@@ -16,7 +16,6 @@ from html.parser import HTMLParser
 
 from src.text.reader import extract_company_from_text, extract_rfp_from_text
 from src.text.rfp_source_picker import pick_best_rfp_source
-from src.controller.qdrant_handler import QdrantHandler
 from src.controller.email_handler import EmailHandlers
 from src.repository.email_repository import EmailRepository
 from src.supabase.supabase_client import get_supabase_service
@@ -101,38 +100,10 @@ class BusinessHandlers:
                     if 'part_number' in product and 'sku' not in product:
                         product['sku'] = product.pop('part_number')
 
-                # for each product, search in qdrant the matching entry by marque/refciale/tarif
-                try:
-                    enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
-                    if not enable_qdrant:
-                        print("[BusinessHandlers] QdrantHandler disabled (ENABLE_QDRANT=false)")
-                    else:
-                        qdrant_handler = QdrantHandler()
-                    for product in rfp_data.get('products', []) or []:
-                        filters = {}
-                        if product.get('manufacturer'):
-                            filters['marque'] = product['manufacturer']
-                        if product.get('sku'):
-                            filters['refciale'] = product['sku']
-
-                        if not filters:
-                            continue
-
-                        match = qdrant_handler.scroll_points(
-                            limit=5,
-                            filters=filters,
-                            with_payload=True,
-                            with_vectors=False
-                        )
-                        product['qdrant_matches'] = match.get('points', [])
-                        if product['qdrant_matches']:
-                            product['price_found'] = True
-                            product['price'] = product['qdrant_matches'][0]['payload'].get('tarif')
-                        else:
-                            product['price_found'] = False
-                            product['price'] = None
-                except Exception as e:
-                    print(f"[BusinessHandlers] Qdrant lookup error: {e}")
+                # Preserve pricing fields without vector enrichment.
+                for product in rfp_data.get('products', []) or []:
+                    product['price_found'] = bool(product.get('price'))
+                    product['price'] = product.get('price')
 
 
                 if cache_flag:
@@ -1701,7 +1672,7 @@ class BusinessHandlers:
                 except Exception as e:
                     print(f"[BusinessHandlers] Warning: Failed to extract company data: {e}")
                 
-                # Enrich with Qdrant pricing (same as handle_generate_quote_for_opportunity)
+                # Normalize extracted pricing fields (same helper used by quote generation)
                 rfp_data = self.opportunity_repository._extract_and_enrich_rfp_data(
                     message_clean,
                     pre_extracted_data=rfp_data

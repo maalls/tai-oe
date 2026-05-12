@@ -1,5 +1,5 @@
 /**
- * LLM tool definitions (db_query and qdrant_search)
+ * LLM tool definitions
  */
 
 export const CHAT_TOOLS = [
@@ -14,43 +14,6 @@ export const CHAT_TOOLS = [
                className: {
                   type: 'string',
                   description: 'CSS selector for tracked elements (default: .ao)',
-               },
-            },
-            required: [],
-         },
-      },
-   },
-   {
-      type: 'function',
-      function: {
-         name: 'product_search',
-         description:
-            'Search products by free-text query and/or column filters (marque, refciale, tarif). Uses combined semantic + filter search.',
-         parameters: {
-            type: 'object',
-            properties: {
-               query: {
-                  type: 'string',
-                  description: 'Free-text query for semantic/similarity search',
-               },
-               marque: {
-                  type: 'string',
-                  description: 'Manufacturer/brand filter (marque)',
-               },
-               refciale: {
-                  type: 'string',
-                  description: 'Part number filter (refciale)',
-               },
-               tarif: {
-                  type: 'string',
-                  description: 'Price filter (tarif) - exact match or text value',
-               },
-               limit: {
-                  type: 'integer',
-                  minimum: 1,
-                  maximum: 100,
-                  default: 50,
-                  description: 'Maximum number of results',
                },
             },
             required: [],

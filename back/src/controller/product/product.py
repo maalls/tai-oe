@@ -1,29 +1,15 @@
 """Email classification request handler."""
 
-import os
 from typing import Dict
-#from src.repository.email_repository import EmailRepository
-from qdrant_client.models import FieldCondition, MatchValue, PointStruct, Filter
-from script.generate_vector import generate_numeric_id, get_product
-from src.controller.db_client import DatabaseHandler
-from src.controller.qdrant_handler import QdrantHandler
-from src.embeddings import EmbeddingGenerator
+# from src.repository.email_repository import EmailRepository
 from src.supabase.supabase_client import get_supabase_service
 
 
 class ProductController:
 
     def __init__(self):
-        enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
-        if enable_qdrant:
-            self.qdrant_handler = QdrantHandler()
-        else:
-            print("[ProductController] QdrantHandler disabled (ENABLE_QDRANT=false)")
-            self.qdrant_handler = None
-        self.embedding_generator = EmbeddingGenerator()
         self.supabase = get_supabase_service()
 
-    
     def list(self, qs: dict):
         """
         List products, optionally filtering by sku (ILIKE/partial match) and supporting limit.
@@ -35,7 +21,7 @@ class ProductController:
         if sku:
             query = query.ilike('sku', f'{sku}')
         query = query.limit(limit)
-        print("[api][product][list] Querying database with sku:", sku )
+        print("[api][product][list] Querying database with sku:", sku)
         result = query.execute()
         products = result.data if result and result.data else []
         print(f"[api][product][list] Retrieved {len(products)} products from database")
@@ -44,7 +30,6 @@ class ProductController:
     def post(self, payload) -> Dict:
         product = self.upsert_product(payload)
         self.upsert_family(product, payload)
-        self.upsert_in_qdrant(product, payload)
         print("Product upserted in database", product)
         return product
 
@@ -60,9 +45,9 @@ class ProductController:
             if code not in codes:
                 family = self.create_family(code)
                 families.append(family)
-            else :
+            else:
                 family = next(f for f in db_families.data if f['code'] == code)
-            
+
             print(f"Linking product to family code '{family['code']}' in database")
             result = self.supabase.from_('product_family').upsert({
                 'product_id': product['id'],
@@ -73,7 +58,6 @@ class ProductController:
                 raise Exception(f"Failed to link product to family code in database: {result['error']}")
             else:
                 print(f"Product linked to family code '{family['code']}' successfully in database", result.data)
-                
 
         product['families'] = families
         return product
@@ -88,7 +72,6 @@ class ProductController:
         else:
             print(f"Family code '{code}' created successfully in database", result.data)
             return result.data[0]
-            
 
     def upsert_product(self, payload) -> Dict:
         """
@@ -116,17 +99,15 @@ class ProductController:
             raise ValueError(f"Brand '{payload['marque']}' not found in database")
         brand = brands.data[0]
         print("Brand found in database:", brand['id'])
-        # check all the related families exist in the database    
-        
+
         print("Looking up the database via db client")
         products = self.supabase.from_('product').select('*').eq('sku', payload['refciale']).execute()
         print("Database lookup result:", products)
-        if (len(products.data) > 0):
+        if len(products.data) > 0:
             print("Product found in database")
             product = products.data[0]
         else:
             print("Product not found in database, inserting new product")
-            # Insert into database
             data = {
                 "sku": payload['refciale'],
                 "name": payload['libelle240'],
@@ -140,43 +121,6 @@ class ProductController:
                 product = insert_result.data[0]
             else:
                 raise Exception(f"Failed to insert product into database: {insert_result['error']}")
+
         product['brand'] = brand
         return product
-        
-    def upsert_in_qdrant(self, product: dict, payload) -> Dict:
-        print("[product]Upserting product in Qdrant, marque:", product['brand']['marque'], "refciale:", product['sku'])
-        """Upsert a product into Qdrant."""
-
-        
-        filters = {
-            "marque": product['brand']['marque'],
-            "refciale": product['sku'],
-        }
-
-        print("Checking for existing product in Qdrant with filters:", filters)
-        points = self.qdrant_handler.scroll_points(filters=filters)
-        
-        if len(points['points']) == 0:
-            print("No existing product found in Qdrant, creating new point")
-            ref_id = f"{product['brand']['marque']}-{product['sku']}"
-            qd_id = generate_numeric_id(ref_id)
-            id = qd_id
-            new = True
-            print("Upserting new product with ID:", id)
-            vector = self.embedding_generator.embed_text(product['name'])
-
-            codes = [family['code'] for family in product.get('families', [])]
-            data = {
-                'marque': product['brand']['marque'],
-                'refciale': product['sku'],
-                'libelle240': product['name'],
-                'tarif': product['price'],
-                'family_codes': codes,
-            }
-            point = self.qdrant_handler.upsert_point(point_id=qd_id, vector=vector, payload=data)
-            return point
-        else:
-            print("Existing product found in Qdrant, ID:", points['points'][0]['id'])
-            return points['points'][0]
-
-        

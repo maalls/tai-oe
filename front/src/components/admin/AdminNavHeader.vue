@@ -14,7 +14,6 @@ const navItems = computed(() => [
    },
    { path: '/admin/source', label: 'Source', matchChildren: true },
    { path: '/admin/database', label: 'Database', matchChildren: true },
-   { path: '/admin/qdrant', label: 'Qdrant', matchChildren: true },
    { path: '/admin/flow', label: 'Flow', matchChildren: true },
 ]);
 </script>

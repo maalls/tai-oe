@@ -10,11 +10,6 @@ supabase:
     url: 'http://localhost:8003'
     key: 'YOUR_SERVICE_ROLE_KEY'
 
-qdrant:
-  url: 'http://localhost:6333' # or http://localhost:6333 for remote
-  collection_name: 'test_commerce_vectors'
-  timeout: 30
-
 app:
   attachments_dir: 'var/attachments'
   vendor:

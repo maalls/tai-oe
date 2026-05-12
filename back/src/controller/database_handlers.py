@@ -10,9 +10,8 @@ from src.controller.db_client import DatabaseHandler
 class DatabaseHandlers:
     """Handlers for PostgreSQL database operations."""
     
-    def __init__(self, db_handler: Optional[DatabaseHandler] = None, qdrant_handler=None):
+    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
         self.db_handler = db_handler
-        self.qdrant_handler = qdrant_handler
     
     @staticmethod
     def serialize_value(value):
@@ -95,9 +94,6 @@ class DatabaseHandlers:
         if not table:
             return {"error": "Missing 'table' parameter"}
         
-        # Check if this is a Qdrant collection (fallback to Qdrant if table not found in PostgreSQL)
-        # Try PostgreSQL first, but if it fails with table not found, check Qdrant
-        
         # Get optional parameters
         columns_raw = (qs.get('columns') or ['*'])[0]
         where_clause = (qs.get('where') or [''])[0]
@@ -108,19 +104,6 @@ class DatabaseHandlers:
         # Validate and sanitize
         limit = max(1, min(limit, 1000))
         offset = max(0, offset)
-        
-        # Try Qdrant collection first if qdrant_handler is available
-        if self.qdrant_handler:
-            try:
-                from src.controller.qdrant_client import QdrantClient
-                qdrant_client = QdrantClient()
-                collections = qdrant_client.get_collections()
-                collection_names = [c.name for c in collections.collections] if hasattr(collections, 'collections') else []
-                
-                if table in collection_names:
-                    return self._query_qdrant_collection(table, columns_raw, where_clause, limit, offset)
-            except Exception:
-                pass  # Fallback to PostgreSQL
         
         # Build PostgreSQL query
         columns = columns_raw if columns_raw != '*' else '*'
@@ -200,119 +183,3 @@ class DatabaseHandlers:
             return {"results": results}
         except Exception as e:
             return {"error": str(e)}
-    
-    def _query_qdrant_collection(self, collection: str, columns_raw: str, where_clause: str, limit: int, offset: int) -> Dict:
-        """Query a Qdrant collection with text filtering.
-        
-        Args:
-            collection: Collection name
-            columns_raw: Comma-separated columns to return (or '*' for all)
-            where_clause: WHERE clause for text filtering (e.g., "field ILIKE '%pattern%'")
-            limit: Max results
-            offset: Pagination offset
-            
-        Returns:
-            Dict with 'columns' and 'rows' keys
-        """
-        try:
-            from src.controller.qdrant_client import QdrantClient
-            import re
-            
-            qdrant_client = QdrantClient()
-            
-            # Scroll through collection to get all points
-            points = []
-            offset_scroll = 0
-            total_limit = limit + offset + 100  # Get extra to account for filtering
-            
-            while len(points) < total_limit:
-                response = qdrant_client.scroll(collection, limit=min(100, total_limit - len(points)), offset=offset_scroll)
-                if not response.points:
-                    break
-                points.extend(response.points)
-                offset_scroll += len(response.points)
-            
-            # Convert points to dictionaries
-            rows = []
-            for point in points:
-                payload = point.payload if hasattr(point, 'payload') else {}
-                rows.append(payload)
-            
-            # Apply WHERE clause filtering if provided
-            if where_clause:
-                rows = self._filter_rows_by_where_clause(rows, where_clause)
-            
-            # Extract columns
-            if rows:
-                if columns_raw == '*':
-                    columns_list = list(rows[0].keys())
-                else:
-                    columns_list = [c.strip() for c in columns_raw.split(',')]
-                    # Filter rows to only include specified columns
-                    rows = [{col: row.get(col) for col in columns_list if col in row} for row in rows]
-            else:
-                columns_list = [c.strip() for c in columns_raw.split(',')] if columns_raw != '*' else []
-            
-            # Apply pagination
-            paginated_rows = rows[offset:offset + limit]
-            
-            return {
-                "columns": columns_list,
-                "rows": paginated_rows,
-                "count": len(paginated_rows),
-                "offset": offset,
-                "limit": limit
-            }
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {"error": f"Qdrant query failed: {str(e)}"}
-    
-    def _filter_rows_by_where_clause(self, rows: list, where_clause: str) -> list:
-        """Filter rows using a WHERE clause pattern.
-        
-        Supports simple patterns like:
-            - field ILIKE '%pattern%'
-            - field = 'value'
-            - field LIKE '%pattern'
-        """
-        if not where_clause:
-            return rows
-        
-        filtered = []
-        for row in rows:
-            if self._matches_where_clause(row, where_clause):
-                filtered.append(row)
-        
-        return filtered
-    
-    def _matches_where_clause(self, row: dict, where_clause: str) -> bool:
-        """Check if a row matches the WHERE clause."""
-        # Parse simple ILIKE patterns: "field ILIKE '%pattern%'"
-        import re
-        
-        # Match ILIKE pattern: field ILIKE '%...%'
-        ilike_match = re.match(r"(\w+)\s+ILIKE\s+'([^']+)'", where_clause, re.IGNORECASE)
-        if ilike_match:
-            field = ilike_match.group(1)
-            pattern = ilike_match.group(2).replace('%', '')  # Remove % wildcards
-            value = str(row.get(field, '')).lower()
-            pattern_lower = pattern.lower()
-            return pattern_lower in value
-        
-        # Match exact equality: field = 'value'
-        eq_match = re.match(r"(\w+)\s*=\s*'([^']+)'", where_clause)
-        if eq_match:
-            field = eq_match.group(1)
-            pattern = eq_match.group(2)
-            return str(row.get(field, '')) == pattern
-        
-        # Match LIKE pattern: field LIKE '%...%'
-        like_match = re.match(r"(\w+)\s+LIKE\s+'([^']+)'", where_clause, re.IGNORECASE)
-        if like_match:
-            field = like_match.group(1)
-            pattern = like_match.group(2).replace('%', '')
-            value = str(row.get(field, ''))
-            return pattern in value
-        
-        return True  # If no pattern matches, include the row

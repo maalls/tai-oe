@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { apiUrl } from '../../utils/api';
+import { supabase } from '../../lib/supabase';
 
 interface Product {
    id: string | number;
@@ -81,9 +81,6 @@ interface Product {
    gamme?: string;
    qt?: string | number;
 }
-
-const QDRANT_API_URL = apiUrl('qdrant');
-const COLLECTION_NAME = 'test_commerce_vectors';
 
 const route = useRoute();
 const product = ref<Product | null>(null);
@@ -103,37 +100,36 @@ async function loadProduct() {
    error.value = '';
 
    try {
-      const url = new URL(QDRANT_API_URL);
-      url.searchParams.set('action', 'retrieve');
-      url.searchParams.set('collection', COLLECTION_NAME);
-      url.searchParams.set('ids', JSON.stringify([id]));
-      url.searchParams.set('with_payload', 'true');
+      const { data, error: queryError } = await supabase
+         .from('product')
+         .select('id, sku, name, price, brand:brand_id(marque,name)')
+         .eq('id', id)
+         .single();
 
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-         const text = await response.text();
-         throw new Error(`API error ${response.status}: ${text}`);
+      if (queryError) {
+         throw new Error(queryError.message || 'Failed to load product');
       }
 
-      const data = await response.json();
-      const point = Array.isArray(data?.points) ? data.points[0] : null;
-
-      if (!point) {
+      if (!data) {
          product.value = null;
          return;
       }
 
+      const brandData = Array.isArray(data.brand)
+         ? (data.brand[0] as any)
+         : (data.brand as any);
+
       product.value = {
-         id: point.id,
-         marque: point.payload?.marque || '',
-         refciale: point.payload?.refciale || '',
-         libelle240: point.payload?.libelle240 || '',
-         tarif: point.payload?.tarif || '',
-         gamme: point.payload?.gamme || '',
-         qt: point.payload?.qt ?? '',
+         id: data.id,
+         marque: brandData?.marque || brandData?.name || '',
+         refciale: (data as any).sku || '',
+         libelle240: (data as any).name || '',
+         tarif: (data as any).price ?? '',
+         gamme: '',
+         qt: '',
       };
 
-      rawPayload.value = JSON.stringify(point.payload || {}, null, 2);
+      rawPayload.value = JSON.stringify(data, null, 2);
    } catch (e: any) {
       error.value = String(e?.message || e);
    } finally {

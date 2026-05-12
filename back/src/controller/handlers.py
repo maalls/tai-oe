@@ -1,17 +1,14 @@
 """Main request handlers orchestration for the RAG server."""
 
-import os
 from typing import Optional, Dict
 
 from src.controller.file_handler import FileHandler
 from src.controller.csv_handlers import CsvHandlers
 from src.controller.database_handlers import DatabaseHandlers
-from src.controller.qdrant_handlers import QdrantHandlers
 from src.controller.business_handler import BusinessHandlers
 from src.controller.email_handler import EmailHandlers
 from src.controller.action_handlers import ActionHandlers
 from src.controller.db_client import DatabaseHandler
-from src.controller.qdrant_handler import QdrantHandler
 
 
 class RequestHandlers:
@@ -30,31 +27,9 @@ class RequestHandlers:
 
         try:
             db_handler = DatabaseHandler()
-            
-            # Initialize qdrant_handler for database handlers
-            qdrant_handler_for_db = None
-            enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
-            if enable_qdrant:
-                try:
-                    qdrant_handler_for_db = QdrantHandler()
-                except:
-                    pass
-            
-            self.database_handlers = DatabaseHandlers(db_handler, qdrant_handler_for_db)
+            self.database_handlers = DatabaseHandlers(db_handler)
         except Exception as e:
             print(f"[Rag] Warning: Could not initialize DatabaseHandler: {e}")
-        
-        try:
-            enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
-            if enable_qdrant:
-                qdrant_handler = QdrantHandler()
-                self.qdrant_handlers = QdrantHandlers(qdrant_handler)
-                print(f"[Rag] Initialized QdrantHandler")
-            else:
-                print(f"[Rag] QdrantHandler disabled (ENABLE_QDRANT=false)")
-                self.qdrant_handlers = None
-        except Exception as e:
-            print(f"[Rag] Warning: Could not initialize QdrantHandler: {e}")
                     
     
 
@@ -87,19 +62,6 @@ class RequestHandlers:
     def handle_search(self, qs: Dict, embedding_generator) -> Dict:
         """Handle /api/csv/search request."""
         return self.database_handlers.handle_search(qs, embedding_generator)
-    
-    # Qdrant operations
-    def handle_qdrant_query(self, qs: Dict) -> Dict:
-        """Handle /api/qdrant request."""
-        if not self.qdrant_handlers:
-            return {'error': 'QdrantHandler is disabled'}
-        return self.qdrant_handlers.handle_qdrant_query(qs)
-    
-    def handle_embeddings(self, qs: Dict, embedding_generator) -> Dict:
-        """Handle /api/embeddings request."""
-        if not self.qdrant_handlers:
-            return {'error': 'QdrantHandler is disabled'}
-        return self.qdrant_handlers.handle_embeddings(qs, embedding_generator)
     
     # Business operations
     def handle_rfp_upload(self, body: bytes, content_type: str) -> Dict:

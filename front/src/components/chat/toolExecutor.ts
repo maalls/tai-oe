@@ -1,10 +1,9 @@
 /**
- * Tool execution handlers (db_query and qdrant_search)
+ * Tool execution handlers
  */
 
 import type { ChatMessage } from './types';
 import { DB_API_URL } from './types';
-import { QdrantSearch } from '../../utils/qdrantSearch';
 
 export function safeParseArgs(argStr: string | undefined): any {
    if (!argStr) return {};
@@ -105,82 +104,6 @@ export async function dbQuery(args: any): Promise<any> {
    return await resp.json();
 }
 
-export async function qdrantSearch(args: any): Promise<any> {
-   const collection = 'commerce_vectors';
-   const query = String(args?.query || '').trim();
-   if (!collection) throw new Error('Missing collection');
-   if (!query) throw new Error('Missing query');
-
-   const limit = Number.isInteger(args?.limit) ? args.limit : 10;
-
-   const results = await QdrantSearch.search({
-      collection,
-      query,
-      limit,
-      with_payload: true,
-   });
-
-   return { results, count: results.length };
-}
-
-export async function productSearch(args: any): Promise<any> {
-   const QDRANT_API_URL = '/api/qdrant';
-   const collection = 'test_commerce_vectors';
-
-   const query = typeof args?.query === 'string' ? args.query.trim() : '';
-   const limit = Number.isInteger(args?.limit) ? args.limit : 50;
-
-   const filters: Record<string, any> = {};
-   if (typeof args?.marque === 'string' && args.marque.trim()) {
-      filters.marque = args.marque.trim();
-   }
-   if (typeof args?.refciale === 'string' && args.refciale.trim()) {
-      filters.refciale = args.refciale.trim();
-   }
-   if (typeof args?.tarif === 'string' && args.tarif.trim()) {
-      filters.tarif = args.tarif.trim();
-   }
-
-   const url = new URL(QDRANT_API_URL);
-   url.searchParams.set('action', 'scroll');
-   url.searchParams.set('collection', collection);
-   url.searchParams.set('limit', String(limit));
-   url.searchParams.set('with_payload', 'true');
-
-   if (query) {
-      url.searchParams.set('q', query);
-   }
-   if (Object.keys(filters).length > 0) {
-      url.searchParams.set('filters', JSON.stringify(filters));
-   }
-
-   const response = await fetch(url.toString());
-   if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Qdrant error ${response.status}: ${text}`);
-   }
-
-   const data = await response.json();
-   const points = (data.points || []).map((point: any) => {
-      const productId = point?.id ?? point?.payload?.id;
-      const link = productId !== undefined ? `/products/${productId}` : '';
-      return {
-         ...point,
-         internal_product_page_link: link,
-         payload: {
-            ...(point?.payload || {}),
-            internal_product_page_link: link,
-         },
-      };
-   });
-
-   return {
-      points,
-      count: data.count ?? (data.points ? data.points.length : 0),
-      next_offset: data.next_offset ?? null,
-      error: data.error,
-   };
-}
 
 export function trackedElements(args: any): any {
    const className =
@@ -489,46 +412,6 @@ export async function executeToolCalls(
             toolMessages.push({
                role: 'tool',
                name: 'db_products_query',
-               tool_call_id: tc.id,
-               tool_arguments: argStr,
-               content: JSON.stringify({ error: String(e?.message || e) }),
-            });
-         }
-      } else if (name === 'qdrant_search') {
-         try {
-            const args = safeParseArgs(argStr);
-            const result = await qdrantSearch(args);
-            toolMessages.push({
-               role: 'tool',
-               name: 'qdrant_search',
-               tool_call_id: tc.id,
-               tool_arguments: argStr,
-               content: JSON.stringify(result),
-            });
-         } catch (e: any) {
-            toolMessages.push({
-               role: 'tool',
-               name: 'qdrant_search',
-               tool_call_id: tc.id,
-               tool_arguments: argStr,
-               content: JSON.stringify({ error: String(e?.message || e) }),
-            });
-         }
-      } else if (name === 'product_search') {
-         try {
-            const args = safeParseArgs(argStr);
-            const result = await productSearch(args);
-            toolMessages.push({
-               role: 'tool',
-               name: 'product_search',
-               tool_call_id: tc.id,
-               tool_arguments: argStr,
-               content: JSON.stringify(result),
-            });
-         } catch (e: any) {
-            toolMessages.push({
-               role: 'tool',
-               name: 'product_search',
                tool_call_id: tc.id,
                tool_arguments: argStr,
                content: JSON.stringify({ error: String(e?.message || e) }),

@@ -10,7 +10,6 @@ from typing import Any, Dict, List
 import json
 import psycopg2
 
-from back.script.vendors.fabdis.qdrant import vectorize
 from product import handle_product
 from brand import handle_brand
 
@@ -28,7 +27,6 @@ def handle_vendor(config: Dict[str, Any]) -> None:
 		product['vendor'] = vendor
 		print("product", product.get("MARQUE"), 'fab', product.get("vendor").get("name"))
 		handle_product(product, con)
-		vectorize(product)
 	
 def generate_vendor(config: Dict[str, Any], con) -> Dict[str, Any]:
 	file_path = config.get("file_path")

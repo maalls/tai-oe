@@ -1429,13 +1429,6 @@ def create_rag_handler(config):
                     return self.json(handlers.handle_sources())
                 elif parsed.path == '/api/csv/query':
                     return self.json(handlers.handle_query(qs))
-                elif parsed.path == '/api/qdrant':
-                    result = handlers.handle_qdrant_query(qs)
-                    # Return 400 if there's an error in the response
-                    status = 400 if result.get('error') else 200
-                    return self.json(result, status)
-                elif parsed.path == '/api/embeddings':
-                    return self.json(handlers.handle_embeddings(qs, self.get_embedding_generator()))
                 elif parsed.path.startswith('/api/csv/search'):
                     return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
                 elif parsed.path == '/api/quotes/list':
@@ -1716,17 +1709,26 @@ def create_rag_handler(config):
                 self.send_header('Content-Length', str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                # Client disconnected before receiving the response.
+                return
             except Exception as e:
-                self._send_error(500, f"Error serializing JSON: {e}")
+                try:
+                    self._send_error(500, f"Error serializing JSON: {e}")
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                    return
 
         def _send_error(self, code: int, message: str):
             """Send error response."""
-            payload = json.dumps({"error": message}).encode('utf-8')
-            self.send_response(code)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.send_header('Content-Length', str(len(payload)))
-            self.end_headers()
-            self.wfile.write(payload)
+            try:
+                payload = json.dumps({"error": message}).encode('utf-8')
+                self.send_response(code)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                return
     
     return Rag
 

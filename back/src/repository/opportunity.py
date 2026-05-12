@@ -1,12 +1,10 @@
 from typing import Any, Dict, Optional
 from uuid import UUID
 from datetime import datetime
-import os
 
 from flask import json
 
 from src.text.reader import extract_rfp_from_text
-from src.controller.qdrant_handler import QdrantHandler
 from src.repository.email_repository import EmailRepository
 from src.text.rfp_source_picker import pick_best_rfp_source
 from src.supabase.supabase_client import get_supabase_service
@@ -454,10 +452,7 @@ class OpportunityRepository:
             print(f"[BusinessHandlers] Error generating quote with custom content: {e}")
             import traceback
             traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error generating quote: {str(e)}",
-            }
+            raise
     
     def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None) -> Dict:
         """Generate a quote draft (no PDF yet) for a given opportunity.
@@ -656,103 +651,72 @@ class OpportunityRepository:
             print(f"[BusinessHandlers] Error generating quote for opportunity: {e}")
             import traceback
             traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error generating quote: {str(e)}",
-            }
+            raise
 
     def _extract_and_enrich_rfp_data(self, text: str, pre_extracted_data: Dict = None) -> Dict:
-            """Extract RFP data from text and enrich with Qdrant prices.
-            
-            This is a common helper used by both RFP upload and RFQ source creation
-            to avoid code duplication. Extracts RFP data using LLM and looks up
-            prices in Qdrant for each product.
-            
-            Parameters
-            ----------
-            text : str
-                Text content to extract RFP data from
-            pre_extracted_data : Dict, optional
-                Pre-extracted RFP data (e.g., from pick_best_rfp_source).
-                If provided, skips LLM extraction and enriches directly.
-                
-            Returns
-            -------
-            Dict
-                RFP data with extracted products and enriched pricing
-            """
-            # Clean the text first
-            text_clean = EmailRepository._clean_email_body(text)
-            
-            # Use pre-extracted data only if it has useful content
-            # Otherwise extract using LLM (avoid using empty cache)
-            has_useful_content = pre_extracted_data and (
-                (pre_extracted_data.get('products') and len(pre_extracted_data.get('products', [])) > 0) or
-                (pre_extracted_data.get('contact') and any(pre_extracted_data.get('contact').values()))
-            )
-            
-            if has_useful_content:
-                pre_count = len(pre_extracted_data.get('products', []) or []) if isinstance(pre_extracted_data, dict) else 0
-                print(f"[OpportunityRepository] Using pre_extracted_data (products={pre_count}), skipping LLM extraction")
-                rfp_data = pre_extracted_data
-            else:
-                print("[OpportunityRepository] No usable pre_extracted_data, running LLM extraction")
-                rfp_data = extract_rfp_from_text(text_clean, timeout_seconds=300)
-                if isinstance(rfp_data, list):
-                    rfp_data = {"products": rfp_data, "contact": {}}
-                elif isinstance(rfp_data, str):
-                    try:
-                        parsed = json.loads(rfp_data)
-                        if isinstance(parsed, dict):
-                            rfp_data = parsed
-                        elif isinstance(parsed, list):
-                            rfp_data = {"products": parsed, "contact": {}}
-                        else:
-                            rfp_data = {"products": [], "contact": {}}
-                    except Exception:
-                        rfp_data = {"products": [], "contact": {}}
-                elif not isinstance(rfp_data, dict):
-                    rfp_data = {"products": [], "contact": {}}
-            
-            # Normalize field names: part_number → sku
-            for product in rfp_data.get('products', []) or []:
-                if 'part_number' in product and 'sku' not in product:
-                    product['sku'] = product.pop('part_number')
-            
-            # For each product, search in Qdrant for matching entry and enrich with price
-            try:
-                enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
-                if not enable_qdrant:
-                    print("[OpportunityRepository] QdrantHandler disabled (ENABLE_QDRANT=false)")
-                else:
-                    qdrant_handler = QdrantHandler()
-                for product in rfp_data.get('products', []) or []:
-                    filters = {}
-                    if product.get('manufacturer'):
-                        filters['marque'] = product['manufacturer']
-                    if product.get('sku'):
-                        filters['refciale'] = product['sku']
-                    
-                    if not filters:
-                        continue
+        """Extract RFP data from text and normalize product pricing fields.
 
-                    match = qdrant_handler.scroll_points(
-                        limit=5,
-                        filters=filters,
-                        with_payload=True,
-                        with_vectors=False
-                    )
-                    product['qdrant_matches'] = match.get('points', [])
-                    if product['qdrant_matches']:
-                        product['price_found'] = True
-                        product['price'] = product['qdrant_matches'][0]['payload'].get('tarif')
+        This is a common helper used by both RFP upload and RFQ source creation
+        to avoid code duplication. It extracts RFP data using LLM and ensures
+        all product pricing fields are present even when no enrichment source
+        is available.
+
+        Parameters
+        ----------
+        text : str
+            Text content to extract RFP data from
+        pre_extracted_data : Dict, optional
+            Pre-extracted RFP data (e.g., from pick_best_rfp_source).
+            If provided, skips LLM extraction and enriches directly.
+
+        Returns
+        -------
+        Dict
+            RFP data with extracted products and enriched pricing
+        """
+        # Clean the text first
+        text_clean = EmailRepository._clean_email_body(text)
+
+        # Use pre-extracted data only if it has useful content
+        # Otherwise extract using LLM (avoid using empty cache)
+        has_useful_content = pre_extracted_data and (
+            (pre_extracted_data.get('products') and len(pre_extracted_data.get('products', [])) > 0) or
+            (pre_extracted_data.get('contact') and any(pre_extracted_data.get('contact').values()))
+        )
+
+        if has_useful_content:
+            pre_count = len(pre_extracted_data.get('products', []) or []) if isinstance(pre_extracted_data, dict) else 0
+            print(f"[OpportunityRepository] Using pre_extracted_data (products={pre_count}), skipping LLM extraction")
+            rfp_data = pre_extracted_data
+        else:
+            print("[OpportunityRepository] No usable pre_extracted_data, running LLM extraction")
+            rfp_data = extract_rfp_from_text(text_clean, timeout_seconds=300)
+            if isinstance(rfp_data, list):
+                rfp_data = {"products": rfp_data, "contact": {}}
+            elif isinstance(rfp_data, str):
+                try:
+                    parsed = json.loads(rfp_data)
+                    if isinstance(parsed, dict):
+                        rfp_data = parsed
+                    elif isinstance(parsed, list):
+                        rfp_data = {"products": parsed, "contact": {}}
                     else:
-                        product['price_found'] = False
-                        product['price'] = None
-            except Exception as e:
-                print(f"[BusinessHandlers] Qdrant lookup error: {e}")
-            
-            return rfp_data
+                        rfp_data = {"products": [], "contact": {}}
+                except Exception:
+                    rfp_data = {"products": [], "contact": {}}
+            elif not isinstance(rfp_data, dict):
+                rfp_data = {"products": [], "contact": {}}
+
+        # Normalize field names: part_number -> sku
+        for product in rfp_data.get('products', []) or []:
+            if 'part_number' in product and 'sku' not in product:
+                product['sku'] = product.pop('part_number')
+
+        for product in rfp_data.get('products', []) or []:
+            product['price_found'] = bool(product.get('price'))
+            product['price'] = product.get('price')
+
+        return rfp_data
     
 
     def _compute_totals(self, rfp_data: Dict) -> Dict[str, float]:

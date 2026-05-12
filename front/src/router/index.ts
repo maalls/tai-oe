@@ -3,7 +3,6 @@ import SourcePage from '../components/admin/components/source/IndexPage.vue';
 import DatabasePage from '../components/admin/components/database/IndexPage.vue';
 import CartouchesPage from '../components/database/CartouchesPage.vue';
 import CommercePage from '../components/database/CommercePage.vue';
-import QdrantPage from '../components/admin/components/qdrant/IndexPage.vue';
 import AdminFlowPage from '../components/admin/components/flow/IndexPage.vue';
 import ChatPage from '../components/chat/IndexPage.vue';
 import MailPage from '../components/mail/IndexPage.vue';
@@ -88,12 +87,6 @@ const router = createRouter({
          ],
       },
       {
-         path: '/admin/qdrant',
-         name: 'admin-qdrant',
-         component: QdrantPage,
-         meta: { requiresAuth: true, titleKey: 'pageTitles.adminQdrant' },
-      },
-      {
          path: '/admin/flow',
          name: 'admin-flow',
          component: AdminFlowPage,
@@ -110,10 +103,6 @@ const router = createRouter({
       {
          path: '/database/:subpath(.*)',
          redirect: (to) => `/admin/database/${to.params.subpath}`,
-      },
-      {
-         path: '/qdrant',
-         redirect: '/admin/qdrant',
       },
       {
          path: '/chat',

@@ -4,3 +4,10 @@
 
 
 ## Installation
+
+
+
+## Prod update
+
+Environment/config changes (.env files):
+```sudo systemctl restart rag-backend```

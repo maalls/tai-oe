@@ -18,7 +18,6 @@ export default {
       adminDatabase: 'Admin - Base de données',
       adminDatabaseCartouches: 'Admin - Base de données - Cartouches',
       adminDatabaseCommerce: 'Admin - Base de données - Commerce',
-      adminQdrant: 'Admin - Qdrant',
       adminFlow: 'Admin - Flow',
       chat: 'Chat',
       business: 'Business',
