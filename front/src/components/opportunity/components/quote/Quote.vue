@@ -154,40 +154,13 @@
                   @click="generateQuotePdf"
                   :disabled="isGeneratingPdf || !isEditable"
                   style="margin-right: 8px"
-                  class="p-2 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-gray-300 disabled:text-gray-600"
+                  class="p-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600"
                >
                   {{
                      isGeneratingPdf
                         ? t('opportunities.generatingPdf')
                         : t('opportunities.generatePdf')
                   }}
-               </button>
-               <button
-                  v-if="quoteDocument"
-                  type="button"
-                  @click="generateQuote"
-                  :disabled="isGeneratingQuote || !isEditable"
-                  class="p-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-300 disabled:text-gray-600 flex items-center gap-2"
-               >
-                  <svg
-                     v-if="!isGeneratingQuote"
-                     class="w-4 h-4"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24"
-                  >
-                     <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"
-                     ></path>
-                  </svg>
-                  <span class="hidden">{{
-                     isGeneratingQuote
-                        ? t('opportunities.extracting')
-                        : t('opportunities.regenerateRfp')
-                  }}</span>
                </button>
             </div>
          </div>

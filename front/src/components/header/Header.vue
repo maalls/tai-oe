@@ -2,15 +2,15 @@
    <header class="bg-black shadow-lg sticky top-0 z-50">
       <nav class="flex gap-2 px-6 py-4 items-center">
          <RouterLink to="/chat" class="flex items-center gap-3 mr-6" title="Chat">
-            <img src="../../assets/logo-white.png" alt="FAB-DIS Logo" class="h-8 w-8" />
-            <span class="text-xl font-semibold text-white">Ai Oe</span>
+            <img src="../../assets/logo-white.png" alt="Acme Logo" class="h-8 w-8" />
+            <span class="text-xl font-semibold text-white">Acme</span>
          </RouterLink>
          <router-link
             v-for="page in pages"
             :key="page.path"
             :to="page.path"
             class="px-4 py-2 rounded-lg font-medium transition-all duration-200 text-gray-300 hover:bg-slate-800 hover:text-white"
-            :class="isRouteActive(page.path) ? '!bg-blue-600 !text-white' : ''"
+            :class="isRouteActive(page.path) ? 'bg-blue-600! text-white!' : ''"
          >
             {{ t(page.labelKey) }}
          </router-link>

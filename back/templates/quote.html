@@ -161,12 +161,14 @@
 
       <div class="to-section">
         <div class="to-label">To:</div>
-        <h3>{{ account.name }}</h3>
+        <h3>{{ account.name or '—' }}</h3>
         <div class="client-details">
-          {{ account.address_line1 }}<br />
-          {% if account.address_line2 %}{{ account.address_line2 }}<br />{%
-          endif %} {{ account.postal_code }} {{ account.city }}<br />
-          {{ account.country_name }}
+          {% if account.address_line1 %}{{ account.address_line1 }}<br />{%
+          endif %} {% if account.address_line2 %}{{ account.address_line2 }}<br />{%
+          endif %} {% if account.postal_code or account.city %} {{
+          account.postal_code or '' }} {{ account.city or '' }}<br />
+          {% endif %} {% if account.country_name %}{{ account.country_name }}{%
+          endif %}
         </div>
       </div>
 

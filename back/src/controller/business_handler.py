@@ -39,6 +39,35 @@ class BusinessHandlers:
     def _extract_and_enrich_rfp_data(self, text: str) -> Dict:
         return self.opportunity_repository._extract_and_enrich_rfp_data(text)
 
+    @staticmethod
+    def _normalize_account_address(account: Dict) -> Dict[str, str]:
+        """Return a stable address shape for PDF templates.
+
+        The database has used both `address_line1/address_line2` and
+        `street_address`, so we normalize all known variants here and keep
+        missing fields empty to avoid rendering `None` in the PDF.
+        """
+        account = account or {}
+        street_address = (
+            account.get('street_address')
+            or account.get('address_line1')
+            or account.get('address1')
+            or ''
+        )
+        address_line2 = account.get('address_line2') or account.get('address2') or ''
+        city = account.get('city') or ''
+        postal_code = account.get('postal_code') or ''
+        country_name = account.get('country_name') or account.get('country') or ''
+
+        return {
+            'street_address': street_address,
+            'address_line1': account.get('address_line1') or street_address,
+            'address_line2': address_line2,
+            'city': city,
+            'postal_code': postal_code,
+            'country_name': country_name,
+        }
+
     def getForm(self, body: bytes, content_type: str):
         boundary = self._extract_boundary(content_type)
         if not boundary:
@@ -903,12 +932,7 @@ class BusinessHandlers:
                 "products": [],
                 "contact": {
                     "company_name": account.get("name", ""),
-                    "address": {
-                        "street_address": account.get("street_address", ""),
-                        "city": account.get("city", ""),
-                        "postal_code": account.get("postal_code", ""),
-                        "country_name": account.get("country_name", ""),
-                    }
+                    "address": self._normalize_account_address(account),
                 },
                 "account": account,
                 "issued_date": document.get("issued_at") or datetime.now().isoformat(),
@@ -2555,12 +2579,7 @@ class BusinessHandlers:
                 "products": [],
                 "contact": {
                     "company_name": account.get("name", ""),
-                    "address": {
-                        "street_address": account.get("street_address", ""),
-                        "city": account.get("city", ""),
-                        "postal_code": account.get("postal_code", ""),
-                        "country_name": account.get("country_name", ""),
-                    }
+                    "address": self._normalize_account_address(account),
                 },
                 "account": account,
                 "issued_date": document.get("issued_at") or datetime.now().isoformat(),
