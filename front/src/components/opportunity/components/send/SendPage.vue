@@ -193,26 +193,16 @@
             >
                {{ t('opportunities.quotePdfNotGenerated') }}
 
-               <button
-                  @click="generateQuotePdf()"
-                  class="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-               >
+               <button @click="generateQuotePdf()" class="btn btn-primary ml-2">
                   {{ t('opportunities.generatePdf') }}
                </button>
             </div>
 
             <div class="flex gap-3 pt-4">
-               <button
-                  type="submit"
-                  :disabled="isSending"
-                  class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-medium"
-               >
+               <button type="submit" :disabled="isSending" class="btn btn-primary">
                   {{ isSending ? t('opportunities.sending') : t('opportunities.sendEmail') }}
                </button>
-               <router-link
-                  :to="`/opportunities/${opportunityId}/quote`"
-                  class="px-3 py-1.5 text-xs border border-gray-300 text-gray-700 hover:bg-gray-50 rounded"
-               >
+               <router-link :to="`/opportunities/${opportunityId}/quote`" class="btn btn-secondary">
                   {{ t('common.cancel') }}
                </router-link>
             </div>

@@ -56,11 +56,7 @@
                </div>
 
                <div class="flex gap-2 pt-2">
-                  <button
-                     type="submit"
-                     :disabled="isSaving"
-                     class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 disabled:bg-gray-400"
-                  >
+                  <button type="submit" :disabled="isSaving" class="btn btn-primary">
                      {{
                         isSaving
                            ? t('vendors.actions.saving')
@@ -69,11 +65,7 @@
                              : t('vendors.actions.update')
                      }}
                   </button>
-                  <button
-                     type="button"
-                     @click="resetForm"
-                     class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium text-sm hover:bg-gray-300"
-                  >
+                  <button type="button" @click="resetForm" class="btn btn-secondary">
                      {{ t('vendors.actions.reset') }}
                   </button>
                   <button
@@ -81,7 +73,7 @@
                      type="button"
                      @click="deleteVendor"
                      :disabled="isDeleting"
-                     class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 disabled:bg-gray-400"
+                     class="btn btn-danger"
                   >
                      {{ isDeleting ? t('vendors.actions.deleting') : t('vendors.actions.delete') }}
                   </button>

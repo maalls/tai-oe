@@ -199,9 +199,7 @@ const loadMessages = async (force = false) => {
       }
 
       // Only fetch from Gmail if force=true (refresh button), otherwise show cached DB results
-      const url = `/api/gmail/messages?max_results=100${
-         force ? '&force=true' : ''
-      }`;
+      const url = `/api/gmail/messages?max_results=100${force ? '&force=true' : ''}`;
       const response = await fetch(url, { headers });
       const result = await response.json();
 
@@ -237,9 +235,7 @@ const authorizeGmail = async () => {
 
    try {
       const response = await fetch(
-         `/api/gmail/authorize?redirect_url=${encodeURIComponent(
-            window.location.href
-         )}`
+         `/api/gmail/authorize?redirect_url=${encodeURIComponent(window.location.href)}`
       );
       const result = await response.json();
 

@@ -36,10 +36,7 @@
                         {{ t('opportunities.deleteOpportunityDescription') }}
                      </p>
                   </div>
-                  <button
-                     @click="showDeleteConfirmation = true"
-                     class="ml-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors"
-                  >
+                  <button @click="showDeleteConfirmation = true" class="btn btn-danger ml-4">
                      {{ t('opportunities.deleteOpportunity') }}
                   </button>
                </div>
@@ -66,17 +63,10 @@
                <li>{{ t('opportunities.deleteListItemRelatedData') }}</li>
             </ul>
             <div class="flex gap-3 justify-end">
-               <button
-                  @click="showDeleteConfirmation = false"
-                  class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium text-sm transition-colors"
-               >
+               <button @click="showDeleteConfirmation = false" class="btn btn-secondary">
                   {{ t('common.cancel') }}
                </button>
-               <button
-                  @click="deleteOpportunity"
-                  :disabled="isDeleting"
-                  class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-               >
+               <button @click="deleteOpportunity" :disabled="isDeleting" class="btn btn-danger">
                   {{
                      isDeleting ? t('opportunities.deleting') : t('opportunities.deleteOpportunity')
                   }}

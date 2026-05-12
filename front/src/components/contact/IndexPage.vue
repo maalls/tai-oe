@@ -2,19 +2,10 @@
    <div>
       <AccountNavHeader>
          <template #actions>
-            <button
-               @click="loadContacts"
-               :disabled="isLoading"
-               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm disabled:bg-gray-400 transition-colors"
-            >
+            <button @click="loadContacts" :disabled="isLoading" class="btn btn-neutral">
                🔄 Refresh
             </button>
-            <router-link
-               to="/contacts/new"
-               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm"
-            >
-               + Add Contact
-            </router-link>
+            <router-link to="/contacts/new" class="btn btn-primary"> + Add Contact </router-link>
          </template>
       </AccountNavHeader>
       <div class="p-6">
@@ -69,22 +60,22 @@
                         @click="goToDetail(contact.id)"
                         class="hover:bg-gray-50 transition-colors cursor-pointer"
                      >
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900 break-words">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900 wrap-break-word">
                            {{ contact.name }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 break-words">
+                        <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
                            {{ contact.email || '-' }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 break-words">
+                        <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
                            {{ contact.phone || '-' }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 break-words">
+                        <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
                            {{ contact.role_title || '-' }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 break-words">
+                        <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
                            {{ contact.account?.name || '-' }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 break-words">
+                        <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
                            {{ formatDate(contact.created_at) }}
                         </td>
                      </tr>
