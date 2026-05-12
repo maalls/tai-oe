@@ -320,7 +320,7 @@ const saveAction = async () => {
 
       closeModal();
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to save action';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToSaveAction');
       console.error('[ActionsPage] Error saving action:', error);
    }
 };
@@ -340,7 +340,7 @@ const confirmDeleteAction = async () => {
       showDeleteConfirm.value = false;
       deletingAction.value = null;
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to delete action';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToDeleteAction');
       console.error('[ActionsPage] Error deleting action:', error);
    }
 };
@@ -355,7 +355,7 @@ const pauseAction = async (action: any) => {
 
       action.status = 'paused';
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to pause action';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToPauseAction');
       console.error('[ActionsPage] Error pausing action:', error);
    }
 };
@@ -370,7 +370,7 @@ const resumeAction = async (action: any) => {
 
       action.status = 'active';
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to resume action';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToResumeAction');
       console.error('[ActionsPage] Error resuming action:', error);
    }
 };
@@ -391,7 +391,7 @@ const executeAction = async (action: any) => {
 
       action.last_executed_at = new Date().toISOString();
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to execute action';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToExecuteAction');
       console.error('[ActionsPage] Error executing action:', error);
    }
 };
@@ -409,7 +409,7 @@ const viewLogs = async (action: any) => {
       actionLogs.value = data || [];
       showLogsModal.value = true;
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to load logs';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToLoadLogs');
       console.error('[ActionsPage] Error loading logs:', error);
    }
 };

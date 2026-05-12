@@ -229,7 +229,7 @@
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 interface Props {
    action: any;
@@ -286,8 +286,11 @@ function getScheduleLabel(scheduleType: string, config: any): string {
       const time = config?.time || '09:00';
       return t('actions.schedules.monthly', { day, time });
    } else if (scheduleType === 'weekly') {
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const dayOfWeek = days[config?.day_of_week || 0];
+      const dayIndex = config?.day_of_week || 0;
+      const dayDate = new Date(Date.UTC(2024, 0, 7 + dayIndex));
+      const dayOfWeek = new Intl.DateTimeFormat(locale.value || undefined, {
+         weekday: 'long',
+      }).format(dayDate);
       const time = config?.time || '09:00';
       return t('actions.schedules.weekly', { day: dayOfWeek, time });
    } else if (scheduleType === 'daily') {

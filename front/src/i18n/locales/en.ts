@@ -402,6 +402,32 @@ export default {
          loading: 'Loading opportunities...',
          noOpportunities: 'No opportunities found',
          noOpportunitiesFiltered: 'No opportunities found matching the filter',
+         tableHeaders: {
+            name: 'Name',
+            account: 'Account',
+            stage: 'Stage',
+            status: 'Status',
+            amount: 'Amount',
+            sourceRef: 'Source Ref',
+            created: 'Created',
+         },
+         batchDelete: {
+            confirmTitle: 'Confirm Batch Deletion',
+            confirmMessage:
+               'Are you sure you want to delete {count} opportunity(ies)? This action cannot be undone and will permanently remove all related data.',
+            deleting: 'Deleting...',
+            deleteAll: 'Delete All',
+         },
+         errors: {
+            userNotAuthenticated:
+               'User not authenticated. Please refresh the page or log in again.',
+            failedToSaveAction: 'Failed to save action',
+            failedToDeleteAction: 'Failed to delete action',
+            failedToPauseAction: 'Failed to pause action',
+            failedToResumeAction: 'Failed to resume action',
+            failedToExecuteAction: 'Failed to execute action',
+            failedToLoadLogs: 'Failed to load logs',
+         },
          untitled: 'Untitled',
          selectOpportunity: 'Select opportunity',
          searchOpportunities: 'Search opportunities',

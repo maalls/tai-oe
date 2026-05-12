@@ -416,6 +416,32 @@ export default {
       loading: 'Chargement des devis...',
       noOpportunities: 'Aucun devis trouvé',
       noOpportunitiesFiltered: 'Aucun devis trouvé correspondant au filtre',
+      tableHeaders: {
+         name: 'Nom',
+         account: 'Compte',
+         stage: 'Étape',
+         status: 'Statut',
+         amount: 'Montant',
+         sourceRef: 'Réf source',
+         created: 'Créé',
+      },
+      batchDelete: {
+         confirmTitle: 'Confirmer la suppression en lot',
+         confirmMessage:
+            'Voulez-vous vraiment supprimer {count} devis ? Cette action est irréversible et supprimera définitivement toutes les données associées.',
+         deleting: 'Suppression en cours...',
+         deleteAll: 'Tout supprimer',
+      },
+      errors: {
+         userNotAuthenticated:
+            'Utilisateur non authentifié. Veuillez rafraîchir la page ou vous reconnecter.',
+         failedToSaveAction: "Échec de l'enregistrement de l'action",
+         failedToDeleteAction: "Échec de la suppression de l'action",
+         failedToPauseAction: "Échec de la mise en pause de l'action",
+         failedToResumeAction: "Échec de la reprise de l'action",
+         failedToExecuteAction: "Échec de l'exécution de l'action",
+         failedToLoadLogs: 'Échec du chargement des journaux',
+      },
       untitled: 'Sans titre',
       selectOpportunity: 'Selectionner un devis',
       searchOpportunities: 'Rechercher des devis',

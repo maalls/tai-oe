@@ -111,28 +111,28 @@
                      />
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Name
+                     {{ t('opportunities.tableHeaders.name') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Account
+                     {{ t('opportunities.tableHeaders.account') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Stage
+                     {{ t('opportunities.tableHeaders.stage') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Status
+                     {{ t('opportunities.tableHeaders.status') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Amount
+                     {{ t('opportunities.tableHeaders.amount') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                      {{ t('opportunities.source') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Source Ref
+                     {{ t('opportunities.tableHeaders.sourceRef') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                     Created
+                     {{ t('opportunities.tableHeaders.created') }}
                   </th>
                </tr>
             </thead>
@@ -207,24 +207,33 @@
          @click.self="showBatchDeleteConfirmation = false"
       >
          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Batch Deletion</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+               {{ t('opportunities.batchDelete.confirmTitle') }}
+            </h3>
             <p class="text-sm text-gray-600 mb-4">
-               Are you sure you want to delete {{ selectedOpportunities.size }} opportunity(ies)?
-               This action cannot be undone and will permanently remove all related data.
+               {{
+                  t('opportunities.batchDelete.confirmMessage', {
+                     count: selectedOpportunities.size,
+                  })
+               }}
             </p>
             <div class="flex gap-3 justify-end">
                <button
                   @click="showBatchDeleteConfirmation = false"
                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium text-sm transition-colors"
                >
-                  Cancel
+                  {{ t('common.cancel') }}
                </button>
                <button
                   @click="batchDelete"
                   :disabled="isDeleting"
                   class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
                >
-                  {{ isDeleting ? 'Deleting...' : 'Delete All' }}
+                  {{
+                     isDeleting
+                        ? t('opportunities.batchDelete.deleting')
+                        : t('opportunities.batchDelete.deleteAll')
+                  }}
                </button>
             </div>
          </div>
@@ -380,7 +389,7 @@ const loadOpportunities = async () => {
    errorMessage.value = '';
 
    if (!user.value?.id) {
-      errorMessage.value = 'User not authenticated. Please refresh the page or log in again.';
+      errorMessage.value = t('opportunities.errors.userNotAuthenticated');
       isLoading.value = false;
       return;
    }
