@@ -2,7 +2,9 @@
    <div class="space-y-6">
       <div class="flex items-center justify-between">
          <div>
-            <h2 class="text-2xl font-semibold text-gray-900">{{ t('products.cms.brand.title') }}</h2>
+            <h2 class="text-2xl font-semibold text-gray-900">
+               {{ t('products.cms.brand.title') }}
+            </h2>
             <p class="text-sm text-gray-500">{{ t('products.cms.brand.subtitle') }}</p>
          </div>
       </div>
@@ -44,13 +46,19 @@
                </div>
             </div>
             <div class="p-6">
-               <h4 class="text-sm font-semibold text-gray-700 mb-3">{{ t('products.cms.brand.familiesTitle') }}</h4>
+               <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                  {{ t('products.cms.brand.familiesTitle') }}
+               </h4>
                <div v-if="familiesByBrand[brand.id]?.length" class="overflow-x-auto">
                   <table class="w-full text-sm">
                      <thead class="bg-gray-100 text-gray-700">
                         <tr>
-                           <th class="px-4 py-2 text-left">{{ t('products.cms.brand.columns.name') }}</th>
-                           <th class="px-4 py-2 text-left">{{ t('products.cms.brand.columns.type') }}</th>
+                           <th class="px-4 py-2 text-left">
+                              {{ t('products.cms.brand.columns.name') }}
+                           </th>
+                           <th class="px-4 py-2 text-left">
+                              {{ t('products.cms.brand.columns.type') }}
+                           </th>
                         </tr>
                      </thead>
                      <tbody class="divide-y divide-gray-200">
@@ -65,10 +73,14 @@
                      </tbody>
                   </table>
                </div>
-               <div v-else class="text-sm text-gray-500">{{ t('products.cms.brand.noFamiliesLinked') }}</div>
+               <div v-else class="text-sm text-gray-500">
+                  {{ t('products.cms.brand.noFamiliesLinked') }}
+               </div>
             </div>
          </div>
-         <div v-if="!brands.length && !isLoading" class="text-gray-500">{{ t('products.cms.brand.noBrands') }}</div>
+         <div v-if="!brands.length && !isLoading" class="text-gray-500">
+            {{ t('products.cms.brand.noBrands') }}
+         </div>
       </div>
    </div>
 </template>

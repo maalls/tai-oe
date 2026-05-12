@@ -5,12 +5,16 @@
          <Breadcrumb v-if="!isNewBrand" :items="breadcrumbItems" />
          <div class="mb-6 flex items-center justify-between">
             <div>
-               <div v-if="isNewBrand" class="text-gray-600 mt-2">Create a new brand</div>
+               <div v-if="isNewBrand" class="text-gray-600 mt-2">
+                  {{ t('products.brand.createTitle') }}
+               </div>
                <div v-else class="flex gap-4 mt-2 text-gray-600">
                   <span class="text-gray-500">
-                     Minimum Margin: {{ formData.minimum_margin || '0' }}%
+                     {{ t('products.brand.minimumMargin') }}: {{ formData.minimum_margin || '0' }}%
                   </span>
-                  <span class="text-gray-500"> Target Margin: {{ formData.target_margin }}% </span>
+                  <span class="text-gray-500">
+                     {{ t('products.brand.targetMargin') }}: {{ formData.target_margin }}%
+                  </span>
                </div>
             </div>
             <div class="flex gap-2">
@@ -19,7 +23,7 @@
                   @click="showForm = !showForm"
                   class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700"
                >
-                  {{ showForm ? 'Cancel' : 'Edit' }}
+                  {{ showForm ? t('products.brand.cancelButton') : t('products.brand.editButton') }}
                </button>
             </div>
          </div>
@@ -34,7 +38,9 @@
          <div v-if="isNewBrand || showForm" class="bg-white border border-gray-200 rounded-lg p-6">
             <form @submit.prevent="saveBrand" class="space-y-4">
                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"> Name * </label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                     {{ t('products.brand.nameField') }} *
+                  </label>
                   <input
                      v-model="formData.name"
                      type="text"
@@ -43,7 +49,9 @@
                   />
                </div>
                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"> Email </label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                     {{ t('products.brand.emailField') }}
+                  </label>
                   <input
                      v-model="formData.email"
                      type="email"
@@ -51,7 +59,9 @@
                   />
                </div>
                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"> Phone </label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                     {{ t('products.brand.phoneField') }}
+                  </label>
                   <input
                      v-model="formData.phone"
                      type="text"
@@ -59,7 +69,9 @@
                   />
                </div>
                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"> Website </label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                     {{ t('products.brand.websiteField') }}
+                  </label>
                   <input
                      v-model="formData.website"
                      type="url"
@@ -68,7 +80,7 @@
                </div>
                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                     Minimum Margin (%)
+                     {{ t('products.brand.fields.minimumMargin') }}
                   </label>
                   <input
                      v-model.number="formData.minimum_margin"
@@ -77,12 +89,12 @@
                      min="0"
                      max="999.99"
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                     placeholder="e.g., 10.50"
+                     :placeholder="t('products.brand.placeholders.minimumMargin')"
                   />
                </div>
                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                     Target Margin (%)
+                     {{ t('products.brand.fields.targetMargin') }}
                   </label>
                   <input
                      v-model.number="formData.target_margin"
@@ -91,7 +103,7 @@
                      min="0"
                      max="999.99"
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                     placeholder="e.g., 15.00"
+                     :placeholder="t('products.brand.placeholders.targetMargin')"
                   />
                </div>
 
@@ -101,14 +113,20 @@
                      :disabled="isSaving"
                      class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 disabled:bg-gray-400"
                   >
-                     {{ isSaving ? 'Saving...' : isNewBrand ? 'Create' : 'Update' }}
+                     {{
+                        isSaving
+                           ? t('common.saving')
+                           : isNewBrand
+                             ? t('common.create')
+                             : t('common.edit')
+                     }}
                   </button>
                   <button
                      type="button"
                      @click="resetForm"
                      class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium text-sm hover:bg-gray-300"
                   >
-                     Reset
+                     {{ t('products.brand.reset') }}
                   </button>
                </div>
             </form>
@@ -117,7 +135,7 @@
          <div v-if="!isNewBrand && families.length > 0" class="mt-8">
             <div class="flex items-center justify-between mb-4">
                <h2 class="text-xl font-bold text-gray-900">
-                  Families ({{ filteredFamilies.length }})
+                  {{ t('products.brand.familiesTitle', { count: filteredFamilies.length }) }}
                </h2>
                <button
                   type="button"
@@ -129,7 +147,11 @@
                         : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                   "
                >
-                  {{ showDiscountOnly ? 'Showing: Discounts only' : 'Showing: All families' }}
+                  {{
+                     showDiscountOnly
+                        ? t('products.brand.showingDiscountsOnly')
+                        : t('products.brand.showingAllFamilies')
+                  }}
                </button>
             </div>
             <div class="bg-white border border-gray-200 rounded-lg shadow overflow-hidden">
@@ -137,28 +159,28 @@
                   <thead class="bg-gray-50 border-b">
                      <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                           Name
+                           {{ t('products.brand.columns.name') }}
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                           Code
+                           {{ t('products.brand.columns.code') }}
                         </th>
                         <th
                            class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase"
                         >
-                           Discount
+                           {{ t('products.brand.columns.discount') }}
                         </th>
                         <th
                            class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase"
                         >
-                           Minimum Margin
+                           {{ t('products.brand.columns.minimumMargin') }}
                         </th>
                         <th
                            class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase"
                         >
-                           Target Margin
+                           {{ t('products.brand.columns.targetMargin') }}
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                           Action
+                           {{ t('common.edit') }}
                         </th>
                      </tr>
                   </thead>
@@ -186,7 +208,7 @@
                               :to="getFamilyEditLink(family)"
                               class="text-blue-600 hover:text-blue-800 hover:underline font-medium"
                            >
-                              Edit
+                              {{ t('common.edit') }}
                            </router-link>
                         </td>
                      </tr>
@@ -194,7 +216,9 @@
                </table>
                <div v-if="filteredFamilies.length === 0" class="p-6 text-center text-gray-500">
                   {{
-                     showDiscountOnly ? 'No families with discounts found.' : 'No families found.'
+                     showDiscountOnly
+                        ? t('products.brand.noDiscountFamilies')
+                        : t('products.brand.noFamilies')
                   }}
                </div>
             </div>
@@ -203,7 +227,7 @@
             v-else-if="!isNewBrand && families.length === 0"
             class="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500"
          >
-            No families associated with this brand.
+            {{ t('products.brand.noFamiliesLinked') }}
          </div>
       </div>
    </div>
@@ -215,9 +239,11 @@ import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
 import { supabase } from '../../lib/supabase';
+import { useI18n } from '../../i18n/useI18n';
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const brandId = computed(() => (route.params.id ? String(route.params.id) : null));
 const isNewBrand = computed(() => !brandId.value);
@@ -248,8 +274,8 @@ const isEditModeQueryEnabled = () => {
 };
 
 const breadcrumbItems = computed(() => [
-   { label: 'Brands', to: '/vendors/brand' },
-   { label: formData.value.name || 'Loading...' },
+   { label: t('products.brand.breadcrumb'), to: '/vendors/brand' },
+   { label: formData.value.name || t('common.loading') },
 ]);
 
 const filteredFamilies = computed(() => {

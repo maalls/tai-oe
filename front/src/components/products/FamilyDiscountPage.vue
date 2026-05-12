@@ -4,7 +4,9 @@
       <div class="p-6 max-w-5xl mx-auto space-y-6">
          <div class="flex items-center justify-between">
             <div>
-               <h1 class="text-3xl font-bold text-gray-900">{{ t('products.familyDiscount.title') }}</h1>
+               <h1 class="text-3xl font-bold text-gray-900">
+                  {{ t('products.familyDiscount.title') }}
+               </h1>
                <p class="text-sm text-gray-500">{{ t('products.familyDiscount.subtitle') }}</p>
             </div>
             <button type="button" class="text-sm text-gray-600 hover:text-gray-900" @click="goBack">
@@ -18,7 +20,9 @@
 
          <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div v-if="isLoading" class="p-6 text-gray-500">{{ t('common.loading') }}</div>
-            <div v-else-if="!family" class="p-6 text-gray-500">{{ t('products.familyDiscount.notFound') }}</div>
+            <div v-else-if="!family" class="p-6 text-gray-500">
+               {{ t('products.familyDiscount.notFound') }}
+            </div>
             <div v-else class="p-6 space-y-4">
                <div>
                   <div class="text-sm text-gray-500">{{ t('products.familyDiscount.family') }}</div>
@@ -26,21 +30,29 @@
                </div>
                <div class="grid gap-4 sm:grid-cols-2">
                   <div>
-                     <div class="text-xs uppercase tracking-wide text-gray-400">{{ t('products.familyDiscount.code') }}</div>
+                     <div class="text-xs uppercase tracking-wide text-gray-400">
+                        {{ t('products.familyDiscount.code') }}
+                     </div>
                      <div class="text-sm text-gray-700">{{ family.code || '-' }}</div>
                   </div>
                   <div>
-                     <div class="text-xs uppercase tracking-wide text-gray-400">{{ t('products.familyDiscount.type') }}</div>
+                     <div class="text-xs uppercase tracking-wide text-gray-400">
+                        {{ t('products.familyDiscount.type') }}
+                     </div>
                      <div class="text-sm text-gray-700">{{ family.type }}</div>
                   </div>
                   <div>
-                     <div class="text-xs uppercase tracking-wide text-gray-400">{{ t('products.familyDiscount.brand') }}</div>
+                     <div class="text-xs uppercase tracking-wide text-gray-400">
+                        {{ t('products.familyDiscount.brand') }}
+                     </div>
                      <div class="text-sm text-gray-700">{{ family.brand_id }}</div>
                   </div>
                </div>
                <div class="space-y-4">
                   <div class="flex items-center justify-between">
-                     <div class="text-sm font-semibold text-gray-900">{{ t('products.familyDiscount.linesTitle') }}</div>
+                     <div class="text-sm font-semibold text-gray-900">
+                        {{ t('products.familyDiscount.linesTitle') }}
+                     </div>
                      <div class="flex items-center gap-2">
                         <button
                            type="button"
@@ -66,13 +78,27 @@
                         <table class="min-w-full text-sm">
                            <thead class="bg-gray-50 text-gray-600">
                               <tr>
-                                 <th class="px-3 py-2 text-left">{{ t('products.familyDiscount.columns.pos') }}</th>
-                                 <th class="px-3 py-2 text-left">{{ t('products.familyDiscount.columns.sku') }}</th>
-                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.qty') }}</th>
-                                 <th class="px-3 py-2 text-left">{{ t('products.familyDiscount.columns.unit') }}</th>
-                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.unitPrice') }}</th>
-                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.discount') }}</th>
-                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.lineTotal') }}</th>
+                                 <th class="px-3 py-2 text-left">
+                                    {{ t('products.familyDiscount.columns.pos') }}
+                                 </th>
+                                 <th class="px-3 py-2 text-left">
+                                    {{ t('products.familyDiscount.columns.sku') }}
+                                 </th>
+                                 <th class="px-3 py-2 text-right">
+                                    {{ t('products.familyDiscount.columns.qty') }}
+                                 </th>
+                                 <th class="px-3 py-2 text-left">
+                                    {{ t('products.familyDiscount.columns.unit') }}
+                                 </th>
+                                 <th class="px-3 py-2 text-right">
+                                    {{ t('products.familyDiscount.columns.unitPrice') }}
+                                 </th>
+                                 <th class="px-3 py-2 text-right">
+                                    {{ t('products.familyDiscount.columns.discount') }}
+                                 </th>
+                                 <th class="px-3 py-2 text-right">
+                                    {{ t('products.familyDiscount.columns.lineTotal') }}
+                                 </th>
                               </tr>
                            </thead>
                            <tbody class="divide-y divide-gray-200">
