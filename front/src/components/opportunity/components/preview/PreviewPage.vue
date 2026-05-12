@@ -104,7 +104,7 @@ const loadQuotePdf = async () => {
 const deleteQuotePdf = async () => {
    if (!quoteDocumentId.value) return;
 
-   if (!confirm('Are you sure you want to delete the generated PDF?')) {
+   if (!confirm(t('opportunities.confirmDeleteGeneratedPdf'))) {
       return;
    }
 
@@ -118,17 +118,17 @@ const deleteQuotePdf = async () => {
          .eq('id', quoteDocumentId.value);
 
       if (error) {
-         throw new Error(error.message || 'Failed to delete PDF');
+         throw new Error(error.message || t('opportunities.errors.failedToDeletePdf'));
       }
 
       pdfFilename.value = null;
-      successMessage.value = 'Quote PDF deleted successfully';
+      successMessage.value = t('opportunities.quotePdfDeletedSuccess');
       setTimeout(() => {
          successMessage.value = '';
       }, 800);
       router.push(`/opportunities/${opportunityId}/quote`);
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to delete PDF';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToDeletePdf');
    } finally {
       isDeleting.value = false;
    }

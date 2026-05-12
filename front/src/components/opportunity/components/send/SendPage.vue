@@ -326,7 +326,7 @@ const generateQuotePdf = async () => {
    });
 
    if (!response.ok) {
-      throw new Error('Failed to generate quote PDF');
+      throw new Error(t('opportunities.errors.failedToGenerateQuotePdf'));
    } else {
       await loadQuoteDocument();
    }

@@ -322,7 +322,7 @@ const loadOpportunity = async () => {
          .single();
 
       if (error) {
-         errorMessage.value = `Failed to load opportunity: ${error.message}`;
+         errorMessage.value = t('opportunities.errorLoadingOpportunity', { message: error.message });
          return;
       }
 
@@ -332,7 +332,9 @@ const loadOpportunity = async () => {
          await loadAccountDetails(opportunityData.account_id);
       }
    } catch (error) {
-      errorMessage.value = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      errorMessage.value = t('opportunities.errorLoadingOpportunity', {
+         message: error instanceof Error ? error.message : t('opportunities.unknownError'),
+      });
    } finally {
       isLoading.value = false;
    }
@@ -419,12 +421,12 @@ const assignAccountToOpportunity = async (acct: { id: string; name: string }) =>
       accountSearchResults.value = [];
       showAccountResults.value = false;
       await loadAccountDetails(acct.id);
-      successMessage.value = 'Opportunity reassigned to account';
+      successMessage.value = t('opportunities.accountReassignedSuccess');
       setTimeout(() => {
          successMessage.value = '';
       }, 2000);
    } catch (err: any) {
-      errorMessage.value = err?.message || 'Failed to assign account';
+      errorMessage.value = err?.message || t('opportunities.errors.failedToAssignAccount');
    }
 };
 
@@ -459,12 +461,12 @@ const createAccountAndAssign = async () => {
       accountSearchResults.value = [];
       showAccountResults.value = false;
       await loadAccountDetails(newAccount.id);
-      successMessage.value = 'Account created and linked to opportunity';
+      successMessage.value = t('opportunities.accountCreatedAndLinkedSuccess');
       setTimeout(() => {
          successMessage.value = '';
       }, 2000);
    } catch (err: any) {
-      errorMessage.value = err?.message || 'Failed to create account';
+      errorMessage.value = err?.message || t('opportunities.errors.failedToCreateAccount');
    } finally {
       isSearching.value = false;
    }
@@ -498,12 +500,12 @@ const saveAccountDetails = async () => {
          throw new Error(error.message);
       }
 
-      successMessage.value = 'Account updated successfully';
+      successMessage.value = t('opportunities.accountUpdatedSuccess');
       setTimeout(() => {
          successMessage.value = '';
       }, 2000);
    } catch (err: any) {
-      errorMessage.value = err?.message || 'Failed to update account';
+      errorMessage.value = err?.message || t('opportunities.errors.failedToUpdateAccount');
    } finally {
       isSavingAccount.value = false;
    }

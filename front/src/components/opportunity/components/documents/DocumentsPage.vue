@@ -71,7 +71,7 @@
                         <th
                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                           Actions
+                           {{ t('opportunities.actions') }}
                         </th>
                      </tr>
                   </thead>
@@ -293,7 +293,13 @@ const formatDate = (dateString: string) => {
 };
 
 const deleteDocument = async (doc: any) => {
-   if (!confirm(`Are you sure you want to delete "${doc.title || doc.external_ref}"?`)) {
+   if (
+      !confirm(
+         t('opportunities.confirmDeleteDocument', {
+            title: doc.title || doc.external_ref,
+         })
+      )
+   ) {
       return;
    }
 
@@ -312,13 +318,13 @@ const deleteDocument = async (doc: any) => {
       const result = await response.json();
 
       if (!response.ok) {
-         throw new Error(result?.message || 'Failed to delete document');
+         throw new Error(result?.message || t('opportunities.errors.failedToDeleteDocument'));
       }
 
       // Remove from list
       documents.value = documents.value.filter((d) => d.id !== doc.id);
    } catch (error: any) {
-      errorMessage.value = error?.message || 'Failed to delete document';
+      errorMessage.value = error?.message || t('opportunities.errors.failedToDeleteDocument');
       console.error('[DocumentsPage] Error deleting document:', error);
    } finally {
       deletingIds.value.delete(doc.id);

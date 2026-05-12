@@ -188,13 +188,13 @@ async function loadLogs() {
       });
 
       if (!response.ok) {
-         throw new Error('Failed to load logs');
+         throw new Error(t('opportunities.errors.failedToLoadLogs'));
       }
 
       const data = await response.json();
       logs.value = data.logs || [];
    } catch (err: any) {
-      error.value = err.message || 'Failed to load execution logs';
+      error.value = err.message || t('opportunities.errors.failedToLoadExecutionLogs');
       console.error('Error loading logs:', err);
    } finally {
       loading.value = false;
