@@ -209,52 +209,85 @@ class EmailDatabaseHandler:
             email_data["category_suggestion"] = existing_classification.get("category_suggestion")
             email_data["important"] = existing_classification.get("important")
 
-        try:
-            # Use upsert to handle duplicates gracefully
-            response = self.supabase.table("email").upsert(
-                email_data,
-                on_conflict="user_id,provider,provider_message_id"
-            ).execute()
+        payload = dict(email_data)
 
-            if response.data:
-                return {
-                    "success": True,
-                    "email_id": response.data[0]["id"] if isinstance(response.data, list) else response.data["id"],
-                }
-            return {"success": False, "error": "Failed to insert email"}
-        except Exception as e:
-            if "contact_id" in str(e) or "account_id" in str(e):
-                # Retry without contact/account columns if schema cache hasn't refreshed yet
-                email_data.pop("contact_id", None)
-                email_data.pop("account_id", None)
-                try:
-                    response = self.supabase.table("email").upsert(
-                        email_data,
-                        on_conflict="user_id,provider,provider_message_id"
-                    ).execute()
-                    if response.data:
-                        return {
-                            "success": True,
-                            "email_id": response.data[0]["id"] if isinstance(response.data, list) else response.data["id"],
-                        }
-                except Exception:
-                    pass
-            # If upsert fails, try to get existing email
+        def _existing_email_id() -> Optional[str]:
             try:
-                existing = self.supabase.table("email").select("id").eq(
-                    "user_id", user_id
-                ).eq("provider", provider).eq("provider_message_id", provider_message_id).limit(1).execute()
-                
+                existing = (
+                    self.supabase.table("email")
+                    .select("id")
+                    .eq("user_id", user_id)
+                    .eq("provider", provider)
+                    .eq("provider_message_id", provider_message_id)
+                    .limit(1)
+                    .execute()
+                )
                 if existing.data:
+                    return existing.data[0]["id"]
+            except Exception:
+                pass
+            return None
+
+        # Retry loop to tolerate schema drift (missing columns in PostgREST cache).
+        for _ in range(10):
+            try:
+                response = self.supabase.table("email").upsert(
+                    payload,
+                    on_conflict="user_id,provider,provider_message_id"
+                ).execute()
+
+                if response.data:
                     return {
                         "success": True,
-                        "email_id": existing.data[0]["id"],
-                        "skipped": True
+                        "email_id": response.data[0]["id"] if isinstance(response.data, list) else response.data["id"],
                     }
-            except:
-                pass
-            
-            return {"success": False, "error": str(e)}
+
+                existing_id = _existing_email_id()
+                if existing_id:
+                    return {"success": True, "email_id": existing_id, "skipped": True}
+                return {"success": False, "error": "Failed to insert email"}
+            except Exception as e:
+                error_text = str(e)
+
+                # No matching unique constraint for ON CONFLICT -> fallback to plain insert.
+                if "no unique or exclusion constraint" in error_text.lower():
+                    try:
+                        ins_response = self.supabase.table("email").insert(payload).execute()
+                        if ins_response.data:
+                            return {
+                                "success": True,
+                                "email_id": ins_response.data[0]["id"] if isinstance(ins_response.data, list) else ins_response.data["id"],
+                            }
+                    except Exception:
+                        existing_id = _existing_email_id()
+                        if existing_id:
+                            return {"success": True, "email_id": existing_id, "skipped": True}
+                    return {"success": False, "error": error_text}
+
+                # Missing column in schema cache: remove it and retry.
+                missing_col_match = re.search(r"Could not find the '([^']+)' column", error_text)
+                if missing_col_match:
+                    missing_col = missing_col_match.group(1)
+                    if missing_col in payload:
+                        print(f"[EmailRepository] Email schema mismatch: removing missing column '{missing_col}' and retrying")
+                        payload.pop(missing_col, None)
+                        continue
+
+                # Backward compatibility for old fallback behavior.
+                if "contact_id" in error_text or "account_id" in error_text:
+                    payload.pop("contact_id", None)
+                    payload.pop("account_id", None)
+                    continue
+
+                existing_id = _existing_email_id()
+                if existing_id:
+                    return {"success": True, "email_id": existing_id, "skipped": True}
+                return {"success": False, "error": error_text}
+
+        existing_id = _existing_email_id()
+        if existing_id:
+            return {"success": True, "email_id": existing_id, "skipped": True}
+        return {"success": False, "error": "Failed to insert email after schema fallback retries"}
 
     def add_labels(self, email_id: str, labels: List[Dict[str, str]]) -> Dict:
         """Add labels to an email."""
@@ -2191,6 +2224,8 @@ class EmailRepository:
                             skipped_count += 1
                         else:
                             saved_count += 1
+                    else:
+                        print(f"[EmailRepository] Failed to save email {message.get('id')}: {db_result.get('error')}")
 
                     if inspected_count >= max_total_fetch:
                         print(f"[EmailRepository] Reached fetch cap: {max_total_fetch} emails inspected")
