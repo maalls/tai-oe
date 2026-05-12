@@ -527,14 +527,11 @@ const sendEmail = async () => {
          quote_id: quoteDocument.value?.id || null,
       };
 
-      const response = await fetch(
-         `/api/opportunity/${opportunityId}/send-quote`,
-         {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-         }
-      );
+      const response = await fetch(`/api/opportunity/${opportunityId}/send-quote`, {
+         method: 'POST',
+         headers,
+         body: JSON.stringify(payload),
+      });
 
       const result = await response.json();
       if (!response.ok) {

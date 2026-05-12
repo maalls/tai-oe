@@ -195,13 +195,10 @@ const generateInvoice = async () => {
    try {
       const headers = await buildAuthHeaders();
 
-      const response = await fetch(
-         `/api/quote/${props.opportunity.id}/invoice`,
-         {
-            method: 'POST',
-            headers,
-         }
-      );
+      const response = await fetch(`/api/quote/${props.opportunity.id}/invoice`, {
+         method: 'POST',
+         headers,
+      });
 
       const result = await response.json();
       if (!response.ok) {

@@ -322,7 +322,9 @@ const loadOpportunity = async () => {
          .single();
 
       if (error) {
-         errorMessage.value = t('opportunities.errorLoadingOpportunity', { message: error.message });
+         errorMessage.value = t('opportunities.errorLoadingOpportunity', {
+            message: error.message,
+         });
          return;
       }
 

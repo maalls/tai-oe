@@ -489,15 +489,12 @@ const generateInvoiceAndOpen = async () => {
    isUpdating.value = true;
    try {
       const token = await getValidToken();
-      const response = await fetch(
-         `/api/quote/${props.opportunityId}/invoice`,
-         {
-            method: 'POST',
-            headers: {
-               Authorization: `Bearer ${token}`,
-            },
-         }
-      );
+      const response = await fetch(`/api/quote/${props.opportunityId}/invoice`, {
+         method: 'POST',
+         headers: {
+            Authorization: `Bearer ${token}`,
+         },
+      });
 
       const result = await response.json();
       if (!response.ok) {

@@ -444,7 +444,8 @@ export default {
             failedToLoadOpportunities: 'Failed to load opportunities',
             failedToCreateOpportunity: 'Failed to create opportunity',
             failedToDeleteOpportunities: 'Failed to delete opportunities',
-            loadOpportunitiesWithReason: 'Error loading opportunities: {message}. Please try refreshing the page.',
+            loadOpportunitiesWithReason:
+               'Error loading opportunities: {message}. Please try refreshing the page.',
             createOpportunityWithReason: 'Error creating opportunity: {message}',
             deleteOpportunitiesWithReason: 'Error deleting opportunities: {message}',
          },
