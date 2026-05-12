@@ -897,6 +897,11 @@ class BusinessHandlers:
                     }
 
             # Build rfp-like structure for PDF generator
+            # Try to get totals from document, but will recalculate if missing/zero
+            stored_total_excl = float(document.get("total_excl_tax") or 0)
+            stored_total_tax = float(document.get("total_tax") or 0)
+            stored_total_incl = float(document.get("total_incl_tax") or 0)
+            
             rfp_data = {
                 "quote_id": document.get("id"),
                 "title": document.get("title") or "Quote",
@@ -915,11 +920,15 @@ class BusinessHandlers:
                 "valid_until": document.get("valid_until"),
                 "currency": document.get("currency", "EUR"),
                 "totals": {
-                    "subtotal": float(document.get("total_excl_tax", 0)),
-                    "tax": float(document.get("total_tax", 0)),
-                    "total": float(document.get("total_incl_tax", 0)),
+                    "subtotal": stored_total_excl,
+                    "tax": stored_total_tax,
+                    "total": stored_total_incl,
                 }
             }
+
+            print(f"[BusinessHandlers] PDF Generation Debug:")
+            print(f"  document_id: {document_id}")
+            print(f"  stored totals - excl_tax: {stored_total_excl}, tax: {stored_total_tax}, incl_tax: {stored_total_incl}")
 
             for line in lines:
                 sku = str(line.get("sku") or "").strip()
@@ -967,9 +976,46 @@ class BusinessHandlers:
                     "unit": line.get("unit", "U"),
                 })
 
+            # If totals are missing/zero in document, recalculate from lines
+            if stored_total_excl == 0 and stored_total_tax == 0 and stored_total_incl == 0:
+                print(f"[BusinessHandlers] Recalculating totals from lines (stored totals were zero/missing)")
+                calculated_total_excl = 0.0
+                calculated_total_tax = 0.0
+                for product in rfp_data["products"]:
+                    try:
+                        line_total = float(product.get("line_total_excl_tax", 0) or 0)
+                        tax_rate = float(product.get("tax_rate", 20) or 20)
+                    except Exception:
+                        line_total = 0.0
+                        tax_rate = 20.0
+                    
+                    calculated_total_excl += line_total
+                    calculated_total_tax += line_total * (tax_rate / 100.0)
+                
+                calculated_total_excl = round(calculated_total_excl, 2)
+                calculated_total_tax = round(calculated_total_tax, 2)
+                calculated_total_incl = round(calculated_total_excl + calculated_total_tax, 2)
+                
+                print(f"[BusinessHandlers] Calculated totals - excl_tax: {calculated_total_excl}, tax: {calculated_total_tax}, incl_tax: {calculated_total_incl}")
+                
+                rfp_data["totals"]["subtotal"] = calculated_total_excl
+                rfp_data["totals"]["tax"] = calculated_total_tax
+                rfp_data["totals"]["total"] = calculated_total_incl
+
             pdf_filename = self._generate_quote_pdf(rfp_data)
 
-            upd_resp = supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
+            # Prepare update data with PDF filename and totals if they were recalculated
+            update_data = {"storage_key": pdf_filename}
+            if stored_total_excl == 0 and stored_total_tax == 0 and stored_total_incl == 0:
+                # Persist the recalculated totals
+                update_data.update({
+                    "total_excl_tax": rfp_data["totals"]["subtotal"],
+                    "total_tax": rfp_data["totals"]["tax"],
+                    "total_incl_tax": rfp_data["totals"]["total"],
+                })
+                print(f"[BusinessHandlers] Persisting recalculated totals: {update_data}")
+
+            upd_resp = supabase.table("document").update(update_data).eq("id", document_id).execute()
             if getattr(upd_resp, "error", None):
                 return {"status": "error", "message": f"Failed to update document with PDF: {upd_resp.error}"}
 
