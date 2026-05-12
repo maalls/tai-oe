@@ -41,17 +41,26 @@
             </label>
             <div class="flex items-center gap-3">
                <input
+                  ref="fileInputRef"
                   id="rfq-file"
                   name="rfq-file"
                   type="file"
                   @change="$emit('onFileSelected', $event)"
-                  class="ao flex-1 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer"
+                  class="sr-only"
                />
-               <span
-                  v-if="rfqForm.file"
-                  class="text-sm text-green-600 font-medium whitespace-nowrap"
+               <button
+                  type="button"
+                  class="ao px-4 py-2 border border-gray-300 rounded-lg cursor-pointer bg-white text-gray-700 hover:bg-gray-50"
+                  @click="fileInputRef?.click()"
                >
-                  {{ t('opportunities.rfqFileSelected', { fileName: rfqForm.file.name }) }}
+                  {{ t('opportunities.chooseFile') }}
+               </button>
+               <span class="text-sm text-gray-500 truncate">
+                  {{
+                     rfqForm.file
+                        ? t('opportunities.rfqFileSelected', { fileName: rfqForm.file.name })
+                        : t('opportunities.noFileChosen')
+                  }}
                </span>
             </div>
          </div>
@@ -95,6 +104,7 @@ const props = defineProps({
 defineEmits(['submitRFQ', 'onFileSelected']);
 
 const messageInputRef = ref<HTMLTextAreaElement | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const getScrollParent = (el: HTMLElement | null) => {
    if (!el) return null;

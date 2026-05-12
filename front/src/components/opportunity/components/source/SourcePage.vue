@@ -9,7 +9,7 @@
          <div
             :class="[
                isChatCollapsed ? 'w-10' : 'w-96',
-               'flex-shrink-0  border-gray-300 flex flex-col h-full overflow-hidden transition-[width] duration-200',
+               'shrink-0 border-gray-300 flex flex-col h-full overflow-hidden transition-[width] duration-200',
             ]"
          >
             <ChatPanel
@@ -32,7 +32,7 @@
                   for="opportunity-name`"
                   class="block mt-4 text-sm font-medium text-gray-700 mb-1"
                >
-                  {{ t('opportunities.description') }}
+                  {{ t('opportunities.opportunityNameLabel') }}
                </label>
                <div class="mb-2">
                   <label class="flex flex-col gap-1 w-full">

@@ -293,7 +293,7 @@ import { useAuth } from '../../../../stores/auth';
 import EmailSentView from '../../../shared/EmailSentView.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 
-const { t } = useI18n();
+const { t, te, locale } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
@@ -317,15 +317,11 @@ const emailForm = ref({
 const sentEmail = ref<any>(null);
 
 const invoiceDownloadUrl = computed(() => {
-   return pdfFilename.value
-      ? `/api/documents/download/${pdfFilename.value}`
-      : '';
+   return pdfFilename.value ? `/api/documents/download/${pdfFilename.value}` : '';
 });
 
 const invoicePreviewUrl = computed(() => {
-   return pdfFilename.value
-      ? `/api/documents/download/${pdfFilename.value}?inline=1`
-      : '';
+   return pdfFilename.value ? `/api/documents/download/${pdfFilename.value}?inline=1` : '';
 });
 
 const loadInvoice = async () => {
@@ -391,8 +387,13 @@ const loadInvoice = async () => {
          emailForm.value = {
             to: '',
             cc: '',
-            subject: `Invoice ${invoice.value.external_ref || invoice.value.id}`,
-            body: `Dear Customer,\n\nPlease find attached invoice ${invoice.value.external_ref || invoice.value.id} for ${formatCurrency(invoice.value.total_incl_tax, invoice.value.currency)}.\n\nThank you for your business.\n\nBest regards`,
+            subject: t('opportunities.invoiceEmailSubject', {
+               reference: invoice.value.external_ref || invoice.value.id,
+            }),
+            body: t('opportunities.invoiceEmailBody', {
+               reference: invoice.value.external_ref || invoice.value.id,
+               amount: formatCurrency(invoice.value.total_incl_tax, invoice.value.currency),
+            }),
          };
 
          // Try to load contact email from opportunity account
@@ -561,12 +562,14 @@ const getStatusColor = (status: string) => {
 };
 
 const formatStatus = (status: string) => {
-   return status.replace(/_/g, ' ');
+   const key = `opportunities.invoiceStatuses.${status}` as const;
+   return te(key) ? t(key) : status.replace(/_/g, ' ');
 };
 
 const formatCurrency = (value: number, currency: string = 'EUR') => {
    const amount = Number(value) || 0;
-   return new Intl.NumberFormat('en-US', {
+   const resolvedLocale = locale.value === 'fr' ? 'fr-FR' : 'en-US';
+   return new Intl.NumberFormat(resolvedLocale, {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 2,
@@ -577,7 +580,8 @@ const formatCurrency = (value: number, currency: string = 'EUR') => {
 const formatDate = (dateString: string) => {
    if (!dateString) return '—';
    const date = new Date(dateString);
-   return new Intl.DateTimeFormat('en-US', {
+   const resolvedLocale = locale.value === 'fr' ? 'fr-FR' : 'en-US';
+   return new Intl.DateTimeFormat(resolvedLocale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

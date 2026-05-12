@@ -14,7 +14,7 @@
                   <span v-else-if="loadingRecent">{{ t('opportunities.loadingDots') }}</span>
                   <span v-else>{{ t('opportunities.selectOpportunity') }}</span>
                   <svg
-                     class="w-4 h-4 ml-2 flex-shrink-0"
+                     class="w-4 h-4 ml-2 shrink-0"
                      :class="{ 'transform rotate-180': showDropdown }"
                      fill="none"
                      stroke="currentColor"
@@ -183,7 +183,7 @@
                      : 'border-transparent text-gray-600 hover:text-gray-900',
                ]"
             >
-               Invoices
+               {{ t('opportunities.invoicesTitle') }}
             </router-link>
             <!--router-link
                :to="`/opportunities/${opportunityId}/actions`"

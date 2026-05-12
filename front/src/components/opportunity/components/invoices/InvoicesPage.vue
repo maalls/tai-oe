@@ -125,7 +125,7 @@ import { supabase } from '../../../../lib/supabase';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 
-const { t } = useI18n();
+const { t, te, locale } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
@@ -173,12 +173,14 @@ const getStatusColor = (status: string) => {
 };
 
 const formatStatus = (status: string) => {
-   return status.replace(/_/g, ' ');
+   const key = `opportunities.invoiceStatuses.${status}` as const;
+   return te(key) ? t(key) : status.replace(/_/g, ' ');
 };
 
 const formatCurrency = (value: number, currency: string = 'EUR') => {
    const amount = Number(value) || 0;
-   return new Intl.NumberFormat('en-US', {
+   const resolvedLocale = locale.value === 'fr' ? 'fr-FR' : 'en-US';
+   return new Intl.NumberFormat(resolvedLocale, {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 2,
@@ -189,7 +191,8 @@ const formatCurrency = (value: number, currency: string = 'EUR') => {
 const formatDate = (dateString: string) => {
    if (!dateString) return '—';
    const date = new Date(dateString);
-   return new Intl.DateTimeFormat('en-US', {
+   const resolvedLocale = locale.value === 'fr' ? 'fr-FR' : 'en-US';
+   return new Intl.DateTimeFormat(resolvedLocale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
