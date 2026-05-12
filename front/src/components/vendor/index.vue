@@ -46,10 +46,10 @@
                         {{ t('vendors.columns.brands') }}
                      </th>
                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        Families
+                        {{ t('vendors.columns.families') }}
                      </th>
                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        Products
+                        {{ t('vendors.columns.products') }}
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                         {{ t('vendors.columns.created') }}

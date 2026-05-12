@@ -122,12 +122,12 @@
                         <th
                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                           minimum margin
+                           {{ t('products.brand.columns.minimumMargin') }}
                         </th>
                         <th
                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                           target margin
+                           {{ t('products.brand.columns.targetMargin') }}
                         </th>
                      </tr>
                   </thead>
@@ -202,8 +202,8 @@ const formData = ref({
 });
 
 const breadcrumbItems = computed(() => [
-   { label: 'Vendors', to: '/vendors' },
-   { label: formData.value.name || 'Loading...' },
+   { label: t('vendors.breadcrumb'), to: '/vendors' },
+   { label: formData.value.name || t('common.loading') },
 ]);
 
 const loadVendor = async () => {

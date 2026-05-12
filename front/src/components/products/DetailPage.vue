@@ -2,16 +2,16 @@
    <div class="p-6 max-w-4xl mx-auto">
       <div class="flex items-center justify-between mb-6">
          <div>
-            <div class="text-sm text-gray-500">Product Detail</div>
+            <div class="text-sm text-gray-500">{{ t('products.detail.title') }}</div>
             <h1 class="text-3xl font-bold text-gray-900">
-               {{ product?.refciale || 'Product' }}
+               {{ product?.refciale || t('products.detail.fallbackTitle') }}
             </h1>
          </div>
          <RouterLink
             to="/products"
             class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
          >
-            Back to Products
+            {{ t('products.detail.back') }}
          </RouterLink>
       </div>
 
@@ -20,45 +20,45 @@
       </div>
 
       <div v-if="loading" class="bg-white rounded-lg shadow p-6 text-gray-600">
-         Loading product...
+         {{ t('products.detail.loading') }}
       </div>
 
       <div v-else-if="!product" class="bg-white rounded-lg shadow p-6 text-gray-600">
-         Product not found.
+         {{ t('products.detail.notFound') }}
       </div>
 
       <div v-else class="bg-white rounded-lg shadow p-6">
          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-               <div class="text-sm text-gray-500">Ref. Ciale</div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.refciale') }}</div>
                <div class="text-lg font-mono text-gray-900">{{ product.refciale }}</div>
             </div>
             <div>
-               <div class="text-sm text-gray-500">Marque</div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.brand') }}</div>
                <div class="text-lg text-gray-900">{{ product.marque || '-' }}</div>
             </div>
             <div class="md:col-span-2">
-               <div class="text-sm text-gray-500">Description</div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.description') }}</div>
                <div class="text-gray-900">{{ product.libelle240 || '-' }}</div>
             </div>
             <div>
-               <div class="text-sm text-gray-500">Tarif</div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.tarif') }}</div>
                <div class="text-lg font-semibold text-gray-900">
                   {{ formatPrice(product.tarif) }}
                </div>
             </div>
             <div>
-               <div class="text-sm text-gray-500">Gamme</div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.gamme') }}</div>
                <div class="text-gray-900">{{ product.gamme || '-' }}</div>
             </div>
             <div>
-               <div class="text-sm text-gray-500">Quantity</div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.quantity') }}</div>
                <div class="text-gray-900">{{ product.qt ?? '-' }}</div>
             </div>
          </div>
 
          <div v-if="rawPayload" class="mt-6">
-            <div class="text-sm text-gray-500 mb-2">Raw Payload</div>
+            <div class="text-sm text-gray-500 mb-2">{{ t('products.detail.rawPayload') }}</div>
             <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">{{
                rawPayload
             }}</pre>
@@ -71,6 +71,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '../../lib/supabase';
+import { useI18n } from '../../i18n/useI18n';
 
 interface Product {
    id: string | number;
@@ -83,6 +84,7 @@ interface Product {
 }
 
 const route = useRoute();
+const { t } = useI18n();
 const product = ref<Product | null>(null);
 const loading = ref(false);
 const error = ref('');
@@ -92,7 +94,7 @@ async function loadProduct() {
    const routeId = route.params.id;
    const id = Array.isArray(routeId) ? routeId[0] : routeId;
    if (!id) {
-      error.value = 'Missing product id.';
+      error.value = t('products.detail.missingId');
       return;
    }
 
@@ -107,7 +109,7 @@ async function loadProduct() {
          .single();
 
       if (queryError) {
-         throw new Error(queryError.message || 'Failed to load product');
+         throw new Error(queryError.message || t('products.detail.loadFailed'));
       }
 
       if (!data) {
@@ -115,9 +117,7 @@ async function loadProduct() {
          return;
       }
 
-      const brandData = Array.isArray(data.brand)
-         ? (data.brand[0] as any)
-         : (data.brand as any);
+      const brandData = Array.isArray(data.brand) ? (data.brand[0] as any) : (data.brand as any);
 
       product.value = {
          id: data.id,

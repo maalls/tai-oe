@@ -1,28 +1,38 @@
 <template>
    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div v-if="loading" class="p-6 text-center text-gray-600">Loading products...</div>
+      <div v-if="loading" class="p-6 text-center text-gray-600">
+         {{ t('products.table.loading') }}
+      </div>
       <div v-else-if="products.length === 0" class="p-6 text-center text-gray-600">
-         No products found
+         {{ t('products.table.empty') }}
       </div>
       <div v-else class="overflow-x-auto">
          <div class="px-6 py-3 text-sm text-gray-600 border-b border-gray-200 bg-white">
             <template v-if="isUsingSearch">
-               {{ products.length }} result{{ products.length > 1 ? 's' : '' }}
+               {{ t('products.table.results', { count: products.length }) }}
             </template>
-            <template v-else> Showing {{ products.length }} of {{ totalCount }} products </template>
+            <template v-else>
+               {{ t('products.table.showing', { count: products.length, total: totalCount }) }}
+            </template>
          </div>
          <table class="w-full">
             <thead class="bg-gray-50 border-b border-gray-200">
                <tr>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                     Ref. Ciale
+                     {{ t('products.table.columns.refciale') }}
                   </th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Brand</th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                     Description
+                     {{ t('products.table.columns.brand') }}
                   </th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Families</th>
-                  <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">Price</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                     {{ t('products.table.columns.description') }}
+                  </th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                     {{ t('products.table.columns.families') }}
+                  </th>
+                  <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                     {{ t('products.table.columns.price') }}
+                  </th>
                </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -82,9 +92,11 @@
       >
          <div class="text-sm text-gray-600">
             <template v-if="isUsingSearch">
-               {{ products.length }} result{{ products.length > 1 ? 's' : '' }}
+               {{ t('products.table.results', { count: products.length }) }}
             </template>
-            <template v-else> Showing {{ products.length }} of {{ totalCount }} products </template>
+            <template v-else>
+               {{ t('products.table.showing', { count: products.length, total: totalCount }) }}
+            </template>
          </div>
          <button
             v-if="nextOffset && !isUsingSearch"
@@ -92,7 +104,7 @@
             :disabled="loading"
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
          >
-            Load More
+            {{ t('products.table.loadMore') }}
          </button>
       </div>
    </div>
@@ -100,6 +112,9 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import { useI18n } from '../../../../i18n/useI18n';
+
+const { t } = useI18n();
 
 defineProps<{
    products: any[];

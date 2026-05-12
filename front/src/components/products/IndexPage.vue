@@ -3,12 +3,12 @@
       <ProductsSubHeader />
       <div class="p-6 max-w-7xl mx-auto">
          <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">Products</h1>
+            <h1 class="text-3xl font-bold text-gray-900">{{ t('products.list.title') }}</h1>
             <router-link
                to="/products/new"
                class="inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
             >
-               + New Product
+               {{ t('products.list.new') }}
             </router-link>
          </div>
 
@@ -23,7 +23,7 @@
                <input
                   v-model="searchQuery"
                   type="text"
-                  placeholder="e.g., transformateur, switch, cable..."
+                  :placeholder="t('products.list.searchPlaceholder')"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   @keydown.enter="performSearch"
                />
@@ -33,7 +33,7 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                     Marque (Manufacturer)
+                     {{ t('products.list.fields.marque') }}
                   </label>
                   <input
                      v-model="filterMarque"
@@ -45,7 +45,7 @@
                </div>
                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                     Refciale (Part Number)
+                     {{ t('products.list.fields.refciale') }}
                   </label>
                   <input
                      v-model="filterRefciale"
@@ -57,7 +57,7 @@
                </div>
                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                     Tarif (Price)
+                     {{ t('products.list.fields.tarif') }}
                   </label>
                   <input
                      v-model="filterTarif"
@@ -68,7 +68,9 @@
                   />
                </div>
                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"> Family Code </label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                     {{ t('products.list.fields.family') }}
+                  </label>
                   <input
                      v-model="filterFamily"
                      type="text"
@@ -85,21 +87,21 @@
                   :disabled="loading"
                   class="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50 hover:bg-blue-700"
                >
-                  {{ loading ? 'Searching...' : 'Search' }}
+                  {{ loading ? t('products.list.searching') : t('common.search') }}
                </button>
                <button
                   @click="clearSearch"
                   :disabled="loading"
                   class="px-4 py-2 bg-gray-400 text-white rounded-md disabled:opacity-50 hover:bg-gray-500"
                >
-                  Clear
+                  {{ t('common.clear') }}
                </button>
                <button
                   @click="loadProducts"
                   :disabled="loading"
                   class="px-4 py-2 bg-gray-600 text-white rounded-md disabled:opacity-50 hover:bg-gray-700"
                >
-                  Show All
+                  {{ t('products.list.showAll') }}
                </button>
             </div>
 
@@ -129,6 +131,7 @@ import ProductsSubHeader from './ProductsSubHeader.vue';
 import Table from './components/table/index.vue';
 import { useBrandFamilyData } from './useBrandFamilyData';
 import { supabase } from '../../lib/supabase';
+import { useI18n } from '../../i18n/useI18n';
 
 interface Product {
    id: string | number;
@@ -163,6 +166,7 @@ const currentOffset = ref(0);
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const { brands, families, loadData: loadBrandData } = useBrandFamilyData();
 
