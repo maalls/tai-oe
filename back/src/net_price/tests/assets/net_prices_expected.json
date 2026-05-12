@@ -1,0 +1,123 @@
+{
+  "products": [
+    {
+      "product_code": "470136",
+      "local_code": null,
+      "description": "DISJ. PH/N SN201T-C10 U / 3KA",
+      "quantity": 72.0,
+      "net_price": 3.91
+    },
+    {
+      "product_code": "470138",
+      "local_code": null,
+      "description": "DISJ. PH/N SN201T-C16 U / 3KA",
+      "quantity": 72.0,
+      "net_price": 3.91
+    },
+    {
+      "product_code": "470139",
+      "local_code": null,
+      "description": "DISJ. PH/N SN201T-C20 U / 3KA",
+      "quantity": 72.0,
+      "net_price": 3.91
+    },
+    {
+      "product_code": "470141",
+      "local_code": null,
+      "description": "DISJ. PH/N SN201T-C32 U / 3KA",
+      "quantity": 72.0,
+      "net_price": 4.4
+    },
+    {
+      "product_code": "471011",
+      "local_code": null,
+      "description": "DISJ.DIF. DS201 L C6 AC30",
+      "quantity": 5.0,
+      "net_price": 39.04
+    },
+    {
+      "product_code": "471012",
+      "local_code": null,
+      "description": "DISJ.DIF. DS201 L C10 AC30",
+      "quantity": 5.0,
+      "net_price": 35.54
+    },
+    {
+      "product_code": "471014",
+      "local_code": null,
+      "description": "DISJ.DIF. DS201 L C20 AC30",
+      "quantity": 5.0,
+      "net_price": 41.02
+    },
+    {
+      "product_code": "471015",
+      "local_code": null,
+      "description": "DISJ.DIF. DS201 L C25 AC30",
+      "quantity": 5.0,
+      "net_price": 41.02
+    },
+    {
+      "product_code": "471016",
+      "local_code": null,
+      "description": "DISJ.DIF. DS201 L C32 AC30",
+      "quantity": 5.0,
+      "net_price": 46.1
+    },
+    {
+      "product_code": "443051",
+      "local_code": null,
+      "description": "INTER.DIF.FH202 AC-40/0.03",
+      "quantity": 6.0,
+      "net_price": 19.4
+    },
+    {
+      "product_code": "443061",
+      "local_code": null,
+      "description": "INTER.DIF.FH202 AC-63/0.03",
+      "quantity": 6.0,
+      "net_price": 31.0
+    },
+    {
+      "product_code": "443151",
+      "local_code": null,
+      "description": "INTER.DIF.FH202 A-40/0.03",
+      "quantity": 6.0,
+      "net_price": 24.08
+    },
+    {
+      "product_code": "443161",
+      "local_code": null,
+      "description": "INTER.DIF.FH202 A-63/0.03",
+      "quantity": 6.0,
+      "net_price": 36.0
+    },
+    {
+      "product_code": "444051",
+      "local_code": null,
+      "description": "INTER.DIF.FH202S AC-40/0.03",
+      "quantity": 6.0,
+      "net_price": 21.5
+    },
+    {
+      "product_code": "444061",
+      "local_code": null,
+      "description": "INTER.DIF.FH202S AC-63/0.03",
+      "quantity": 6.0,
+      "net_price": 34.0
+    },
+    {
+      "product_code": "444151",
+      "local_code": null,
+      "description": "INTER.DIF.FH202S A-40/0.03",
+      "quantity": 6.0,
+      "net_price": 24.5
+    },
+    {
+      "product_code": "444161",
+      "local_code": null,
+      "description": "INTER.DIF.FH202S A-63/0.03",
+      "quantity": 6.0,
+      "net_price": 39.0
+    }
+  ]
+}

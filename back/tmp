@@ -1,0 +1,24 @@
+[EmailRepository] Auto-resolved after-date to: 1770069010 (epoch seconds)
+[EmailRepository] Fetching emails from Gmail...
+[EmailRepository] Last fetched email ID: None
+[EmailRepository] Date limit (oldest email): 1770069010
+[EmailRepository] Fetching ALL emails since 1770069010 (ignoring duplicate detection)
+[EmailRepository] Fetching page 1...
+[GmailClient] Listing messages with params: {'userId': 'me', 'maxResults': 50, 'q': 'after:1770069010'}
+[EmailRepository] No more messages to fetch
+[EmailRepository] Fetched 0 new emails across 1 page(s)
+[EmailRepository] Saved 0 new, skipped 0 duplicate emails (total 0)
+[EmailRepository] ✓ Fetched emails successfully
+[EmailRepository] ✓ Created 0 contacts and 0 accounts
+[EmailRepository] Classifying emails...
+[EmailRepository] ✓ Classified 0 emails
+
+[fetch-emails] Summary:
+  Status: ok
+  Emails fetched: 0
+  Emails classified: 0
+  Contacts created: 0
+  Accounts created: 0
+  RFQ processed: 0
+  Opportunities created: 0
+  Quotes generated: 0

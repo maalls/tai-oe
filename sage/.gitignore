@@ -1,0 +1,18 @@
+# .NET build outputs
+bin/
+obj/
+
+# Visual Studio / Rider artifacts
+.vs/
+*.user
+*.suo
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Secrets / local overrides (keep appsettings.json, ignore environment overrides)
+appsettings.*.json
+!appsettings.json

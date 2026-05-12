@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quote</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', sans-serif;
+        color: #333;
+        line-height: 1.4;
+        padding: 10px;
+        background-color: #fff;
+      }
+      .container {
+        max-width: 100%;
+        margin: 0;
+        background: white;
+        padding: 15px;
+      }
+      .header {
+        border-bottom: 2px solid #0066cc;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
+      .header h1 {
+        color: #0066cc;
+        font-size: 20px;
+        margin-bottom: 5px;
+      }
+      .header p {
+        color: #666;
+        font-size: 9px;
+        margin: 2px 0;
+      }
+      .contact-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 3px;
+      }
+      .contact-block h3 {
+        color: #0066cc;
+        font-size: 10px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .contact-block p {
+        font-size: 9px;
+        margin-bottom: 2px;
+        color: #555;
+      }
+      .contact-block a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+      }
+      table thead {
+        background-color: #0066cc;
+        color: white;
+      }
+      table th {
+        padding: 6px 4px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 9px;
+        text-transform: uppercase;
+      }
+      table td {
+        padding: 5px 4px;
+        border-bottom: 1px solid #ddd;
+        font-size: 8px;
+      }
+      table tbody tr:hover {
+        background-color: #f9f9f9;
+      }
+      .text-right {
+        text-align: right;
+      }
+      .text-center {
+        text-align: center;
+      }
+      .total-row {
+        background-color: #f5f5f5;
+        font-weight: bold;
+      }
+      .total-row td {
+        border-bottom: 2px solid #0066cc;
+        border-top: 2px solid #0066cc;
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+      }
+      .summary-item {
+        font-size: 12px;
+      }
+      .summary-item h4 {
+        color: #0066cc;
+        margin-bottom: 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .summary-item p {
+        color: #555;
+      }
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+        text-align: center;
+        color: #999;
+        font-size: 10px;
+      }
+      .price-col {
+        width: 12%;
+        text-align: right;
+      }
+      .qty-col {
+        width: 8%;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>Quote</h1>
+        <p>Quote ID: {{ quote_id }}</p>
+        <p>Generated on {{ generated_date }}</p>
+        {% if issued_date %}
+        <p>Issued: {{ issued_date }}</p>
+        {% endif %} {% if valid_until %}
+        <p>Valid until: {{ valid_until }}</p>
+        {% endif %}
+      </div>
+
+      <!-- Contact Information -->
+      {% if contact %}
+      <div class="contact-section">
+        <div class="contact-block">
+          <h3>From:</h3>
+          {% if contact.company_name %}
+          <p><strong>{{ contact.company_name }}</strong></p>
+          {% endif %} {% if contact.name %}
+          <p>{{ contact.name }}</p>
+          {% endif %} {% if contact.email %}
+          <p><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></p>
+          {% endif %} {% if contact.phone %}
+          <p>{{ contact.phone }}</p>
+          {% endif %}
+        </div>
+        <div class="contact-block">
+          <h3>Address:</h3>
+          {% if contact.address %} {% if contact.address is mapping %} {% if
+          contact.address.street_address %}
+          <p>{{ contact.address.street_address }}</p>
+          {% endif %} {% if contact.address.city %}
+          <p>
+            {{ contact.address.city }}{% if contact.address.postal_code %} {{
+            contact.address.postal_code }}{% endif %}
+          </p>
+          {% endif %} {% if contact.address.country_name %}
+          <p>{{ contact.address.country_name }}</p>
+          {% endif %} {% else %}
+          <p>{{ contact.address }}</p>
+          {% endif %} {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Title and Budget -->
+      {% if title or budget %}
+      <div
+        style="
+          margin-bottom: 20px;
+          padding: 15px;
+          background-color: #f5f5f5;
+          border-radius: 4px;
+        "
+      >
+        {% if title %}
+        <p><strong>Project:</strong> {{ title }}</p>
+        {% endif %} {% if budget %}
+        <p><strong>Budget:</strong> {{ budget }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Products Table -->
+      {% if products %}
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 6%">Qty</th>
+            <th style="width: 10%">Manufacturer</th>
+            <th style="width: 12%">Part Number</th>
+            <th style="width: 45%">Description</th>
+            <th style="width: 12%; text-align: right">Price</th>
+            <th style="width: 15%; text-align: right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td class="text-center">{{ product.quantity }}</td>
+            <td>{{ product.manufacturer or '-' }}</td>
+            <td style="font-family: monospace; font-size: 10px">
+              {{ product.part_number or '-' }}
+            </td>
+            <td>{{ product.description or '-' }}</td>
+            <td class="text-right">
+              {% if product.price_found and product.price %} {{
+              "%.2f"|format(product.price) }} {% else %} - {% endif %}
+            </td>
+            <td class="text-right">
+              {% if product.price_found and product.price %} {{
+              "%.2f"|format(product.quantity * product.price) }} {% else %} - {%
+              endif %}
+            </td>
+          </tr>
+          {% endfor %} {# Calculate totals using namespace for mutable counter
+          #} {% set ns = namespace(subtotal=0) %} {% for product in products %}
+          {% if product.price_found and product.price %} {% set ns.subtotal =
+          ns.subtotal + (product.quantity * product.price) %} {% endif %} {%
+          endfor %} {% set tax = ns.subtotal * 0.20 %} {% set total =
+          ns.subtotal + tax %}
+
+          <tr class="total-row">
+            <td colspan="5" class="text-right">SUBTOTAL:</td>
+            <td class="text-right">{{ "%.2f"|format(ns.subtotal) }}</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="5" class="text-right">TAX (20%):</td>
+            <td class="text-right">{{ "%.2f"|format(tax) }}</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="5" class="text-right">TOTAL:</td>
+            <td class="text-right">{{ "%.2f"|format(total) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% endif %}
+
+      <!-- Summary -->
+      <div class="summary">
+        <div class="summary-item">
+          <h4>Items</h4>
+          <p>{{ products|length if products else 0 }} product(s)</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>
+          This quote is generated automatically and is valid for 30 days from
+          the issue date.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Node
+front/node_modules/
+front/dist/
+front/.vite/
+
+# Environment / secrets
+.env
+.env.*
+back/.env
+front/.env
+front/.env.*
+supabase/.env*
+
+# Runtime / temp
+var/
+tmp/
+*.log
+
+# Local backups / generated data
+supabase.pre-reinstall-*/
+back/tmp/
+supabase/volumes/

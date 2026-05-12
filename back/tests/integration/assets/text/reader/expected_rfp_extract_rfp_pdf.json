@@ -1,0 +1,79 @@
+{
+  "cached_at": "20260511-090027",
+  "elapsed_seconds": 102.515,
+  "input_chars": 910,
+  "result": {
+    "products": [
+      {
+        "quantity": 31,
+        "quantity_unit": "PCS",
+        "manufacturer": "ABB",
+        "part_number": "073984",
+        "description": "KIT PRISE HR INF E1.2"
+      },
+      {
+        "quantity": 92,
+        "quantity_unit": "",
+        "manufacturer": "ABB",
+        "part_number": "856039",
+        "description": "AP11STHC couvercle (pivot. transp.) R7035"
+      },
+      {
+        "quantity": 63,
+        "quantity_unit": "",
+        "manufacturer": "ABB",
+        "part_number": "12814",
+        "description": "Boite Derivation Polycarbonate IP65 275X370X140"
+      },
+      {
+        "quantity": 23,
+        "quantity_unit": "",
+        "manufacturer": "Thomas&Betts",
+        "part_number": "CPS12B-50-CV0",
+        "description": "B. Sleev. Conformed V0 - 50M"
+      },
+      {
+        "quantity": 30,
+        "quantity_unit": "",
+        "manufacturer": "Thomas&Betts",
+        "part_number": "EXS07MSC3K",
+        "description": "ATTACHE INOX 4.6X680MM"
+      },
+      {
+        "quantity": 90,
+        "quantity_unit": "",
+        "manufacturer": "Thomas&Betts",
+        "part_number": "GSC297",
+        "description": "Bague extérieure - Ferrule Shield-Kon en 2 parties Ø7.54mm"
+      },
+      {
+        "quantity": 44,
+        "quantity_unit": "",
+        "manufacturer": "ABB",
+        "part_number": "831338",
+        "description": "ARIA 108 Platine de montage tôle métallique perforée 1.5mm"
+      },
+      {
+        "quantity": 90,
+        "quantity_unit": "",
+        "manufacturer": "Thomas&Betts",
+        "part_number": "AL16/U075/A/000620",
+        "description": "Raccord droit - Polyamide (Nylon) 6 - Pas UNEF - Noir"
+      },
+      {
+        "quantity": null,
+        "quantity_unit": "",
+        "manufacturer": "ABB",
+        "part_number": "703174",
+        "description": "Bouton Poussoir lumineux 1F Bleu 12-48V AC/DC E217-16-10G448"
+      },
+      {
+        "quantity": 23,
+        "quantity_unit": "",
+        "manufacturer": "Hélita",
+        "part_number": "B752160",
+        "description": "Collier de cerclage pour mat Ø30 a 50 mm"
+      }
+    ]
+  }
+}

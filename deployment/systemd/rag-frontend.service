@@ -1,0 +1,25 @@
+[Unit]
+Description=RAG Frontend (Vite)
+After=network-online.target rag-backend.service
+Wants=network-online.target rag-backend.service
+
+[Service]
+Type=simple
+User=malo
+Group=malo
+WorkingDirectory=/home/malo/ai-koru/external/rag/front
+Environment=NODE_ENV=development
+Environment=PATH=/home/malo/.nvm/versions/node/v22.22.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/home/malo/.nvm/versions/node/v22.22.2/bin/npm run dev -- --host 0.0.0.0 --port 5173
+
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+KillSignal=SIGTERM
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rag-frontend
+
+[Install]
+WantedBy=multi-user.target

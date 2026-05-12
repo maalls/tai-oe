@@ -1,0 +1,31 @@
+supabase:
+  schema_file: 'back/schema/schema.sql'
+  db:
+    host: 'localhost'
+    port: 5432
+    user: 'postgres'
+    password: 'g7+bXoS1sE7TJ8nmsO5TnvBNm3WRDQmO'
+    sslmode: 'disable'
+  api:
+    url: 'http://localhost:8003'
+    key: 'YOUR_SERVICE_ROLE_KEY'
+
+qdrant:
+  url: 'http://localhost:6333' # or http://localhost:6333 for remote
+  collection_name: 'test_commerce_vectors'
+  timeout: 30
+
+app:
+  attachments_dir: 'var/attachments'
+  vendor:
+    yuasa:
+      file_path: 'var/storage/yuasa-tarif.xlsx'
+      csv_output_dir: 'var/storage/yuasa-tarif'
+      type: 'custom'
+    legrand:
+      file_path: 'var/storage/legrand-tarif-professionnel-reference-ht.xlsx'
+      csv_output_dir: 'var/storage/legrand-tarif-professionnel-reference-ht'
+      type: 'custom'
+    abb:
+      file_path: '/Users/malo/Documents/Projects/rkllm-server/external/rag/back/var/storage/FULL_Tarif_Public_ABB France_Février_2025.xlsx'
+      type: 'fabdis'

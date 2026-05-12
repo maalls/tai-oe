@@ -1,0 +1,11 @@
+DO $$ BEGIN
+  CREATE TYPE document_link_type AS ENUM (
+    'QUOTE_TO_PO',
+    'PO_TO_INVOICE',
+    'QUOTE_TO_INVOICE',
+    'CONTRACT_TO_SOW',
+    'DELIVERY_TO_INVOICE',
+    'ACCEPTANCE_TO_INVOICE',
+    'QUOTE_REVISION'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

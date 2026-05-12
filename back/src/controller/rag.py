@@ -1,0 +1,1826 @@
+#!/usr/bin/env python3
+"""
+Quote Management.s
+Config via env:
+- PORT (default 8088)
+- STORAGE_DIR (default ./var/storage)
+"""
+import os
+import sys
+import json
+import re
+import urllib.parse
+import urllib.request
+import http.server
+import signal
+import socket
+import traceback
+from pathlib import Path
+
+from typing import Dict
+from src.reader.csv import CSVReader
+from src.embeddings import EmbeddingGenerator
+from src.controller.file_handler import FileHandler
+from src.controller.handlers import RequestHandlers
+from src.controller.auth.auth_handler import AuthHandler
+from src.controller.classify_handler import ClassifyHandler
+from src.controller.product.product import ProductController
+from src.controller.quote.quote import Quote as QuoteController
+from src.controller.opportunity.opportunity import Opportunity as OpportunityController
+from src.controller.llm_factory import LLMClientFactory
+from http.server import ThreadingHTTPServer
+
+# Load .env before reading config values
+try:
+    from dotenv import load_dotenv, find_dotenv, dotenv_values
+    env_file = find_dotenv(usecwd=True)
+    if env_file:
+        load_dotenv(env_file, override=False)
+        print(f"[dotenv] Loaded from {env_file}")
+
+    # Optional: load shared Supabase env (single source of truth)
+    shared_env_rel = os.environ.get("SUPABASE_ENV_FILE", "../supabase/.env.prod")
+    shared_env_path = Path(shared_env_rel)
+    if not shared_env_path.is_absolute():
+        base_dir = Path(env_file).parent if env_file else Path(__file__).resolve().parents[2]
+        shared_env_path = (base_dir / shared_env_path).resolve()
+
+    if shared_env_path.exists():
+        shared_env = dotenv_values(shared_env_path)
+        os.environ["SUPABASE_URL"] = (
+            shared_env.get("SUPABASE_PUBLIC_URL")
+            or shared_env.get("API_EXTERNAL_URL")
+            or shared_env.get("SITE_URL")
+            or os.environ.get("SUPABASE_URL", "")
+        )
+        os.environ["SUPABASE_ANON_KEY"] = shared_env.get("ANON_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
+        os.environ["SUPABASE_SERVICE_KEY"] = shared_env.get("SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY", "")
+except Exception:
+    pass
+
+
+config = {
+    "PORT": int(os.environ.get("PORT", "8088")),
+    "STORAGE_DIR": Path(os.environ.get("STORAGE_DIR", "var/storage")).resolve(),
+    "SUPABASE_URL": os.environ.get("SUPABASE_URL"),
+    "DATABASE_URL": os.environ.get("DATABASE_URL"),
+}
+
+
+def create_rag_handler(config):
+    """Factory to create HTTP request handler with config."""
+    
+    class Rag(http.server.SimpleHTTPRequestHandler):
+        # Shared resources (class variables)
+        _embedding_generator = None
+        _csv_reader = None
+        _file_handler = None
+        _request_handlers = None
+        _auth_handler = None
+
+        @classmethod
+        def get_embedding_generator(cls):
+            if cls._embedding_generator is None:
+                print("[Rag] Initializing embedding generator...")
+                cls._embedding_generator = EmbeddingGenerator()
+            return cls._embedding_generator
+        
+        @classmethod
+        def get_csv_reader(cls):
+            if cls._csv_reader is None:
+                cls._csv_reader = CSVReader()
+            return cls._csv_reader
+        
+        @classmethod
+        def get_file_handler(cls):
+            if cls._file_handler is None:
+                cls._file_handler = FileHandler(config["STORAGE_DIR"], cls.get_csv_reader())
+            return cls._file_handler
+        
+        @classmethod
+        def get_auth_handler(cls):
+            if cls._auth_handler is None:
+                cls._auth_handler = AuthHandler()
+                print("[Rag] Initialized AuthHandler")
+            return cls._auth_handler
+        
+        @classmethod
+        def get_request_handlers(cls):
+            if cls._request_handlers is None:
+                cls._request_handlers = RequestHandlers(
+                    cls.get_file_handler()
+                )
+            return cls._request_handlers
+        
+        def __init__(self, *args, **kwargs):
+            self.config = config
+            super().__init__(*args, **kwargs)
+
+        def end_headers(self):
+            # Only add wildcard CORS if we haven't already set a specific origin
+            # Check if Access-Control-Allow-Origin header was already sent
+            if not hasattr(self, '_cors_header_sent'):
+                self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS, POST, DELETE, PATCH')
+            self.send_header('Access-Control-Allow-Headers', '*')
+            super().end_headers()
+
+        def do_OPTIONS(self):
+            self.send_response(200)
+            self.end_headers()
+
+        def do_DELETE(self):
+            try:
+                print(f"[RAG] do_DELETE called with path: {self.path}", file=sys.stderr)
+                parsed = urllib.parse.urlparse(self.path)
+                
+                # Opportunity delete
+                opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed.path)
+                if opportunity_delete_match:
+                    print(f"[RAG] DELETE /api/opportunities matched, processing deletion", file=sys.stderr)
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        print(f"[RAG] DELETE - Auth failed", file=sys.stderr)
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    opportunity_ids = opportunity_delete_match.group(1)
+                    print(f"[RAG] DELETE opportunity(ies) {opportunity_ids} for user {user_id}", file=sys.stderr)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    print(f"[RAG] DELETE result: {result}", file=sys.stderr)
+                    return self.json(result, status)
+                
+                # Quote delete
+                quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
+                if quote_delete_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    document_id = quote_delete_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+
+                # Generic document delete (for all document types)
+                document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed.path)
+                if document_delete_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+                    user_id = user_data.get('id') if user_data else None
+                    document_id = document_delete_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_delete_document(document_id=document_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+
+                # Email attachment delete
+                attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed.path)
+                if attachment_delete_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    attachment_id = attachment_delete_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Email delete
+                email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed.path)
+                if email_delete_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    email_id = email_delete_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_email_delete(email_id=email_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Action delete
+                action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
+                if action_delete_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = action_delete_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_delete_action(action_id=action_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+
+                if parsed.path == '/api/imap/config':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_imap_config_delete(user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                return self._send_error(404, "Not found")
+            except Exception as e:
+                traceback.print_exc()
+                return self._send_error(500, f"Server error: {str(e)}")
+
+        def do_PATCH(self):
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+                print(f"[RAG] PATCH request to: {parsed.path}")
+                print(f"[RAG] PATCH path not matched: {parsed.path}")
+                return self._send_error(404, "Not found")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"[RAG] PATCH error: {e}")
+                return self._send_error(500, f"Server error: {str(e)}")
+
+        def do_PUT(self):
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+                
+                # Update action
+                update_action_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
+                if update_action_match:
+                    data = self._read_json_or_error()
+                    if data is None:
+                        return
+
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = update_action_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_update_action(action_id, data, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                return self._send_error(404, "Not found")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return self._send_error(500, f"Server error: {str(e)}")
+
+        def do_POST(self):
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+
+                if parsed.path == '/api/products':
+                    payload = self._read_json(default={})
+                    entity_name = "product"
+                    controller = ProductController()
+                    entity = controller.post(payload)
+                    return self.json({'status': 'ok', entity_name: entity}, 201)
+
+                if parsed.path == '/api/fs/create':
+                    payload = self._read_json(default={})
+
+                    raw_path = str(payload.get('path') or '').strip()
+                    kind = payload.get('type') or 'dir'
+
+                    target_path = self._resolve_fs_path(raw_path)
+                    if target_path is None:
+                        return
+
+                    try:
+                        if kind == 'file':
+                            target_path.parent.mkdir(parents=True, exist_ok=True)
+                            target_path.touch(exist_ok=True)
+                        else:
+                            target_path.mkdir(parents=True, exist_ok=True)
+                    except Exception as e:
+                        return self._send_error(500, f'Create failed: {e}')
+
+                    if kind == 'file':
+                        if not target_path.exists() or not target_path.is_file():
+                            return self._send_error(500, 'Create failed: file not created')
+                    else:
+                        if not target_path.exists() or not target_path.is_dir():
+                            return self._send_error(500, 'Create failed: directory not created')
+
+                    return self.json({
+                        'status': 'ok',
+                        'path': str(target_path),
+                        'type': 'file' if kind == 'file' else 'dir',
+                    })
+
+                if parsed.path == '/api/fs/read':
+                    payload = self._read_json(default={})
+
+                    raw_path = str(payload.get('path') or '').strip()
+
+                    try:
+                        max_chars = int(payload.get('max_chars') or 10000)
+                    except Exception:
+                        max_chars = 10000
+                    max_chars = max(100, min(max_chars, 50000))
+
+                    target_path = self._resolve_fs_path(raw_path)
+                    if target_path is None:
+                        return
+
+                    if not target_path.exists() or not target_path.is_file():
+                        return self._send_error(404, 'File not found')
+
+                    try:
+                        content = target_path.read_text(encoding='utf-8', errors='replace')
+                    except Exception as e:
+                        return self._send_error(500, f'Read failed: {e}')
+
+                    truncated = content[:max_chars]
+
+                    return self.json({
+                        'status': 'ok',
+                        'path': str(target_path),
+                        'truncated': len(content) > max_chars,
+                        'text': truncated,
+                    })
+
+                if parsed.path == '/api/curl':
+                    payload = self._read_json(default={})
+
+                    target_url = str(payload.get('url') or '').strip()
+                    if not target_url:
+                        return self._send_error(400, 'Missing url')
+
+                    if not target_url.startswith('http://') and not target_url.startswith('https://'):
+                        return self._send_error(400, 'Invalid url scheme')
+
+                    method = str(payload.get('method') or 'GET').upper()
+                    if method not in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
+                        return self._send_error(400, 'Invalid method')
+
+                    headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
+                    body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
+
+                    try:
+                        max_chars = int(payload.get('max_chars') or 10000)
+                    except Exception:
+                        max_chars = 10000
+                    try:
+                        timeout_ms = int(payload.get('timeout_ms') or 8000)
+                    except Exception:
+                        timeout_ms = 8000
+
+                    max_chars = max(100, min(max_chars, 50000))
+                    timeout_ms = max(1000, min(timeout_ms, 20000))
+
+                    data_bytes = body_text.encode('utf-8') if body_text is not None else None
+
+                    try:
+                        req = urllib.request.Request(target_url, data=data_bytes, method=method)
+                        for key, value in headers.items():
+                            if isinstance(key, str) and isinstance(value, str):
+                                req.add_header(key, value)
+
+                        with urllib.request.urlopen(req, timeout=timeout_ms / 1000) as resp:
+                            content_type = resp.headers.get('Content-Type', '')
+                            status = getattr(resp, 'status', 200)
+                            raw = resp.read()
+
+                        text = raw.decode('utf-8', errors='replace')
+                        truncated = text[:max_chars]
+
+                        return self.json({
+                            'status': status,
+                            'ok': status >= 200 and status < 300,
+                            'url': target_url,
+                            'content_type': content_type,
+                            'truncated': len(text) > max_chars,
+                            'text': truncated,
+                        })
+                    except Exception as e:
+                        return self._send_error(500, f'Curl failed: {e}')
+                
+                # Auth endpoints
+                if parsed.path == '/api/auth/signup':
+                    body = self._read_body()
+                    auth_handler = self.get_auth_handler()
+                    result = auth_handler.handle_signup(body)
+                    status = result.pop('status', 200)
+                    return self.json(result, status)
+                elif parsed.path == '/api/auth/login':
+                    body = self._read_body()
+                    auth_handler = self.get_auth_handler()
+                    result = auth_handler.handle_login(body)
+                    status = result.pop('status', 200)
+                    return self.json(result, status)
+                elif parsed.path == '/api/auth/logout':
+                    auth_header = self.headers.get('Authorization', '')
+                    auth_handler = self.get_auth_handler()
+                    result = auth_handler.handle_logout(auth_header)
+                    status = result.pop('status', 200)
+                    return self.json(result, status)
+                
+                entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed.path)
+                if entity_update_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    table = entity_update_match.group(1)
+                    field = entity_update_match.group(2)
+
+                    payload = self._read_json(default={})
+
+                    record_id = payload.get('id') or payload.get('record_id')
+                    if record_id is None:
+                        return self.json({"status": "error", "message": "Missing id"}, 400)
+
+                    if 'value' not in payload:
+                        return self.json({"status": "error", "message": "Missing value"}, 400)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_update_entity_field(
+                        table=table,
+                        field=field,
+                        record_id=record_id,
+                        value=payload.get('value'),
+                        user_id=user_id,
+                    )
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                elif parsed.path.startswith('/api/emails/classify/'):
+                    # Extract email_uuid from path
+                    email_uuid = parsed.path.split('/')[-1]
+                    
+                    # Verify auth
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+                    
+                    user_id = user_data.get('id')
+                    print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
+                    
+                    # Classify email
+                    classify_handler = ClassifyHandler()
+                    result = classify_handler.handle_classify(email_uuid, user_id, True)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                elif parsed.path == '/api/rfq/generate':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+
+                    payload = self._read_json(default={})
+
+                    text = payload.get('text') or payload.get('content')
+                    message_id = payload.get('message_id')
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                elif parsed.path == '/api/opportunities/create-from-email':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+
+                    payload = self._read_json(default={})
+
+                    message_id = payload.get('message_id')
+                    if not message_id:
+                        return self.json({"error": "Missing message_id parameter"}, 400)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
+                    print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                elif parsed.path == '/api/opportunities/create-manual':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    payload = self._read_json(default={})
+
+                    name = payload.get('name')
+                    if not name:
+                        return self.json({"status": "error", "message": "Missing name parameter"}, 400)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                elif parsed.path == '/api/opportunities/create-from-rfp':
+                    body = self._read_body()
+                    content_type = self.headers.get('Content-Type', '')
+
+                    auth_header = self.headers.get('Authorization', '')
+                    print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
+                    user_data = self._require_auth(auth_header=auth_header)
+                    print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
+                    if user_data is None:
+                        print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
+                    print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                elif parsed.path == '/api/email/extract-contact':
+                    payload = self._read_json(default={})
+                    
+                    email_id = payload.get('email_id')
+                    email_body = payload.get('email_body')
+                    
+                    if not email_body:
+                        return self.json({"error": "Missing email_body parameter"}, 400)
+                    
+                    # Get user_id from auth header
+                    auth_header = self.headers.get('Authorization', '')
+                    user_data = self._require_auth(auth_header=auth_header, required=False)
+                    user_id = user_data.get('id') if user_data else None  # Use 'id' not 'sub'
+                    print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path.startswith('/api/email/auth/'):
+                    # GET /api/email/auth/{email_id} - Get authentication status for an email
+                    email_id = parsed.path.split('/api/email/auth/')[-1]
+
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    if not user_id:
+                        return self.json({"error": "Unauthorized"}, 401)
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path.startswith('/api/email/') and parsed.path.endswith('/resync'):
+                    # POST /api/email/{email_id}/resync - Resync email from Gmail
+                    path_parts = parsed.path.split('/')
+                    email_id = path_parts[-2] if len(path_parts) >= 4 else None
+                    
+                    if not email_id:
+                        return self.json({"error": "Missing email_id"}, 400)
+                    
+                    payload = self._read_json(default={})
+                    
+                    provider_message_id = payload.get('provider_message_id')
+                    if not provider_message_id:
+                        return self.json({"error": "Missing provider_message_id"}, 400)
+
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    if not user_id:
+                        return self.json({"error": "Unauthorized"}, 401)
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_email_resync(email_id=email_id, provider_message_id=provider_message_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path == '/api/email/senders/high-risk':
+                    # GET /api/email/senders/high-risk - Get high-risk senders
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    if not user_id:
+                        return self.json({"error": "Unauthorized"}, 401)
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_get_high_risk_senders(user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path == '/api/email/senders/verified':
+                    # GET /api/email/senders/verified - Get verified senders
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    if not user_id:
+                        return self.json({"error": "Unauthorized"}, 401)
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_get_verified_senders(user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+
+                elif parsed.path == '/api/imap/config':
+                    payload = self._read_json(default={})
+
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_imap_config_save(user_id=user_id, payload=payload)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+
+                elif parsed.path == '/api/imap/test':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_imap_test(user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path == '/api/document/extract-rfp':
+                    payload = self._read_json(default={})
+                    
+                    auth_header = self.headers.get('Authorization', '')
+                    print(f"[RAG] Document extract-rfp - Auth header: {auth_header[:50] if auth_header else 'None'}")
+                    
+                    user_data = self._require_auth(auth_header=auth_header)
+                    print(f"[RAG] Document extract-rfp - Token valid: {bool(user_data)}")
+                    if user_data is None:
+                        print(f"[RAG] Document extract-rfp - Auth failed")
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    document_id = payload.get('document_id')
+                    
+                    if not document_id:
+                        return self.json({"error": "Missing document_id parameter"}, 400)
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path == '/api/document/update-content':
+                    payload = self._read_json(default={})
+
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    document_id = payload.get('document_id')
+                    content = payload.get('content', '')
+                    
+                    if not document_id:
+                        return self.json({"error": "Missing document_id parameter"}, 400)
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.business_handlers.handle_update_document_content(
+                        document_id=document_id,
+                        content=content,
+                        user_id=user_id
+                    )
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                else:
+                    # Send quote email for opportunity
+                    send_quote_match = re.match(r"^/api/opportunity/([^/]+)/send-quote$", parsed.path)
+                    if send_quote_match:
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        opportunity_id = send_quote_match.group(1)
+
+                        payload = self._read_json_or_error()
+                        if payload is None:
+                            return
+
+                        handlers = self.get_request_handlers()
+                        result = handlers.business_handlers.handle_send_quote_for_opportunity(
+                            opportunity_id=opportunity_id,
+                            payload=payload,
+                            user_id=user_id,
+                        )
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Chat attachment upload
+                    if parsed.path == '/api/chat/attachments' and self.command == 'POST':
+                        body = self._read_body()
+                        content_type = self.headers.get('Content-Type', '')
+
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        qs = urllib.parse.parse_qs(parsed.query)
+                        opportunity_id = qs.get('opportunity_id', [None])[0]
+
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_chat_attachment_upload(
+                            body=body,
+                            content_type=content_type,
+                            user_id=user_id,
+                            opportunity_id=opportunity_id,
+                        )
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Opportunity-scoped RFQ/quote generation
+                    opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
+                    if opp_match:
+
+                        opportunity_controller = OpportunityController()
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+                        user_id = user_data.get('id') if user_data else None
+                        opportunity_id = opp_match.group(1)
+                        handlers = self.get_request_handlers()
+                        print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
+                        result = opportunity_controller.opportunity_repository.handle_generate_quote_for_opportunity(
+                            opportunity_id=opportunity_id,
+                            user_id=user_id,
+                        )
+                        print('result:', result
+                              )
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Opportunity-scoped RFQ creation from text/file
+                    opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
+                    if opp_rfq_create_match and self.command == 'POST':
+                        body = self._read_body()
+                        content_type = self.headers.get('Content-Type', '')
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+                        user_id = user_data.get('id') if user_data else None
+                        handlers = self.get_request_handlers()
+                        opportunity_id = opp_rfq_create_match.group(1)
+
+
+                        if opportunity_id == "new":
+                            # create new opportunity first
+                            result = handlers.handle_create_opportunity_from_rfp(
+                                body=body,
+                                content_type=content_type,
+                                user_id=user_id
+                            )
+                            if result.get('status') == 'ok':
+                                o = result.get('opportunity', {})
+                                opportunity_id = o.get('id')
+                                print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
+                                handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
+                        
+                        else:
+                            result = handlers.handle_create_rfq_source_from_html_body(
+                                opportunity_id=opportunity_id,
+                                body=body,
+                                content_type=content_type,
+                                user_id=user_id
+                            )
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Quote PDF generation
+                    quote_pdf_match = re.match(r"^/api/quote/([^/]+)/pdf$", parsed.path)
+                    if quote_pdf_match:
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        document_id = quote_pdf_match.group(1)
+
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Invoice generation from quote
+                    quote_invoice_match = re.match(r"^/api/quote/([^/]+)/invoice$", parsed.path)
+                    if quote_invoice_match and self.command == 'POST':
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        quote_id = quote_invoice_match.group(1)
+
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Invoice PDF generation
+                    invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
+                    if invoice_pdf_match and self.command == 'POST':
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        invoice_id = invoice_pdf_match.group(1)
+
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Invoice send
+                    invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
+                    if invoice_send_match and self.command == 'POST':
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        invoice_id = invoice_send_match.group(1)
+
+                        payload = self._read_json_or_error()
+                        if payload is None:
+                            return
+
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
+                        status = 200 if result.get('status') == 'ok' else 400
+                        return self.json(result, status)
+
+                    # Quote draft update
+                    quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
+
+                    if quote_update_match and self.command == 'POST':
+                        user_data = self._require_auth()
+                        if user_data is None:
+                            return
+
+                        user_id = user_data.get('id') if user_data else None
+                        document_id = quote_update_match.group(1)
+
+                        payload = self._read_json(default={})
+
+                        controller = QuoteController()
+                        print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
+                        result = controller.update(document_id=document_id, payload=payload, user_id=user_id)
+                        status = 400 if result.get('error') else 200
+                        return self.json(result, status)
+                
+                # Existing endpoints
+                if parsed.path == '/api/csv/source':
+                    content_type = self.headers.get('Content-Type', '')
+                    body = self._read_body()
+                    content_length = len(body)
+                    
+                    handler = self.get_file_handler()
+                    result = handler.handle_file_upload(content_type, content_length, body)
+                    return self.json(result)
+                elif parsed.path == '/api/rfp':
+                    content_type = self.headers.get('Content-Type', '')
+                    body = self._read_body()
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_rfp_upload(body, content_type)
+                    return self.json(result)
+                elif parsed.path == '/api/quote':
+                    content_type = self.headers.get('Content-Type', '')
+                    body = self._read_body()
+                    handlers = self.get_request_handlers()
+                    result = self.quote.handle_quote_submit(body, content_type)
+                    return self.json(result)
+                elif parsed.path == '/api/quote/send':
+                    print(f"[RAG] Received request to send quote email, path: {parsed.path}, method: {self.command}")
+                    content_type = self.headers.get('Content-Type', '')
+                    body = self._read_body()
+                    
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_quote_send(body, content_type)
+                    return self.json(result)
+                
+                # Action endpoints
+                elif parsed.path == '/api/actions':
+                    # Create action
+                    data = self._read_json_or_error()
+                    if data is None:
+                        return
+
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_create_action(data, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Pause action
+                pause_action_match = re.match(r"^/api/actions/([^/]+)/pause$", parsed.path)
+                if pause_action_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = pause_action_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_pause_action(action_id, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Resume action
+                resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed.path)
+                if resume_action_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = resume_action_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_resume_action(action_id, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Execute action manually
+                execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed.path)
+                if execute_action_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = execute_action_match.group(1)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_execute_action(action_id, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                else:
+                    return self._send_error(404, "Not found")
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[RAG] Error handling request: {e}")
+                
+                return self._send_error(500, f"Internal server error 1: {e}")
+
+        def do_HEAD(self):
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+
+                if parsed.path.startswith('/api/storage/'):
+                    filename = parsed.path[len('/api/storage/'):]
+                    filename = urllib.parse.unquote(filename)
+                    filename = filename.replace('..', '').replace('/', '')
+
+                    print(f"[RAG] Storage HEAD request for file: {filename}")
+
+                    storage_subdirs = ['rfp_uploads', 'attachment', 'attachments', 'email', 'quotes']
+                    storage_path = None
+
+                    for subdir in storage_subdirs:
+                        candidate = config['STORAGE_DIR'] / subdir / filename
+                        if candidate.exists():
+                            storage_path = candidate
+                            break
+
+                    if not storage_path:
+                        storage_path = config['STORAGE_DIR'] / filename
+
+                    if not storage_path.exists():
+                        print(f"[RAG] File not found in any storage location: {filename}")
+                        self.send_response(404)
+                        self.send_header('Content-Type', 'text/plain')
+                        self.end_headers()
+                        return
+
+                    file_ext = storage_path.suffix.lower()
+                    content_type_map = {
+                        '.pdf': 'application/pdf',
+                        '.txt': 'text/plain; charset=utf-8',
+                        '.doc': 'application/msword',
+                        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        '.xls': 'application/vnd.ms-excel',
+                        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        '.png': 'image/png',
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.gif': 'image/gif',
+                        '.zip': 'application/zip',
+                    }
+                    content_type = content_type_map.get(file_ext, 'application/octet-stream')
+                    file_size = storage_path.stat().st_size
+                    encoded_filename = urllib.parse.quote(filename)
+
+                    self.send_response(200)
+                    self.send_header('Content-Type', content_type)
+                    self.send_header('Content-Length', str(file_size))
+                    self.send_header('Accept-Ranges', 'bytes')
+                    if content_type == 'application/pdf':
+                        self.send_header(
+                            'Content-Disposition',
+                            f"inline; filename*=UTF-8''{encoded_filename}"
+                        )
+                    else:
+                        self.send_header(
+                            'Content-Disposition',
+                            f"attachment; filename*=UTF-8''{encoded_filename}"
+                        )
+                    self.end_headers()
+                    return
+
+                return self._send_error(404, "Not found")
+            except Exception as e:
+                return self._send_error(500, f"Internal server error 2: {e}")
+
+        def do_GET(self):
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+
+                if parsed.path == '/api/products':
+                    controller = ProductController()
+                    products = controller.list(qs)
+                    return self.json({'products': products})
+
+                if parsed.path.startswith('/api/google/oauth/callback'):
+                    handlers = self.get_request_handlers()
+                    code = qs.get('code', [None])[0]
+                    state = qs.get('state', [None])[0]
+                    if not code:
+                        return self._send_error(400, 'Missing code parameter')
+                    result = handlers.handle_gmail_oauth_callback(code, state)
+                    if result.get('status') == 'ok':
+                        redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
+                        self.send_response(302)
+                        self.send_header('Location', redirect_url)
+                        self.end_headers()
+                        return
+                    return self.json(result, 500)
+
+                # Prompt endpoint: /api/prompt/<relative_path> -> back/src/prompt/<relative_path>/prompt.md
+                if parsed.path.startswith('/api/prompt/'):
+                    relative_path = parsed.path[len('/api/prompt/'):].strip('/')
+                    if not relative_path:
+                        return self._send_error(400, "Missing prompt path")
+
+                    base_dir = Path(__file__).resolve().parents[1] / 'prompt'
+                    prompt_path = (base_dir / relative_path / 'prompt.md').resolve()
+
+                    if base_dir not in prompt_path.parents:
+                        return self._send_error(400, "Invalid prompt path")
+
+                    if not prompt_path.exists():
+                        return self._send_error(404, "Prompt not found")
+
+                    try:
+                        content = prompt_path.read_text(encoding='utf-8')
+                    except Exception as e:
+                        return self._send_error(500, f"Error reading prompt: {e}")
+
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/plain; charset=utf-8')
+                    self.end_headers()
+                    self.wfile.write(content.encode('utf-8'))
+                    return
+
+                if parsed.path == '/api/fetch':
+                    target_url = qs.get('url', [None])[0]
+                    if not target_url:
+                        return self._send_error(400, 'Missing url parameter')
+
+                    if not target_url.startswith('http://') and not target_url.startswith('https://'):
+                        return self._send_error(400, 'Invalid url scheme')
+
+                    try:
+                        max_chars = int(qs.get('max_chars', [10000])[0])
+                    except Exception:
+                        max_chars = 10000
+                    try:
+                        timeout_ms = int(qs.get('timeout_ms', [8000])[0])
+                    except Exception:
+                        timeout_ms = 8000
+
+                    max_chars = max(100, min(max_chars, 50000))
+                    timeout_ms = max(1000, min(timeout_ms, 20000))
+
+                    try:
+                        with urllib.request.urlopen(target_url, timeout=timeout_ms / 1000) as resp:
+                            content_type = resp.headers.get('Content-Type', '')
+                            status = getattr(resp, 'status', 200)
+                            raw = resp.read()
+
+                        text = raw.decode('utf-8', errors='replace')
+                        truncated = text[:max_chars]
+
+                        return self.json({
+                            'status': status,
+                            'ok': status >= 200 and status < 300,
+                            'url': target_url,
+                            'content_type': content_type,
+                            'truncated': len(text) > max_chars,
+                            'text': truncated,
+                        })
+                    except Exception as e:
+                        return self._send_error(500, f'Fetch failed: {e}')
+
+                if parsed.path == '/api/email-fetch-loop/status':
+                    status_path = Path(__file__).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
+                    legacy_path = Path(__file__).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
+                    if not status_path.exists() and legacy_path.exists():
+                        status_path = legacy_path
+
+                    if not status_path.exists():
+                        return self.json({
+                            'running': False,
+                            'pid': None,
+                            'started_at': None,
+                            'last_heartbeat': None,
+                            'mode': None,
+                        })
+
+                    try:
+                        payload = json.loads(status_path.read_text(encoding='utf-8') or '{}')
+                    except Exception:
+                        payload = {}
+
+                    pid = payload.get('pid')
+                    running = False
+                    if pid:
+                        try:
+                            os.kill(int(pid), 0)
+                            running = True
+                        except Exception:
+                            running = False
+
+                    return self.json({
+                        'running': running,
+                        'pid': pid,
+                        'started_at': payload.get('started_at'),
+                        'last_heartbeat': payload.get('last_heartbeat'),
+                        'mode': payload.get('mode'),
+                    })
+                
+                # Storage endpoint for serving uploaded files
+                if parsed.path.startswith('/api/storage/'):
+                    filename = parsed.path[len('/api/storage/'):]
+                    # URL decode the filename (convert %20 to space, etc.)
+                    filename = urllib.parse.unquote(filename)
+                    # Sanitize filename to prevent path traversal
+                    filename = filename.replace('..', '').replace('/', '')
+                    
+                    print(f"[RAG] Storage request for file: {filename}")
+                    
+                    # Determine which storage subdirectory to look in based on filename pattern
+                    storage_subdirs = ['rfp_uploads', 'attachment', 'attachments', 'email', 'quotes']
+                    storage_path = None
+                    
+                    for subdir in storage_subdirs:
+                        candidate = config['STORAGE_DIR'] / subdir / filename
+                        if candidate.exists():
+                            storage_path = candidate
+                            break
+                    
+                    # If not found in subdirs, try root storage directory
+                    if not storage_path:
+                        storage_path = config['STORAGE_DIR'] / filename
+                    
+                    if not storage_path.exists():
+                        print(f"[RAG] File not found in any storage location: {filename}")
+                        self.send_response(404)
+                        self.send_header('Content-Type', 'text/plain')
+                        self.end_headers()
+                        self.wfile.write(b'File not found')
+                        return
+                    
+                    try:
+                        print(f"[RAG] Reading file: {storage_path}")
+                        
+                        # Determine content type based on file extension
+                        file_ext = storage_path.suffix.lower()
+                        content_type_map = {
+                            '.pdf': 'application/pdf',
+                            '.txt': 'text/plain; charset=utf-8',
+                            '.doc': 'application/msword',
+                            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            '.xls': 'application/vnd.ms-excel',
+                            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            '.png': 'image/png',
+                            '.jpg': 'image/jpeg',
+                            '.jpeg': 'image/jpeg',
+                            '.gif': 'image/gif',
+                            '.zip': 'application/zip',
+                        }
+                        content_type = content_type_map.get(file_ext, 'application/octet-stream')
+                        
+                        file_size = storage_path.stat().st_size
+                        encoded_filename = urllib.parse.quote(filename)
+
+                        self.send_response(200)
+                        self.send_header('Content-Type', content_type)
+                        self.send_header('Content-Length', str(file_size))
+                        self.send_header('Accept-Ranges', 'bytes')
+                        # Use inline for PDFs to support preview
+                        if content_type == 'application/pdf':
+                            self.send_header(
+                                'Content-Disposition',
+                                f"inline; filename*=UTF-8''{encoded_filename}"
+                            )
+                        else:
+                            self.send_header(
+                                'Content-Disposition',
+                                f"attachment; filename*=UTF-8''{encoded_filename}"
+                            )
+                        self.end_headers()
+
+                        # Stream file to avoid truncation issues
+                        with open(storage_path, 'rb') as f:
+                            while True:
+                                chunk = f.read(8192)
+                                if not chunk:
+                                    break
+                                self.wfile.write(chunk)
+                        print(f"[RAG] File sent successfully: {filename} ({file_size} bytes)")
+                        return
+                    except Exception as e:
+                        print(f"[RAG] Error reading file {filename}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        self.send_response(500)
+                        self.send_header('Content-Type', 'text/plain')
+                        self.end_headers()
+                        self.wfile.write(f'Error reading file: {str(e)}'.encode('utf-8'))
+                        return
+                
+                # Auth endpoint
+                if parsed.path == '/api/auth/user':
+                    auth_header = self.headers.get('Authorization', '')
+                    auth_handler = self.get_auth_handler()
+                    result = auth_handler.handle_get_user(auth_header)
+                    status = result.pop('status', 200)
+                    return self.json(result, status)
+                
+                # Existing endpoints
+                if parsed.path == '/api/gmail/oauth/start':
+                    handlers = self.get_request_handlers()
+                    redirect_url = qs.get('redirect_url', [None])[0]
+                    user_id = qs.get('user_id', [None])[0]
+                    result = handlers.handle_gmail_oauth_start(redirect_url, user_id=user_id)
+                    return self.json(result)
+                if parsed.path == '/api/gmail/authorize':
+                    handlers = self.get_request_handlers()
+                    # Get redirect_url from query params
+                    redirect_url = qs.get('redirect_url', [None])[0]
+                    result = handlers.handle_gmail_authorize(redirect_url)
+                    return self.json(result)
+                elif parsed.path == '/api/gmail/status':
+                    handlers = self.get_request_handlers()
+                    user_id = qs.get('user_id', [None])[0]
+                    result = handlers.handle_gmail_status(user_id=user_id)
+                    return self.json(result)
+                elif parsed.path == '/api/gmail/revoke':
+                    handlers = self.get_request_handlers()
+                    user_id = qs.get('user_id', [None])[0]
+                    result = handlers.handle_gmail_revoke(user_id=user_id)
+                    return self.json(result)
+                elif parsed.path == '/api/gmail/profile':
+                    handlers = self.get_request_handlers()
+                    user_id = qs.get('user_id', [None])[0]
+                    result = handlers.handle_gmail_profile(user_id=user_id)
+                    return self.json(result)
+                elif parsed.path == '/api/imap/status':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    handlers = self.get_request_handlers()
+                    user_id = user_data.get('id') if user_data else None
+                    result = handlers.handle_imap_status(user_id=user_id)
+                    return self.json(result)
+                elif parsed.path == '/api/imap/config':
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    handlers = self.get_request_handlers()
+                    user_id = user_data.get('id') if user_data else None
+                    result = handlers.handle_imap_config(user_id=user_id)
+                    return self.json(result)
+                elif parsed.path == '/api/gmail/messages':
+                    handlers = self.get_request_handlers()
+                    # Get max_results and user_id from query params
+                    max_results = int(qs.get('max_results', [20])[0])
+                    user_id = qs.get('user_id', [None])[0]
+                    force = qs.get('force', ['false'])[0].lower() == 'true'
+                    
+                    print(f"[RAG] /api/gmail/messages - user_id from query: {user_id}, force: {force}")
+                    
+                    # Get user from auth header if not provided
+                    if not user_id:
+                        auth_header = self.headers.get('Authorization', '')
+                        print(f"[RAG] Auth header: {auth_header[:50] if auth_header else 'None'}...")
+                        user_data = self._require_auth(auth_header=auth_header, required=False)
+                        print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
+                        if user_data:
+                            user_id = user_data.get('id')
+                            print(f"[RAG] Extracted user_id from token: {user_id}")
+                    
+                    print(f"[RAG] Final user_id: {user_id}")
+                    
+                    result = handlers.handle_gmail_list_messages(
+                        max_results=max_results,
+                        user_id=user_id,
+                        save_to_db=True,
+                        force=force
+                    )
+                    return self.json(result)
+                elif parsed.path.startswith('/api/gmail/message/'):
+                    # Extract message ID from path
+                    message_id = parsed.path.split('/api/gmail/message/')[-1]
+                    
+                    # Get user_id from auth header
+                    auth_header = self.headers.get('Authorization', '')
+                    print(f"[RAG] /api/gmail/message/{message_id} - Auth header: {auth_header[:50] if auth_header else 'None'}...")
+                    user_id = None
+                    if auth_header:
+                        user_data = self._require_auth(auth_header=auth_header, required=False)
+                        print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
+                        if user_data:
+                            user_id = user_data.get('id')
+                            print(f"[RAG] Extracted user_id from token: {user_id}")
+                    
+                    print(f"[RAG] Final user_id for message body: {user_id}")
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_get_message_body(message_id, user_id)
+                    return self.json(result)
+                elif parsed.path.startswith('/api/email-attachment/'):
+                    # Extract attachment ID from path
+                    attachment_id = parsed.path.split('/api/email-attachment/')[-1].split('/')[0]
+                    
+                    # Get user_id from auth header
+                    auth_header = self.headers.get('Authorization', '')
+                    user_id = None
+                    if auth_header:
+                        user_data = self._require_auth(auth_header=auth_header, required=False)
+                        if user_data:
+                            user_id = user_data.get('id')
+                    
+                    handlers = self.get_request_handlers()
+                    status_code, headers, file_content = handlers.handle_email_attachment_download(attachment_id, user_id)
+                    
+                    self.send_response(status_code)
+                    for header_name, header_value in headers.items():
+                        self.send_header(header_name, header_value)
+                    self.end_headers()
+                    self.wfile.write(file_content)
+                    return
+                handlers = self.get_request_handlers()
+                
+                if parsed.path == '/api/csv/files':
+                    return self.json(handlers.handle_list_files(qs))
+                elif parsed.path == '/api/csv/preview':
+                    return self.json(handlers.handle_preview(qs))
+                elif parsed.path == '/api/csv/raw':
+                    return self._handle_raw_stream(qs, handlers)
+                elif parsed.path == '/api/csv/source':
+                    return self._handle_source_stream(qs, handlers)
+                elif parsed.path == '/api/csv/download':
+                    return self._handle_csv_download(qs, handlers)
+                elif parsed.path == '/api/csv/sources':
+                    return self.json(handlers.handle_sources())
+                elif parsed.path == '/api/csv/query':
+                    return self.json(handlers.handle_query(qs))
+                elif parsed.path == '/api/qdrant':
+                    result = handlers.handle_qdrant_query(qs)
+                    # Return 400 if there's an error in the response
+                    status = 400 if result.get('error') else 200
+                    return self.json(result, status)
+                elif parsed.path == '/api/embeddings':
+                    return self.json(handlers.handle_embeddings(qs, self.get_embedding_generator()))
+                elif parsed.path.startswith('/api/csv/search'):
+                    return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
+                elif parsed.path == '/api/quotes/list':
+                    return self.json(handlers.handle_list_quotes())
+                elif parsed.path == '/api/opportunities/search':
+                    # Get query parameters
+                    source_reference_id = qs.get('source_reference_id', [None])[0]
+                    name = qs.get('name', [None])[0]
+                    
+                    # Verify authentication
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+                    
+                    user_id = user_data.get('id') if user_data else None
+                    
+                    result = handlers.handle_search_opportunities(
+                        user_id=user_id,
+                        source_reference_id=source_reference_id,
+                        name=name,
+                    )
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Action endpoints - List actions for opportunity
+                list_actions_match = re.match(r"^/api/opportunities/([^/]+)/actions$", parsed.path)
+                if list_actions_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    opportunity_id = list_actions_match.group(1)
+
+                    result = handlers.handle_list_actions(opportunity_id, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Get action details
+                get_action_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
+                if get_action_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = get_action_match.group(1)
+
+                    result = handlers.handle_get_action(action_id, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                # Get action logs
+                get_action_logs_match = re.match(r"^/api/actions/([^/]+)/logs$", parsed.path)
+                if get_action_logs_match:
+                    user_data = self._require_auth()
+                    if user_data is None:
+                        return
+
+                    user_id = user_data.get('id') if user_data else None
+                    action_id = get_action_logs_match.group(1)
+                    limit = int(qs.get('limit', [50])[0])
+
+                    result = handlers.handle_get_action_logs(action_id, limit, user_id)
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
+                
+                elif parsed.path.startswith('/api/quotes/download/'):
+                    filename = parsed.path.split('/api/quotes/download/')[-1]
+                    return self._handle_quote_download(filename, handlers, qs)
+                elif parsed.path.startswith('/api/documents/download/'):
+                    filename = parsed.path.split('/api/documents/download/')[-1]
+                    filename = urllib.parse.unquote(filename)
+                    return self._handle_document_download(filename, handlers, qs)
+                else:
+                    # Fallback to static file serving
+                    return super().do_GET()
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[RAG] Error handling GET request: {e}")
+
+                return self._send_error(500, f"Internal server error 3: {e}")
+
+        def authorize(self) -> Dict:
+            user_data = self._require_auth()
+            if user_data is None:
+                raise Exception({"Unauthorized"}, 401)
+            return user_data
+
+        def _require_auth(self, auth_header: str = None, required: bool = True) -> Dict:
+            auth_header = auth_header if auth_header is not None else self.headers.get('Authorization', '')
+            auth_handler = self.get_auth_handler()
+            is_valid, user_data = auth_handler.verify_token(auth_header)
+            if not is_valid:
+                if required:
+                    self.json({"error_code": "UNAUTHORIZED", "message": "Unauthorized"}, 401)
+                return None
+            return user_data
+
+        def _read_body(self) -> bytes:
+            content_length = int(self.headers.get('Content-Length', 0))
+            return self.rfile.read(content_length)
+
+        def _read_json(self, default=None):
+            body = self._read_body()
+            try:
+                return json.loads(body.decode('utf-8') or '{}')
+            except Exception:
+                return {} if default is None else default
+
+        def _read_json_or_error(self, error_payload=None, status_code=400):
+            body = self._read_body()
+            try:
+                return json.loads(body.decode('utf-8') or '{}')
+            except Exception:
+                self.json(error_payload or {"status": "error", "message": "Invalid JSON"}, status_code)
+                return None
+
+        def _resolve_fs_path(self, raw_path: str):
+            if not raw_path:
+                self._send_error(400, 'Missing path')
+                return None
+
+            base_dir = Path(__file__).resolve().parents[3]
+            input_path = Path(raw_path)
+
+            if raw_path.startswith('~'):
+                raw_path = raw_path[1:].lstrip('/')
+                input_path = Path(raw_path)
+
+            if input_path.is_absolute():
+                try:
+                    input_path = input_path.relative_to(base_dir)
+                except Exception:
+                    self._send_error(400, 'Invalid path')
+                    return None
+
+            target_path = (base_dir / input_path).resolve()
+
+            if base_dir not in target_path.parents and target_path != base_dir:
+                self._send_error(400, 'Invalid path')
+                return None
+
+            return target_path
+        
+        def _handle_raw_stream(self, qs, handlers):
+            """Stream raw CSV file."""
+            try:
+                content = handlers.handle_raw(qs)
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/csv; charset=utf-8')
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception as e:
+                return self._send_error(500, f"Error streaming CSV: {e}")
+
+        def _handle_csv_download(self, qs, handlers):
+            """Download CSV file with proper filename."""
+            try:
+                source = (qs.get('source') or [None])[0]
+                sheet = (qs.get('file') or [None])[0]
+                
+                if not source or not sheet:
+                    return self._send_error(400, "Missing 'source' or 'file' parameter")
+                
+                # Get file path from file handler
+                file_handler = handlers.file_handler
+                csv_path = file_handler.safe_file_from_query(source, sheet)
+                filename = sheet  # Use sheet name as filename
+                file_size = csv_path.stat().st_size
+                
+                # Send response headers
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/csv; charset=utf-8')
+                self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                self.send_header('Content-Length', str(file_size))
+                self.end_headers()
+                
+                # Stream file in chunks to avoid memory issues
+                with open(csv_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        
+            except Exception as e:
+                return self._send_error(500, f"Error downloading CSV: {e}")
+
+        def _handle_source_stream(self, qs, handlers):
+            """Stream original Excel source file."""
+            try:
+                source = (qs.get('source') or [None])[0]
+                if not source:
+                    return self._send_error(400, "Missing 'source' parameter")
+                content = handlers.handle_source_raw(qs)
+                ext = source.lower().split('.')[-1] if '.' in source else ''
+                content_type_map = {
+                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'xls': 'application/vnd.ms-excel',
+                }
+                content_type = content_type_map.get(ext, 'application/octet-stream')
+                self.send_response(200)
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Disposition', f'attachment; filename="{source}"')
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception as e:
+                return self._send_error(500, f"Error streaming source: {e}")
+
+        def _handle_quote_download(self, filename, handlers, qs=None):
+            """Stream PDF quote file."""
+            try:
+                qs = qs or {}
+                is_inline = qs.get('inline', ['0'])[0] == '1'
+                content = handlers.handle_get_quote_file(filename)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/pdf')
+                disposition = 'inline' if is_inline else 'attachment'
+                self.send_header('Content-Disposition', f'{disposition}; filename="{filename}"')
+                self.send_header('Content-Length', str(len(content)))
+                self.send_header('Access-Control-Allow-Origin', 'http://localhost:5173')
+                self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+                self.send_header('Access-Control-Allow-Credentials', 'true')
+                self._cors_header_sent = True
+                self.end_headers()
+                self.wfile.write(content)
+            except FileNotFoundError:
+                return self._send_error(404, "Quote file not found")
+            except Exception as e:
+                return self._send_error(500, f"Error streaming PDF: {e}")
+
+        def _handle_document_download(self, filename, handlers, qs=None):
+            """Stream document file (PDF, DOCX, etc.)."""
+            try:
+                qs = qs or {}
+                is_inline = qs.get('inline', ['0'])[0] == '1'
+                content = handlers.handle_get_document_file(filename)
+                
+                # Determine content type based on file extension
+                ext = filename.lower().split('.')[-1] if '.' in filename else ''
+                content_type_map = {
+                    'pdf': 'application/pdf',
+                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'doc': 'application/msword',
+                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'xls': 'application/vnd.ms-excel',
+                    'txt': 'text/plain; charset=utf-8',
+                }
+                content_type = content_type_map.get(ext, 'application/octet-stream')
+                
+                self.send_response(200)
+                self.send_header('Content-Type', content_type)
+                disposition = 'inline' if is_inline else 'attachment'
+                self.send_header('Content-Disposition', f'{disposition}; filename="{filename}"')
+                self.send_header('Content-Length', str(len(content)))
+                self.send_header('Access-Control-Allow-Origin', 'http://localhost:5173')
+                self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+                self.send_header('Access-Control-Allow-Credentials', 'true')
+                self._cors_header_sent = True
+                self.end_headers()
+                self.wfile.write(content)
+            except FileNotFoundError:
+                return self._send_error(404, "Document file not found")
+            except Exception as e:
+                return self._send_error(500, f"Error streaming document: {e}")
+
+        def json(self, payload, status_code=200):
+            """Send JSON response."""
+            try:
+                data = json.dumps(payload).encode('utf-8')
+                self.send_response(status_code)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self._send_error(500, f"Error serializing JSON: {e}")
+
+        def _send_error(self, code: int, message: str):
+            """Send error response."""
+            payload = json.dumps({"error": message}).encode('utf-8')
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+    
+    return Rag
+
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    
+    def server_bind(self):
+        """Override to ensure SO_REUSEADDR is set before binding.
+        
+        SO_REUSEADDR allows rapid server restarts without waiting for TIME_WAIT.
+        We do NOT use SO_REUSEPORT to prevent multiple servers on the same port.
+        """
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        super().server_bind()
+
+
+def test_llm_connection():
+    """Test LLM connectivity at startup.
+    
+    Attempts to connect to the configured LLM endpoint and verify the API is reachable.
+    Logs status but does not block startup if LLM is unavailable.
+    """
+    def format_llm_error(error: Exception) -> str:
+        parts = [f"{error.__class__.__name__}: {error}"]
+        status_code = getattr(error, "status_code", None)
+        if status_code is not None:
+            parts.append(f"status={status_code}")
+
+        response = getattr(error, "response", None)
+        if response is not None:
+            response_text = getattr(response, "text", None)
+            if response_text:
+                parts.append(f"response={response_text}")
+
+        body = getattr(error, "body", None)
+        if body:
+            parts.append(f"body={body}")
+
+        return " | ".join(parts)
+
+    try:
+        print("[LLM] Testing connection to LLM service...")
+        factory = LLMClientFactory()
+        client = factory.create_client(timeout=5)
+
+        # A lightweight models list call verifies transport and auth without forcing
+        # a full generation request, which can time out while the model is loading.
+        response = client.client.models.list()
+        models = []
+        if hasattr(response, "data") and response.data:
+            models = [getattr(item, "id", None) for item in response.data if getattr(item, "id", None)]
+
+        requested_model = factory.get_settings().model
+        if models and requested_model not in models:
+            print(f"⚠️  [LLM] API reachable, but model '{requested_model}' is not in the local model list")
+        else:
+            print("✅ [LLM] Connection successful")
+        return True
+    except Exception as e:
+        print(f"⚠️  [LLM] Connection failed: {format_llm_error(e)}")
+        print(f"     LLM may be unavailable or misconfigured")
+        print(f"     Make sure your LLM service is running at {os.environ.get('LLM_URL', 'http://127.0.0.1:1234')}")
+        return False
+
+
+def main():
+    if not config["STORAGE_DIR"].exists():
+        print(f"Storage directory not found: {config['STORAGE_DIR']}")
+        sys.exit(1)
+    
+    # Test LLM connection (non-blocking)
+    test_llm_connection()
+    
+    try:
+        signal.signal(signal.SIGTERM, lambda s, f: (_ for _ in ()).throw(KeyboardInterrupt()))
+    except Exception:
+        pass
+
+    Handler = create_rag_handler(config)
+    with ReusableThreadingHTTPServer(('', config["PORT"]), Handler) as httpd:
+        print(f"CSV server on http://127.0.0.1:{config['PORT']}")
+        print(f"Storage dir: {config['STORAGE_DIR']}")
+        print(f"ex: http://127.0.0.1:{config['PORT']}/api/csv/sources")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nShutting down...")
+        finally:
+            try:
+                httpd.shutdown()
+            except Exception:
+                pass
+            httpd.server_close()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice</title>
+    <style>
+      @page {
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background-color: #e8e3d5;
+        color: #000;
+        padding: 0;
+        line-height: 1;
+      }
+
+      .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 28px 36px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+
+      .header h1 {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .invoice-title {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .from-address {
+        margin-bottom: 20px;
+        font-size: 11px;
+      }
+
+      .invoice-meta {
+        text-align: right;
+        margin-bottom: 10px;
+        font-size: 11px;
+      }
+
+      .invoice-meta div {
+        margin-bottom: 2px;
+      }
+
+      .to-section {
+        margin-bottom: 16px;
+      }
+
+      .to-label {
+        font-weight: 600;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+
+      .client-name {
+        font-weight: 700;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+
+      .client-details {
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .services-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+      }
+
+      .services-table th {
+        background-color: transparent;
+        border: 1px solid #000;
+        padding: 5px 8px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 11px;
+      }
+
+      .services-table td {
+        border: 1px solid #000;
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      .services-table .price-col {
+        text-align: right;
+        width: 150px;
+      }
+
+      .tax-row td {
+        border-top: none;
+        border-bottom: none;
+        font-size: 11px;
+      }
+
+      .total-row {
+        background-color: #9db4d4;
+        font-weight: 700;
+        font-size: 12px;
+      }
+
+      .total-row td {
+        padding: 5px 8px;
+      }
+
+      .bank-details {
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .bank-details-title {
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .iban {
+        margin-top: 6px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h3>Malo Milki Yamakado</h3>
+        <div class="invoice-title">Quote</div>
+      </div>
+      <div class="invoice-meta">
+        <div># {{ quote_id }}</div>
+        <div>Date: {{ issued_date[:10] }}</div>
+      </div>
+
+      <div class="to-section">
+        <div class="to-label">To:</div>
+        <h3>{{ account.name }}</h3>
+        <div class="client-details">
+          {{ account.address_line1 }}<br />
+          {% if account.address_line2 %}{{ account.address_line2 }}<br />{%
+          endif %} {{ account.postal_code }} {{ account.city }}<br />
+          {{ account.country_name }}
+        </div>
+      </div>
+
+      <table class="services-table">
+        <thead>
+          <tr>
+            <th>Brand</th>
+            <th>SKU</th>
+            <th>Description</th>
+            <th class="price-col">Quantity</th>
+            <th class="price-col">Selling Price</th>
+            <th class="price-col">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %} {% set unit_price =
+          product.get('discounted_unit_price') if
+          product.get('discounted_unit_price') is not none else
+          (product.get('selling_price') if product.get('selling_price') is not
+          none else product.get('price', 0)) %} {% set line_total =
+          product.get('line_total_excl_tax') if
+          product.get('line_total_excl_tax') is not none else (product.quantity
+          * unit_price) %}
+          <tr>
+            <td style="white-space: nowrap">
+              {{ product.brand or product.manufacturer or '' }}
+            </td>
+            <td style="white-space: nowrap">{{ product.sku or '' }}</td>
+            <td>
+              {{ (product.description or '')[:40] }}{% if (product.description
+              or '')|length > 40 %}…{% endif %}
+            </td>
+            <td class="price-col">{{ product.quantity }}</td>
+            <td class="price-col">
+              {{ unit_price|format_currency(currency) }} {{ currency }}
+            </td>
+            <td class="price-col">
+              {{ line_total|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td colspan="5" class="price-col"><strong>Subtotal</strong></td>
+            <td class="price-col">
+              {{ totals.subtotal|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="5" class="price-col"><strong>Tax</strong></td>
+            <td class="price-col">
+              {{ totals.tax|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="5" class="price-col"><strong>Total</strong></td>
+            <td class="price-col">
+              {{ totals.total|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ai Oe</title>
+    <style>
+      @page {
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background-color: #e8e3d5;
+        color: #000;
+        padding: 0;
+        line-height: 1.6;
+      }
+
+      .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 60px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .invoice-title {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .from-address {
+        margin-bottom: 60px;
+        font-size: 14px;
+      }
+
+      .invoice-meta {
+        text-align: right;
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+
+      .invoice-meta div {
+        margin-bottom: 4px;
+      }
+
+      .to-section {
+        margin-bottom: 40px;
+      }
+
+      .to-label {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .client-name {
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+
+      .client-details {
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .services-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 60px;
+      }
+
+      .services-table th {
+        background-color: transparent;
+        border: 2px solid #000;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .services-table td {
+        border: 2px solid #000;
+        padding: 12px;
+        font-size: 14px;
+      }
+
+      .services-table .price-col {
+        text-align: right;
+        width: 150px;
+      }
+
+      .tax-row td {
+        border-top: none;
+        border-bottom: none;
+        font-size: 14px;
+      }
+
+      .total-row {
+        background-color: #9db4d4;
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      .total-row td {
+        padding: 14px 12px;
+      }
+
+      .bank-details {
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .bank-details-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .iban {
+        margin-top: 12px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h3>Malo Milki Yamakado</h3>
+        <div class="invoice-title">Invoice</div>
+      </div>
+      <div class="invoice-meta">
+        <div># {{ quote_id }}</div>
+        <div>Date: {{ issued_date[:10] }}</div>
+      </div>
+
+      <div class="to-section">
+        <div class="to-label">To:</div>
+        <h3>{{ account.name }}</h3>
+        <div class="client-details">
+          {{ account.address_line1 }}<br />
+          {% if account.address_line2 %}{{ account.address_line2 }}<br />{%
+          endif %} {{ account.postal_code }} {{ account.city }}<br />
+          {{ account.country_name }}
+        </div>
+      </div>
+
+      <table class="services-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="price-col">Quantity</th>
+            <th class="price-col">Unit Price</th>
+            <th class="price-col">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td>{{ product.description }}</td>
+            <td class="price-col">{{ product.quantity }}</td>
+            <td class="price-col">
+              {{ product.price|format_currency(currency) }} {{ currency }}
+            </td>
+            <td class="price-col">
+              {{ (product.quantity * product.price)|format_currency(currency) }}
+              {{ currency }}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td colspan="3" class="price-col"><strong>Subtotal</strong></td>
+            <td class="price-col">
+              {{ totals.subtotal|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="3" class="price-col"><strong>Tax</strong></td>
+            <td class="price-col">
+              {{ totals.tax|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="3" class="price-col"><strong>Total</strong></td>
+            <td class="price-col">
+              {{ totals.total|format_currency(currency) }} {{ currency }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top: 40px; text-align: right">
+        <div style="margin-bottom: 12px">
+          <strong>Subtotal:</strong> {{
+          totals.subtotal|format_currency(currency) }} {{ currency }}
+        </div>
+        <div style="margin-bottom: 12px">
+          <strong>Tax:</strong> {{ totals.tax|format_currency(currency) }} {{
+          currency }}
+        </div>
+        <div
+          style="
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px;
+            background-color: #9db4d4;
+          "
+        >
+          <strong>Total:</strong> {{ totals.total|format_currency(currency) }}
+          {{ currency }}
+        </div>
+      </div>
+
+      <div>
+        Bank detail: Bank name: Société Générale swift code: SOGEFRPP Account
+        number: 00050023562 Bank Address: MEUDON CENTRE 36 Rue De La Republique
+        92190 Meudon Account name: Malo Yamakado IBAN: FR76 3000 3038 4000 0500
+        2356 21
+      </div>
+    </div>
+  </body>
+</html>

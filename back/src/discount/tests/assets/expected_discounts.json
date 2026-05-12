@@ -1,0 +1,158 @@
+[
+  {
+    "family_code": "00A10",
+    "description": "APPAREILLAGE MURAL",
+    "quantity": 1.0,
+    "discount": 67.0
+  },
+  {
+    "family_code": "00A11",
+    "description": "DETECTEURS",
+    "quantity": 1.0,
+    "discount": 67.0
+  },
+  {
+    "family_code": "00A13",
+    "description": "PORTIER AUDIO/VIDÉO",
+    "quantity": 1.0,
+    "discount": 67.0
+  },
+  {
+    "family_code": "00A14",
+    "description": null,
+    "quantity": 1.0,
+    "discount": 67.0
+  },
+  {
+    "family_code": "00A15",
+    "description": null,
+    "quantity": 1.0,
+    "discount": 66.4
+  },
+  {
+    "family_code": "00C10",
+    "description": "COFFRETS, ENVELOPPES ET PRISES INDUSTRIELS",
+    "quantity": 1.0,
+    "discount": 62.0
+  },
+  {
+    "family_code": "00C11",
+    "description": "PROTECTION ET COMMANDE MOTEURS",
+    "quantity": 1.0,
+    "discount": 62.0
+  },
+  {
+    "family_code": "00C12",
+    "description": "DEMARREURS PROGRESSIFS",
+    "quantity": 1.0,
+    "discount": 53.0
+  },
+  {
+    "family_code": "00C13",
+    "description": "RELAYS DE CONTRÔLE ET RELAIS TEMPORISÉS",
+    "quantity": 1.0,
+    "discount": 43.0
+  },
+  {
+    "family_code": "00C14",
+    "description": "INTERRUPTEURS-SECTIONNEURS",
+    "quantity": 1.0,
+    "discount": 62.0
+  },
+  {
+    "family_code": "00C15",
+    "description": "AUTOMATISMES ET PÉRI-AUTOMATISMES",
+    "quantity": 1.0,
+    "discount": 62.0
+  },
+  {
+    "family_code": "00C16",
+    "description": "INTERFACE HOMME/MACHINE",
+    "quantity": 1.0,
+    "discount": 62.0
+  },
+  {
+    "family_code": "00D10",
+    "description": "TABLEAU ÉLECTRIQUE RÉSIDENTIEL",
+    "quantity": 1.0,
+    "discount": 83.0
+  },
+  {
+    "family_code": "00D11",
+    "description": "PROTECTION, COUPURE ET AUTRES FONCTIONS",
+    "quantity": 1.0,
+    "discount": 78.0
+  },
+  {
+    "family_code": "00D13",
+    "description": "ENVELOPPES",
+    "quantity": 1.0,
+    "discount": 67.0
+  },
+  {
+    "family_code": "00D17",
+    "description": "EV CHARGING",
+    "quantity": 1.0,
+    "discount": 60.0
+  },
+  {
+    "family_code": "00D19",
+    "description": "DISJONCTEURS BOITIERS MOULÉS",
+    "quantity": 1.0,
+    "discount": 78.0
+  },
+  {
+    "family_code": "00F10",
+    "description": "PARAFOUDRES SOULÉ",
+    "quantity": 1.0,
+    "discount": 70.0
+  },
+  {
+    "family_code": "00M10",
+    "description": "FREE@HOME",
+    "quantity": 1.0,
+    "discount": 50.0
+  },
+  {
+    "family_code": "00E10",
+    "description": "CENTRALE DE MESURE",
+    "quantity": 1.0,
+    "discount": 74.0
+  },
+  {
+    "family_code": "00E11",
+    "description": "ANALYSEUR DE RESEAU",
+    "quantity": 1.0,
+    "discount": 74.0
+  },
+  {
+    "family_code": "00E12",
+    "description": "COMPTEUR",
+    "quantity": 1.0,
+    "discount": 74.0
+  },
+  {
+    "family_code": "00E13",
+    "description": "TORES",
+    "quantity": 1.0,
+    "discount": 74.0
+  },
+  {
+    "family_code": "00M12",
+    "description": "OFFRE KNX",
+    "quantity": 1.0,
+    "discount": 61.0
+  },
+  {
+    "family_code": "00V15",
+    "description": "TABLEAUX RESI PRECABLES",
+    "quantity": 1.0,
+    "discount": 75.1
+  },
+  {
+    "family_code": "00V12",
+    "description": "DIVERS RÉSIDENTIEL",
+    "quantity": 1.0,
+    "discount": 75.1
+  }
+]

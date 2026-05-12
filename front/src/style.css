@@ -1,0 +1,123 @@
+@import 'tailwindcss';
+
+.opportunity-page {
+   padding: 1rem;
+   border: 0px solid blue;
+}
+
+.opportunity-page-section {
+   margin: 1rem;
+
+   background: #ffffff;
+   border: 0px solid red;
+}
+
+.panel {
+   border-radius: 0.5rem;
+   box-shadow:
+      0 1px 3px 0 rgb(0 0 0 / 0.1),
+      0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Quote table */
+
+@keyframes saveFlash {
+   0% {
+      background-color: rgb(209, 250, 229);
+   }
+
+   100% {
+      background-color: transparent;
+   }
+}
+
+.save-flash {
+   animation: saveFlash 1s ease-out;
+}
+
+th.head-brand,
+.line-brand input {
+   width: 80px;
+}
+th.head-unit {
+   text-align: right;
+}
+
+th.total-without-tax {
+   text-align: right;
+}
+th.head-tax {
+   text-align: right;
+}
+th.head-total {
+   text-align: right;
+}
+
+.line td {
+   padding: 4px;
+   vertical-align: top;
+   border: 1px solid #dddddd;
+}
+.line .input {
+   /* 'w-full px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors', */
+   border: 0px;
+   width: 100%;
+   padding: 0.25rem;
+}
+.line textarea {
+   width: 100%;
+
+   border: 0px;
+   resize: vertical;
+}
+.line-sku input {
+   width: 100px;
+   text-align: left;
+}
+.line-quantity input {
+   width: 80px;
+}
+
+.line .rank button {
+   margin: 0px;
+   padding: 0px;
+}
+
+.number {
+   text-align: right;
+}
+.line-total-without-tax {
+   min-width: 100px;
+   text-align: right;
+}
+.line-total {
+   min-width: 100px;
+   text-align: right;
+}
+
+.line-tax-rate {
+   text-align: right;
+}
+
+.line-description {
+   min-width: 140px;
+}
+.line-rank {
+   min-width: 30px;
+}
+.line-rank button:hover {
+   cursor: pointer;
+   color: blue;
+}
+.line-rank button:disabled {
+   cursor: not-allowed;
+   color: gray;
+}
+.line-unit button {
+   width: 60px;
+   text-align: right;
+}
+
+.line input {
+   background-color: #eeeeee;
+}

@@ -1,0 +1,7 @@
+[Unit]
+Description=RAG Full Stack (Backend + Frontend)
+Wants=rag-backend.service rag-frontend.service
+After=rag-backend.service rag-frontend.service
+
+[Install]
+WantedBy=multi-user.target
