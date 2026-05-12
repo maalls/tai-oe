@@ -1,6 +1,17 @@
 <template>
    <div>
-      <ProductsSubHeader />
+      <ProductsSubHeader>
+         <template #actions>
+            <button
+               type="button"
+               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+               :disabled="isCreatingFamily"
+               @click="addFamily"
+            >
+               {{ isCreatingFamily ? t('products.family.adding') : t('products.family.add') }}
+            </button>
+         </template>
+      </ProductsSubHeader>
       <div class="p-6 max-w-7xl mx-auto space-y-6">
          <div v-if="errorMessage" class="rounded-lg bg-red-50 text-red-700 p-4">
             {{ errorMessage }}
@@ -122,14 +133,6 @@
                         net price
                      </button>
                   </div>
-                  <button
-                     type="button"
-                     class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                     :disabled="isCreatingFamily"
-                     @click="addFamily"
-                  >
-                     {{ isCreatingFamily ? 'Adding...' : 'Add' }}
-                  </button>
                </div>
             </div>
             <div v-if="isLoading" class="p-6 text-gray-500">Loading...</div>
@@ -196,6 +199,7 @@
                         >
                            Products
                         </th>
+                        <th class="px-4 py-2 text-right">Actions</th>
                      </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-200">
@@ -438,19 +442,21 @@
                               1
                            </RouterLink>
                         </td>
+                        <td class="px-4 py-2 text-right">
+                           <button
+                              type="button"
+                              class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              :disabled="isDeletingById[family.id]"
+                              @click="deleteFamily(family)"
+                           >
+                              {{ isDeletingById[family.id] ? 'Deleting...' : 'Delete' }}
+                           </button>
+                        </td>
                      </tr>
                   </tbody>
                </table>
             </div>
          </div>
-         <button
-            type="button"
-            class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="isCreatingFamily"
-            @click="addFamily"
-         >
-            {{ isCreatingFamily ? 'Adding...' : 'Add' }}
-         </button>
       </div>
    </div>
 </template>
@@ -482,9 +488,11 @@ import ProductsSubHeader from './../products/ProductsSubHeader.vue';
 import { useBrandFamilyData } from '../products/useBrandFamilyData';
 import { supabase } from '../../lib/supabase';
 import { searchProductBySku } from '../../composables/useSuggestionSearch';
+import { useI18n } from '../../i18n/useI18n';
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 const { brands, families, isLoading, errorMessage, loadData } = useBrandFamilyData();
 const codeQuery = ref('');
 const typeQuery = ref('');
@@ -494,6 +502,7 @@ const exactMatch = ref(true);
 const showDiscountOnly = ref(true);
 const brandIdFilter = ref<string | null>(null);
 const isSavingById = ref<Record<string, boolean>>({});
+const isDeletingById = ref<Record<string, boolean>>({});
 const savedFlashById = ref<Record<string, boolean>>({});
 const isCreatingFamily = ref(false);
 
@@ -982,6 +991,43 @@ const saveFamily = async (family: (typeof families.value)[number]) => {
       console.error('[FamilyPage] Failed to save family fields:', error);
    } finally {
       isSavingById.value = { ...isSavingById.value, [family.id]: false };
+   }
+};
+
+const deleteFamily = async (family: (typeof families.value)[number]) => {
+   const confirmed = window.confirm('Delete this family?');
+   if (!confirmed) return;
+
+   isDeletingById.value = { ...isDeletingById.value, [family.id]: true };
+   errorMessage.value = '';
+
+   try {
+      const { error: linkDeleteError } = await (supabase as any)
+         .from('product_family')
+         .delete()
+         .eq('family_id', family.id);
+      if (linkDeleteError) throw linkDeleteError;
+
+      const { error: familyDeleteError } = await (supabase as any)
+         .from('family')
+         .delete()
+         .eq('id', family.id);
+      if (familyDeleteError) throw familyDeleteError;
+
+      families.value = families.value.filter((entry) => entry.id !== family.id);
+
+      if (activeProductCodeFamilyId.value === family.id) {
+         activeProductCodeFamilyId.value = null;
+      }
+
+      const nextDeleting = { ...isDeletingById.value };
+      delete nextDeleting[family.id];
+      isDeletingById.value = nextDeleting;
+   } catch (error) {
+      console.error('[FamilyPage] Failed to delete family:', error);
+      errorMessage.value = error instanceof Error ? error.message : 'Failed to delete family.';
+   } finally {
+      isDeletingById.value = { ...isDeletingById.value, [family.id]: false };
    }
 };
 </script>

@@ -291,6 +291,10 @@ export default {
          missingFamilyId: 'Identifiant de famille manquant.',
          loadFailed: 'Échec du chargement des informations de famille.',
       },
+      family: {
+         add: 'Ajouter',
+         adding: 'Ajout...',
+      },
       cms: {
          brand: {
             title: 'Marques',

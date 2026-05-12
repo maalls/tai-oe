@@ -108,23 +108,25 @@
          </div>
 
          <Table
-            :products="displayedProducts"
+            :products="paginatedProducts"
             :loading="loading"
-            :totalCount="totalCount"
-            :nextOffset="nextOffset"
+            :totalCount="tableTotalCount"
             :isUsingSearch="isUsingSearch"
+            :currentPage="currentPage"
+            :totalPages="totalPages"
+            :pageSize="PAGE_SIZE"
             :getBrandDisplay="getBrandDisplay"
             :getFamilyTags="getFamilyTags"
             :getDiscountedPrice="getDiscountedPrice"
             :formatPrice="formatPrice"
-            :loadMore="loadMore"
+            :goToPage="goToPage"
          />
       </div>
    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import Table from './components/table/index.vue';
@@ -143,7 +145,7 @@ interface Product {
    family_codes?: string[] | null;
 }
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
 const SEARCH_LIMIT = 500;
 const FAMILY_LINK_BATCH_SIZE = 1000;
 
@@ -159,9 +161,8 @@ const filterTarif = ref('');
 const filterFamily = ref('');
 const exactMatch = ref(false);
 const totalCount = ref(0);
-const nextOffset = ref<string | number | null>(null);
 const isUsingSearch = ref(false);
-const currentOffset = ref(0);
+const currentPage = ref(1);
 
 const route = useRoute();
 const router = useRouter();
@@ -209,6 +210,25 @@ const familyMetaByCode = computed(() => {
 const displayedProducts = computed(() =>
    isUsingSearch.value ? searchResults.value : products.value
 );
+
+const tableTotalCount = computed(() =>
+   isUsingSearch.value ? displayedProducts.value.length : totalCount.value
+);
+
+const totalPages = computed(() => {
+   const total = tableTotalCount.value;
+   if (total === 0) return 0;
+   return Math.ceil(total / PAGE_SIZE);
+});
+
+const paginatedProducts = computed(() => {
+   if (!isUsingSearch.value) {
+      return products.value;
+   }
+   const start = (currentPage.value - 1) * PAGE_SIZE;
+   const end = start + PAGE_SIZE;
+   return searchResults.value.slice(start, end);
+});
 
 function matchesFamilyFilter(product: Product, familyFilter: string): boolean {
    const normalizedFilter = familyFilter.trim().toLowerCase();
@@ -292,19 +312,19 @@ function applyClientFilters(list: Product[]): Product[] {
    });
 }
 
-async function loadProducts() {
+async function loadProducts(page = 1) {
    loading.value = true;
    error.value = '';
    searchError.value = '';
    isUsingSearch.value = false;
    searchResults.value = [];
-   currentOffset.value = 0;
+   currentPage.value = Math.max(1, page);
 
    await syncQueryToUrl();
 
    try {
-      const from = 0;
-      const to = PAGE_SIZE - 1;
+      const from = (currentPage.value - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
       const {
          data,
          count,
@@ -322,8 +342,6 @@ async function loadProducts() {
       const mapped = (data || []).map(mapSupabaseProduct);
       products.value = mapped;
       totalCount.value = count || 0;
-      currentOffset.value = mapped.length;
-      nextOffset.value = mapped.length === PAGE_SIZE ? currentOffset.value : null;
    } catch (e: any) {
       error.value = String(e?.message || e);
    } finally {
@@ -331,35 +349,7 @@ async function loadProducts() {
    }
 }
 
-async function loadMore() {
-   if (!nextOffset.value) return;
-
-   loading.value = true;
-   error.value = '';
-
-   try {
-      const from = currentOffset.value;
-      const to = currentOffset.value + PAGE_SIZE - 1;
-      const { data, error: queryError } = await supabase
-         .from('product')
-         .select('*, brand:brand_id(id,name,marque), product_family(family:family_id(code))')
-         .order('sku', { ascending: true })
-         .range(from, to);
-
-      if (queryError) throw queryError;
-
-      const mapped = (data || []).map(mapSupabaseProduct);
-      products.value = [...products.value, ...mapped];
-      currentOffset.value += mapped.length;
-      nextOffset.value = mapped.length === PAGE_SIZE ? currentOffset.value : null;
-   } catch (e: any) {
-      error.value = String(e?.message || e);
-   } finally {
-      loading.value = false;
-   }
-}
-
-async function performSearch() {
+async function performSearch(options?: { preservePage?: boolean }) {
    const hasQuery = searchQuery.value.trim().length > 0;
    const hasFilters =
       filterMarque.value.trim() ||
@@ -378,6 +368,10 @@ async function performSearch() {
    if (!hasQuery && !hasFilters) {
       await loadProducts();
       return;
+   }
+
+   if (!options?.preservePage) {
+      currentPage.value = 1;
    }
 
    await syncQueryToUrl();
@@ -444,6 +438,9 @@ async function performSearch() {
       if (familyFilteredProducts) {
          searchResults.value = applyClientFilters(familyFilteredProducts);
          isUsingSearch.value = true;
+         if (options?.preservePage) {
+            currentPage.value = Math.min(Math.max(1, currentPage.value), totalPages.value || 1);
+         }
          return;
       }
 
@@ -471,6 +468,9 @@ async function performSearch() {
       const mappedResults = (data || []).map(mapSupabaseProduct);
       searchResults.value = applyClientFilters(mappedResults);
       isUsingSearch.value = true;
+      if (options?.preservePage) {
+         currentPage.value = Math.min(Math.max(1, currentPage.value), totalPages.value || 1);
+      }
    } catch (e: any) {
       searchError.value = String(e?.message || e);
    } finally {
@@ -488,7 +488,22 @@ function clearSearch() {
    searchResults.value = [];
    searchError.value = '';
    isUsingSearch.value = false;
+   currentPage.value = 1;
    syncQueryToUrl();
+}
+
+async function goToPage(page: number) {
+   const target = Math.max(1, page);
+   if (target === currentPage.value) return;
+
+   if (isUsingSearch.value) {
+      currentPage.value = Math.min(target, totalPages.value || 1);
+      await syncQueryToUrl();
+      return;
+   }
+
+   const maxPage = Math.max(1, Math.ceil(totalCount.value / PAGE_SIZE));
+   await loadProducts(Math.min(target, maxPage));
 }
 
 function formatPrice(price: string | number): string {
@@ -618,6 +633,8 @@ function applyQueryFromUrl() {
    filterTarif.value = String(getValue(query.tarif) || '').trim();
    filterFamily.value = String(getValue(query.family) || '').trim();
    exactMatch.value = String(getValue(query.exactMatch) || '').toLowerCase() === 'true';
+   const parsedPage = Number.parseInt(String(getValue(query.page) || '1'), 10);
+   currentPage.value = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 }
 
 async function syncQueryToUrl() {
@@ -628,13 +645,19 @@ async function syncQueryToUrl() {
    if (filterTarif.value.trim()) nextQuery.tarif = filterTarif.value.trim();
    if (filterFamily.value.trim()) nextQuery.family = filterFamily.value.trim();
    if (exactMatch.value) nextQuery.exactMatch = 'true';
+   if (currentPage.value > 1) nextQuery.page = String(currentPage.value);
 
+   const scrollY = typeof window !== 'undefined' ? window.scrollY : 0;
    await router.replace({ query: nextQuery });
+
+   if (typeof window !== 'undefined') {
+      await nextTick();
+      window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' });
+   }
 }
 
 onMounted(() => {
    applyQueryFromUrl();
-   loadProducts();
    loadBrandData();
    if (
       searchQuery.value ||
@@ -643,7 +666,9 @@ onMounted(() => {
       filterTarif.value ||
       filterFamily.value
    ) {
-      performSearch();
+      performSearch({ preservePage: true });
+   } else {
+      loadProducts(currentPage.value);
    }
 });
 </script>

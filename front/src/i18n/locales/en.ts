@@ -276,6 +276,10 @@ export default {
             missingFamilyId: 'Missing family id.',
             loadFailed: 'Failed to load family information.',
          },
+         family: {
+            add: 'Add',
+            adding: 'Adding...',
+         },
          cms: {
             brand: {
                title: 'Brands',

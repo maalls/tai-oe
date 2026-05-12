@@ -1,20 +1,34 @@
 <template>
    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div v-if="loading" class="p-6 text-center text-gray-600">
+      <div class="px-6 py-3 text-sm text-gray-600 border-b border-gray-200 bg-white">
+         <template v-if="isUsingSearch">
+            {{ t('products.table.results', { count: totalCount }) }}
+         </template>
+         <template v-else>
+            {{ t('products.table.showing', { count: products.length, total: totalCount }) }}
+         </template>
+      </div>
+      <div class="px-6 py-3 bg-white border-b border-gray-200 flex justify-end">
+         <PaginationControls
+            :currentPage="currentPage"
+            :totalPages="totalPages"
+            :goToPage="goToPage"
+         />
+      </div>
+
+      <div
+         v-if="loading"
+         class="min-h-105 p-6 flex items-center justify-center text-center text-gray-600 border-b border-gray-200"
+      >
          {{ t('products.table.loading') }}
       </div>
-      <div v-else-if="products.length === 0" class="p-6 text-center text-gray-600">
+      <div
+         v-else-if="products.length === 0"
+         class="min-h-80 p-6 flex items-center justify-center text-center text-gray-600"
+      >
          {{ t('products.table.empty') }}
       </div>
       <div v-else class="overflow-x-auto">
-         <div class="px-6 py-3 text-sm text-gray-600 border-b border-gray-200 bg-white">
-            <template v-if="isUsingSearch">
-               {{ t('products.table.results', { count: products.length }) }}
-            </template>
-            <template v-else>
-               {{ t('products.table.showing', { count: products.length, total: totalCount }) }}
-            </template>
-         </div>
          <table class="w-full">
             <thead class="bg-gray-50 border-b border-gray-200">
                <tr>
@@ -92,20 +106,17 @@
       >
          <div class="text-sm text-gray-600">
             <template v-if="isUsingSearch">
-               {{ t('products.table.results', { count: products.length }) }}
+               {{ t('products.table.results', { count: totalCount }) }}
             </template>
             <template v-else>
                {{ t('products.table.showing', { count: products.length, total: totalCount }) }}
             </template>
          </div>
-         <button
-            v-if="nextOffset && !isUsingSearch"
-            @click="loadMore"
-            :disabled="loading"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
-         >
-            {{ t('products.table.loadMore') }}
-         </button>
+         <PaginationControls
+            :currentPage="currentPage"
+            :totalPages="totalPages"
+            :goToPage="goToPage"
+         />
       </div>
    </div>
 </template>
@@ -113,21 +124,24 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
 import { useI18n } from '../../../../i18n/useI18n';
+import PaginationControls from './PaginationControls.vue';
 
 const { t } = useI18n();
 
-defineProps<{
+const props = defineProps<{
    products: any[];
    loading: boolean;
    totalCount: number;
-   nextOffset: string | number | null;
    isUsingSearch: boolean;
+   currentPage: number;
+   totalPages: number;
+   pageSize: number;
    getBrandDisplay: (product: any) => string;
    getFamilyTags: (
       product: any
    ) => { label: string; hasDiscount: boolean; isNetPrice: boolean; href: string }[];
    getDiscountedPrice: (product: any) => { original: number; discounted: number } | null;
    formatPrice: (price: string | number) => string;
-   loadMore: () => void;
+   goToPage: (page: number) => void;
 }>();
 </script>
