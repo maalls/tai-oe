@@ -3,7 +3,7 @@
       <button
          @click.stop="showMenu = !showMenu"
          class="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-         title="More actions"
+         :title="t('mail.moreActions')"
       >
          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -24,7 +24,7 @@
          >
             <span class="flex items-center gap-2">
                <span>👤</span>
-               Contact
+               {{ t('mail.menuContact') }}
             </span>
          </router-link>
          <router-link
@@ -35,7 +35,7 @@
          >
             <span class="flex items-center gap-2">
                <span>🏢</span>
-               Account
+               {{ t('mail.menuAccount') }}
             </span>
          </router-link>
          <button
@@ -46,7 +46,7 @@
             <span class="flex items-center gap-2">
                <span v-if="!isClassifying">✓</span>
                <span v-else class="animate-spin">↻</span>
-               {{ isClassifying ? 'Classifying...' : 'Classify Email' }}
+               {{ isClassifying ? t('mail.classifying') : t('mail.classifyEmail') }}
             </span>
          </button>
          <button
@@ -57,7 +57,11 @@
             <span class="flex items-center gap-2">
                <span v-if="!isCreatingOpportunity">→</span>
                <span v-else class="animate-spin">↻</span>
-               {{ isCreatingOpportunity ? 'Creating...' : 'Create Opportunity' }}
+               {{
+                  isCreatingOpportunity
+                     ? t('mail.creatingOpportunity')
+                     : t('mail.createOpportunity')
+               }}
             </span>
          </button>
          <button
@@ -68,7 +72,7 @@
             <span class="flex items-center gap-2">
                <span v-if="!isResyncing">🔄</span>
                <span v-else class="animate-spin">↻</span>
-               {{ isResyncing ? 'Resyncing...' : 'Resync from Gmail' }}
+               {{ isResyncing ? t('mail.resyncing') : t('mail.resyncFromGmail') }}
             </span>
          </button>
          <button
@@ -79,7 +83,7 @@
             <span class="flex items-center gap-2">
                <span v-if="!isDeleting">🗑️</span>
                <span v-else class="animate-spin">↻</span>
-               {{ isDeleting ? 'Deleting...' : 'Delete Email' }}
+               {{ isDeleting ? t('mail.deleting') : t('mail.deleteEmail') }}
             </span>
          </button>
          <div
@@ -90,12 +94,12 @@
                v-if="messageId"
                @click="copyToClipboard(messageId, 'uuid')"
                class="truncate font-mono cursor-pointer hover:text-gray-700 hover:bg-gray-100 px-1 -mx-1 rounded transition-colors flex items-center justify-between gap-2"
-               :title="`${messageId} (click to copy)`"
+               :title="`${messageId} (${t('mail.clickToCopy')})`"
             >
-               <span class="truncate">UUID: {{ messageId }}</span>
+               <span class="truncate">{{ t('mail.uuidLabel') }}: {{ messageId }}</span>
                <svg
                   v-if="copiedId !== 'uuid'"
-                  class="w-3 h-3 flex-shrink-0"
+                  class="w-3 h-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -109,7 +113,7 @@
                </svg>
                <svg
                   v-else
-                  class="w-3 h-3 flex-shrink-0 text-green-600"
+                  class="w-3 h-3 shrink-0 text-green-600"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                >
@@ -120,17 +124,21 @@
                   />
                </svg>
             </div>
-            <div v-if="provider" class="truncate">Provider: {{ provider }}</div>
+            <div v-if="provider" class="truncate">
+               {{ t('mail.providerLabel') }}: {{ provider }}
+            </div>
             <div
                v-if="providerMessageId"
                @click="copyToClipboard(providerMessageId, 'provider')"
                class="truncate font-mono cursor-pointer hover:text-gray-700 hover:bg-gray-100 px-1 -mx-1 rounded transition-colors flex items-center justify-between gap-2"
-               :title="`${providerMessageId} (click to copy)`"
+               :title="`${providerMessageId} (${t('mail.clickToCopy')})`"
             >
-               <span class="truncate">{{ provider }} ID: {{ providerMessageId }}</span>
+               <span class="truncate"
+                  >{{ provider }} {{ t('mail.idShort') }}: {{ providerMessageId }}</span
+               >
                <svg
                   v-if="copiedId !== 'provider'"
-                  class="w-3 h-3 flex-shrink-0"
+                  class="w-3 h-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -144,7 +152,7 @@
                </svg>
                <svg
                   v-else
-                  class="w-3 h-3 flex-shrink-0 text-green-600"
+                  class="w-3 h-3 shrink-0 text-green-600"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                >
@@ -162,6 +170,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from '../../i18n/useI18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
    isClassifying?: boolean;

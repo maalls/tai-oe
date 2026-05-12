@@ -1,8 +1,15 @@
 <template>
-   <div v-if="messages.length === 0" class="text-center py-12 text-gray-500">No messages found</div>
+   <div v-if="messages.length === 0" class="text-center py-12 text-gray-500">
+      {{ t('mail.noMessagesFound') }}
+   </div>
 
    <div v-else class="space-y-2">
-      <div v-for="message in messages" :key="message.id">
+      <div
+         v-for="message in messages"
+         :key="message.id"
+         class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-all"
+         :class="{ 'bg-gray-50': message.labels?.includes('UNREAD') }"
+      >
          <MailItem
             :message="message as any"
             :isClassifying="classifyingEmails[message.id] || false"
@@ -30,6 +37,9 @@
 <script setup lang="ts">
 import MailItem from './MailItem.vue';
 import MailItemExpanded from './MailItemExpanded.vue';
+import { useI18n } from '../../i18n/useI18n';
+
+const { t } = useI18n();
 
 interface Message {
    id: string;

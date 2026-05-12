@@ -207,7 +207,7 @@ const loadMessages = async (force = false) => {
          messages.value = result.messages || [];
          isAuthorized.value = true;
          if (force) {
-            showNotification('Emails refreshed successfully', 'success');
+            showNotification(t('mail.refreshedSuccess'), 'success');
          }
       } else {
          if (
@@ -217,12 +217,14 @@ const loadMessages = async (force = false) => {
             isAuthorized.value = false;
             errorMessage.value = result.message;
          } else {
-            errorMessage.value = result.message || 'Failed to load messages';
+            errorMessage.value = result.message || t('mail.failedToLoadMessages');
             isAuthorized.value = true;
          }
       }
    } catch (error) {
-      errorMessage.value = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      errorMessage.value = `${t('mail.errorPrefix')}: ${
+         error instanceof Error ? error.message : t('mail.unknownError')
+      }`;
    } finally {
       isLoading.value = false;
       isRefreshing.value = false;
@@ -242,11 +244,11 @@ const authorizeGmail = async () => {
       if (response.ok && result.status === 'ok') {
          setTimeout(() => loadMessages(), 3000);
       } else {
-         errorMessage.value = result.message || 'Authorization failed';
+         errorMessage.value = result.message || t('mail.authorizationFailed');
       }
    } catch (error) {
-      errorMessage.value = `Authorization error: ${
-         error instanceof Error ? error.message : 'Unknown error'
+      errorMessage.value = `${t('mail.authorizationError')}: ${
+         error instanceof Error ? error.message : t('mail.unknownError')
       }`;
    } finally {
       isAuthorizingGmail.value = false;
@@ -315,13 +317,13 @@ const fetchMessageBody = async (messageId: string) => {
          };
       } else {
          messageBody.value[messageId] = {
-            body: `Error loading message: ${result.message || 'Unknown error'}`,
+            body: `${t('mail.failedToLoadMessage')}: ${result.message || t('mail.unknownError')}`,
             opportunities: [],
          };
       }
    } catch (error) {
       messageBody.value[messageId] = {
-         body: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+         body: `${t('mail.errorPrefix')}: ${error instanceof Error ? error.message : t('mail.unknownError')}`,
          opportunities: [],
       };
    } finally {
@@ -338,7 +340,7 @@ const classifyEmail = async (emailId: string) => {
    console.log(`Classifying email: ${emailId}`);
    const message = messages.value.find((m) => m.id === emailId);
    if (!message) {
-      showNotification('Email not found', 'error');
+      showNotification(t('mail.emailNotFound'), 'error');
       return;
    }
 
@@ -372,16 +374,18 @@ const classifyEmail = async (emailId: string) => {
             }
          }
          showNotification(
-            `✓ Email classified as: ${result.result.category_suggestion}`,
+            t('mail.emailClassifiedAs', { category: result.result.category_suggestion }),
             'success',
             4000
          );
       } else {
-         showNotification(result.message || 'Failed to classify email', 'error');
+         showNotification(result.message || t('mail.failedToClassify'), 'error');
          console.error('Classification error:', result);
       }
    } catch (error) {
-      const errorMsg = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMsg = `${t('mail.errorPrefix')}: ${
+         error instanceof Error ? error.message : t('mail.unknownError')
+      }`;
       showNotification(errorMsg, 'error');
       console.error('Classification exception:', error);
    } finally {
@@ -407,15 +411,17 @@ const resyncEmail = async (emailId: string, providerMessageId: string) => {
       const result = await response.json();
 
       if (response.ok && result.status === 'ok') {
-         showNotification('✓ Email resynced successfully', 'success', 4000);
+         showNotification(t('mail.resyncedSuccess'), 'success', 4000);
          // Refresh the email list
          await loadMessages(true);
       } else {
-         showNotification(result.message || 'Failed to resync email', 'error');
+         showNotification(result.message || t('mail.failedToResync'), 'error');
          console.error('Resync error:', result);
       }
    } catch (error) {
-      const errorMsg = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMsg = `${t('mail.errorPrefix')}: ${
+         error instanceof Error ? error.message : t('mail.unknownError')
+      }`;
       showNotification(errorMsg, 'error');
       console.error('Resync exception:', error);
    }
@@ -437,15 +443,17 @@ const deleteEmail = async (emailId: string) => {
       const result = await response.json();
 
       if (response.ok && result.status === 'ok') {
-         showNotification('✓ Email deleted successfully', 'success', 4000);
+         showNotification(t('mail.deletedSuccess'), 'success', 4000);
          // Refresh the email list
          await loadMessages(true);
       } else {
-         showNotification(result.message || 'Failed to delete email', 'error');
+         showNotification(result.message || t('mail.failedToDelete'), 'error');
          console.error('Delete error:', result);
       }
    } catch (error) {
-      const errorMsg = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMsg = `${t('mail.errorPrefix')}: ${
+         error instanceof Error ? error.message : t('mail.unknownError')
+      }`;
       showNotification(errorMsg, 'error');
       console.error('Delete exception:', error);
    }
@@ -551,12 +559,14 @@ const createOpportunity = async (messageId: string) => {
 
       const result = await response.json();
       if (!response.ok) {
-         throw new Error(result?.message || 'Failed to create opportunity');
+         throw new Error(result?.message || t('mail.failedCreateOpportunity'));
       }
 
       const opportunityId = result?.opportunity.id;
       showNotification(
-         `✓ Opportunity created: ${result.opportunity.name || result.opportunity.id}`,
+         t('mail.opportunityCreated', {
+            name: result.opportunity.name || result.opportunity.id,
+         }),
          'success',
          3000
       );
@@ -567,7 +577,7 @@ const createOpportunity = async (messageId: string) => {
          router.push(`/opportunities/${opportunityId}/source`);
       }, 1500);
    } catch (error: any) {
-      const msg = error?.message || 'Failed to create opportunity';
+      const msg = error?.message || t('mail.failedCreateOpportunity');
       showNotification(msg, 'error', 5000);
    } finally {
       creatingOpportunity.value[messageId] = false;

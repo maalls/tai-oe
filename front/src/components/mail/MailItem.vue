@@ -1,8 +1,5 @@
 <template>
-   <div
-      class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all cursor-pointer"
-      :class="{ 'bg-gray-50': message.labels?.includes('UNREAD') }"
-   >
+   <div class="cursor-pointer">
       <div @click="$emit('expand', message.id)" class="p-4">
          <div class="flex items-start justify-between mb-2">
             <div class="flex-1 min-w-0">
@@ -21,7 +18,7 @@
                </div>
                <!--p class="text-sm text-gray-600 truncate">To: {{ message.to }}</p-->
                <p v-if="message.cc_email" class="text-sm text-gray-600 truncate">
-                  Cc: {{ message.cc_email }}
+                  {{ t('mail.ccLabel') }}: {{ message.cc_email }}
                </p>
                <!--p class="text-xs">id:{{ message.id }}</p-->
 
@@ -54,7 +51,9 @@
                      {{
                         message.opportunities.length === 1
                            ? formatStageLabel(message.opportunities[0]!.stage || '')
-                           : `Opportunities (${message.opportunities.length})`
+                           : t('mail.opportunitiesCount', {
+                                count: message.opportunities.length,
+                             })
                      }}
                   </button>
                   <!-- Create opportunity button (when no opportunities exist) -->
@@ -86,7 +85,9 @@
                         ></path>
                      </svg>
                      <span>{{
-                        isCreatingOpportunity ? 'Creating...' : '+ Create Opportunity'
+                        isCreatingOpportunity
+                           ? t('mail.creatingOpportunity')
+                           : t('mail.createOpportunity')
                      }}</span>
                   </button>
                </div>
@@ -129,7 +130,7 @@ import MailItemMenu from './MailItemMenu.vue';
 import type { MailMessage } from '../../types/mail';
 
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 defineProps<{
    message: MailMessage;
@@ -189,14 +190,14 @@ const formatDate = (date: string): string => {
          : Intl.DateTimeFormat().resolvedOptions().timeZone; // Use local timezone
 
       if (isToday) {
-         return dateObj.toLocaleString('en-US', {
+         return dateObj.toLocaleString(locale.value === 'fr' ? 'fr-FR' : 'en-US', {
             hour: '2-digit',
             minute: '2-digit',
             timeZone,
          });
       }
 
-      return dateObj.toLocaleString('en-US', {
+      return dateObj.toLocaleString(locale.value === 'fr' ? 'fr-FR' : 'en-US', {
          month: 'short',
          day: 'numeric',
          timeZone,

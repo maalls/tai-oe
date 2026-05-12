@@ -22,6 +22,25 @@
                   <span class="text-gray-600">{{ t('settings.email') }}</span>
                   <span class="ml-2 text-gray-900">{{ user.email }}</span>
                </div>
+               <div class="max-w-md">
+                  <label class="text-gray-600 block mb-1">{{ t('settings.senderName') }}</label>
+                  <input
+                     v-model="senderName"
+                     type="text"
+                     class="w-full rounded-md border px-3 py-2 transition-all duration-200"
+                     :class="senderNameInputClass"
+                     :placeholder="t('settings.senderNamePlaceholder')"
+                     @blur="handleSenderNameBlur"
+                     @keydown.enter.prevent="handleSenderNameEnter"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">{{ t('settings.senderNameHelp') }}</p>
+                  <p v-if="senderNameSuccess" class="text-xs text-green-700 mt-1">
+                     {{ senderNameSuccess }}
+                  </p>
+                  <p v-if="senderNameError" class="text-xs text-red-600 mt-1">
+                     {{ senderNameError }}
+                  </p>
+               </div>
                <div>
                   <button
                      @click="handleSignOut"
@@ -324,7 +343,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { API_BASE_URL } from '../../utils/api';
 
 const router = useRouter();
-const { user, signOut, getValidToken } = useAuth();
+const { user, signOut, getValidToken, updateDisplayName } = useAuth();
 const { t } = useI18n();
 
 const LLM_API_URL = 'http://localhost:1234/v1/chat/completions';
@@ -373,6 +392,12 @@ const fetchLoopStatus = ref<{
    last_heartbeat: number | null;
    mode: string | null;
 } | null>(null);
+const senderName = ref('');
+const senderNameSaving = ref(false);
+const senderNameSuccess = ref('');
+const senderNameError = ref('');
+const lastSavedSenderName = ref('');
+let senderNameSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
 const fetchLoopCommandAll = computed(
    () =>
       'python -m src.command.fetch_emails_loop --interval 120 --max-results 50 --classify-limit 200'
@@ -414,6 +439,56 @@ const permissionItems = computed(() => {
 async function handleSignOut() {
    await signOut();
    router.push('/login');
+}
+
+const senderNameInputClass = computed(() => {
+   if (senderNameSaving.value) {
+      return 'border-blue-500 ring-2 ring-blue-200 animate-pulse';
+   }
+   if (senderNameError.value) {
+      return 'border-red-500 ring-1 ring-red-200';
+   }
+   if (senderNameSuccess.value) {
+      return 'border-green-500 ring-1 ring-green-200';
+   }
+   return 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200';
+});
+
+async function handleSaveSenderName() {
+   const nextValue = senderName.value.trim();
+   if (senderNameSaving.value || nextValue === lastSavedSenderName.value) {
+      return;
+   }
+
+   senderName.value = nextValue;
+   senderNameSaving.value = true;
+   senderNameError.value = '';
+   senderNameSuccess.value = '';
+   if (senderNameSuccessTimeout) {
+      clearTimeout(senderNameSuccessTimeout);
+      senderNameSuccessTimeout = null;
+   }
+
+   try {
+      await updateDisplayName(nextValue);
+      lastSavedSenderName.value = nextValue;
+      senderNameSuccess.value = t('settings.senderNameSaved');
+      senderNameSuccessTimeout = setTimeout(() => {
+         senderNameSuccess.value = '';
+      }, 1600);
+   } catch (error) {
+      senderNameError.value = t('settings.senderNameSaveFailed');
+   } finally {
+      senderNameSaving.value = false;
+   }
+}
+
+async function handleSenderNameBlur() {
+   await handleSaveSenderName();
+}
+
+async function handleSenderNameEnter() {
+   await handleSaveSenderName();
 }
 
 async function getAuthHeaders(includeJson = false): Promise<Record<string, string>> {
@@ -657,6 +732,10 @@ async function handleImapClear() {
 }
 
 onMounted(() => {
+   const metadata = (user.value?.user_metadata || {}) as Record<string, any>;
+   const initialSenderName = String(metadata.full_name || metadata.name || '').trim();
+   senderName.value = initialSenderName;
+   lastSavedSenderName.value = initialSenderName;
    loadGmailStatus();
    loadImapConfig();
    loadImapStatus();

@@ -79,6 +79,41 @@ export function useAuth() {
       session.value = null;
    }
 
+   async function updateDisplayName(displayName: string) {
+      if (!user.value) throw new Error('No authenticated user');
+
+      const fullName = displayName.trim();
+      const currentMetadata = (user.value.user_metadata || {}) as Record<string, any>;
+      const { data, error } = await supabase.auth.updateUser({
+         data: {
+            ...currentMetadata,
+            full_name: fullName,
+         },
+      });
+
+      if (error) throw error;
+
+      if (data?.user) {
+         user.value = data.user;
+         if (session.value) {
+            session.value = {
+               ...session.value,
+               user: data.user,
+            };
+         }
+      }
+
+      // Keep profile table aligned with auth metadata when available.
+      await (supabase.from('profile') as any).upsert(
+         {
+            id: user.value.id,
+            email: user.value.email,
+            full_name: fullName,
+         },
+         { onConflict: 'id' }
+      );
+   }
+
    async function initialize() {
       try {
          loading.value = true;
@@ -127,6 +162,7 @@ export function useAuth() {
       signUp,
       signIn,
       signOut,
+      updateDisplayName,
       initialize,
       getValidToken,
    };
