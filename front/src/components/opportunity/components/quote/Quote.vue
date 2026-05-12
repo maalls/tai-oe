@@ -538,7 +538,7 @@ const generateQuote = async () => {
 
       const result = await response.json();
       if (!response.ok) {
-         throw new Error(result?.message || 'Failed to generate quote');
+         throw new Error(result?.message || t('opportunities.errors.failedToGenerateQuote'));
       }
 
       // Reload the full document with lines (the generation response is a partial object
@@ -553,7 +553,7 @@ const generateQuote = async () => {
       //console.log('[QuotePage] Error generating quote:', error);
       window.dispatchEvent(
          new CustomEvent('header-notification', {
-            detail: { error: error?.message || 'Failed to generate quote' },
+            detail: { error: error?.message || t('opportunities.errors.failedToGenerateQuote') },
          })
       );
    } finally {
@@ -581,7 +581,7 @@ const saveQuotDocument = async () => {
          const payload = await response.json();
 
          if (!response.ok) {
-            throw new Error(payload?.error || 'Failed to save quote draft');
+            throw new Error(payload?.error || t('opportunities.errors.failedToSaveQuoteDraft'));
          }
 
          //console.log('[QuotePage] Quote document saved successfully:', payload);
@@ -592,7 +592,10 @@ const saveQuotDocument = async () => {
          console.error('[QuotePage] Error saving quote draft 1', error);
          window.dispatchEvent(
             new CustomEvent('header-notification', {
-               detail: { type: 'error', content: error?.message || 'Failed to save draft' },
+               detail: {
+                  type: 'error',
+                  content: error?.message || t('opportunities.errors.failedToSaveDraft'),
+               },
             })
          );
       }
@@ -600,7 +603,10 @@ const saveQuotDocument = async () => {
       console.error('[QuotePage] Error saving quote draft:= 2', error);
       window.dispatchEvent(
          new CustomEvent('header-notification', {
-            detail: { type: 'error', content: error?.message || 'Failed to save draft' },
+            detail: {
+               type: 'error',
+               content: error?.message || t('opportunities.errors.failedToSaveDraft'),
+            },
          })
       );
    } finally {
@@ -629,7 +635,7 @@ const generateQuotePdf = async () => {
 
       const result = await response.json();
       if (!response.ok) {
-         throw new Error(result?.message || 'Failed to generate PDF');
+         throw new Error(result?.message || t('opportunities.errors.failedToGeneratePdf'));
       }
 
       quoteDocument.value = {
@@ -643,7 +649,7 @@ const generateQuotePdf = async () => {
    } catch (error: any) {
       window.dispatchEvent(
          new CustomEvent('header-notification', {
-            detail: { error: error?.message || 'Failed to generate PDF' },
+            detail: { error: error?.message || t('opportunities.errors.failedToGeneratePdf') },
          })
       );
    } finally {

@@ -221,7 +221,7 @@ const markAsPaid = async () => {
       if (error) throw error;
 
       invoice.value.status = 'PAID';
-      paymentMessage.value = 'Invoice marked as paid successfully';
+      paymentMessage.value = t('opportunities.pipeline.messages.invoiceMarkedPaidSuccess');
 
       // Optionally update opportunity stage to PAID
       if (props.opportunity?.id) {
@@ -230,7 +230,8 @@ const markAsPaid = async () => {
             .eq('id', props.opportunity.id);
       }
    } catch (error: any) {
-      paymentError.value = error?.message || 'Failed to update invoice status';
+      paymentError.value =
+         error?.message || t('opportunities.errors.failedToUpdateInvoiceStatus');
       console.error('[PipelineStageInvoiced] Error marking as paid:', error);
    } finally {
       isUpdating.value = false;

@@ -205,10 +205,12 @@ const generateInvoice = async () => {
 
       const result = await response.json();
       if (!response.ok) {
-         throw new Error(result?.message || 'Failed to generate invoice');
+         throw new Error(result?.message || t('opportunities.errors.failedToGenerateInvoice'));
       }
 
-      invoiceMessage.value = `Invoice ${result.invoice.external_ref} created successfully`;
+      invoiceMessage.value = t('opportunities.pipeline.messages.invoiceCreatedSuccess', {
+         reference: result.invoice.external_ref,
+      });
       hasExistingInvoice.value = true;
       existingInvoiceId.value = result.invoice.id;
 
@@ -224,7 +226,7 @@ const generateInvoice = async () => {
          invoiceMessage.value = '';
       }, 4000);
    } catch (error: any) {
-      invoiceError.value = error?.message || 'Failed to generate invoice';
+      invoiceError.value = error?.message || t('opportunities.errors.failedToGenerateInvoice');
    } finally {
       isGeneratingInvoice.value = false;
    }

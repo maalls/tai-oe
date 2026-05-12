@@ -257,12 +257,12 @@ const closeAsWon = async () => {
          changed_at: new Date().toISOString(),
       });
 
-      closeMessage.value = 'Opportunity closed as won successfully!';
+      closeMessage.value = t('opportunities.pipeline.messages.closedWonSuccess');
 
       // Emit event to update parent
       emit('stageUpdated', 'CLOSED_WON', 'WON');
    } catch (error: any) {
-      closeError.value = error?.message || 'Failed to close opportunity';
+      closeError.value = error?.message || t('opportunities.errors.failedToCloseOpportunity');
       console.error('[PipelineStagePaid] Error closing opportunity:', error);
    } finally {
       isClosing.value = false;
