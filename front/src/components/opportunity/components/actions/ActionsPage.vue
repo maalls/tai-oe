@@ -298,7 +298,7 @@ const saveAction = async () => {
          }
       } else {
          if (!user.value?.id) {
-            throw new Error('Missing user id');
+            throw new Error(t('opportunities.errors.userNotAuthenticated'));
          }
          const { data, error } = await (supabase.from('action') as any)
             .insert([
@@ -386,7 +386,7 @@ const executeAction = async (action: any) => {
       });
 
       if (!response.ok) {
-         throw new Error('Failed to execute action');
+         throw new Error(t('opportunities.errors.failedToExecuteAction'));
       }
 
       action.last_executed_at = new Date().toISOString();
