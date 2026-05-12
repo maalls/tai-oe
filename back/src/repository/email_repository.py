@@ -2141,6 +2141,8 @@ class EmailRepository:
             found_last_email = False
             reached_fetch_limit = False
             page_count = 0
+            inspected_count = 0
+            seen_page_tokens = set()
             
             saved_count = 0
             skipped_count = 0
@@ -2149,9 +2151,21 @@ class EmailRepository:
             while not found_last_email and not reached_fetch_limit:
                 page_count += 1
                 print(f"[EmailRepository] Fetching page {page_count}...")
+
+                # Guard against buggy/repeating pagination tokens.
+                if page_token and page_token in seen_page_tokens:
+                    print("[EmailRepository] Detected repeated nextPageToken; stopping pagination to avoid loop")
+                    break
+                if page_token:
+                    seen_page_tokens.add(page_token)
+
+                remaining_budget = max_total_fetch - inspected_count
+                if remaining_budget <= 0:
+                    print(f"[EmailRepository] Reached fetch cap before next page: {max_total_fetch}")
+                    break
                 
                 result = gmail_client.list_messages(
-                    max_results=max_results,
+                    max_results=min(max_results, remaining_budget),
                     page_token=page_token,
                     query=query
                 )
@@ -2167,6 +2181,8 @@ class EmailRepository:
                         print(f"[EmailRepository] Reached last fetched email (ID: {last_fetched_email_id})")
                         found_last_email = True
                         break
+
+                    inspected_count += 1
                     
                     db_result = self._save_email_to_database(gmail_client, message, user_id)
                     
@@ -2176,8 +2192,8 @@ class EmailRepository:
                         else:
                             saved_count += 1
 
-                    if (saved_count + skipped_count) >= max_total_fetch:
-                        print(f"[EmailRepository] Reached fetch cap: {max_total_fetch} emails processed")
+                    if inspected_count >= max_total_fetch:
+                        print(f"[EmailRepository] Reached fetch cap: {max_total_fetch} emails inspected")
                         reached_fetch_limit = True
                         break
                 
@@ -2190,7 +2206,7 @@ class EmailRepository:
             print(f"[EmailRepository] Fetched across {page_count} page(s)")
             print(
                 f"[EmailRepository] Saved {saved_count} new, skipped {skipped_count} duplicate emails "
-                f"(processed {saved_count + skipped_count}, cap {max_total_fetch})"
+                f"(inspected {inspected_count}, cap {max_total_fetch})"
             )
             return db_result
         
