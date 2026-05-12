@@ -477,6 +477,20 @@ class EmailRepository:
         """Initialize email repository."""
         self.db_handler = EmailDatabaseHandler()
 
+    def _resolve_gmail_callback_url(self, redirect_url: Optional[str]) -> str:
+        """Resolve OAuth callback URL from frontend redirect URL origin."""
+        env_callback = os.getenv("GMAIL_OAUTH_CALLBACK_URL")
+        if env_callback:
+            return env_callback
+
+        default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
+        candidate = redirect_url or default_origin
+        parsed = urlparse(candidate)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}/api/google/oauth/callback"
+
+        return "http://localhost:7153/api/google/oauth/callback"
+
     @staticmethod
     def _get_secret_fernet() -> Fernet:
         raw_key = os.getenv("APP_SECRETS_ENCRYPTION_KEY")
