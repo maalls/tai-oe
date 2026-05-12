@@ -367,7 +367,7 @@ const finalizeSaveFlash = () => {
       new CustomEvent('header-notification', {
          detail: {
             type: 'success',
-            content: 'Quote updated successfully',
+            content: t('opportunities.quoteUpdatedSuccess'),
          },
       })
    );

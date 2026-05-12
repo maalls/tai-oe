@@ -443,10 +443,12 @@ const loadOpportunities = async () => {
          await loadAccountNames(opportunities.value);
          console.log('[OpportunityPage] Fetched opportunities:', opportunities.value.length);
       } else {
-         throw new Error(result?.message || 'Failed to load opportunities');
+         throw new Error(result?.message || t('opportunities.errors.failedToLoadOpportunities'));
       }
    } catch (error: any) {
-      errorMessage.value = `Error loading opportunities: ${error.message}. Please try refreshing the page.`;
+      errorMessage.value = t('opportunities.errors.loadOpportunitiesWithReason', {
+         message: error?.message || t('opportunities.unknownError'),
+      });
       console.error('[OpportunityPage] Error during fetch:', error);
    } finally {
       isLoading.value = false;
@@ -496,7 +498,7 @@ const createOpportunityFromSearch = async () => {
 
       const result = await response.json();
       if (!response.ok || result.status !== 'ok') {
-         throw new Error(result.message || 'Failed to create opportunity');
+         throw new Error(result.message || t('opportunities.errors.failedToCreateOpportunity'));
       }
 
       const createdId = result.opportunity?.id;
@@ -507,7 +509,9 @@ const createOpportunityFromSearch = async () => {
 
       await loadOpportunities();
    } catch (error: any) {
-      errorMessage.value = `Error creating opportunity: ${error.message}`;
+      errorMessage.value = t('opportunities.errors.createOpportunityWithReason', {
+         message: error?.message || t('opportunities.unknownError'),
+      });
       console.error('[OpportunityPage] Error creating opportunity:', error);
    } finally {
       isLoading.value = false;
@@ -575,15 +579,19 @@ const batchDelete = async () => {
          showBatchDeleteConfirmation.value = false;
 
          // Show success message
-         errorMessage.value = `Successfully deleted ${result.deleted_count || selectedOpportunities.value.size} opportunity(ies)`;
+         errorMessage.value = t('opportunities.batchDelete.success', {
+            count: result.deleted_count || deletedIds.size,
+         });
          setTimeout(() => {
             errorMessage.value = '';
          }, 3000);
       } else {
-         throw new Error(result.message || 'Failed to delete opportunities');
+         throw new Error(result.message || t('opportunities.errors.failedToDeleteOpportunities'));
       }
    } catch (error: any) {
-      errorMessage.value = `Error deleting opportunities: ${error.message}`;
+      errorMessage.value = t('opportunities.errors.deleteOpportunitiesWithReason', {
+         message: error?.message || t('opportunities.unknownError'),
+      });
       console.error('[OpportunityPage] Error during batch delete:', error);
    } finally {
       isDeleting.value = false;

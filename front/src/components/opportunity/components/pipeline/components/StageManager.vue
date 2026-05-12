@@ -501,7 +501,7 @@ const generateInvoiceAndOpen = async () => {
 
       const result = await response.json();
       if (!response.ok) {
-         throw new Error(result?.message || 'Failed to generate invoice');
+         throw new Error(result?.message || t('opportunities.errors.failedToGenerateInvoice'));
       }
 
       const invoiceId = result?.invoice?.id as string | undefined;
@@ -514,7 +514,7 @@ const generateInvoiceAndOpen = async () => {
       }
    } catch (error) {
       console.error('[StageManager] Error generating invoice:', error);
-      alert('Failed to generate invoice');
+      alert(t('opportunities.errors.failedToGenerateInvoice'));
    } finally {
       isUpdating.value = false;
    }

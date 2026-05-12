@@ -417,6 +417,7 @@ export default {
                'Are you sure you want to delete {count} opportunity(ies)? This action cannot be undone and will permanently remove all related data.',
             deleting: 'Deleting...',
             deleteAll: 'Delete All',
+            success: 'Successfully deleted {count} opportunity(ies)',
          },
          errors: {
             userNotAuthenticated:
@@ -440,6 +441,12 @@ export default {
             failedToCloseOpportunity: 'Failed to close opportunity',
             failedToUpdateInvoiceStatus: 'Failed to update invoice status',
             failedToGenerateInvoice: 'Failed to generate invoice',
+            failedToLoadOpportunities: 'Failed to load opportunities',
+            failedToCreateOpportunity: 'Failed to create opportunity',
+            failedToDeleteOpportunities: 'Failed to delete opportunities',
+            loadOpportunitiesWithReason: 'Error loading opportunities: {message}. Please try refreshing the page.',
+            createOpportunityWithReason: 'Error creating opportunity: {message}',
+            deleteOpportunitiesWithReason: 'Error deleting opportunities: {message}',
          },
          untitled: 'Untitled',
          selectOpportunity: 'Select opportunity',
@@ -475,6 +482,7 @@ export default {
          noExistingQuoteDocument:
             'No existing quote document found. Generate a new quote to get started.',
          quoteDraftGeneratedSuccess: 'Quote draft generated. Review and generate PDF when ready.',
+         quoteUpdatedSuccess: 'Quote updated successfully',
          confirmDeleteGeneratedPdf: 'Are you sure you want to delete the generated PDF?',
          quotePdfDeletedSuccess: 'Quote PDF deleted successfully',
          confirmDeleteDocument: 'Are you sure you want to delete "{title}"?',

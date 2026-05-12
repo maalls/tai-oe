@@ -431,6 +431,7 @@ export default {
             'Voulez-vous vraiment supprimer {count} devis ? Cette action est irréversible et supprimera définitivement toutes les données associées.',
          deleting: 'Suppression en cours...',
          deleteAll: 'Tout supprimer',
+         success: '{count} devis supprimé(s) avec succès',
       },
       errors: {
          userNotAuthenticated:
@@ -454,6 +455,13 @@ export default {
          failedToCloseOpportunity: 'Échec de la clôture du devis',
          failedToUpdateInvoiceStatus: 'Échec de la mise à jour du statut de la facture',
          failedToGenerateInvoice: 'Échec de la génération de la facture',
+         failedToLoadOpportunities: 'Échec du chargement des devis',
+         failedToCreateOpportunity: 'Échec de la création du devis',
+         failedToDeleteOpportunities: 'Échec de la suppression des devis',
+         loadOpportunitiesWithReason:
+            'Erreur lors du chargement des devis : {message}. Veuillez rafraîchir la page.',
+         createOpportunityWithReason: 'Erreur lors de la création du devis : {message}',
+         deleteOpportunitiesWithReason: 'Erreur lors de la suppression des devis : {message}',
       },
       untitled: 'Sans titre',
       selectOpportunity: 'Selectionner un devis',
@@ -489,9 +497,10 @@ export default {
       noPdfAvailable: 'Aucun PDF disponible. Veuillez générer un PDF depuis la page Devis.',
       quoteIdLabel: 'ID devis',
       noExistingQuoteDocument:
-         "Aucun devis existant trouvé. Générez un nouveau devis pour commencer.",
+         'Aucun devis existant trouvé. Générez un nouveau devis pour commencer.',
       quoteDraftGeneratedSuccess:
          'Brouillon de devis généré. Vérifiez-le puis générez le PDF quand vous êtes prêt.',
+      quoteUpdatedSuccess: 'Devis mis à jour avec succès',
       confirmDeleteGeneratedPdf: 'Êtes-vous sûr de vouloir supprimer le PDF généré ?',
       quotePdfDeletedSuccess: 'PDF du devis supprimé avec succès',
       confirmDeleteDocument: 'Êtes-vous sûr de vouloir supprimer "{title}" ?',
