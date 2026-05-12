@@ -199,7 +199,7 @@ const loadMessages = async (force = false) => {
       }
 
       // Only fetch from Gmail if force=true (refresh button), otherwise show cached DB results
-      const url = `/api/gmail/messages?max_results=50${
+      const url = `/api/gmail/messages?max_results=100${
          force ? '&force=true' : ''
       }`;
       const response = await fetch(url, { headers });

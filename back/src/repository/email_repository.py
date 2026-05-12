@@ -2135,17 +2135,18 @@ class EmailRepository:
                 print(f"[EmailRepository] Date limit (oldest email): {before_date}")
                 print(f"[EmailRepository] Fetching ALL emails since {before_date} (ignoring duplicate detection)")
             
-            # Fetch all new emails with pagination
-            all_messages = []
+            # Fetch all new emails with pagination, with a hard global cap.
+            max_total_fetch = int(os.getenv("GMAIL_MAX_TOTAL_FETCH", "100"))
             page_token = None
             found_last_email = False
+            reached_fetch_limit = False
             page_count = 0
             
             saved_count = 0
             skipped_count = 0
             db_result = {"success": True}
             
-            while not found_last_email:
+            while not found_last_email and not reached_fetch_limit:
                 page_count += 1
                 print(f"[EmailRepository] Fetching page {page_count}...")
                 
@@ -2174,6 +2175,11 @@ class EmailRepository:
                             skipped_count += 1
                         else:
                             saved_count += 1
+
+                    if (saved_count + skipped_count) >= max_total_fetch:
+                        print(f"[EmailRepository] Reached fetch cap: {max_total_fetch} emails processed")
+                        reached_fetch_limit = True
+                        break
                 
                 # Check if there are more pages
                 page_token = result.get('nextPageToken')
@@ -2181,10 +2187,11 @@ class EmailRepository:
                     print(f"[EmailRepository] No more pages available")
                     break
             
-            print(f"[EmailRepository] Fetched {len(all_messages)} new emails across {page_count} page(s)")
-            
-            
-            print(f"[EmailRepository] Saved {saved_count} new, skipped {skipped_count} duplicate emails (total {len(all_messages)})")
+            print(f"[EmailRepository] Fetched across {page_count} page(s)")
+            print(
+                f"[EmailRepository] Saved {saved_count} new, skipped {skipped_count} duplicate emails "
+                f"(processed {saved_count + skipped_count}, cap {max_total_fetch})"
+            )
             return db_result
         
         except PermissionError as e:
