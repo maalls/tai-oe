@@ -1,21 +1,16 @@
 <template>
    <div>
-      <ProductsSubHeader />
+      <ProductsSubHeader>
+         <template #actions>
+            <router-link
+               to="/vendors/new"
+               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm"
+            >
+               {{ t('vendors.new') }}
+            </router-link>
+         </template>
+      </ProductsSubHeader>
       <div class="p-6 max-w-7xl mx-auto">
-         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <div>
-               <h1 class="text-3xl font-bold text-gray-900">{{ t('vendors.title') }}</h1>
-            </div>
-            <div class="mt-4 md:mt-0 flex gap-2">
-               <router-link
-                  to="/vendors/new"
-                  class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm"
-               >
-                  {{ t('vendors.new') }}
-               </router-link>
-            </div>
-         </div>
-
          <div v-if="errorMessage" class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
             {{ errorMessage }}
          </div>

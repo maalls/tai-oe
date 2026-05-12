@@ -1,17 +1,16 @@
 <template>
    <div>
-      <ProductsSubHeader />
-      <div class="p-6 max-w-7xl mx-auto">
-         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">{{ t('products.list.title') }}</h1>
+      <ProductsSubHeader>
+         <template #actions>
             <router-link
                to="/products/new"
-               class="inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm"
             >
                {{ t('products.list.new') }}
             </router-link>
-         </div>
-
+         </template>
+      </ProductsSubHeader>
+      <div class="p-6 max-w-7xl mx-auto">
          <div v-if="error" class="text-red-600 bg-red-50 p-4 rounded-lg mb-6">
             {{ error }}
          </div>
