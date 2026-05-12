@@ -1,5 +1,6 @@
 """Email classification request handler."""
 
+import os
 from typing import Dict
 #from src.repository.email_repository import EmailRepository
 from qdrant_client.models import FieldCondition, MatchValue, PointStruct, Filter
@@ -13,7 +14,12 @@ from src.supabase.supabase_client import get_supabase_service
 class ProductController:
 
     def __init__(self):
-        self.qdrant_handler = QdrantHandler()
+        enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
+        if enable_qdrant:
+            self.qdrant_handler = QdrantHandler()
+        else:
+            print("[ProductController] QdrantHandler disabled (ENABLE_QDRANT=false)")
+            self.qdrant_handler = None
         self.embedding_generator = EmbeddingGenerator()
         self.supabase = get_supabase_service()
 

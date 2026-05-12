@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional
 from uuid import UUID
 from datetime import datetime
+import os
 
 from flask import json
 
@@ -720,7 +721,11 @@ class OpportunityRepository:
             
             # For each product, search in Qdrant for matching entry and enrich with price
             try:
-                qdrant_handler = QdrantHandler()
+                enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
+                if not enable_qdrant:
+                    print("[OpportunityRepository] QdrantHandler disabled (ENABLE_QDRANT=false)")
+                else:
+                    qdrant_handler = QdrantHandler()
                 for product in rfp_data.get('products', []) or []:
                     filters = {}
                     if product.get('manufacturer'):

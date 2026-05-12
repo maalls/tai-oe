@@ -3,6 +3,7 @@
 from typing import Dict, Optional
 import json
 import hashlib
+import os
 import uuid
 import time
 import re
@@ -102,7 +103,11 @@ class BusinessHandlers:
 
                 # for each product, search in qdrant the matching entry by marque/refciale/tarif
                 try:
-                    qdrant_handler = QdrantHandler()
+                    enable_qdrant = os.getenv('ENABLE_QDRANT', 'true').lower() == 'true'
+                    if not enable_qdrant:
+                        print("[BusinessHandlers] QdrantHandler disabled (ENABLE_QDRANT=false)")
+                    else:
+                        qdrant_handler = QdrantHandler()
                     for product in rfp_data.get('products', []) or []:
                         filters = {}
                         if product.get('manufacturer'):
