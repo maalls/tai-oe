@@ -6,35 +6,35 @@
             {{ errorMessage }}
          </div>
 
-         <div v-if="isLoading" class="text-gray-500">Loading...</div>
+         <div v-if="isLoading" class="text-gray-500">{{ t('products.brand.loading') }}</div>
 
          <div v-else class="bg-white rounded-lg border border-gray-200 shadow overflow-hidden">
             <table class="w-full">
                <thead class="bg-gray-50 border-b">
                   <tr>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        Name
+                        {{ t('products.brand.columns.name') }}
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        Website
+                        {{ t('products.brand.columns.website') }}
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        Email
+                        {{ t('products.brand.columns.email') }}
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        Phone
+                        {{ t('products.brand.columns.phone') }}
                      </th>
                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        Default Margin
+                        {{ t('products.brand.columns.defaultMargin') }}
                      </th>
                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        Families
+                        {{ t('products.brand.columns.families') }}
                      </th>
                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        Discounts
+                        {{ t('products.brand.columns.discounts') }}
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        Created
+                        {{ t('products.brand.columns.created') }}
                      </th>
                   </tr>
                </thead>
@@ -92,7 +92,7 @@
                </tbody>
             </table>
             <div v-if="!brands.length && !isLoading" class="p-6 text-center text-gray-500">
-               No brands found.
+               {{ t('products.brand.noBrands') }}
             </div>
          </div>
       </div>
@@ -104,8 +104,10 @@ import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import { useBrandFamilyData } from './useBrandFamilyData';
+import { useI18n } from '../../i18n/useI18n';
 
 const router = useRouter();
+const { t } = useI18n();
 
 const { brands, families, isLoading, errorMessage, loadData } = useBrandFamilyData();
 

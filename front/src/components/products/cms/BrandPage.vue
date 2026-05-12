@@ -2,8 +2,8 @@
    <div class="space-y-6">
       <div class="flex items-center justify-between">
          <div>
-            <h2 class="text-2xl font-semibold text-gray-900">Brands</h2>
-            <p class="text-sm text-gray-500">Manage brands and their families</p>
+            <h2 class="text-2xl font-semibold text-gray-900">{{ t('products.cms.brand.title') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('products.cms.brand.subtitle') }}</p>
          </div>
       </div>
 
@@ -11,7 +11,7 @@
          {{ errorMessage }}
       </div>
 
-      <div v-if="isLoading" class="text-gray-500">Loading...</div>
+      <div v-if="isLoading" class="text-gray-500">{{ t('products.cms.brand.loading') }}</div>
 
       <div v-else class="space-y-6">
          <div
@@ -44,13 +44,13 @@
                </div>
             </div>
             <div class="p-6">
-               <h4 class="text-sm font-semibold text-gray-700 mb-3">Families</h4>
+               <h4 class="text-sm font-semibold text-gray-700 mb-3">{{ t('products.cms.brand.familiesTitle') }}</h4>
                <div v-if="familiesByBrand[brand.id]?.length" class="overflow-x-auto">
                   <table class="w-full text-sm">
                      <thead class="bg-gray-100 text-gray-700">
                         <tr>
-                           <th class="px-4 py-2 text-left">Name</th>
-                           <th class="px-4 py-2 text-left">Type</th>
+                           <th class="px-4 py-2 text-left">{{ t('products.cms.brand.columns.name') }}</th>
+                           <th class="px-4 py-2 text-left">{{ t('products.cms.brand.columns.type') }}</th>
                         </tr>
                      </thead>
                      <tbody class="divide-y divide-gray-200">
@@ -65,10 +65,10 @@
                      </tbody>
                   </table>
                </div>
-               <div v-else class="text-sm text-gray-500">No families linked.</div>
+               <div v-else class="text-sm text-gray-500">{{ t('products.cms.brand.noFamiliesLinked') }}</div>
             </div>
          </div>
-         <div v-if="!brands.length && !isLoading" class="text-gray-500">No brands found.</div>
+         <div v-if="!brands.length && !isLoading" class="text-gray-500">{{ t('products.cms.brand.noBrands') }}</div>
       </div>
    </div>
 </template>
@@ -76,8 +76,10 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useCmsData } from './useCmsData';
+import { useI18n } from '../../../i18n/useI18n';
 
 const { brands, families, isLoading, errorMessage, loadData } = useCmsData();
+const { t } = useI18n();
 
 const familiesByBrand = computed(() => {
    return families.value.reduce(

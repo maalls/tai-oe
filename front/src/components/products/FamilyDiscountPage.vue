@@ -4,11 +4,11 @@
       <div class="p-6 max-w-5xl mx-auto space-y-6">
          <div class="flex items-center justify-between">
             <div>
-               <h1 class="text-3xl font-bold text-gray-900">Family Discount</h1>
-               <p class="text-sm text-gray-500">Manage the discount lines for this family.</p>
+               <h1 class="text-3xl font-bold text-gray-900">{{ t('products.familyDiscount.title') }}</h1>
+               <p class="text-sm text-gray-500">{{ t('products.familyDiscount.subtitle') }}</p>
             </div>
             <button type="button" class="text-sm text-gray-600 hover:text-gray-900" @click="goBack">
-               Back to Families
+               {{ t('products.familyDiscount.back') }}
             </button>
          </div>
 
@@ -17,30 +17,30 @@
          </div>
 
          <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div v-if="isLoading" class="p-6 text-gray-500">Loading...</div>
-            <div v-else-if="!family" class="p-6 text-gray-500">Family not found.</div>
+            <div v-if="isLoading" class="p-6 text-gray-500">{{ t('common.loading') }}</div>
+            <div v-else-if="!family" class="p-6 text-gray-500">{{ t('products.familyDiscount.notFound') }}</div>
             <div v-else class="p-6 space-y-4">
                <div>
-                  <div class="text-sm text-gray-500">Family</div>
+                  <div class="text-sm text-gray-500">{{ t('products.familyDiscount.family') }}</div>
                   <div class="text-lg font-semibold text-gray-900">{{ family.name }}</div>
                </div>
                <div class="grid gap-4 sm:grid-cols-2">
                   <div>
-                     <div class="text-xs uppercase tracking-wide text-gray-400">Code</div>
+                     <div class="text-xs uppercase tracking-wide text-gray-400">{{ t('products.familyDiscount.code') }}</div>
                      <div class="text-sm text-gray-700">{{ family.code || '-' }}</div>
                   </div>
                   <div>
-                     <div class="text-xs uppercase tracking-wide text-gray-400">Type</div>
+                     <div class="text-xs uppercase tracking-wide text-gray-400">{{ t('products.familyDiscount.type') }}</div>
                      <div class="text-sm text-gray-700">{{ family.type }}</div>
                   </div>
                   <div>
-                     <div class="text-xs uppercase tracking-wide text-gray-400">Brand</div>
+                     <div class="text-xs uppercase tracking-wide text-gray-400">{{ t('products.familyDiscount.brand') }}</div>
                      <div class="text-sm text-gray-700">{{ family.brand_id }}</div>
                   </div>
                </div>
                <div class="space-y-4">
                   <div class="flex items-center justify-between">
-                     <div class="text-sm font-semibold text-gray-900">Discount lines</div>
+                     <div class="text-sm font-semibold text-gray-900">{{ t('products.familyDiscount.linesTitle') }}</div>
                      <div class="flex items-center gap-2">
                         <button
                            type="button"
@@ -48,7 +48,7 @@
                            :disabled="!documentId"
                            @click="addLine"
                         >
-                           Add line
+                           {{ t('products.familyDiscount.addLine') }}
                         </button>
                         <button
                            type="button"
@@ -56,7 +56,7 @@
                            :disabled="!documentId || isSaving"
                            @click="saveLines"
                         >
-                           {{ isSaving ? 'Saving...' : 'Save' }}
+                           {{ isSaving ? t('common.saving') : t('common.save') }}
                         </button>
                      </div>
                   </div>
@@ -66,13 +66,13 @@
                         <table class="min-w-full text-sm">
                            <thead class="bg-gray-50 text-gray-600">
                               <tr>
-                                 <th class="px-3 py-2 text-left">Pos</th>
-                                 <th class="px-3 py-2 text-left">SKU</th>
-                                 <th class="px-3 py-2 text-right">Qty</th>
-                                 <th class="px-3 py-2 text-left">Unit</th>
-                                 <th class="px-3 py-2 text-right">Unit Price</th>
-                                 <th class="px-3 py-2 text-right">Discount %</th>
-                                 <th class="px-3 py-2 text-right">Line Total</th>
+                                 <th class="px-3 py-2 text-left">{{ t('products.familyDiscount.columns.pos') }}</th>
+                                 <th class="px-3 py-2 text-left">{{ t('products.familyDiscount.columns.sku') }}</th>
+                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.qty') }}</th>
+                                 <th class="px-3 py-2 text-left">{{ t('products.familyDiscount.columns.unit') }}</th>
+                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.unitPrice') }}</th>
+                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.discount') }}</th>
+                                 <th class="px-3 py-2 text-right">{{ t('products.familyDiscount.columns.lineTotal') }}</th>
                               </tr>
                            </thead>
                            <tbody class="divide-y divide-gray-200">
@@ -83,7 +83,7 @@
                                        v-model="line.sku"
                                        class="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                                        type="text"
-                                       placeholder="SKU"
+                                       :placeholder="t('products.familyDiscount.placeholders.sku')"
                                     />
                                  </td>
                                  <td class="px-3 py-2">
@@ -100,7 +100,7 @@
                                        v-model="line.unit"
                                        class="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                                        type="text"
-                                       placeholder="U"
+                                       :placeholder="t('products.familyDiscount.placeholders.unit')"
                                     />
                                  </td>
                                  <td class="px-3 py-2">
@@ -139,7 +139,7 @@
                         v-else-if="!lines.length"
                         class="border-t border-gray-200 p-3 text-sm text-gray-500"
                      >
-                        No discount lines yet.
+                        {{ t('products.familyDiscount.empty') }}
                      </div>
                   </div>
                </div>
@@ -154,6 +154,7 @@ import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import { supabase } from '../../lib/supabase';
+import { useI18n } from '../../i18n/useI18n';
 
 interface FamilyRecord {
    id: string;
@@ -191,6 +192,7 @@ interface LineTotalsInput {
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const family = ref<FamilyRecord | null>(null);
 const documentId = ref<string | null>(null);
 const lines = ref<DocumentLineRecord[]>([]);
@@ -210,7 +212,7 @@ const newLine = ref<NewLineInput>({
 const loadFamily = async () => {
    const familyId = String(route.params.id || '').trim();
    if (!familyId) {
-      errorMessage.value = 'Missing family id.';
+      errorMessage.value = t('products.familyDiscount.missingFamilyId');
       return;
    }
 
@@ -230,7 +232,7 @@ const loadFamily = async () => {
       await loadLines();
    } catch (error) {
       errorMessage.value =
-         error instanceof Error ? error.message : 'Failed to load family information.';
+         error instanceof Error ? error.message : t('products.familyDiscount.loadFailed');
    } finally {
       isLoading.value = false;
    }
@@ -253,7 +255,7 @@ const loadDocument = async () => {
       documentId.value = rows.length > 0 ? String(rows[0].id) : null;
    } catch (error) {
       errorMessage.value =
-         error instanceof Error ? error.message : 'Failed to load discount document.';
+         error instanceof Error ? error.message : t('products.familyDiscount.loadFailed');
    }
 };
 
