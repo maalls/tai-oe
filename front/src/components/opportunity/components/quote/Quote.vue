@@ -21,7 +21,9 @@
                   {{ contactInfo?.name || '—' }}
                   {{ contactInfo?.email ? ` <${contactInfo.email}>` : '' }}
                </div>
-               <div class="mt-2 text-xs text-gray-600">quote ID: {{ quoteDocument?.id }}</div>
+               <div class="mt-2 text-xs text-gray-600">
+                  {{ t('opportunities.quoteIdLabel') }}: {{ quoteDocument?.id }}
+               </div>
             </div>
             <div style="border: 0px solid chocolate">
                <div>
@@ -454,7 +456,7 @@ const loadQuoteDocument = async () => {
          window.dispatchEvent(
             new CustomEvent('header-notification', {
                detail: {
-                  error: 'No existing quote document found. Generate a new quote to get started.',
+                  error: t('opportunities.noExistingQuoteDocument'),
                },
             })
          );
@@ -526,13 +528,10 @@ const generateQuote = async () => {
    try {
       const headers = await buildAuthHeaders(true);
 
-      const response = await fetch(
-         `/api/opportunity/${opportunityId}/rfq/generate`,
-         {
-            method: 'POST',
-            headers,
-         }
-      );
+      const response = await fetch(`/api/opportunity/${opportunityId}/rfq/generate`, {
+         method: 'POST',
+         headers,
+      });
 
       //console.log('[QuotePage] Generate quote response status:', response.status);
 
@@ -546,7 +545,7 @@ const generateQuote = async () => {
       await loadQuoteDocument();
       window.dispatchEvent(
          new CustomEvent('header-notification', {
-            detail: { success: 'Quote draft generated. Review and generate PDF when ready.' },
+            detail: { success: t('opportunities.quoteDraftGeneratedSuccess') },
          })
       );
    } catch (error: any) {
@@ -625,13 +624,10 @@ const generateQuotePdf = async () => {
    try {
       const headers = await buildAuthHeaders(true);
 
-      const response = await fetch(
-         `/api/quote/${quoteDocument.value.id}/pdf`,
-         {
-            method: 'POST',
-            headers,
-         }
-      );
+      const response = await fetch(`/api/quote/${quoteDocument.value.id}/pdf`, {
+         method: 'POST',
+         headers,
+      });
 
       const result = await response.json();
       if (!response.ok) {

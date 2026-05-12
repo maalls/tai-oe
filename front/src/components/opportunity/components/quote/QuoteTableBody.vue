@@ -206,24 +206,26 @@
       </tr>
       <tr style="font-weight: bold">
          <td colspan="11"></td>
-         <td class="text-right py-1 px-1">HT</td>
+         <td class="text-right py-1 px-1">{{ t('opportunities.quoteTable.totalExclTax') }}</td>
          <td class="text-right py-1 px-1">{{ formatNumber(tableTotals.totalExclTax) }}</td>
       </tr>
       <tr style="font-weight: bold">
          <td colspan="11"></td>
-         <td class="text-right py-1 px-1">TAX</td>
+         <td class="text-right py-1 px-1">{{ t('opportunities.quoteTable.tax') }}</td>
          <td class="text-right py-1 px-1">{{ formatNumber(tableTotals.totalTax) }}</td>
       </tr>
       <tr style="font-weight: bold">
          <td colspan="11"></td>
-         <td class="text-right py-1 px-1">TTC</td>
+         <td class="text-right py-1 px-1">{{ t('opportunities.quoteTable.totalInclTax') }}</td>
          <td class="text-right py-1 px-1">
             {{ formatNumber(tableTotals.totalInclTax) }}
          </td>
       </tr>
       <tr style="font-weight: bold; color: blue; font-size: 14px">
          <td colspan="10"></td>
-         <td colspan="2" class="text-right py-1 px-1">Margin %</td>
+         <td colspan="2" class="text-right py-1 px-1">
+            {{ t('opportunities.quoteTable.marginPercent') }}
+         </td>
          <td class="text-right py-1 px-1">{{ formatNumber(quoteGrandTotalMarginPercent) }}%</td>
       </tr>
    </tbody>

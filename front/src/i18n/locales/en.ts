@@ -471,6 +471,10 @@ export default {
          settings: 'Settings',
          loadingDots: 'Loading...',
          noPdfAvailable: 'No PDF available. Please generate a PDF from the Quote page.',
+         quoteIdLabel: 'Quote ID',
+         noExistingQuoteDocument:
+            'No existing quote document found. Generate a new quote to get started.',
+         quoteDraftGeneratedSuccess: 'Quote draft generated. Review and generate PDF when ready.',
          confirmDeleteGeneratedPdf: 'Are you sure you want to delete the generated PDF?',
          quotePdfDeletedSuccess: 'Quote PDF deleted successfully',
          confirmDeleteDocument: 'Are you sure you want to delete "{title}"?',
@@ -689,6 +693,7 @@ export default {
          quoteTable: {
             brand: 'Brand',
             sku: 'SKU',
+            show: 'Show',
             description: 'Description',
             listPrice: 'List Price',
             supplierDiscount: 'Supplier Discount',
@@ -699,6 +704,9 @@ export default {
             salePrice: 'Sale Price',
             quantity: 'Quantity',
             total: 'Total',
+            totalExclTax: 'Excl. Tax',
+            tax: 'Tax',
+            totalInclTax: 'Incl. Tax',
             checkAll: 'Check all',
             uncheckAll: 'Uncheck all',
          },

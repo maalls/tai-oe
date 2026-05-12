@@ -487,6 +487,11 @@ export default {
       settings: 'Paramètres',
       loadingDots: 'Chargement...',
       noPdfAvailable: 'Aucun PDF disponible. Veuillez générer un PDF depuis la page Devis.',
+      quoteIdLabel: 'ID devis',
+      noExistingQuoteDocument:
+         "Aucun devis existant trouvé. Générez un nouveau devis pour commencer.",
+      quoteDraftGeneratedSuccess:
+         'Brouillon de devis généré. Vérifiez-le puis générez le PDF quand vous êtes prêt.',
       confirmDeleteGeneratedPdf: 'Êtes-vous sûr de vouloir supprimer le PDF généré ?',
       quotePdfDeletedSuccess: 'PDF du devis supprimé avec succès',
       confirmDeleteDocument: 'Êtes-vous sûr de vouloir supprimer "{title}" ?',
@@ -708,6 +713,7 @@ export default {
       quoteTable: {
          brand: 'Marque',
          sku: 'SKU',
+         show: 'Voir',
          description: 'Description',
          listPrice: 'Prix liste',
          supplierDiscount: 'Remise Achat',
@@ -718,6 +724,9 @@ export default {
          salePrice: 'Prix vente',
          quantity: 'Quantite',
          total: 'Total',
+         totalExclTax: 'HT',
+         tax: 'Taxe',
+         totalInclTax: 'TTC',
          checkAll: 'Tout cocher',
          uncheckAll: 'Tout decocher',
       },
