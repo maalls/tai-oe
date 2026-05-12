@@ -915,11 +915,14 @@ class BusinessHandlers:
                 "valid_until": document.get("valid_until"),
                 "currency": document.get("currency", "EUR"),
                 "totals": {
-                    "subtotal": float(document.get("total_excl_tax", 0)),
-                    "tax": float(document.get("total_tax", 0)),
-                    "total": float(document.get("total_incl_tax", 0)),
-                }
+                    "subtotal": 0.0,
+                    "tax": 0.0,
+                    "total": 0.0,
+                },
             }
+
+            computed_subtotal = 0.0
+            computed_tax = 0.0
 
             for line in lines:
                 sku = str(line.get("sku") or "").strip()
@@ -952,6 +955,14 @@ class BusinessHandlers:
                 if line_total_excl_tax <= 0:
                     line_total_excl_tax = quantity * discounted_unit_price
 
+                try:
+                    tax_rate = float(line.get("tax_rate", 20) or 20)
+                except Exception:
+                    tax_rate = 20.0
+
+                computed_subtotal += line_total_excl_tax
+                computed_tax += line_total_excl_tax * (tax_rate / 100.0)
+
                 rfp_data["products"].append({
                     "quantity": quantity,
                     "brand": line.get("brand", ""),
@@ -963,15 +974,44 @@ class BusinessHandlers:
                     "client_discount_rate": client_discount_rate,
                     "discounted_unit_price": discounted_unit_price,
                     "line_total_excl_tax": line_total_excl_tax,
-                    "tax_rate": float(line.get("tax_rate", 20)),
+                    "tax_rate": tax_rate,
                     "unit": line.get("unit", "U"),
                 })
 
+            computed_subtotal = round(computed_subtotal, 2)
+            computed_tax = round(computed_tax, 2)
+            computed_total = round(computed_subtotal + computed_tax, 2)
+            rfp_data["totals"] = {
+                "subtotal": computed_subtotal,
+                "tax": computed_tax,
+                "total": computed_total,
+            }
+
             pdf_filename = self._generate_quote_pdf(rfp_data)
 
-            upd_resp = supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
+            update_payload = {
+                "storage_key": pdf_filename,
+                "total_excl_tax": computed_subtotal,
+                "total_tax": computed_tax,
+                "total_incl_tax": computed_total,
+            }
+
+            upd_resp = supabase.table("document").update(update_payload).eq("id", document_id).execute()
             if getattr(upd_resp, "error", None):
-                return {"status": "error", "message": f"Failed to update document with PDF: {upd_resp.error}"}
+                # Backward compatibility: allow PDF generation even if totals columns
+                # are not yet available in a given environment.
+                print(f"[BusinessHandlers] Warning updating totals on document {document_id}: {upd_resp.error}")
+                fallback_resp = (
+                    supabase.table("document")
+                    .update({"storage_key": pdf_filename})
+                    .eq("id", document_id)
+                    .execute()
+                )
+                if getattr(fallback_resp, "error", None):
+                    return {
+                        "status": "error",
+                        "message": f"Failed to update document with PDF: {fallback_resp.error}",
+                    }
 
             return {
                 "status": "ok",
