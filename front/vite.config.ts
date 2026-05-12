@@ -37,7 +37,11 @@ function parseEnvFile(filePath: string): Record<string, string> {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
    const localEnv = loadEnv(mode, process.cwd(), '');
-   const apiBaseUrl = localEnv.VITE_API_URL || process.env.VITE_API_URL || 'http://127.0.0.1:8088';
+   const apiUrl = localEnv.VITE_API_URL || process.env.VITE_API_URL || 'http://127.0.0.1:8088';
+   
+   // Determine proxy target: if apiUrl is relative path (like /api), use localhost:8080, otherwise use apiUrl
+   const apiProxyTarget = apiUrl.startsWith('http') ? apiUrl : 'http://localhost:8080';
+   
    const sharedEnvRel = localEnv.SUPABASE_ENV_FILE || '../supabase/.env.prod';
    const sharedEnvPath = path.isAbsolute(sharedEnvRel)
       ? sharedEnvRel
@@ -69,10 +73,10 @@ export default defineConfig(({ mode }) => {
       plugins: [vue()],
       server: {
          middlewareMode: false,
-         allowedHosts: ['gme.ai-oe.co'],
+         allowedHosts: ['gme.ai-oe.co', 'localhost', '127.0.0.1'],
          proxy: {
             '/api': {
-               target: apiBaseUrl,
+               target: apiProxyTarget,
                changeOrigin: true,
             },
          },

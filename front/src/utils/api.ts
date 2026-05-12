@@ -4,9 +4,27 @@ if (!rawApiBaseUrl || !rawApiBaseUrl.trim()) {
    throw new Error('Missing required environment variable: VITE_API_URL');
 }
 
-export const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, '');
-
+/**
+ * Generate API URL with /api path prefix
+ * - Dev (localhost): relative path /api/... (proxied by Vite to http://localhost:8080)
+ * - Production: full URL with /api prefix
+ * 
+ * Usage: apiUrl('embeddings') → /api/embeddings or https://gme.ai-oe.co/api/embeddings
+ */
 export function apiUrl(path: string): string {
    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-   return `${API_BASE_URL}${normalizedPath}`;
+   const isDev = import.meta.env.DEV;
+   const isLocalhost = rawApiBaseUrl.includes('localhost');
+   
+   if (isDev && isLocalhost) {
+      // Dev mode: use relative /api path for Vite proxy
+      return `/api${normalizedPath}`;
+   }
+   
+   // Production: use full URL with /api prefix
+   const baseUrl = rawApiBaseUrl.replace(/\/$/, '');
+   return `${baseUrl}/api${normalizedPath}`;
 }
+
+// Export for debugging/reference
+export const API_BASE_URL = rawApiBaseUrl;

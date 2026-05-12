@@ -82,7 +82,7 @@ interface Product {
    qt?: string | number;
 }
 
-const QDRANT_API_URL = apiUrl('/api/qdrant');
+const QDRANT_API_URL = apiUrl('qdrant');
 const COLLECTION_NAME = 'test_commerce_vectors';
 
 const route = useRoute();

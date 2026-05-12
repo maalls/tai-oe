@@ -238,7 +238,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
 import { supabase } from '../../lib/supabase';
-import { API_BASE_URL } from '../../utils/api';
+import { apiUrl } from '../../utils/api';
 
 const { t, te } = useI18n();
 
@@ -396,7 +396,7 @@ const loadOpportunities = async () => {
       }
 
       // Build query params
-      let url = `${API_BASE_URL}/api/opportunities/search`;
+      let url = apiUrl('opportunities/search');
       if (sourceReferenceFilter.value.trim()) {
          const trimmedValue = sourceReferenceFilter.value.trim();
          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(

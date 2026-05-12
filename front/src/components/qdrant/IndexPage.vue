@@ -276,7 +276,7 @@ import { QdrantSearch } from '../../utils/qdrantSearch';
 import AdminNavHeader from '../admin/AdminNavHeader.vue';
 import { apiUrl } from '../../utils/api';
 
-const QDRANT_API_URL = apiUrl('/api/qdrant');
+const QDRANT_API_URL = apiUrl('qdrant');
 
 interface CollectionInfo {
    name: string;

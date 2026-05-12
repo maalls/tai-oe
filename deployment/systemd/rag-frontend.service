@@ -7,7 +7,7 @@ Wants=network-online.target rag-backend.service
 Type=simple
 User=malo
 Group=malo
-WorkingDirectory=/home/malo/ai-koru/external/rag/front
+WorkingDirectory=/home/malo/tai-oe/front
 Environment=NODE_ENV=development
 Environment=PATH=/home/malo/.nvm/versions/node/v22.22.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 ExecStart=/home/malo/.nvm/versions/node/v22.22.2/bin/npm run dev -- --host 0.0.0.0 --port 5173

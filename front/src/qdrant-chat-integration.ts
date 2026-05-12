@@ -15,7 +15,7 @@ type ChatMessage = {
 };
 
 const LLM_API_URL = 'http://localhost:1234/v1/chat/completions';
-const QDRANT_API_URL = apiUrl('/api/qdrant');
+const QDRANT_API_URL = apiUrl('qdrant');
 
 // Example: Add this tool to your tools array in ChatPage.vue
 const qdrantTool = {

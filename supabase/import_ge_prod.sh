@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_ROOT="$SCRIPT_DIR/var/backup"
 
 SSH_HOST="${SSH_HOST:-kirin}"
-REMOTE_SUPABASE_DIR="${REMOTE_SUPABASE_DIR:-/home/malo/ai-koru/external/rag/supabase}"
+REMOTE_SUPABASE_DIR="${REMOTE_SUPABASE_DIR:-/home/malo/tai-oe/supabase}"
 REMOTE_ENV_FILE="${REMOTE_ENV_FILE:-.env.prod}"
 
 DB_NAME="${DB_NAME:-ge_prod}"

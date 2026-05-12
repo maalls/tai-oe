@@ -1,7 +1,7 @@
 import { apiUrl } from './api';
 
-const EMBEDDINGS_API_URL = apiUrl('/api/embeddings');
-const QDRANT_API_URL = apiUrl('/api/qdrant');
+const EMBEDDINGS_API_URL = apiUrl('embeddings');
+const QDRANT_API_URL = apiUrl('qdrant');
 
 export interface QdrantSearchOptions {
    collection: string;

@@ -19,7 +19,7 @@ export type ChatMessage = {
 };
 
 export const LLM_API_URL = 'http://localhost:1234/v1/chat/completions';
-export const DB_API_URL = apiUrl('/api/csv/query');
+export const DB_API_URL = apiUrl('csv/query');
 export const DEFAULT_MODEL = 'Qwen3-VL-2B';
 export const STORAGE_KEY = 'rk_chat_history_v1';
 

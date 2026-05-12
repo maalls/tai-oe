@@ -9,7 +9,7 @@ This folder contains systemd units to start backend and frontend at boot.
 ## Install units
 
 ```bash
-cd /home/malo/ai-koru/external/rag
+cd /home/malo/tai-oe
 sudo cp deployment/systemd/rag-backend.service /etc/systemd/system/
 sudo cp deployment/systemd/rag-frontend.service /etc/systemd/system/
 sudo cp deployment/systemd/rag-stack.target /etc/systemd/system/

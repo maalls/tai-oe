@@ -7,14 +7,14 @@ Wants=network-online.target ollama.service
 Type=simple
 User=malo
 Group=malo
-WorkingDirectory=/home/malo/ai-koru/external/rag/back
-EnvironmentFile=/home/malo/ai-koru/external/rag/back/.env
-Environment=PYTHONPATH=/home/malo/ai-koru/external/rag/back
+WorkingDirectory=/home/malo/tai-oe/back
+EnvironmentFile=/home/malo/tai-oe/back/.env
+Environment=PYTHONPATH=/home/malo/tai-oe/back
 Environment=PORT=8088
 
 # Wait for Ollama API to be reachable before starting backend health check
 ExecStartPre=/bin/bash -lc 'for i in {1..90}; do /usr/bin/curl -fsS http://127.0.0.1:11434/api/tags >/dev/null && exit 0; sleep 2; done; echo "Ollama did not become ready in time"; exit 1'
-ExecStart=/home/malo/ai-koru/external/rag/back/venv/bin/python -m src.controller.rag
+ExecStart=/home/malo/tai-oe/back/venv/bin/python -m src.controller.rag
 
 Restart=always
 RestartSec=5
