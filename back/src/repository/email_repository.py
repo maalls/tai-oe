@@ -3008,19 +3008,29 @@ Return ONLY valid JSON, no additional text."""
             
             print(f"[EmailRepository] Creating new account with user_id: {user_id}")
             
-            # Create new account
+            # Create new account.
+            # Some environments have a reduced account schema: if optional columns are
+            # unknown to PostgREST, retry with minimal payload.
             new_account = {
                 "name": account_name,
                 "industry": account_data.get("industry"),
-                "address_line1": account_data.get("address"),  # Map to correct column
+                "address_line1": account_data.get("address"),
                 "city": account_data.get("city"),
-                "postal_code": account_data.get("zip_code"),  # Map to correct column
-                "country_code": account_data.get("country", "").upper()[:2] if account_data.get("country") else None,  # Map to ISO code
+                "postal_code": account_data.get("zip_code"),
+                "country_code": account_data.get("country", "").upper()[:2] if account_data.get("country") else None,
                 "phone": account_data.get("phone"),
                 "website": account_data.get("website")
             }
-            
-            response = supabase.table('account').insert(new_account).execute()
+
+            try:
+                response = supabase.table('account').insert(new_account).execute()
+            except Exception as insert_error:
+                error_text = str(insert_error)
+                if "schema cache" in error_text and "column" in error_text:
+                    print("[EmailRepository] Account schema mismatch; retrying insert with name only")
+                    response = supabase.table('account').insert({"name": account_name}).execute()
+                else:
+                    raise
             
             if response.data and len(response.data) > 0:
                 print(f"[EmailRepository] Created account: {response.data[0]['id']}")
@@ -3060,6 +3070,9 @@ Return ONLY valid JSON, no additional text."""
                 raise Exception("Contact email is required")
             
             contact_email = contact_email.strip().lower()
+
+            if not account_id:
+                raise ValueError("account_id is required to create or find contact")
             
             # Try to find existing contact by email
    
@@ -3082,9 +3095,19 @@ Return ONLY valid JSON, no additional text."""
                     "phone": contact_data.get("phone"),
                     "role_title": contact_data.get("title"),  # Now exists in schema
                     "account_id": account_id
-                }
-            
-                response = supabase.table('contact').insert(new_contact).execute()
+                account_id = None
+                contact_id = None
+
+                try:
+                    account_id = self._get_or_create_sender_account(from_domain, user_id, from_name)
+                except Exception as account_error:
+                    print(f"[EmailRepository] Warning: failed to resolve sender account: {account_error}")
+
+                if account_id:
+                    try:
+                        contact_id = self._get_or_create_sender_contact(from_email, from_name, account_id, user_id)
+                    except Exception as contact_error:
+                        print(f"[EmailRepository] Warning: failed to resolve sender contact: {contact_error}")
                 
                 if response.data and len(response.data) > 0:
                     print(f"[EmailRepository] Created contact: {response.data[0]['id']}")
