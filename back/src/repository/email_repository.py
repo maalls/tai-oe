@@ -766,8 +766,19 @@ class EmailRepository:
         to_email, _, _, _, _ = parse_from_header(raw_to)
         cc_email = raw_cc or None
 
-        account_id = self._get_or_create_sender_account(from_domain, user_id, from_name)
-        contact_id = self._get_or_create_sender_contact(from_email, from_name, account_id, user_id)
+        account_id = None
+        contact_id = None
+
+        try:
+            account_id = self._get_or_create_sender_account(from_domain, user_id, from_name)
+        except Exception as account_error:
+            print(f"[EmailRepository] Warning: failed to resolve sender account: {account_error}")
+
+        if account_id:
+            try:
+                contact_id = self._get_or_create_sender_contact(from_email, from_name, account_id, user_id)
+            except Exception as contact_error:
+                print(f"[EmailRepository] Warning: failed to resolve sender contact: {contact_error}")
 
         return self.db_handler.store_email(
             user_id=user_id,
@@ -3068,56 +3079,42 @@ Return ONLY valid JSON, no additional text."""
             contact_email = contact_data.get("email")
             if not contact_email:
                 raise Exception("Contact email is required")
-            
-            contact_email = contact_email.strip().lower()
 
+            contact_email = contact_email.strip().lower()
             if not account_id:
                 raise ValueError("account_id is required to create or find contact")
-            
-            # Try to find existing contact by email
-   
-            print(f"[EmailRepository] Looking for existing contact with email: {contact_email}")
-            query = supabase.table('contact').select('id').eq('email', contact_email)
-            if account_id:
-                query = query.eq('account_id', account_id)
 
-            response = query.limit(1).execute()
-            
+            print(f"[EmailRepository] Looking for existing contact with email: {contact_email}")
+            response = (
+                supabase.table('contact')
+                .select('id')
+                .eq('email', contact_email)
+                .eq('account_id', account_id)
+                .limit(1)
+                .execute()
+            )
+
             if response.data and len(response.data) > 0:
                 print(f"[EmailRepository] Found existing contact: {response.data[0]['id']}")
                 return response.data[0]['id']
-            else:
-                # Create new contact
-                print(f"[EmailRepository] Creating new contact for account: {account_id}")
-                new_contact = {
-                    "name": contact_data.get("name"),
-                    "email": contact_email,
-                    "phone": contact_data.get("phone"),
-                    "role_title": contact_data.get("title"),  # Now exists in schema
-                    "account_id": account_id
-                account_id = None
-                contact_id = None
 
-                try:
-                    account_id = self._get_or_create_sender_account(from_domain, user_id, from_name)
-                except Exception as account_error:
-                    print(f"[EmailRepository] Warning: failed to resolve sender account: {account_error}")
+            print(f"[EmailRepository] Creating new contact for account: {account_id}")
+            new_contact = {
+                "name": contact_data.get("name"),
+                "email": contact_email,
+                "phone": contact_data.get("phone"),
+                "role_title": contact_data.get("title"),
+                "account_id": account_id,
+            }
 
-                if account_id:
-                    try:
-                        contact_id = self._get_or_create_sender_contact(from_email, from_name, account_id, user_id)
-                    except Exception as contact_error:
-                        print(f"[EmailRepository] Warning: failed to resolve sender contact: {contact_error}")
-                
-                if response.data and len(response.data) > 0:
-                    print(f"[EmailRepository] Created contact: {response.data[0]['id']}")
-                    return response.data[0]['id']
-                
-                else:
-                    print(f"[EmailRepository] Failed to create contact, no data returned: {response}")
-                    raise Exception("Failed to create contact, no data returned")
-                
-        
+            response = supabase.table('contact').insert(new_contact).execute()
+            if response.data and len(response.data) > 0:
+                print(f"[EmailRepository] Created contact: {response.data[0]['id']}")
+                return response.data[0]['id']
+
+            print(f"[EmailRepository] Failed to create contact, no data returned: {response}")
+            raise Exception("Failed to create contact, no data returned")
+
         except Exception as e:
             raise e
 
