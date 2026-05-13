@@ -77,6 +77,92 @@
    background-color: #374151;
 }
 
+/* Shared list/table pages */
+.list-page-shell {
+   padding: 1.5rem;
+   max-width: 80rem;
+   margin: 0 auto;
+}
+
+.list-page-stack {
+   display: flex;
+   flex-direction: column;
+   gap: 1.5rem;
+}
+
+.list-card {
+   background: #ffffff;
+   border: 1px solid #e5e7eb;
+   border-radius: 0.5rem;
+   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+   overflow: hidden;
+}
+
+.list-table-wrap {
+   overflow-x: auto;
+}
+
+.list-table {
+   width: 100%;
+   border-collapse: separate;
+   border-spacing: 0;
+}
+
+.list-table thead {
+   background: #f9fafb;
+}
+
+.list-table thead th {
+   border-bottom: 1px solid #e5e7eb;
+   padding: 0.75rem 1.5rem;
+   text-align: left;
+   font-size: 0.75rem;
+   font-weight: 500;
+   text-transform: uppercase;
+   color: #374151;
+}
+
+.list-table tbody td {
+   padding: 1rem 1.5rem;
+   font-size: 0.875rem;
+   vertical-align: top;
+}
+
+.list-table tbody tr {
+   cursor: pointer;
+}
+
+.list-table tbody tr:hover {
+   background: #f9fafb;
+}
+
+.list-table tbody tr + tr td {
+   border-top: 1px solid #e5e7eb;
+}
+
+.list-table-link {
+   color: #2563eb;
+}
+
+.list-table-link:hover {
+   color: #1d4ed8;
+   text-decoration: underline;
+}
+
+.list-table-muted {
+   color: #4b5563;
+}
+
+.list-table-right {
+   text-align: right;
+}
+
+.list-table-wrap-text {
+   white-space: normal;
+   overflow-wrap: anywhere;
+   word-break: break-word;
+}
+
 /* Quote table */
 
 @keyframes saveFlash {

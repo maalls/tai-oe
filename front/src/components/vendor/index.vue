@@ -10,90 +10,92 @@
             </router-link>
          </template>
       </ProductsSubHeader>
-      <div class="p-6 max-w-7xl mx-auto">
+      <div class="list-page-shell">
          <div v-if="errorMessage" class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
             {{ errorMessage }}
          </div>
 
-         <div class="bg-white rounded-lg shadow overflow-hidden">
+         <div class="list-card">
             <div v-if="isLoading" class="p-6 text-center text-gray-500">
                {{ t('vendors.loading') }}
             </div>
             <div v-else-if="vendors.length === 0" class="p-6 text-center text-gray-500">
                {{ t('vendors.empty') }}
             </div>
-            <table v-else class="w-full">
-               <thead class="bg-gray-50 border-b">
-                  <tr>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.name') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.email') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.phone') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.website') }}
-                     </th>
-                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.brands') }}
-                     </th>
-                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.families') }}
-                     </th>
-                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.products') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('vendors.columns.created') }}
-                     </th>
-                  </tr>
-               </thead>
-               <tbody class="divide-y">
-                  <tr
-                     v-for="vendor in vendors"
-                     :key="vendor.id"
-                     @click="$router.push(`/vendors/${vendor.id}`)"
-                     class="hover:bg-gray-50 cursor-pointer"
-                  >
-                     <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                        {{ vendor.name }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ vendor.email || '-' }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ vendor.phone || '-' }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-blue-600">
-                        <a
-                           v-if="vendor.website"
-                           :href="vendor.website"
-                           target="_blank"
-                           rel="noreferrer"
-                           @click.stop
-                        >
-                           {{ vendor.website }}
-                        </a>
-                        <span v-else class="text-gray-600">-</span>
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600 text-right">
-                        {{ vendor.brand_count ?? 0 }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600 text-right">
-                        {{ vendor.family_count ?? 0 }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600 text-right">
-                        {{ vendor.product_count ?? 0 }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ formatDate(vendor.created_at) }}
-                     </td>
-                  </tr>
-               </tbody>
-            </table>
+            <div v-else class="list-table-wrap">
+               <table class="list-table">
+                  <thead>
+                     <tr>
+                        <th>
+                           {{ t('vendors.columns.name') }}
+                        </th>
+                        <th>
+                           {{ t('vendors.columns.email') }}
+                        </th>
+                        <th>
+                           {{ t('vendors.columns.phone') }}
+                        </th>
+                        <th>
+                           {{ t('vendors.columns.website') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('vendors.columns.brands') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('vendors.columns.families') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('vendors.columns.products') }}
+                        </th>
+                        <th>
+                           {{ t('vendors.columns.created') }}
+                        </th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     <tr
+                        v-for="vendor in vendors"
+                        :key="vendor.id"
+                        @click="$router.push(`/vendors/${vendor.id}`)"
+                     >
+                        <td class="font-medium text-gray-900">
+                           {{ vendor.name }}
+                        </td>
+                        <td class="list-table-muted">
+                           {{ vendor.email || '-' }}
+                        </td>
+                        <td class="list-table-muted">
+                           {{ vendor.phone || '-' }}
+                        </td>
+                        <td class="list-table-wrap-text">
+                           <a
+                              v-if="vendor.website"
+                              :href="vendor.website"
+                              target="_blank"
+                              rel="noreferrer"
+                              @click.stop
+                              class="list-table-link"
+                           >
+                              {{ vendor.website }}
+                           </a>
+                           <span v-else class="list-table-muted">-</span>
+                        </td>
+                        <td class="list-table-muted list-table-right">
+                           {{ formatNumber(vendor.brand_count) }}
+                        </td>
+                        <td class="list-table-muted list-table-right">
+                           {{ formatNumber(vendor.family_count) }}
+                        </td>
+                        <td class="list-table-muted list-table-right">
+                           {{ formatNumber(vendor.product_count) }}
+                        </td>
+                        <td class="list-table-muted">
+                           {{ formatDate(vendor.created_at) }}
+                        </td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
          </div>
       </div>
    </div>
@@ -143,6 +145,19 @@ const formatDate = (dateString?: string) => {
    } catch {
       return dateString;
    }
+};
+
+const { locale } = useI18n();
+
+const formatNumber = (number?: number) => {
+   if (number === undefined || number === null) return '0';
+
+   // Use the current locale directly from i18n
+   return number.toLocaleString(locale.value || 'fr-FR', {
+      useGrouping: true,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+   });
 };
 
 const loadVendors = async () => {

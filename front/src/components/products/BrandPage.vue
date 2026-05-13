@@ -1,96 +1,105 @@
 <template>
    <div>
       <ProductsSubHeader />
-      <div class="p-6 max-w-7xl mx-auto space-y-6">
+      <div class="list-page-shell list-page-stack">
          <div v-if="errorMessage" class="rounded-lg bg-red-50 text-red-700 p-4">
             {{ errorMessage }}
          </div>
 
          <div v-if="isLoading" class="text-gray-500">{{ t('products.brand.loading') }}</div>
 
-         <div v-else class="bg-white rounded-lg border border-gray-200 shadow overflow-hidden">
-            <table class="w-full">
-               <thead class="bg-gray-50 border-b">
-                  <tr>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.name') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.website') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.email') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.phone') }}
-                     </th>
-                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.defaultMargin') }}
-                     </th>
-                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.families') }}
-                     </th>
-                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.discounts') }}
-                     </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                        {{ t('products.brand.columns.created') }}
-                     </th>
-                  </tr>
-               </thead>
-               <tbody class="divide-y">
-                  <tr
-                     v-for="brand in brands"
-                     :key="brand.id"
-                     class="hover:bg-gray-50 cursor-pointer"
-                     @click="router.push({ name: 'vendor-brand-edit', params: { id: brand.id } })"
-                  >
-                     <td class="px-6 py-4 text-sm font-medium text-blue-600">
-                        {{ brand.name }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-blue-600">
-                        <a
-                           v-if="brand.website"
-                           :href="brand.website"
-                           target="_blank"
-                           rel="noreferrer"
-                           class="hover:underline"
-                           @click.stop
-                        >
-                           {{ brand.website }}
-                        </a>
-                        <span v-else class="text-gray-600">-</span>
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-600">{{ brand.email || '-' }}</td>
-                     <td class="px-6 py-4 text-sm text-gray-600">{{ brand.phone || '-' }}</td>
-                     <td class="px-6 py-4 text-sm text-right text-gray-600">
-                        {{ brand.minimum_margin ? brand.minimum_margin + '%' : '-' }}
-                     </td>
-                     <td class="px-6 py-4 text-sm text-right" @click.stop>
-                        <router-link
-                           :to="{ path: '/vendors/family', query: { brand_id: brand.id } }"
-                           class="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                           {{ familiesByBrand[brand.id]?.length || 0 }}
-                        </router-link>
-                     </td>
-                     <td class="px-6 py-4 text-sm text-right" @click.stop>
-                        <router-link
-                           :to="{
-                              path: '/vendors/family',
-                              query: { brand_id: brand.id, discount_only: 'true' },
-                           }"
-                           class="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                           {{ familiesWithDiscountByBrand[brand.id]?.length || 0 }}
-                        </router-link>
-                     </td>
-                     <td class="px-6 py-4 text-sm text-gray-500">
-                        {{ formatDate(brand.created_at) }}
-                     </td>
-                  </tr>
-               </tbody>
-            </table>
+         <div v-else class="list-card">
+            <div class="list-table-wrap">
+               <table class="list-table">
+                  <thead>
+                     <tr>
+                        <th>
+                           {{ t('products.brand.columns.name') }}
+                        </th>
+                        <th>
+                           {{ t('products.brand.columns.vendor') }}
+                        </th>
+                        <th>
+                           {{ t('products.brand.columns.email') }}
+                        </th>
+                        <th>
+                           {{ t('products.brand.columns.phone') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('products.brand.columns.minimumMargin') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('products.brand.columns.targetMargin') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('products.brand.columns.families') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('products.brand.columns.discounts') }}
+                        </th>
+                        <th class="list-table-right">
+                           {{ t('products.brand.columns.products') }}
+                        </th>
+                        <th>
+                           {{ t('products.brand.columns.created') }}
+                        </th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     <tr
+                        v-for="brand in brands"
+                        :key="brand.id"
+                        @click="
+                           router.push({ name: 'vendor-brand-edit', params: { id: brand.id } })
+                        "
+                     >
+                        <td class="font-medium">
+                           <span class="list-table-link">{{ brand.name }}</span>
+                        </td>
+                        <td class="list-table-muted">{{ brand.vendor_name || '-' }}</td>
+                        <td class="list-table-muted">{{ brand.email || '-' }}</td>
+                        <td class="list-table-muted">{{ brand.phone || '-' }}</td>
+                        <td class="list-table-muted list-table-right">
+                           {{ brand.minimum_margin != null ? brand.minimum_margin + '%' : '-' }}
+                        </td>
+                        <td class="list-table-muted list-table-right">
+                           {{ brand.target_margin != null ? brand.target_margin + '%' : '-' }}
+                        </td>
+                        <td class="list-table-right" @click.stop>
+                           <router-link
+                              :to="{ path: '/vendors/family', query: { brand_id: brand.id } }"
+                              class="list-table-link"
+                           >
+                              {{ familiesByBrand[brand.id]?.length || 0 }}
+                           </router-link>
+                        </td>
+                        <td class="list-table-right" @click.stop>
+                           <router-link
+                              :to="{
+                                 path: '/vendors/family',
+                                 query: { brand_id: brand.id, discount_only: 'true' },
+                              }"
+                              class="list-table-link"
+                           >
+                              {{ familiesWithDiscountByBrand[brand.id]?.length || 0 }}
+                           </router-link>
+                        </td>
+                        <td class="list-table-muted list-table-right">
+                           {{
+                              productCountByBrand[brand.id]
+                                 ? productCountByBrand[brand.id].toLocaleString(
+                                      locale.value || 'fr-FR'
+                                   )
+                                 : '0'
+                           }}
+                        </td>
+                        <td class="list-table-muted">
+                           {{ formatDate(brand.created_at) }}
+                        </td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
             <div v-if="!brands.length && !isLoading" class="p-6 text-center text-gray-500">
                {{ t('products.brand.noBrands') }}
             </div>
@@ -107,7 +116,7 @@ import { useBrandFamilyData } from './useBrandFamilyData';
 import { useI18n } from '../../i18n/useI18n';
 
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const { brands, families, isLoading, errorMessage, loadData } = useBrandFamilyData();
 
@@ -132,6 +141,16 @@ const familiesWithDiscountByBrand = computed(() => {
          return acc;
       },
       {} as Record<string, typeof families.value>
+   );
+});
+
+const productCountByBrand = computed(() => {
+   return families.value.reduce(
+      (acc, family) => {
+         acc[family.brand_id] = (acc[family.brand_id] || 0) + (family.product_family_count || 0);
+         return acc;
+      },
+      {} as Record<string, number>
    );
 });
 

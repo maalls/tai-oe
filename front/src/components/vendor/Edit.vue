@@ -81,7 +81,7 @@
             </form>
          </div>
 
-         <div v-if="!isNewVendor" class="mt-8 bg-white border border-gray-200 rounded-lg p-6">
+         <div v-if="!isNewVendor" class="mt-8">
             <div class="mb-4">
                <h2 class="text-lg font-semibold text-gray-900">
                   {{ t('vendors.relatedBrands.title') }}
@@ -97,55 +97,55 @@
             <div v-else-if="relatedBrands.length === 0" class="text-sm text-gray-500">
                {{ t('vendors.relatedBrands.empty') }}
             </div>
-            <div v-else class="overflow-x-auto">
-               <table class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50">
-                     <tr>
-                        <th
-                           class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                           {{ t('vendors.relatedBrands.columns.name') }}
-                        </th>
-                        <th
-                           class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                           {{ t('vendors.relatedBrands.columns.marque') }}
-                        </th>
-                        <th
-                           class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                           {{ t('products.brand.columns.minimumMargin') }}
-                        </th>
-                        <th
-                           class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                           {{ t('products.brand.columns.targetMargin') }}
-                        </th>
-                     </tr>
-                  </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                     <tr v-for="brand in relatedBrands" :key="brand.id" class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm text-gray-900">
-                           <router-link
-                              :to="`/vendors/brand/${brand.id}`"
-                              class="text-blue-600 hover:text-blue-800 hover:underline"
-                           >
-                              {{ brand.name || brand.marque || '-' }}
-                           </router-link>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-600">
-                           <router-link
-                              :to="`/vendors/brand/${brand.id}`"
-                              class="text-blue-600 hover:text-blue-800 hover:underline"
-                           >
-                              {{ brand.marque || '-' }}
-                           </router-link>
-                        </td>
-                        <td class="px-4 py-3 text-sm">{{ brand.minimum_margin }}%</td>
-                        <td class="px-4 py-3 text-sm">{{ brand.target_margin }}%</td>
-                     </tr>
-                  </tbody>
-               </table>
+            <div v-else class="list-card">
+               <div class="list-table-wrap">
+                  <table class="list-table">
+                     <thead>
+                        <tr>
+                           <th>{{ t('vendors.relatedBrands.columns.name') }}</th>
+                           <th>{{ t('vendors.relatedBrands.columns.marque') }}</th>
+                           <th class="list-table-right">
+                              {{ t('products.brand.columns.minimumMargin') }}
+                           </th>
+                           <th class="list-table-right">
+                              {{ t('products.brand.columns.targetMargin') }}
+                           </th>
+                           <th class="list-table-right">
+                              {{ t('products.brand.columns.products') }}
+                           </th>
+                        </tr>
+                     </thead>
+                     <tbody>
+                        <tr v-for="brand in relatedBrands" :key="brand.id">
+                           <td class="font-medium text-gray-900">
+                              <router-link
+                                 :to="`/vendors/brand/${brand.id}`"
+                                 class="list-table-link"
+                              >
+                                 {{ brand.name || brand.marque || '-' }}
+                              </router-link>
+                           </td>
+                           <td class="list-table-muted">
+                              <router-link
+                                 :to="`/vendors/brand/${brand.id}`"
+                                 class="list-table-link"
+                              >
+                                 {{ brand.marque || '-' }}
+                              </router-link>
+                           </td>
+                           <td class="list-table-muted list-table-right">
+                              {{ brand.minimum_margin }}%
+                           </td>
+                           <td class="list-table-muted list-table-right">
+                              {{ brand.target_margin }}%
+                           </td>
+                           <td class="list-table-muted list-table-right">
+                              {{ brand.product_count?.toLocaleString(locale) ?? '0' }}
+                           </td>
+                        </tr>
+                     </tbody>
+                  </table>
+               </div>
             </div>
          </div>
       </div>
@@ -167,11 +167,12 @@ interface Brand {
    website?: string | null;
    target_margin?: number | null;
    minimum_margin?: number | null;
+   product_count?: number;
 }
 
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const isNewVendor = computed(() => route.params.id === 'new');
 const vendorId = computed(() => (isNewVendor.value ? null : (route.params.id as string)));
@@ -253,7 +254,7 @@ const loadRelatedBrands = async () => {
    try {
       const { data, error } = await supabase
          .from('brand')
-         .select('*')
+         .select('*, family(product_family(count))')
          .eq('vendor_id', vendorId.value)
          .order('name', { ascending: true });
 
@@ -265,7 +266,13 @@ const loadRelatedBrands = async () => {
          return;
       }
 
-      relatedBrands.value = data || [];
+      relatedBrands.value = (data || []).map((b: any) => ({
+         ...b,
+         product_count: (b.family || []).reduce(
+            (sum: number, f: any) => sum + (f.product_family?.[0]?.count ?? 0),
+            0
+         ),
+      }));
    } catch (error) {
       brandsErrorMessage.value = t('vendors.relatedBrands.loadFailed', {
          message: error instanceof Error ? error.message : t('vendors.errors.unknown'),

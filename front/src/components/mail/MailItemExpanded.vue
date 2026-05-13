@@ -19,7 +19,7 @@
          </span>
       </div>
    </div>
-   <div class="border-t border-gray-200 bg-gray-50 p-4 space-y-4">
+   <div class="border-t border-gray-200 bg-white p-4">
       <!-- Trust Score Section -->
       <!--div
          v-if="message.auth_score !== undefined"
@@ -74,82 +74,8 @@
          </div>
       </div-->
 
-      <!-- Attachments -->
-      <div v-if="isLoadingAttachments" class="flex justify-center py-4">
-         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-      </div>
-      <div
-         v-else-if="(localAttachments ?? []).length > 0"
-         class="bg-white rounded p-4 border border-gray-200"
-      >
-         <h4 class="font-semibold text-gray-800 mb-3">
-            {{ t('mail.attachmentsTitle', { count: localAttachments?.length || 0 }) }}
-         </h4>
-         <div class="space-y-2">
-            <div
-               v-for="attachment in localAttachments"
-               :key="attachment.id"
-               class="flex items-center gap-3 p-3 rounded bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
-               @click="handleAttachmentClick(attachment)"
-            >
-               <img
-                  v-if="isImageAttachment(attachment)"
-                  :src="getAttachmentPreviewUrl(attachment)"
-                  :alt="attachment.filename"
-                  class="w-10 h-10 rounded object-cover border border-gray-200"
-                  loading="lazy"
-               />
-               <svg
-                  v-else
-                  class="w-4 h-4 text-gray-500 shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-               >
-                  <path
-                     d="M12.586 4.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                  />
-               </svg>
-               <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 truncate">
-                     {{ attachment.filename }}
-                  </p>
-                  <p v-if="attachment.mime_type" class="text-xs text-gray-600">
-                     {{ attachment.mime_type }}
-                  </p>
-               </div>
-               <div class="flex items-center gap-2 shrink-0">
-                  <span v-if="attachment.size" class="text-xs text-gray-500">{{
-                     formatFileSize(attachment.size)
-                  }}</span>
-                  <svg
-                     class="w-4 h-4 text-blue-600"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24"
-                  >
-                     <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                     />
-                  </svg>
-               </div>
-            </div>
-         </div>
-
-         <div
-            v-if="selectedPdfUrl"
-            class="mt-4 rounded border border-gray-200 bg-white overflow-hidden"
-         >
-            <div style="height: 560px">
-               <PdfViewer :pdfUrl="selectedPdfUrl" />
-            </div>
-         </div>
-      </div>
-
       <!-- Extracted Contact & Account Info -->
-      <div v-if="extractedContactInfo" class="bg-white rounded p-4 border-2 border-green-400">
+      <div v-if="extractedContactInfo" class="pt-4">
          <div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold text-green-800">{{ t('mail.contactAccountExtracted') }}</h4>
             <router-link
@@ -215,40 +141,11 @@
          </div>
       </div>
 
-      <!-- Related Opportunities -->
-      <div
-         v-if="messageBody?.opportunities && messageBody.opportunities.length"
-         class="bg-white rounded p-4 border border-gray-200 mb-4"
-      >
-         <h4 class="font-semibold text-gray-800 mb-2">{{ t('mail.relatedOpportunities') }}</h4>
-         <ul class="space-y-2">
-            <li
-               v-for="opportunity in messageBody.opportunities"
-               :key="opportunity.id"
-               class="flex items-center justify-between text-sm"
-            >
-               <div class="min-w-0">
-                  <router-link
-                     class="text-blue-600 hover:text-blue-700 font-medium truncate"
-                     :to="`/opportunities/${opportunity.id}/source`"
-                  >
-                     {{ opportunity.name || opportunity.id }}
-                  </router-link>
-                  <div class="text-xs text-gray-500">
-                     <span v-if="opportunity.stage">{{ getStageLabel(opportunity.stage) }}</span>
-                     <span v-if="opportunity.stage && opportunity.status"> · </span>
-                     <span v-if="opportunity.status">{{ getStatusLabel(opportunity.status) }}</span>
-                  </div>
-               </div>
-            </li>
-         </ul>
-      </div>
-
       <!-- Message Body -->
-      <div v-if="isLoadingBody" class="flex justify-center py-8">
+      <div v-if="isLoadingBody" class="pt-4 flex justify-center py-8">
          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
-      <div v-else-if="messageBody" class="bg-white rounded p-4 border border-gray-200">
+      <div v-else-if="messageBody" class="pt-4">
          <!--div class="flex items-center justify-between mb-3">
             <h4 class="font-semibold text-gray-800">Email Body</h4>
             <button
@@ -269,7 +166,7 @@
                v-html="sanitizeHtml(messageBody.body)"
             ></div>
             <div v-else>{{ messageBody.body }}</div>
-            <div class="mt-4">
+            <!--div class="mt-4">
                <span
                   v-for="label in message.labels"
                   :key="label"
@@ -277,11 +174,108 @@
                >
                   {{ label }}
                </span>
+            </div-->
+         </div>
+      </div>
+      <div v-else class="pt-4 text-center text-gray-600">
+         <p class="text-sm">{{ t('mail.clickClassifyHint') }}</p>
+      </div>
+
+      <!-- Attachments -->
+      <div v-if="isLoadingAttachments" class="pt-4 flex justify-center py-4">
+         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+      </div>
+      <div v-else-if="(localAttachments ?? []).length > 0" class="pt-4">
+         <h4 class="font-semibold text-gray-800 mb-3">
+            {{ t('mail.attachmentsTitle', { count: localAttachments?.length || 0 }) }}
+         </h4>
+         <div class="space-y-2">
+            <div
+               v-for="attachment in localAttachments"
+               :key="attachment.id"
+               class="flex items-center gap-3 p-3 rounded border border-gray-100 bg-white hover:bg-white cursor-pointer transition-colors"
+               @click="handleAttachmentClick(attachment)"
+            >
+               <img
+                  v-if="isImageAttachment(attachment)"
+                  :src="getAttachmentPreviewUrl(attachment)"
+                  :alt="attachment.filename"
+                  class="w-10 h-10 rounded object-cover border border-gray-200"
+                  loading="lazy"
+               />
+               <svg
+                  v-else
+                  class="w-4 h-4 text-gray-500 shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+               >
+                  <path
+                     d="M12.586 4.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  />
+               </svg>
+               <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">
+                     {{ attachment.filename }}
+                  </p>
+                  <p v-if="attachment.mime_type" class="text-xs text-gray-600">
+                     {{ attachment.mime_type }}
+                  </p>
+               </div>
+               <div class="flex items-center gap-2 shrink-0">
+                  <span v-if="attachment.size" class="text-xs text-gray-500">{{
+                     formatFileSize(attachment.size)
+                  }}</span>
+                  <svg
+                     class="w-4 h-4 text-blue-600"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24"
+                  >
+                     <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                     />
+                  </svg>
+               </div>
+            </div>
+         </div>
+
+         <div
+            v-if="selectedPdfUrl"
+            class="mt-4 rounded border border-gray-200 bg-white overflow-hidden"
+         >
+            <div style="height: 560px">
+               <PdfViewer :pdfUrl="selectedPdfUrl" />
             </div>
          </div>
       </div>
-      <div v-else class="bg-white rounded p-4 border border-gray-200 text-center text-gray-600">
-         <p class="text-sm">{{ t('mail.clickClassifyHint') }}</p>
+
+      <!-- Related Opportunities -->
+      <div v-if="messageBody?.opportunities && messageBody.opportunities.length" class="pt-4">
+         <h4 class="font-semibold text-gray-800 mb-2">{{ t('mail.relatedOpportunities') }}</h4>
+         <ul class="space-y-2">
+            <li
+               v-for="opportunity in messageBody.opportunities"
+               :key="opportunity.id"
+               class="flex items-center justify-between text-sm"
+            >
+               <div class="min-w-0">
+                  <router-link
+                     class="text-blue-600 hover:text-blue-700 font-medium truncate"
+                     :to="`/opportunities/${opportunity.id}/quote`"
+                  >
+                     {{ opportunity.name || opportunity.id }}
+                  </router-link>
+                  <div class="text-xs text-gray-500">
+                     <span v-if="opportunity.stage">{{ getStageLabel(opportunity.stage) }}</span>
+                     <span v-if="opportunity.stage && opportunity.status"> · </span>
+                     <span v-if="opportunity.status">{{ getStatusLabel(opportunity.status) }}</span>
+                  </div>
+               </div>
+            </li>
+         </ul>
       </div>
    </div>
 </template>

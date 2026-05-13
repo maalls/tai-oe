@@ -224,6 +224,8 @@ export default {
                name: 'Name',
                code: 'Code',
                discount: 'Discount',
+               vendor: 'Vendor',
+               products: 'Products',
             },
             fields: {
                minimumMargin: 'Minimum Margin (%)',
