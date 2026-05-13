@@ -6,7 +6,7 @@ Test Google Drive downloader with a Google Sheets URL.
 import sys
 from pathlib import Path
 
-from script.googledrive.googledrive import GoogleDriveDownloader
+from script.vendors.googledrive.googledrive import GoogleDriveDownloader
 
 def main():
     # Your Google Sheet URL

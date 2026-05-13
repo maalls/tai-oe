@@ -10,3 +10,6 @@ Traitement docs : pypdf, pdfplumber, openpyxl, pandas
 Génération PDF : WeasyPrint
 Intégrations : Google API (Gmail/OAuth)
 Tests/outillage : pytest, coverage, black, flake8
+
+backend structure:
+src: file related to the app

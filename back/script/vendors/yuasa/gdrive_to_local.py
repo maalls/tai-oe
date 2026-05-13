@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import sys
-from script.googledrive.googledrive import GoogleDriveDownloader
+from script.vendors.googledrive.googledrive import GoogleDriveDownloader
 
 from config import get_vendor_config
  

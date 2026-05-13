@@ -7,7 +7,7 @@ Google Drive URL: https://docs.google.com/spreadsheets/d/1RuAczIm0l5875bkv_AIRsY
 from pathlib import Path
 import sys
 
-from script.googledrive.googledrive import GoogleDriveDownloader
+from script.vendors.googledrive.googledrive import GoogleDriveDownloader
 
 
 def main():

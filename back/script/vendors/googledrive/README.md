@@ -57,7 +57,7 @@ Both Gmail and Google Drive modules use the same credentials file.
 ## Usage
 
 ```python
-from googledrive import GoogleDriveDownloader
+from script.vendors.googledrive.googledrive import GoogleDriveDownloader
 
 downloader = GoogleDriveDownloader()
 
@@ -122,7 +122,7 @@ python3 googledrive.py
 
 If you already have Gmail OAuth2 credentials:
 
-1. Copy `email/credentials.json` to this directory
+1. Reuse `back/var/credentials.json`
 2. Delete `token.pickle` (if it exists)
 3. The first run will prompt for permissions including Google Drive
 
