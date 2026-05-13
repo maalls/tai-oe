@@ -46,51 +46,23 @@ google-auth-httplib2>=0.1.0
 google-api-python-client>=2.70.0
 ```
 
-### 4. Run the Script
+### 4. Fetch Emails via the Main Pipeline
+
+Use the main backend command instead of a standalone collector:
 
 ```bash
-# Basic usage - collect 10 unread emails
-python3 gmail_collector.py
+# Fetch latest emails for one user
+python -m src.command.fetch_emails --user-id <USER_ID> --max-results 50
 
-# Collect more emails
-MAX_EMAILS=50 python3 gmail_collector.py
-
-# Use custom credentials file location
-GMAIL_CREDENTIALS=/path/to/credentials.json python3 gmail_collector.py
-
-# Save to custom output file
-OUTPUT_FILE=my_emails.json python3 gmail_collector.py
+# Continuous loop for all users
+python -m src.command.fetch_emails_loop --interval 120 --max-results 50 --classify-limit 200
 ```
 
-**First run:** A browser window will open asking you to authorize the application. After authorization, a `token.pickle` file will be created for future runs.
-
-## Usage in Your Code
-
-```python
-from gmail_collector import GmailCollector
-    credentials_path="credentials.json",
-    token_path="token.pickle"
-)
-
-# Authenticate (only needed once per session)
-collector.authenticate()
-
-# Get unread emails
-emails = collector.get_unread_emails(max_results=20)
-
-# Access email data
-for email in emails:
-    print(f"From: {email['from']}")
-    print(f"Subject: {email['subject']}")
-    print(f"Body: {email['body']}")
-
-    # Mark as read if needed
-    # collector.mark_as_read(email['id'])
-```
+OAuth tokens are still stored in `back/var/token.pickle` and reused automatically.
 
 ## Advanced Queries
 
-The script supports Gmail search queries:
+The Gmail API supports search queries such as:
 
 ```python
 # Only emails from specific sender
