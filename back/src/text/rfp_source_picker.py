@@ -68,7 +68,7 @@ def _extract_with_cache(text: str) -> Tuple[int, Optional[Dict]]:
         return 0, None
     
     try:
-        timeout_seconds = int(os.getenv("RFQ_LLM_TIMEOUT", "300"))
+        timeout_seconds = int(os.getenv("QUOTE_LLM_TIMEOUT", os.getenv("RFQ_LLM_TIMEOUT", "600")))
         rfp_data = extract_rfp_from_text(text, timeout_seconds=timeout_seconds)
         normalized = _normalize_rfp_data(rfp_data)
         product_count = len(normalized.get("products", []) or [])

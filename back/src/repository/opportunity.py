@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional
 from uuid import UUID
 from datetime import datetime
+import os
 
 from flask import json
 
@@ -690,7 +691,8 @@ class OpportunityRepository:
             rfp_data = pre_extracted_data
         else:
             print("[OpportunityRepository] No usable pre_extracted_data, running LLM extraction")
-            rfp_data = extract_rfp_from_text(text_clean, timeout_seconds=300)
+            quote_llm_timeout = int(os.getenv("QUOTE_LLM_TIMEOUT", os.getenv("RFQ_LLM_TIMEOUT", "600")))
+            rfp_data = extract_rfp_from_text(text_clean, timeout_seconds=quote_llm_timeout)
             if isinstance(rfp_data, list):
                 rfp_data = {"products": rfp_data, "contact": {}}
             elif isinstance(rfp_data, str):

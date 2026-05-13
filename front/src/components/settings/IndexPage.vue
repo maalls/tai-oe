@@ -340,7 +340,7 @@ import { useRouter } from 'vue-router';
 import LocaleSwitcher from '../LocaleSwitcher.vue';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
-import { API_BASE_URL } from '../../utils/api';
+import { API_BASE_URL, apiUrl } from '../../utils/api';
 
 const router = useRouter();
 const { user, signOut, getValidToken, updateDisplayName } = useAuth();
@@ -506,9 +506,9 @@ async function loadGmailStatus() {
    gmailError.value = '';
    try {
       const userId = user.value?.id;
-      const res = await fetch(
-         `${API_BASE_URL}/api/gmail/status?user_id=${encodeURIComponent(userId || '')}`
-      );
+      const url = new URL(apiUrl('gmail/status'), window.location.origin);
+      url.searchParams.set('user_id', userId || '');
+      const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok) {
          gmailError.value = data?.message || 'Failed to load Gmail status.';
@@ -532,9 +532,9 @@ async function loadGmailStatus() {
 async function loadGmailProfile() {
    try {
       const userId = user.value?.id;
-      const res = await fetch(
-         `${API_BASE_URL}/api/gmail/profile?user_id=${encodeURIComponent(userId || '')}`
-      );
+      const url = new URL(apiUrl('gmail/profile'), window.location.origin);
+      url.searchParams.set('user_id', userId || '');
+      const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
          gmailProfile.value = null;
@@ -555,11 +555,10 @@ async function handleGmailAuthorize() {
          return;
       }
       const redirect_url = window.location.href;
-      const res = await fetch(
-         `${API_BASE_URL}/api/gmail/oauth/start?redirect_url=${encodeURIComponent(
-            redirect_url
-         )}&user_id=${encodeURIComponent(user.value.id)}`
-      );
+      const url = new URL(apiUrl('gmail/oauth/start'), window.location.origin);
+      url.searchParams.set('redirect_url', redirect_url);
+      url.searchParams.set('user_id', user.value.id);
+      const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok' || !data?.auth_url) {
          gmailError.value = data?.message || 'Failed to authorize Gmail.';
@@ -578,9 +577,9 @@ async function handleGmailRevoke() {
    gmailError.value = '';
    try {
       const userId = user.value?.id;
-      const res = await fetch(
-         `${API_BASE_URL}/api/gmail/revoke?user_id=${encodeURIComponent(userId || '')}`
-      );
+      const url = new URL(apiUrl('gmail/revoke'), window.location.origin);
+      url.searchParams.set('user_id', userId || '');
+      const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
          gmailError.value = data?.message || 'Failed to disconnect Gmail.';
@@ -597,7 +596,7 @@ async function handleGmailRevoke() {
 async function loadImapConfig() {
    imapError.value = '';
    try {
-      const res = await fetch(`${API_BASE_URL}/api/imap/config`, {
+      const res = await fetch(apiUrl('imap/config'), {
          headers: await getAuthHeaders(),
       });
       const data = await res.json();
@@ -624,7 +623,7 @@ async function loadImapConfig() {
 
 async function loadImapStatus() {
    try {
-      const res = await fetch(`${API_BASE_URL}/api/imap/status`, {
+      const res = await fetch(apiUrl('imap/status'), {
          headers: await getAuthHeaders(),
       });
       const data = await res.json();
@@ -645,7 +644,7 @@ async function handleImapSave() {
    imapError.value = '';
    imapSuccess.value = '';
    try {
-      const res = await fetch(`${API_BASE_URL}/api/imap/config`, {
+      const res = await fetch(apiUrl('imap/config'), {
          method: 'POST',
          headers: await getAuthHeaders(true),
          body: JSON.stringify({
@@ -679,7 +678,7 @@ async function handleImapTest() {
    imapError.value = '';
    imapSuccess.value = '';
    try {
-      const res = await fetch(`${API_BASE_URL}/api/imap/test`, {
+      const res = await fetch(apiUrl('imap/test'), {
          method: 'POST',
          headers: await getAuthHeaders(),
       });
@@ -702,7 +701,7 @@ async function handleImapClear() {
    imapError.value = '';
    imapSuccess.value = '';
    try {
-      const res = await fetch(`${API_BASE_URL}/api/imap/config`, {
+      const res = await fetch(apiUrl('imap/config'), {
          method: 'DELETE',
          headers: await getAuthHeaders(),
       });
@@ -744,7 +743,7 @@ onMounted(() => {
 
 async function loadFetchLoopStatus() {
    try {
-      const res = await fetch(`${API_BASE_URL}/api/email-fetch-loop/status`);
+      const res = await fetch(apiUrl('email-fetch-loop/status'));
       const data = await res.json();
       fetchLoopStatus.value = data;
    } catch (error) {

@@ -81,5 +81,16 @@ export default defineConfig(({ mode }) => {
             },
          },
       },
+      preview: {
+         host: '0.0.0.0',
+         port: 5173,
+         allowedHosts: ['gme.ai-oe.co', 'localhost', '127.0.0.1'],
+         proxy: {
+            '/api': {
+               target: apiProxyTarget,
+               changeOrigin: true,
+            },
+         },
+      },
    };
 });

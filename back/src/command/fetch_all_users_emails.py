@@ -17,6 +17,7 @@ import argparse
 import sys
 from datetime import datetime
 
+from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.command.fetch_emails import run as run_fetch_emails
 
 
@@ -24,7 +25,7 @@ from src.command.fetch_emails import run as run_fetch_emails
 
 def main(argv=None):
 	parser = argparse.ArgumentParser(description="Fetch Gmail emails for all authorized users.")
-	parser.add_argument("--max-results", type=int, default=50, help="Max messages to fetch per user")
+	parser.add_argument("--max-results", type=int, default=EMAIL_FETCH_MAX_RESULTS, help="Max messages to fetch per user")
 	parser.add_argument("--user-id", type=str, default=None, help="Optional: Fetch only for specific user")
 	
 	args = parser.parse_args(argv)

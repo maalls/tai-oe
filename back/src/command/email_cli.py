@@ -22,6 +22,7 @@ from dotenv import load_dotenv, find_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.repository.email_repository import EmailRepository
 from src.supabase import get_supabase_service
 
@@ -35,7 +36,7 @@ except Exception:
 
 default_user_id = os.environ.get("SUPABASE_USER_ID") or os.environ.get("DEFAULT_USER_ID")
 
-DEFAULT_MAX_RESULTS = 50
+DEFAULT_MAX_RESULTS = EMAIL_FETCH_MAX_RESULTS
 DEFAULT_CLASSIFY_LIMIT = 200
 DEFAULT_LOOP_CLASSIFY_LIMIT = 30
 DEFAULT_INTERVAL_SECONDS = 120

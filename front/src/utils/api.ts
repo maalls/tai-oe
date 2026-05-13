@@ -16,8 +16,8 @@ export function apiUrl(path: string): string {
    const isDev = import.meta.env.DEV;
    const isLocalhost = rawApiBaseUrl.includes('localhost');
    
-   if (isDev && isLocalhost) {
-      // Dev mode: use relative /api path for Vite proxy
+   if (isLocalhost) {
+      // Localhost: use relative /api path for Vite proxy (dev or preview)
       return `/api${normalizedPath}`;
    }
    

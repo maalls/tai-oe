@@ -10,6 +10,22 @@ except ImportError as exc:  # pragma: no cover - dependency guard
     raise ImportError("Missing dependency: PyYAML. Install with: pip install PyYAML") from exc
 
 
+def get_int_env(name: str, default: int) -> int:
+    """Read an integer environment variable with fallback."""
+
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return default
+
+
+EMAIL_FETCH_MAX_RESULTS = get_int_env("EMAIL_FETCH_MAX_RESULTS", 50)
+
+
 def _find_config() -> Path:
     """Locate config.yml in common locations."""
 
