@@ -12,7 +12,6 @@ import argparse
 import os
 import sys
 from src.config import EMAIL_FETCH_MAX_RESULTS
-from src.repository.email_repository import EmailRepository
 
 # Load .env if available
 try:
@@ -24,14 +23,62 @@ except Exception:
 	pass
 
 default_user_id = os.environ.get("SUPABASE_USER_ID") or os.environ.get("DEFAULT_USER_ID")
+default_use_new_workflow = os.environ.get("USE_NEW_EMAIL_WORKFLOW", "0") in {"1", "true", "True"}
 
 
-def run(user_id: str, max_results: int = EMAIL_FETCH_MAX_RESULTS, classify_limit: int = 200, after_date: str = None) -> int:
+def _get_legacy_repo():
+	"""Create the legacy repository lazily to avoid import-time side effects."""
+	from src.repository.email_repository import EmailRepository
+
+	return EmailRepository()
+
+
+def _run_new_workflow(user_id: str, classify_limit: int = 200) -> int:
+	"""Run the new DDD workflow (classification only) in opt-in mode."""
+	from src.infrastructure.factory import ServiceFactory
+
+	factory = ServiceFactory()
+	workflow = factory.create_email_workflow_service()
+	emails = workflow.email_service.get_all_unclassified(limit=classify_limit, user_id=user_id)
+
+	classified = 0
+	errors = 0
+	for email in emails:
+		try:
+			workflow.process_new_email(email.id)
+			classified += 1
+		except Exception as exc:
+			errors += 1
+			print(f"[fetch-emails:new-workflow] Failed on {email.id}: {exc}")
+
+	print("\n[fetch-emails] Summary:")
+	print("  Status: ok" if errors == 0 else "  Status: partial")
+	print("  Workflow: new")
+	print("  Emails fetched: 0 (classification-only mode)")
+	print(f"  Emails classified: {classified}")
+	print(f"  Errors: {errors}")
+
+	return 0 if errors == 0 else 1
+
+
+def run(
+	user_id: str,
+	max_results: int = EMAIL_FETCH_MAX_RESULTS,
+	classify_limit: int = 200,
+	after_date: str = None,
+	use_new_workflow: bool = False,
+) -> int:
 	"""Fetch emails from Gmail, classify them, and link to contacts/accounts.
 	
 	This is a thin wrapper around EmailRepository.fetch_and_process_emails().
 	"""
-	repo = EmailRepository()
+	if use_new_workflow:
+		try:
+			return _run_new_workflow(user_id=user_id, classify_limit=classify_limit)
+		except Exception as exc:
+			print(f"[fetch-emails] New workflow failed, falling back to legacy: {exc}")
+
+	repo = _get_legacy_repo()
 	
 	try:
 		# Use the repository's comprehensive workflow method
@@ -85,6 +132,11 @@ def main(argv=None):
 		default=None,
 		help="Fetch emails after this date (YYYY/MM/DD or Unix seconds). Defaults to latest email timestamp (or yesterday if none).",
 	)
+	parser.add_argument(
+		"--use-new-workflow",
+		action="store_true",
+		help="Use new DDD workflow for classification (opt-in, with legacy fallback).",
+	)
 
 	args = parser.parse_args(argv)
 
@@ -100,6 +152,7 @@ def main(argv=None):
 		max_results=args.max_results,
 		classify_limit=args.classify_limit,
 		after_date=args.after_date,  # Pass through, will be auto-resolved if None
+		use_new_workflow=args.use_new_workflow or default_use_new_workflow,
 	)
 	sys.exit(exit_code)
 
