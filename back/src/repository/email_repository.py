@@ -74,6 +74,21 @@ def _dedupe_path(path: Path) -> Path:
         i += 1
 
 
+def _resolve_frontend_redirect_url(default_path: str = "/settings") -> str:
+    """Resolve the frontend redirect URL from the public frontend base URL."""
+    configured = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153").strip()
+    parsed = urlparse(configured)
+
+    if not parsed.scheme or not parsed.netloc:
+        return f"http://localhost:7153{default_path}"
+
+    path = parsed.path.rstrip("/")
+    if path:
+        return configured.rstrip("/")
+
+    return f"{parsed.scheme}://{parsed.netloc}{default_path}"
+
+
 class EmailDatabaseHandler:
     """Handle email storage in Supabase database."""
 
@@ -1085,7 +1100,7 @@ class EmailRepository:
             if not user_id:
                 return {"status": "error", "message": "Missing user_id"}
 
-            resolved_redirect_url = redirect_url or os.getenv("FRONTEND_BASE_URL", "http://localhost:7153/settings")
+            resolved_redirect_url = redirect_url or _resolve_frontend_redirect_url()
             callback_url = self._resolve_gmail_callback_url(resolved_redirect_url)
             flow = Flow.from_client_secrets_file(
                 str(credentials_path),
@@ -1126,7 +1141,7 @@ class EmailRepository:
                     "message": "Gmail credentials.json not found. Please add it to var/credentials.json"
                 }
 
-            redirect_url = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153/settings")
+            redirect_url = _resolve_frontend_redirect_url()
             callback_url = self._resolve_gmail_callback_url(redirect_url)
             user_id = None
             if state:

@@ -19,6 +19,7 @@ import json
 import atexit
 from pathlib import Path
 from typing import List
+from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.command.fetch_emails import run as fetch_emails_run
 from src.repository.email_repository import EmailRepository
 
@@ -76,7 +77,7 @@ def get_user_fetch_provider(user_id: str) -> str:
 	return repo.get_available_fetch_provider(user_id)
 
 
-def run_loop(user_id: str = None, interval_seconds: int = 30, max_results: int = 50, classify_limit: int = 200):
+def run_loop(user_id: str = None, interval_seconds: int = 30, max_results: int = EMAIL_FETCH_MAX_RESULTS, classify_limit: int = 200):
 	"""Run email fetching in a loop with minimum refresh interval.
 	
 	Args:
@@ -218,7 +219,7 @@ def main(argv=None):
 	parser.add_argument(
 		"--max-results",
 		type=int,
-		default=50,
+		default=EMAIL_FETCH_MAX_RESULTS,
 		help="Max messages to fetch from the active provider per cycle per user"
 	)
 	parser.add_argument(

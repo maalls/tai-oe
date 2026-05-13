@@ -18,6 +18,7 @@ import traceback
 from pathlib import Path
 
 from typing import Dict
+from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.reader.csv import CSVReader
 from src.embeddings import EmbeddingGenerator
 from src.controller.file_handler import FileHandler
@@ -1348,7 +1349,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/messages':
                     handlers = self.get_request_handlers()
                     # Get max_results and user_id from query params
-                    max_results = int(qs.get('max_results', [20])[0])
+                    max_results = int(qs.get('max_results', [EMAIL_FETCH_MAX_RESULTS])[0])
                     user_id = qs.get('user_id', [None])[0]
                     force = qs.get('force', ['false'])[0].lower() == 'true'
                     

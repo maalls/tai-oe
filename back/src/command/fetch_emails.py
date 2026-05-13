@@ -11,6 +11,7 @@ Usage:
 import argparse
 import os
 import sys
+from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.repository.email_repository import EmailRepository
 
 # Load .env if available
@@ -25,7 +26,7 @@ except Exception:
 default_user_id = os.environ.get("SUPABASE_USER_ID") or os.environ.get("DEFAULT_USER_ID")
 
 
-def run(user_id: str, max_results: int = 50, classify_limit: int = 200, after_date: str = None) -> int:
+def run(user_id: str, max_results: int = EMAIL_FETCH_MAX_RESULTS, classify_limit: int = 200, after_date: str = None) -> int:
 	"""Fetch emails from Gmail, classify them, and link to contacts/accounts.
 	
 	This is a thin wrapper around EmailRepository.fetch_and_process_emails().
@@ -76,7 +77,7 @@ def run(user_id: str, max_results: int = 50, classify_limit: int = 200, after_da
 def main(argv=None):
 	parser = argparse.ArgumentParser(description="Fetch Gmail emails and classify unclassified ones.")
 	parser.add_argument("--user-id", required=False, help="Supabase user ID")
-	parser.add_argument("--max-results", type=int, default=50, help="Max messages to fetch from Gmail")
+	parser.add_argument("--max-results", type=int, default=EMAIL_FETCH_MAX_RESULTS, help="Max messages to fetch from Gmail")
 	parser.add_argument("--classify-limit", type=int, default=200, help="Max unclassified emails to classify")
 	parser.add_argument(
 		"--after-date",
