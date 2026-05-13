@@ -1,7 +1,14 @@
 """Email-related request handlers for Gmail operations."""
 
 from typing import Dict
-from src.repository.email_repository import EmailRepository
+from src.infrastructure.factory import ServiceFactory
+
+
+def _get_legacy_repo():
+    """Create legacy email repository lazily to avoid import-time side effects."""
+    from src.repository.email_repository import EmailRepository
+
+    return EmailRepository()
 
 
 class EmailHandlers:
@@ -11,9 +18,16 @@ class EmailHandlers:
     business logic to the EmailRepository.
     """
     
-    def __init__(self):
+    def __init__(self, service_factory: ServiceFactory = None):
         """Initialize email handlers."""
-        self.repository = EmailRepository()
+        self._repository = None
+        self.service_factory = service_factory or ServiceFactory()
+
+    @property
+    def repository(self):
+        if self._repository is None:
+            self._repository = _get_legacy_repo()
+        return self._repository
     
     def handle_gmail_authorize(self, redirect_url: str = None) -> Dict:
         """Trigger Gmail OAuth2 authorization flow.
@@ -98,6 +112,46 @@ class EmailHandlers:
         """
         print(f"[EmailHandlers] Listing Gmail messages for user {user_id}, max_results={max_results}, save_to_db={save_to_db}, force={force}")
         return self.repository.fetch_emails(user_id, max_results=max_results, force=force)
+
+    def handle_classify_unclassified(
+        self,
+        user_id: str,
+        limit: int = 200,
+    ) -> Dict:
+        """Classify unclassified emails using the new workflow (fail-fast)."""
+        if not user_id:
+            return {
+                "status": "error",
+                "message": "user_id is required",
+            }
+
+        try:
+            workflow = self.service_factory.create_email_workflow_service()
+            emails = workflow.email_service.get_all_unclassified(limit=limit, user_id=user_id)
+
+            classified = 0
+            errors = []
+            for email in emails:
+                try:
+                    workflow.process_new_email(email.id)
+                    classified += 1
+                except Exception as exc:
+                    errors.append({"email_id": email.id, "error": str(exc)})
+
+            return {
+                "status": "ok",
+                "workflow": "new",
+                "classified": classified,
+                "skipped": len(errors),
+                "errors": errors,
+            }
+        except Exception as exc:
+            print(f"[EmailHandlers] New workflow failed (fail-fast mode): {exc}")
+            return {
+                "status": "error",
+                "workflow": "new",
+                "message": f"New workflow failed: {exc}",
+            }
     
     def handle_send_email(
         self,

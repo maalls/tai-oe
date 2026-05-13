@@ -2,7 +2,7 @@
 
 from typing import Any, Protocol
 
-from domain.email import Email
+from src.domain.email import Email
 from src.repository.classifier.classifier import EmailClassifier
 
 

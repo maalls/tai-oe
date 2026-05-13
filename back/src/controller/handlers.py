@@ -1,6 +1,8 @@
 """Main request handlers orchestration for the RAG server."""
 
-from typing import Optional, Dict
+from dataclasses import asdict
+from enum import Enum
+from typing import Optional, Dict, Any
 
 from src.controller.file_handler import FileHandler
 from src.controller.csv_handlers import CsvHandlers
@@ -9,6 +11,8 @@ from src.controller.business_handler import BusinessHandlers
 from src.controller.email_handler import EmailHandlers
 from src.controller.action_handlers import ActionHandlers
 from src.controller.db_client import DatabaseHandler
+from src.domain.enums import OpportunityStage
+from src.infrastructure.factory import ServiceFactory
 
 
 class RequestHandlers:
@@ -24,12 +28,21 @@ class RequestHandlers:
         self.business_handlers = BusinessHandlers()
         self.email_handlers = EmailHandlers()
         self.action_handlers = ActionHandlers()
+        self.service_factory = ServiceFactory()
 
         try:
             db_handler = DatabaseHandler()
             self.database_handlers = DatabaseHandlers(db_handler)
         except Exception as e:
             print(f"[Rag] Warning: Could not initialize DatabaseHandler: {e}")
+
+    def _serialize_domain_entity(self, entity: Any) -> Dict[str, Any]:
+        """Convert dataclass entities to JSON-serializable dictionaries."""
+        payload = asdict(entity)
+        for key, value in payload.items():
+            if isinstance(value, Enum):
+                payload[key] = value.value
+        return payload
                     
     
 
@@ -197,6 +210,17 @@ class RequestHandlers:
     def handle_gmail_list_messages(self, max_results: int = 20, user_id: str = None, save_to_db: bool = True, force: bool = False) -> Dict:
         """Handle /api/gmail/messages request."""
         return self.email_handlers.handle_gmail_list_messages(max_results, user_id, save_to_db, force)
+
+    def handle_classify_unclassified(
+        self,
+        user_id: str,
+        limit: int = 200,
+    ) -> Dict:
+        """Handle /api/gmail/classify-unclassified request."""
+        return self.email_handlers.handle_classify_unclassified(
+            user_id=user_id,
+            limit=limit,
+        )
     
     def handle_get_message_body(self, message_id: str, user_id: str = None) -> Dict:
         """Handle /api/gmail/message/{id} request."""
@@ -277,6 +301,83 @@ class RequestHandlers:
     def handle_extract_rfp_from_document(self, document_id: str, user_id: str = None) -> Dict:
         """Handle /api/document/extract-rfp request."""
         return self.business_handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
+
+    # New DDD services (incremental migration path)
+    def handle_get_opportunity(self, opportunity_id: str) -> Dict:
+        """Handle DDD get-opportunity use-case."""
+        try:
+            service = self.service_factory.create_opportunity_service()
+            opportunity = service.get_opportunity(opportunity_id)
+            return {
+                "status": "ok",
+                "opportunity": self._serialize_domain_entity(opportunity),
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
+
+    def handle_advance_opportunity(self, opportunity_id: str, stage: str) -> Dict:
+        """Handle DDD advance-opportunity use-case."""
+        try:
+            parsed_stage = OpportunityStage(stage)
+            service = self.service_factory.create_opportunity_service()
+            opportunity = service.advance_opportunity(opportunity_id, parsed_stage)
+            return {
+                "status": "ok",
+                "opportunity": self._serialize_domain_entity(opportunity),
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
+
+    def handle_get_vendor(self, vendor_id: str) -> Dict:
+        """Handle DDD get-vendor use-case."""
+        try:
+            service = self.service_factory.create_vendor_service()
+            vendor = service.get_vendor(vendor_id)
+            return {
+                "status": "ok",
+                "vendor": self._serialize_domain_entity(vendor),
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
+
+    def handle_get_rfp(self, rfp_id: str) -> Dict:
+        """Handle DDD get-rfp use-case."""
+        try:
+            service = self.service_factory.create_rfp_service()
+            rfp = service.get_rfp(rfp_id)
+            return {
+                "status": "ok",
+                "rfp": self._serialize_domain_entity(rfp),
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
+
+    def handle_submit_rfp(self, rfp_id: str) -> Dict:
+        """Handle DDD submit-rfp use-case."""
+        try:
+            service = self.service_factory.create_rfp_service()
+            rfp = service.submit_rfp(rfp_id)
+            return {
+                "status": "ok",
+                "rfp": self._serialize_domain_entity(rfp),
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
 
     # Action management operations
     def handle_list_actions(self, opportunity_id: str, user_id: str = None) -> Dict:

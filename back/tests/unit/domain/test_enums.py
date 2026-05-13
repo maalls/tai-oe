@@ -9,8 +9,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
 import pytest
 from domain.enums import (
-    DocumentStatus, InvoicePaymentStatus, ContactRole,
-    DocumentType, DocumentChannel, EmailStatus
+    ContactRole,
+    DocumentChannel,
+    DocumentLinkType,
+    DocumentStatus,
+    DocumentType,
+    EmailStatus,
+    InvoicePaymentStatus,
+    OpportunityStage,
+    OpportunityStatus,
+    QuoteAcceptanceMode,
+    UnitType,
 )
 
 
@@ -19,9 +28,24 @@ class TestDocumentStatus:
 
     def test_document_status_values_exist(self):
         """Verify all document statuses have correct values"""
-        assert DocumentStatus.DRAFT.value == "DRAFT"
-        assert DocumentStatus.SENT.value == "SENT"
-        assert DocumentStatus.PAID.value == "PAID"
+        assert [member.value for member in DocumentStatus] == [
+            "DRAFT",
+            "SENT",
+            "RECEIVED",
+            "SUBMITTED",
+            "SHORTLISTED",
+            "ACCEPTED",
+            "REJECTED",
+            "CONFIRMED",
+            "FULFILLED",
+            "CANCELLED",
+            "EXPIRED",
+            "PAID",
+            "PARTIALLY_PAID",
+            "OVERDUE",
+            "DISPUTED",
+            "APPLIED",
+        ]
 
     def test_document_status_can_be_created_from_value(self):
         """Verify enums can be created from values"""
@@ -34,8 +58,12 @@ class TestInvoicePaymentStatus:
 
     def test_invoice_payment_status_values(self):
         """Verify payment status values"""
-        assert InvoicePaymentStatus.PAID.value == "PAID"
-        assert InvoicePaymentStatus.UNPAID.value == "UNPAID"
+        assert [member.value for member in InvoicePaymentStatus] == [
+            "UNPAID",
+            "PARTIAL",
+            "PAID",
+            "CANCELLED",
+        ]
 
 
 class TestEmailStatus:
@@ -54,6 +82,117 @@ class TestEmailStatus:
         assert hasattr(EmailStatus, "UNREAD")
         assert hasattr(EmailStatus, "CLASSIFIED")
         assert hasattr(EmailStatus, "ARCHIVED")
+
+
+class TestDocumentType:
+    """Test DocumentType enum"""
+
+    def test_document_type_values(self):
+        assert [member.value for member in DocumentType] == [
+            "RFI",
+            "RFQ",
+            "PROPOSAL",
+            "INVOICE",
+            "QUOTE",
+            "RFP",
+            "PO",
+            "CONTRACT",
+            "DELIVERY_NOTE",
+            "ACCEPTANCE",
+            "CREDIT_NOTE",
+            "NDA",
+            "DPA",
+            "SLA",
+            "CGV",
+            "FAMILY_DISCOUNT",
+            "ATTACHMENT",
+        ]
+
+
+class TestDocumentChannel:
+    """Test DocumentChannel enum"""
+
+    def test_document_channel_values(self):
+        assert [member.value for member in DocumentChannel] == [
+            "EMAIL",
+            "PORTAL",
+            "PHONE",
+            "MANUAL",
+            "OTHER",
+        ]
+
+
+class TestDocumentLinkType:
+    """Test DocumentLinkType enum"""
+
+    def test_document_link_type_values(self):
+        assert [member.value for member in DocumentLinkType] == [
+            "QUOTE_TO_PO",
+            "PO_TO_INVOICE",
+            "QUOTE_TO_INVOICE",
+            "CONTRACT_TO_SOW",
+            "DELIVERY_TO_INVOICE",
+            "ACCEPTANCE_TO_INVOICE",
+            "QUOTE_REVISION",
+        ]
+
+
+class TestQuoteAcceptanceMode:
+    """Test QuoteAcceptanceMode enum"""
+
+    def test_quote_acceptance_mode_values(self):
+        assert [member.value for member in QuoteAcceptanceMode] == [
+            "SIGNED_QUOTE",
+            "EMAIL_OK",
+            "PORTAL_CLICK",
+        ]
+
+
+class TestUnitType:
+    """Test UnitType enum"""
+
+    def test_unit_type_values(self):
+        assert [member.value for member in UnitType] == [
+            "U",
+            "M",
+            "H",
+            "PACK",
+            "KG",
+            "L",
+            "DAY",
+        ]
+
+
+class TestOpportunityEnums:
+    """Test opportunity enums"""
+
+    def test_opportunity_stage_values(self):
+        assert [member.value for member in OpportunityStage] == [
+            "NEW_LEAD",
+            "QUALIFYING",
+            "NEEDS_DEFINED",
+            "RFP_IN_PROGRESS",
+            "RFQ_IN_PROGRESS",
+            "OFFER_SENT",
+            "NEGOTIATION",
+            "COMMITMENT",
+            "PREPARATION",
+            "DELIVERY_IN_PROGRESS",
+            "ACCEPTED",
+            "INVOICED",
+            "PAID",
+            "CLOSED_WON",
+            "CLOSED_LOST",
+            "ON_HOLD",
+        ]
+
+    def test_opportunity_status_values(self):
+        assert [member.value for member in OpportunityStatus] == [
+            "OPEN",
+            "WON",
+            "LOST",
+            "ON_HOLD",
+        ]
 
 
 class TestContactRole:

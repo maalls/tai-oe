@@ -3,11 +3,11 @@
 from datetime import datetime
 from typing import Any, List, Optional
 
-from domain.email import Email
-from domain.enums import EmailStatus
-from infrastructure.database.dto import EmailDTO
-from infrastructure.exceptions import MappingError, NotFoundError, RepositoryError
-from repository.contracts.email_repository import EmailRepositoryContract
+from src.domain.email import Email
+from src.domain.enums import EmailStatus
+from src.infrastructure.database.dto import EmailDTO
+from src.infrastructure.exceptions import MappingError, NotFoundError, RepositoryError
+from src.repository.contracts.email_repository import EmailRepositoryContract
 
 
 class SupabaseEmailRepository(EmailRepositoryContract):

@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock
 
+from datetime import datetime, timezone
+
 import pytest
 
 from domain.enums import EmailStatus
@@ -43,7 +45,7 @@ def test_get_by_id_maps_to_domain_entity():
                 "body_full": "Please share pricing",
                 "is_classified": True,
                 "category": "quote",
-                "classified_at": None,
+                "classified_at": "2026-05-13T10:20:30Z",
             }
         ]
     )
@@ -54,6 +56,7 @@ def test_get_by_id_maps_to_domain_entity():
     assert email.id == "e-1"
     assert email.status == EmailStatus.CLASSIFIED
     assert email.classification == "quote"
+    assert email.classified_at == datetime(2026, 5, 13, 10, 20, 30, tzinfo=timezone.utc)
 
 
 def test_get_by_id_raises_not_found():

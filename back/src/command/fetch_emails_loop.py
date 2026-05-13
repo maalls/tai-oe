@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import List
 from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.command.fetch_emails import run as fetch_emails_run
-from src.repository.email_repository import EmailRepository
 
 # Load .env if available
 try:
@@ -67,17 +66,12 @@ def get_all_users() -> List[dict]:
 		return []
 
 
-def get_user_fetch_provider(user_id: str) -> str:
-	"""Return the active email provider for a user.
-
-	Uses IMAP when configured and enabled, Gmail when authorized, and returns
-	None when no provider is available.
-	"""
-	repo = EmailRepository()
-	return repo.get_available_fetch_provider(user_id)
-
-
-def run_loop(user_id: str = None, interval_seconds: int = 30, max_results: int = EMAIL_FETCH_MAX_RESULTS, classify_limit: int = 200):
+def run_loop(
+	user_id: str = None,
+	interval_seconds: int = 30,
+	max_results: int = EMAIL_FETCH_MAX_RESULTS,
+	classify_limit: int = 200,
+):
 	"""Run email fetching in a loop with minimum refresh interval.
 	
 	Args:
@@ -99,6 +93,7 @@ def run_loop(user_id: str = None, interval_seconds: int = 30, max_results: int =
 	print(f"[fetch-emails-loop] Minimum interval: {interval_seconds} seconds ({interval_seconds / 60:.1f} minutes)")
 	print(f"[fetch-emails-loop] Max results per fetch per user: {max_results}")
 	print(f"[fetch-emails-loop] Classify limit per cycle per user: {classify_limit}")
+	print(f"[fetch-emails-loop] Workflow mode: new")
 	print(f"[fetch-emails-loop] Press Ctrl+C to stop\n")
 	
 	cycle_count = 0
@@ -132,30 +127,18 @@ def run_loop(user_id: str = None, interval_seconds: int = 30, max_results: int =
 				users = get_all_users()
 				if not users:
 					print(f"[fetch-emails-loop] No users found, skipping cycle")
+					continue
 				else:
-					available_user_ids = []
-					skipped_users = 0
-					for user in users:
-						uid = user['id']
-						provider = get_user_fetch_provider(uid)
-						if provider is None:
-							skipped_users += 1
-							print(f"[fetch-emails-loop] Skipping user {uid}: no IMAP or Gmail provider configured")
-							continue
-						available_user_ids.append(uid)
-
-					user_ids = available_user_ids
-					print(f"[fetch-emails-loop] Found {len(users)} users, {len(user_ids)} eligible, {skipped_users} skipped")
+					user_ids = [u["id"] for u in users if u.get("id")]
+					print(f"[fetch-emails-loop] Found {len(users)} users, {len(user_ids)} eligible (new workflow mode)")
 					if not user_ids:
 						print(f"[fetch-emails-loop] No eligible users for this cycle")
+						continue
 			
 			# Process each user
 			total_errors = 0
 			for i, uid in enumerate(user_ids, 1):
-				provider = get_user_fetch_provider(uid)
-				if provider is None:
-					print(f"[fetch-emails-loop] Skipping user {uid}: no provider available")
-					continue
+				provider = "new-workflow"
 				if len(user_ids) > 1:
 					print(f"\n[{i}/{len(user_ids)}] Processing user {uid} via {provider.upper()}...")
 				else:
@@ -166,7 +149,7 @@ def run_loop(user_id: str = None, interval_seconds: int = 30, max_results: int =
 						user_id=uid,
 						max_results=max_results,
 						classify_limit=classify_limit,
-						after_date=None  # Auto-resolve to latest email date
+						after_date=None,  # Auto-resolve to latest email date
 					)
 					
 					if exit_code != 0:
@@ -228,7 +211,6 @@ def main(argv=None):
 		default=30,
 		help="Max unclassified emails to classify per cycle per user"
 	)
-
 	args = parser.parse_args(argv)
 
 	user_id = args.user_id  # None = all users mode

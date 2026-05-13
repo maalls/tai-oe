@@ -4,7 +4,7 @@ Email Domain Entity - Pure business logic, no framework dependencies
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Optional
-from domain.enums import EmailStatus
+from src.domain.enums import EmailStatus
 
 
 @dataclass(frozen=True)

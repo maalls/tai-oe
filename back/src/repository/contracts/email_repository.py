@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from domain.email import Email
+from src.domain.email import Email
 
 
 class EmailRepositoryContract(ABC):

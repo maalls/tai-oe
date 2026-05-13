@@ -1,7 +1,7 @@
 """Workflow service for end-to-end email processing."""
 
-from service.email.classification_service import ClassificationService
-from service.email.email_service import EmailService
+from src.service.email.classification_service import ClassificationService
+from src.service.email.email_service import EmailService
 
 
 class EmailWorkflowService:

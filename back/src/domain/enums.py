@@ -100,6 +100,36 @@ class UnitType(Enum):
     DAY = "DAY"
 
 
+class OpportunityStage(Enum):
+    """Synced with: back/schema/tables/opportunity.sql opportunity_stage"""
+
+    NEW_LEAD = "NEW_LEAD"
+    QUALIFYING = "QUALIFYING"
+    NEEDS_DEFINED = "NEEDS_DEFINED"
+    RFP_IN_PROGRESS = "RFP_IN_PROGRESS"
+    RFQ_IN_PROGRESS = "RFQ_IN_PROGRESS"
+    OFFER_SENT = "OFFER_SENT"
+    NEGOTIATION = "NEGOTIATION"
+    COMMITMENT = "COMMITMENT"
+    PREPARATION = "PREPARATION"
+    DELIVERY_IN_PROGRESS = "DELIVERY_IN_PROGRESS"
+    ACCEPTED = "ACCEPTED"
+    INVOICED = "INVOICED"
+    PAID = "PAID"
+    CLOSED_WON = "CLOSED_WON"
+    CLOSED_LOST = "CLOSED_LOST"
+    ON_HOLD = "ON_HOLD"
+
+
+class OpportunityStatus(Enum):
+    """Synced with: back/schema/tables/opportunity.sql opportunity_status"""
+
+    OPEN = "OPEN"
+    WON = "WON"
+    LOST = "LOST"
+    ON_HOLD = "ON_HOLD"
+
+
 # Custom enums (not in PostgreSQL)
 class EmailStatus(Enum):
     """Status of an email in the system"""

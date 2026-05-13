@@ -29,6 +29,8 @@ from src.controller.product.product import ProductController
 from src.controller.quote.quote import Quote as QuoteController
 from src.controller.opportunity.opportunity import Opportunity as OpportunityController
 from src.controller.llm_factory import LLMClientFactory
+from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
+from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from http.server import ThreadingHTTPServer
 
 # Load .env before reading config values
@@ -251,7 +253,6 @@ def create_rag_handler(config):
                 print(f"[RAG] PATCH path not matched: {parsed.path}")
                 return self._send_error(404, "Not found")
             except Exception as e:
-                import traceback
                 traceback.print_exc()
                 print(f"[RAG] PATCH error: {e}")
                 return self._send_error(500, f"Server error: {str(e)}")
@@ -281,13 +282,15 @@ def create_rag_handler(config):
                 
                 return self._send_error(404, "Not found")
             except Exception as e:
-                import traceback
                 traceback.print_exc()
                 return self._send_error(500, f"Server error: {str(e)}")
 
         def do_POST(self):
             try:
                 parsed = urllib.parse.urlparse(self.path)
+
+                if self._handle_ddd_post_routes(parsed):
+                    return
 
                 if parsed.path == '/api/products':
                     payload = self._read_json(default={})
@@ -1073,10 +1076,50 @@ def create_rag_handler(config):
             except Exception as e:
                 return self._send_error(500, f"Internal server error 2: {e}")
 
+        def _handle_ddd_post_routes(self, parsed):
+            """Handle incremental DDD POST routes through API adapters."""
+            if not is_ddd_post_route(parsed.path):
+                return False
+
+            # Mutating DDD routes require authentication.
+            if self._require_auth() is None:
+                return True
+
+            payload = self._read_json(default={})
+            if not isinstance(payload, dict):
+                payload = {}
+
+            handlers = self.get_request_handlers()
+            handled, response_payload, status = handle_ddd_post_route(parsed.path, payload, handlers)
+            if not handled:
+                return False
+
+            self.json(response_payload, status)
+            return True
+
+        def _handle_ddd_get_routes(self, parsed, qs):
+            """Handle incremental DDD GET routes through API adapters."""
+            if not is_ddd_get_route(parsed.path):
+                return False
+
+            if self._require_auth() is None:
+                return True
+
+            query = {key: values[0] for key, values in qs.items() if values}
+            handlers = self.get_request_handlers()
+            handled, payload, status = handle_ddd_get_route(parsed.path, query, handlers)
+            if not handled:
+                return False
+            self.json(payload, status)
+            return True
+
         def do_GET(self):
             try:
                 parsed = urllib.parse.urlparse(self.path)
                 qs = urllib.parse.parse_qs(parsed.query)
+
+                if self._handle_ddd_get_routes(parsed, qs):
+                    return
 
                 if parsed.path == '/api/products':
                     controller = ProductController()
@@ -1284,7 +1327,6 @@ def create_rag_handler(config):
                         return
                     except Exception as e:
                         print(f"[RAG] Error reading file {filename}: {e}")
-                        import traceback
                         traceback.print_exc()
                         self.send_response(500)
                         self.send_header('Content-Type', 'text/plain')
@@ -1366,6 +1408,9 @@ def create_rag_handler(config):
                             print(f"[RAG] Extracted user_id from token: {user_id}")
                     
                     print(f"[RAG] Final user_id: {user_id}")
+
+                    if not user_id:
+                        return self._send_error(400, 'Missing user_id')
                     
                     result = handlers.handle_gmail_list_messages(
                         max_results=max_results,
@@ -1374,6 +1419,26 @@ def create_rag_handler(config):
                         force=force
                     )
                     return self.json(result)
+                elif parsed.path == '/api/gmail/classify-unclassified':
+                    handlers = self.get_request_handlers()
+                    user_id = qs.get('user_id', [None])[0]
+                    limit = int(qs.get('limit', [200])[0])
+
+                    if not user_id:
+                        auth_header = self.headers.get('Authorization', '')
+                        user_data = self._require_auth(auth_header=auth_header, required=False)
+                        if user_data:
+                            user_id = user_data.get('id')
+
+                    if not user_id:
+                        return self._send_error(400, 'Missing user_id')
+
+                    result = handlers.handle_classify_unclassified(
+                        user_id=user_id,
+                        limit=limit,
+                    )
+                    status = 200 if result.get('status') == 'ok' else 400
+                    return self.json(result, status)
                 elif parsed.path.startswith('/api/gmail/message/'):
                     # Extract message ID from path
                     message_id = parsed.path.split('/api/gmail/message/')[-1]

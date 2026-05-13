@@ -1,7 +1,7 @@
 """Application service for email read/update use-cases."""
 
-from domain.email import Email
-from repository.contracts.email_repository import EmailRepositoryContract
+from src.domain.email import Email
+from src.repository.contracts.email_repository import EmailRepositoryContract
 
 
 class EmailService:
