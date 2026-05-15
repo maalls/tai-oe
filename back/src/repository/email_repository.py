@@ -2093,11 +2093,14 @@ class EmailRepository:
             else:
                 print(f"[EmailRepository] Using email body (most products: {product_count})")
 
-            # Create opportunity using the same business logic as the UI
-            from src.api.business.handler import BusinessHandlers
+            # Create opportunity using the same handlers as the UI orchestration.
+            from src.api.email.handler import EmailHandlers
+            from src.repository.opportunity import OpportunityRepository
 
-            handlers = BusinessHandlers()
-            create_result = handlers.handle_create_opportunity_from_email(
+            email_handlers = EmailHandlers()
+            opportunity_repository = OpportunityRepository()
+
+            create_result = email_handlers.handle_create_opportunity_from_email(
                 message_id=email_id,
                 user_id=user_id,
             )
@@ -2119,14 +2122,14 @@ class EmailRepository:
 
             # Generate quote using the best source
             if best_source == "pdf" and best_content:
-                quote_result = handlers.opportunity_repository.handle_generate_quote_with_content(
+                quote_result = opportunity_repository.handle_generate_quote_with_content(
                     opportunity_id=opportunity_id,
                     content=best_content,
                     user_id=user_id,
                     pre_extracted_data=selection.get("extracted_data"),  # Avoid re-extraction
                 )
             else:
-                quote_result = handlers.opportunity_repository.handle_generate_quote_for_opportunity(
+                quote_result = opportunity_repository.handle_generate_quote_for_opportunity(
                     opportunity_id=opportunity_id,
                     user_id=user_id,
                 )

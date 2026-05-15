@@ -22,7 +22,7 @@ sys.path.insert(0, str(test_root))
 from dotenv import load_dotenv
 load_dotenv(test_root / ".env")
 
-from src.api.business.handler import BusinessHandlers
+from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.clients.database import get_db_handler
 
 
@@ -32,7 +32,7 @@ class TestRFPUploadFunctional:
     def setup_method(self):
         self.test_assets_dir = Path(__file__).resolve().parents[3] / "assets" / "rfp"
         self.db_handler = get_db_handler()
-        self.business_handlers = BusinessHandlers()
+        self.rfq_handlers = RfqHandlers()
 
     def test_upload_rfp_pdf_with_multipart(self):
         """
@@ -90,7 +90,7 @@ class TestRFPUploadFunctional:
             ]
         }
         with patch("src.api.rfq.handler.extract_rfp_from_text", return_value=fake_rfp_data):
-            result = self.business_handlers.handle_rfp_upload(body=body, content_type=content_type)
+            result = self.rfq_handlers.handle_rfp_upload(body=body, content_type=content_type)
 
         print(f"\n✓ Response status: {result.get('status')}")
         print(f"✓ Files received: {result.get('total_files')}")

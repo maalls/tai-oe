@@ -1,6 +1,6 @@
-"""Unit tests for BusinessHandlers migration slices."""
+"""Unit tests for RouterBusinessFacade migration slices."""
 
-from src.api.business.handler import BusinessHandlers
+from src.api.router import RouterBusinessFacade
 
 
 class _RfqHandlersStub:
@@ -236,7 +236,7 @@ class _DocumentHandlersStub:
 
 
 def _make_handler(rfq_result=None):
-    handler = BusinessHandlers.__new__(BusinessHandlers)
+    handler = RouterBusinessFacade.__new__(RouterBusinessFacade)
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
     handler.email_handlers = _EmailHandlersStub()
     handler.quote_handlers = _QuoteHandlersStub()
