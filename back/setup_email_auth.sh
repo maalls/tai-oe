@@ -65,7 +65,7 @@ echo ""
 echo "4️⃣  Fetching emails with auth verification..."
 echo ""
 echo "To fetch emails with authentication tracking:"
-echo "   python -m src.command.fetch_emails --user-id YOUR_USER_ID"
+echo "   python -m src.command.email_cli fetch --user-id YOUR_USER_ID"
 echo ""
 
 echo "5️⃣  Checking API endpoints..."

@@ -3,7 +3,7 @@
 ## Overview
 
 fetching emails:
-```python -m src.command.fetch_emails_loop --interval 10```
+```python -m src.command.email_cli loop --interval 10```
 
 ## Installation
 

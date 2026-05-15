@@ -122,7 +122,7 @@ After regenerating, verify the token is valid:
 
 ```bash
 cd back/
-./venv/bin/python -m src.command.fetch_emails --user-id <USER_ID>
+./venv/bin/python -m src.command.email_cli fetch --user-id <USER_ID>
 ```
 
 ### Google Drive
