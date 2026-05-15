@@ -9,6 +9,18 @@ def authorize_request(handler):
     return user_data
 
 
+def require_auth(handler, auth_header: str = None, required: bool = True):
+    """Validate bearer token and optionally emit unauthorized response."""
+    auth_header = auth_header if auth_header is not None else handler.headers.get('Authorization', '')
+    auth_handler = handler.get_auth_handler()
+    is_valid, user_data = auth_handler.verify_token(auth_header)
+    if not is_valid:
+        if required:
+            handler.json({"error_code": "UNAUTHORIZED", "message": "Unauthorized"}, 401)
+        return None
+    return user_data
+
+
 def get_optional_user_id_from_auth(handler, auth_header: str):
     """Extract user id from auth header without enforcing auth."""
     if not auth_header:

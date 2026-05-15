@@ -28,7 +28,12 @@ from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
-from src.api.routes.server_auth_helpers import authorize_request, get_optional_user_id_from_auth, require_auth_user_id
+from src.api.routes.server_auth_helpers import (
+    authorize_request,
+    get_optional_user_id_from_auth,
+    require_auth,
+    require_auth_user_id,
+)
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_get_auth_handlers import (
     handle_auth_user_get,
@@ -1256,14 +1261,7 @@ def create_rag_handler(config):
             return authorize_request(self)
 
         def _require_auth(self, auth_header: str = None, required: bool = True) -> Dict:
-            auth_header = auth_header if auth_header is not None else self.headers.get('Authorization', '')
-            auth_handler = self.get_auth_handler()
-            is_valid, user_data = auth_handler.verify_token(auth_header)
-            if not is_valid:
-                if required:
-                    self.json({"error_code": "UNAUTHORIZED", "message": "Unauthorized"}, 401)
-                return None
-            return user_data
+            return require_auth(self, auth_header=auth_header, required=required)
 
         def _read_body(self) -> bytes:
             content_length = int(self.headers.get('Content-Length', 0))
