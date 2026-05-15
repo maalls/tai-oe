@@ -298,47 +298,7 @@ def create_rag_handler(config):
                     return self._handle_fs_read_post()
 
                 if parsed.path == '/api/curl':
-                    payload = self._read_json(default={})
-
-                    target_url = str(payload.get('url') or '').strip()
-                    if not target_url:
-                        return self._send_error(400, 'Missing url')
-
-                    if not target_url.startswith('http://') and not target_url.startswith('https://'):
-                        return self._send_error(400, 'Invalid url scheme')
-
-                    method = str(payload.get('method') or 'GET').upper()
-                    if method not in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
-                        return self._send_error(400, 'Invalid method')
-
-                    headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
-                    body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
-
-                    try:
-                        max_chars = int(payload.get('max_chars') or 10000)
-                    except Exception:
-                        max_chars = 10000
-                    try:
-                        timeout_ms = int(payload.get('timeout_ms') or 8000)
-                    except Exception:
-                        timeout_ms = 8000
-
-                    max_chars = max(100, min(max_chars, 50000))
-                    timeout_ms = max(1000, min(timeout_ms, 20000))
-
-                    try:
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_curl_request(
-                            target_url=target_url,
-                            method=method,
-                            headers=headers,
-                            body_text=body_text,
-                            max_chars=max_chars,
-                            timeout_ms=timeout_ms,
-                        )
-                        return self.json(result)
-                    except Exception as e:
-                        return self._send_error(500, f'Curl failed: {e}')
+                    return self._handle_curl_post()
                 
                 # Auth endpoints
                 if parsed.path == '/api/auth/signup':
@@ -1176,6 +1136,49 @@ def create_rag_handler(config):
             except Exception as e:
                 return self._send_error(500, f'Read failed: {e}')
             return self.json(result)
+
+        def _handle_curl_post(self):
+            """Handle /api/curl POST endpoint."""
+            payload = self._read_json(default={})
+
+            target_url = str(payload.get('url') or '').strip()
+            if not target_url:
+                return self._send_error(400, 'Missing url')
+            if not target_url.startswith('http://') and not target_url.startswith('https://'):
+                return self._send_error(400, 'Invalid url scheme')
+
+            method = str(payload.get('method') or 'GET').upper()
+            if method not in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
+                return self._send_error(400, 'Invalid method')
+
+            headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
+            body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
+
+            try:
+                max_chars = int(payload.get('max_chars') or 10000)
+            except Exception:
+                max_chars = 10000
+            try:
+                timeout_ms = int(payload.get('timeout_ms') or 8000)
+            except Exception:
+                timeout_ms = 8000
+
+            max_chars = max(100, min(max_chars, 50000))
+            timeout_ms = max(1000, min(timeout_ms, 20000))
+
+            try:
+                handlers = self.get_request_handlers()
+                result = handlers.handle_curl_request(
+                    target_url=target_url,
+                    method=method,
+                    headers=headers,
+                    body_text=body_text,
+                    max_chars=max_chars,
+                    timeout_ms=timeout_ms,
+                )
+                return self.json(result)
+            except Exception as e:
+                return self._send_error(500, f'Curl failed: {e}')
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
