@@ -337,17 +337,7 @@ def create_rag_handler(config):
                     return self._handle_email_senders_verified_post()
 
                 elif parsed.path == '/api/imap/config':
-                    payload = self._read_json(default={})
-
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_imap_config_save(user_id=user_id, payload=payload)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_imap_config_post()
 
                 elif parsed.path == '/api/imap/test':
                     user_data = self._require_auth()
@@ -1213,6 +1203,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_get_verified_senders(user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_imap_config_post(self):
+            """Handle /api/imap/config POST endpoint."""
+            payload = self._read_json(default={})
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            handlers = self.get_request_handlers()
+            result = handlers.handle_imap_config_save(user_id=user_id, payload=payload)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
