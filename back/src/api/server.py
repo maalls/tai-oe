@@ -21,7 +21,6 @@ from src.api.auth.handler import AuthHandler
 from src.infrastructure.runtime.env_loader import load_runtime_env
 from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
-from src.lib.encoders.embeddings import EmbeddingGenerator
 from src.lib.readers.csv import CSVReader
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
@@ -75,16 +74,8 @@ def create_rag_handler(config):
     
     class Rag(http.server.SimpleHTTPRequestHandler):
         # Shared resources (class variables)
-        _embedding_generator = None
         _request_handlers = None
         _auth_handler = None
-
-        @classmethod
-        def get_embedding_generator(cls):
-            if cls._embedding_generator is None:
-                print("[Rag] Initializing embedding generator...")
-                cls._embedding_generator = EmbeddingGenerator()
-            return cls._embedding_generator
         
         @classmethod
         def get_auth_handler(cls):

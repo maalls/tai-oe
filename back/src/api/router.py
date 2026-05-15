@@ -28,6 +28,7 @@ from src.api.auth.oauth_handler import OAuthHandler
 from src.api.quote.handler import Quote as QuoteController
 from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
+from src.lib.encoders.embeddings import EmbeddingGenerator
 from src.lib.storage_paths import get_storage_dir, get_storage_path
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
@@ -204,6 +205,7 @@ class RequestHandlers:
         file_handler: FileHandler,
     ):
         self.file_handler = file_handler
+        self._embedding_generator = None
         # Delegate to specialized handlers
         self.csv_handlers = CsvHandlers(file_handler)
         self.email_handlers = EmailHandlers()
@@ -219,6 +221,13 @@ class RequestHandlers:
             self.database_handlers = DatabaseHandlers(db_handler)
         except Exception as e:
             print(f"[Rag] Warning: Could not initialize DatabaseHandler: {e}")
+
+    @property
+    def embedding_generator(self) -> EmbeddingGenerator:
+        if self._embedding_generator is None:
+            print("[Rag] Initializing embedding generator...")
+            self._embedding_generator = EmbeddingGenerator()
+        return self._embedding_generator
 
     def _serialize_domain_entity(self, entity: Any) -> Dict[str, Any]:
         """Convert dataclass entities to JSON-serializable dictionaries."""
@@ -540,9 +549,9 @@ class RequestHandlers:
         """Handle /api/csv/query request."""
         return self.database_handlers.handle_query(qs)
     
-    def handle_search(self, qs: Dict, embedding_generator) -> Dict:
+    def handle_search(self, qs: Dict) -> Dict:
         """Handle /api/csv/search request."""
-        return self.database_handlers.handle_search(qs, embedding_generator)
+        return self.database_handlers.handle_search(qs, self.embedding_generator)
     
     # Business operations
     def handle_rfp_upload(self, body: bytes, content_type: str) -> Dict:

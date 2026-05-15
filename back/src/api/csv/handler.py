@@ -135,7 +135,7 @@ def handle_csv_query_get(handler, qs, request_handlers):
 
 def handle_csv_search_get(handler, qs, request_handlers):
     """Handle /api/csv/search* GET endpoints."""
-    return handler.json(request_handlers.handle_search(qs, handler.get_embedding_generator()))
+    return handler.json(request_handlers.handle_search(qs))
 
 
 def handle_raw_stream(handler, qs, request_handlers):
