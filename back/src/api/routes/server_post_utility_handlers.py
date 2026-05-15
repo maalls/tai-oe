@@ -368,7 +368,7 @@ def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
         if result.get('status') == 'ok':
             opportunity = result.get('opportunity', {})
             opportunity_id = opportunity.get('id')
-            print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
+            print(f"[ServerPostUtilityHandlers] Generating quote for opportunity {opportunity_id} by user")
             request_handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
     else:
         result = request_handlers.handle_create_rfq_source_from_html_body(

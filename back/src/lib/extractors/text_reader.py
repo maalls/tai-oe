@@ -119,10 +119,10 @@ def extract_rfp_from_text(content: str, timeout_seconds: Optional[int] = None) -
     elapsed = time.time() - started_at
     print(f"[TextReader] Raw RFP data extracted in {elapsed:.1f}s: {rfp_data}")
     if isinstance(rfp_data, list):
-        print(f"[BusinessHandlers] RFP data is a list, wrapping as products")
+        print(f"[TextReader] RFP data is a list, wrapping as products")
         rfp_data = {"products": rfp_data, "contact": {}}
     elif isinstance(rfp_data, str):
-        print(f"[BusinessHandlers] RFP data is a string, attempting to parse")
+        print(f"[TextReader] RFP data is a string, attempting to parse")
         try:
             parsed = json.loads(rfp_data)
             if isinstance(parsed, dict):
@@ -134,7 +134,7 @@ def extract_rfp_from_text(content: str, timeout_seconds: Optional[int] = None) -
         except Exception:
             rfp_data = {"contact": {}}
     elif not isinstance(rfp_data, dict):
-        print(f"[BusinessHandlers] RFP data is not a dict: {type(rfp_data)}")
+        print(f"[TextReader] RFP data is not a dict: {type(rfp_data)}")
         rfp_data = {"contact": {}}
 
     _cache_llm_extraction(content=content, payload=rfp_data, elapsed=elapsed)

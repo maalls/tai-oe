@@ -21,7 +21,7 @@ class OpportunityFromEmailService:
             opportunity = result.get("opportunity", {})
             opportunity_id = opportunity.get("id")
             if opportunity_id:
-                print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
+                print(f"[OpportunityFromEmailService] Generating quote for opportunity {opportunity_id} by user")
                 self._generate_quote_for_opportunity(opportunity_id, user_id)
 
         return result

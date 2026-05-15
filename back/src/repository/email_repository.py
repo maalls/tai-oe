@@ -977,7 +977,7 @@ class EmailRepository:
                 cleaned = cleaned[:max_length] + "..."
             return cleaned
         except Exception as e:
-            print(f"[BusinessHandlers] HTML parsing failed: {e}, truncating original")
+            print(f"[EmailRepository] HTML parsing failed: {e}, truncating original")
             return email_body[:max_length] + "..." if len(email_body) > max_length else email_body
     
 

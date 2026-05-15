@@ -3,7 +3,7 @@
 from src.api.router import RequestHandlers
 
 
-class _BusinessHandlersStub:
+class _RouterBusinessFacadeStub:
     def __init__(self):
         self.calls = []
 
@@ -49,7 +49,7 @@ class _EmailHandlersStub:
         return {"status": "ok", "email_id": email_id}
 
 
-def _make_request_handlers_with_stub(stub: _BusinessHandlersStub) -> RequestHandlers:
+def _make_request_handlers_with_stub(stub: _RouterBusinessFacadeStub) -> RequestHandlers:
     handlers = RequestHandlers.__new__(RequestHandlers)
     handlers.business_handlers = stub
     return handlers
@@ -61,8 +61,8 @@ def _make_request_handlers_with_email_stub(stub: _EmailHandlersStub) -> RequestH
     return handlers
 
 
-def test_handle_generate_quote_for_opportunity_uses_business_handler_method():
-    stub = _BusinessHandlersStub()
+def test_handle_generate_quote_for_opportunity_uses_business_facade_method():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_generate_quote_for_opportunity("opp-42", user_id="u-1")
@@ -71,8 +71,8 @@ def test_handle_generate_quote_for_opportunity_uses_business_handler_method():
     assert stub.calls == [("generate", "opp-42", "u-1")]
 
 
-def test_handle_create_opportunity_from_email_triggers_quote_generation_via_business_handler():
-    stub = _BusinessHandlersStub()
+def test_handle_create_opportunity_from_email_triggers_quote_generation_via_business_facade():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_create_opportunity_from_email("email-1", user_id="u-2")
@@ -84,8 +84,8 @@ def test_handle_create_opportunity_from_email_triggers_quote_generation_via_busi
     ]
 
 
-def test_handle_create_opportunity_manual_uses_business_handler_method():
-    stub = _BusinessHandlersStub()
+def test_handle_create_opportunity_manual_uses_business_facade_method():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_create_opportunity_manual(user_id="u-3", name="Deal")
@@ -94,8 +94,8 @@ def test_handle_create_opportunity_manual_uses_business_handler_method():
     assert stub.calls == [("create_manual", "u-3", "Deal")]
 
 
-def test_handle_search_opportunities_uses_business_handler_method():
-    stub = _BusinessHandlersStub()
+def test_handle_search_opportunities_uses_business_facade_method():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_search_opportunities(
@@ -109,7 +109,7 @@ def test_handle_search_opportunities_uses_business_handler_method():
 
 
 def test_handle_delete_opportunity_splits_csv_ids_before_delegating():
-    stub = _BusinessHandlersStub()
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_delete_opportunity("opp-1, opp-2 ,,opp-3", user_id="u-5")
@@ -128,8 +128,8 @@ def test_handle_email_resync_uses_email_handler_method():
     assert stub.calls == [("e-1", "gmail-1", "u-6")]
 
 
-def test_handle_send_quote_for_opportunity_uses_business_handler_method():
-    stub = _BusinessHandlersStub()
+def test_handle_send_quote_for_opportunity_uses_business_facade_method():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
     payload = {"to": ["a@example.com"], "subject": "s", "body": "b", "quote_id": "q-1"}
 
@@ -139,8 +139,8 @@ def test_handle_send_quote_for_opportunity_uses_business_handler_method():
     assert stub.calls == [("send_quote", "opp-7", payload, "u-8")]
 
 
-def test_handle_update_document_content_uses_business_handler_method():
-    stub = _BusinessHandlersStub()
+def test_handle_update_document_content_uses_business_facade_method():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_update_document_content("doc-1", "new content", user_id="u-9")
@@ -149,8 +149,8 @@ def test_handle_update_document_content_uses_business_handler_method():
     assert stub.calls == [("update_document_content", "doc-1", "new content", "u-9")]
 
 
-def test_handle_quote_submit_uses_business_handler_method():
-    stub = _BusinessHandlersStub()
+def test_handle_quote_submit_uses_business_facade_method():
+    stub = _RouterBusinessFacadeStub()
     handlers = _make_request_handlers_with_stub(stub)
 
     result = handlers.handle_quote_submit(b"{}", "application/json")

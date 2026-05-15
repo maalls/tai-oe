@@ -73,7 +73,7 @@ from src.api.routes.server_get_csv_handlers import (
 )
 from src.api.routes.server_get_download_handlers import handle_document_download, handle_quote_download
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
-from src.api.routes.server_get_business_handlers import (
+from src.api.routes.server_get_utility_handlers import (
     handle_action_get,
     handle_action_logs_get,
     handle_documents_download_get,

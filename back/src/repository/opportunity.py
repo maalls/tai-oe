@@ -88,7 +88,7 @@ class OpportunityRepository:
                         continue
                     product_meta_by_sku[sku]["direct_net_price_family"] = family
             except Exception as e:
-                print(f"[BusinessHandlers] Warning: failed to load product metadata for discount init: {e}")
+                print(f"[OpportunityRepository] Warning: failed to load product metadata for discount init: {e}")
 
         lines: list = []
         total_excl = 0.0
@@ -427,7 +427,7 @@ class OpportunityRepository:
             # Insert specialized quote row
             quote_resp = supabase.table("quote").insert({"document_id": document_id}).execute()
             if getattr(quote_resp, "error", None):
-                print(f"[BusinessHandlers] Warning: failed to insert quote specialization: {quote_resp.error}")
+                print(f"[OpportunityRepository] Warning: failed to insert quote specialization: {quote_resp.error}")
 
             # Insert document lines from products
             if lines:
@@ -435,7 +435,7 @@ class OpportunityRepository:
                     line["document_id"] = document_id
                 line_resp = supabase.table("document_line").insert(lines).execute()
                 if getattr(line_resp, "error", None):
-                    print(f"[BusinessHandlers] Warning: failed to insert document lines: {line_resp.error}")
+                    print(f"[OpportunityRepository] Warning: failed to insert document lines: {line_resp.error}")
 
             return {
                 "status": "ok",
@@ -450,7 +450,7 @@ class OpportunityRepository:
             }
 
         except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error generating quote with custom content: {e}")
+            print(f"[OpportunityRepository] Error generating quote with custom content: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -497,7 +497,7 @@ class OpportunityRepository:
                                 .data
                             )
                         except Exception as lookup_err:
-                            print(f"[BusinessHandlers] Warning: email lookup by provider_message_id failed: {lookup_err}")
+                            print(f"[OpportunityRepository] Warning: email lookup by provider_message_id failed: {lookup_err}")
                     email_body = ""
                     if email:
                         if user_id and email.get("user_id") != user_id:
@@ -522,18 +522,18 @@ class OpportunityRepository:
                             if (att.get("mime_type") or "").lower().startswith("application/pdf")
                         ]
                     except Exception as e:
-                        print(f"[BusinessHandlers] Warning: could not load email PDF attachments: {e}")
+                        print(f"[OpportunityRepository] Warning: could not load email PDF attachments: {e}")
 
                     selection = pick_best_rfp_source(email_body, pdf_candidates)
                     content = selection.get("content", email_body)
                     pre_extracted_data = selection.get("extracted_data")  # Cache to avoid re-extraction
                 except Exception as e:  # noqa: BLE001 - operational warning
-                    print(f"[BusinessHandlers] Warning: could not load email body for quote generation: {e}")
+                    print(f"[OpportunityRepository] Warning: could not load email body for quote generation: {e}")
             
             # Try to load from RFP document (prefer PDF attachment if it has more products)
             elif opportunity.get("source") == "rfp_upload" and source_ref_id:
                 try:
-                    print("[BusinessHandlers] Loading RFP document for opportunity quote generation")
+                    print("[OpportunityRepository] Loading RFP document for opportunity quote generation")
                     doc_response = supabase.table("document").select("*").eq("id", source_ref_id).single().execute()
                     if not getattr(doc_response, "error", None) and doc_response.data:
                         document = doc_response.data
@@ -545,18 +545,18 @@ class OpportunityRepository:
                             # Files for rfp_upload are stored in var/storage/rfp_uploads/
                             base_storage = Path(__file__).parent.parent.parent / "var" / "storage" / "rfp_uploads"
                             file_path = base_storage / storage_key
-                            print(f"[BusinessHandlers] Loading RFP document storage file: {file_path}")
+                            print(f"[OpportunityRepository] Loading RFP document storage file: {file_path}")
                             if file_path.exists():
                                 try:
                                     with open(file_path, 'r', encoding='utf-8') as f:
                                         base_text = f.read()
-                                        print(f"[BusinessHandlers] Loaded {len(base_text)} chars from storage file")
+                                        print(f"[OpportunityRepository] Loaded {len(base_text)} chars from storage file")
                                 except Exception as read_err:
-                                    print(f"[BusinessHandlers] Warning: could not read storage file {file_path}: {read_err}")
+                                    print(f"[OpportunityRepository] Warning: could not read storage file {file_path}: {read_err}")
                             else:
-                                print(f"[BusinessHandlers] Warning: Storage file not found: {file_path}")
+                                print(f"[OpportunityRepository] Warning: Storage file not found: {file_path}")
                         else:
-                            print("[BusinessHandlers] No storage_key found for RFP document")
+                            print("[OpportunityRepository] No storage_key found for RFP document")
                             
                         # Look for PDF attachments linked to this opportunity
                         pdf_candidates = []
@@ -581,13 +581,13 @@ class OpportunityRepository:
                                         "path": pdf_path,
                                     })
                         except Exception as e:
-                            print(f"[BusinessHandlers] Warning: could not load RFP attachment list: {e}")
+                            print(f"[OpportunityRepository] Warning: could not load RFP attachment list: {e}")
 
                         selection = pick_best_rfp_source(base_text, pdf_candidates)
                         content = selection.get("content", base_text)
                         pre_extracted_data = selection.get("extracted_data")  # Cache to avoid re-extraction
                 except Exception as e:
-                    print(f"[BusinessHandlers] Warning: could not load RFP document content for quote generation: {e}")
+                    print(f"[OpportunityRepository] Warning: could not load RFP document content for quote generation: {e}")
 
             if not content:
                 return {
@@ -627,14 +627,14 @@ class OpportunityRepository:
             # Insert specialized quote row
             quote_resp = supabase.table("quote").insert({"document_id": document_id}).execute()
             if getattr(quote_resp, "error", None):
-                print(f"[BusinessHandlers] Warning: failed to insert quote specialization: {quote_resp.error}")
+                print(f"[OpportunityRepository] Warning: failed to insert quote specialization: {quote_resp.error}")
 
             if lines:
                 for line in lines:
                     line["document_id"] = document_id
                 line_resp = supabase.table("document_line").insert(lines).execute()
                 if getattr(line_resp, "error", None):
-                    print(f"[BusinessHandlers] Warning: failed to insert document lines: {line_resp.error}")
+                    print(f"[OpportunityRepository] Warning: failed to insert document lines: {line_resp.error}")
 
             return {
                 "status": "ok",
@@ -649,7 +649,7 @@ class OpportunityRepository:
             }
 
         except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error generating quote for opportunity: {e}")
+            print(f"[OpportunityRepository] Error generating quote for opportunity: {e}")
             import traceback
             traceback.print_exc()
             raise

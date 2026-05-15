@@ -1,4 +1,4 @@
-"""Business/action/download GET handlers for legacy API server."""
+"""Utility GET handlers for the legacy API server."""
 
 import urllib.parse
 

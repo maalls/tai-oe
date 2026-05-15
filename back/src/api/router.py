@@ -682,7 +682,7 @@ class RequestHandlers:
             user_id=user_id,
         )
         if result.get('status') != 'ok':
-            print(f"[BusinessHandlers] Could not create RFQ source from text: {result}")
+            print(f"[RouterBusinessFacade] Could not create RFQ source from text: {result}")
         return result
 
     def handle_chat_attachment_upload(self, body: bytes, content_type: str, user_id: str, opportunity_id: str) -> Dict:
