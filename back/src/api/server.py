@@ -94,11 +94,11 @@ from src.api.routes.server_http_method_handlers import (
     handle_head_method,
     handle_options_method,
     handle_patch_method,
+    handle_post_method,
     handle_put_method,
 )
 from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
-from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
@@ -236,18 +236,7 @@ def create_rag_handler(config):
             return handle_opportunity_delete(self, opportunity_delete_match)
 
         def do_POST(self):
-            try:
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_post_request(self, parsed):
-                    return
-
-                return self._send_error(404, "Not found")
-            except Exception as e:
-                traceback.print_exc()
-                print(f"[RAG] Error handling request: {e}")
-                
-                return self._send_error(500, f"Internal server error 1: {e}")
+            return handle_post_method(self)
 
         def do_HEAD(self):
             return handle_head_method(self)

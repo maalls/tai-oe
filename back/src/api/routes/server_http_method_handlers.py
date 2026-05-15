@@ -5,8 +5,10 @@ import traceback
 import urllib.parse
 
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
+from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request
 from src.api.routes.server_mutation_dispatch import dispatch_put_request
+from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
 
 
@@ -73,3 +75,19 @@ def handle_put_method(handler):
     except Exception as e:
         traceback.print_exc()
         return handler._send_error(500, f"Server error: {str(e)}")
+
+
+def handle_post_method(handler):
+    """Handle POST method."""
+    try:
+        parsed = urllib.parse.urlparse(handler.path)
+
+        if dispatch_post_request(handler, parsed):
+            return None
+
+        return handler._send_error(404, "Not found")
+    except Exception as e:
+        traceback.print_exc()
+        print(f"[RAG] Error handling request: {e}")
+
+        return handler._send_error(500, f"Internal server error 1: {e}")
