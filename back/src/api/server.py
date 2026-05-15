@@ -39,6 +39,7 @@ from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
 from src.api.routes.server_post_auth_dispatch import dispatch_post_auth_routes
+from src.api.routes.server_post_business_dispatch import dispatch_post_business_routes
 from src.api.routes.server_post_domain_dispatch import dispatch_post_domain_routes
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
@@ -367,51 +368,7 @@ def create_rag_handler(config):
 
         def _handle_post_opportunity_quote_invoice_routes(self, parsed):
             """Handle secondary POST routes for opportunity/quote/invoice flows."""
-            send_quote_match = re.match(r"^/api/opportunity/([^/]+)/send-quote$", parsed.path)
-            if send_quote_match:
-                self._handle_send_quote_for_opportunity_post(send_quote_match)
-                return True
-
-            if parsed.path == '/api/chat/attachments':
-                self._handle_chat_attachments_post(parsed)
-                return True
-
-            opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
-            if opp_match:
-                self._handle_opportunity_rfq_generate_post(opp_match)
-                return True
-
-            opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
-            if opp_rfq_create_match:
-                self._handle_opportunity_rfq_create_from_text_post(opp_rfq_create_match)
-                return True
-
-            quote_pdf_match = re.match(r"^/api/quote/([^/]+)/pdf$", parsed.path)
-            if quote_pdf_match:
-                self._handle_quote_pdf_post(quote_pdf_match)
-                return True
-
-            quote_invoice_match = re.match(r"^/api/quote/([^/]+)/invoice$", parsed.path)
-            if quote_invoice_match:
-                self._handle_quote_invoice_post(quote_invoice_match)
-                return True
-
-            invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
-            if invoice_pdf_match:
-                self._handle_invoice_pdf_post(invoice_pdf_match)
-                return True
-
-            invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
-            if invoice_send_match:
-                self._handle_invoice_send_post(invoice_send_match)
-                return True
-
-            quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
-            if quote_update_match:
-                self._handle_quote_update_post(quote_update_match)
-                return True
-
-            return False
+            return dispatch_post_business_routes(self, parsed)
 
         def _handle_post_core_routes(self, parsed_path: str) -> bool:
             """Handle core POST routes that map directly to controller helpers."""
