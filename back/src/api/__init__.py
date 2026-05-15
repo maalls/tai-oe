@@ -1,5 +1,5 @@
 """API layer package (migration target).
 
-Current runtime still uses controller/rag.py HTTP server.
-This package is introduced progressively during refactoring.
+Runtime HTTP server now lives in src.api.server.
+Legacy src.controller.rag remains as a thin compatibility wrapper.
 """

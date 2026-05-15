@@ -102,8 +102,8 @@ def kill_port_process(port=8088):
                 )
                 cmd = cmd_result.stdout.strip()
                 
-                # Only kill if it's the RAG process (contains src.controller.rag)
-                if "src.controller.rag" in cmd:
+                # Only kill if it's the RAG process module (new API path or legacy wrapper)
+                if "src.api.server" in cmd or "src.controller.rag" in cmd:
                     os.kill(int(pid), signal.SIGTERM)  # SIGTERM (graceful) not SIGKILL
                     print(f"   Killed RAG process on port {port} (PID: {pid})")
                     time.sleep(0.2)
@@ -177,7 +177,7 @@ def run_server(server_port):
     env["PORT"] = str(server_port)
 
     process = subprocess.Popen(
-        [sys.executable, "-m", "src.controller.rag"],
+        [sys.executable, "-m", "src.api.server"],
         cwd=str(back_dir),
         env=env,
     )
@@ -206,7 +206,7 @@ def main():
         )
         env["PORT"] = str(server_port)
         process = subprocess.run(
-            [sys.executable, "-m", "src.controller.rag"],
+            [sys.executable, "-m", "src.api.server"],
             cwd=str(back_dir),
             env=env,
         )
