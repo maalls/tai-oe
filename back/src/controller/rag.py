@@ -1110,16 +1110,7 @@ def create_rag_handler(config):
                 # Action endpoints - List actions for opportunity
                 list_actions_match = re.match(r"^/api/opportunities/([^/]+)/actions$", parsed.path)
                 if list_actions_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    opportunity_id = list_actions_match.group(1)
-
-                    result = handlers.handle_list_actions(opportunity_id, user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_opportunity_actions_list_get(list_actions_match, handlers)
                 
                 # Get action details
                 get_action_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
@@ -1399,6 +1390,18 @@ def create_rag_handler(config):
                 source_reference_id=source_reference_id,
                 name=name,
             )
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunity_actions_list_get(self, list_actions_match, handlers):
+            """Handle /api/opportunities/<id>/actions GET endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            opportunity_id = list_actions_match.group(1)
+            result = handlers.handle_list_actions(opportunity_id, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
