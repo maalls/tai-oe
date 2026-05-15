@@ -907,7 +907,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_rfq_generate_post(self):
