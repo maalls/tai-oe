@@ -12,7 +12,7 @@ import os
 from src.api.file.handler import FileHandler
 from src.api.csv.handler import CsvHandlers
 from src.api.database.handler import DatabaseHandlers
-from src.controller.product.product import ProductController
+from src.api.product.handler import ProductController
 from src.controller.business_handler import BusinessHandlers
 from src.controller.email_handler import EmailHandlers
 from src.controller.classify_handler import ClassifyHandler

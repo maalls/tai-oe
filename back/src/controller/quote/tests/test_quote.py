@@ -1,5 +1,5 @@
 import unittest
-from src.controller.product.product import ProductController
+from src.api.product.handler import ProductController
 from src.supabase.supabase_client import get_supabase_service
 
 class TestQuoteController(unittest.TestCase):
