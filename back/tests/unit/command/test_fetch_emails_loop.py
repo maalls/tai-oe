@@ -54,3 +54,19 @@ def test_main_defaults_match_unified_cli(monkeypatch):
     assert captured["interval_seconds"] == fetch_emails_loop.DEFAULT_INTERVAL_SECONDS
     assert captured["max_results"] == fetch_emails_loop.DEFAULT_MAX_RESULTS
     assert captured["classify_limit"] == fetch_emails_loop.DEFAULT_LOOP_CLASSIFY_LIMIT
+
+
+def test_main_passes_explicit_limits(monkeypatch):
+    captured = {}
+
+    def _fake_run_loop(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(fetch_emails_loop, "run_loop", _fake_run_loop)
+
+    fetch_emails_loop.main(["--max-results", "123", "--classify-limit", "17", "--interval", "60"])
+
+    assert captured["user_id"] is None
+    assert captured["interval_seconds"] == 60
+    assert captured["max_results"] == 123
+    assert captured["classify_limit"] == 17
