@@ -223,6 +223,120 @@ class DocumentHandlers:
             print(f"[DocumentHandlers] Error uploading chat attachment: {e}")
             return {"status": "error", "message": f"Upload failed: {str(e)}"}
 
+    def handle_update_line_verification(
+        self,
+        document_id: str,
+        line_index: int,
+        verification_fields: dict = None,
+        is_ref_verified: bool = None,
+        user_id: str = None,
+    ) -> Dict:
+        """Update verification status for a specific line in a quote document."""
+        _ = user_id
+        try:
+            if verification_fields is None:
+                verification_fields = {}
+                if is_ref_verified is not None:
+                    verification_fields["is_ref_verified"] = is_ref_verified
+
+            if not verification_fields:
+                return {"status": "error", "message": "No verification fields provided"}
+
+            print(
+                "[DocumentHandlers] Starting line verification update: "
+                f"doc={document_id}, line={line_index}, fields={verification_fields}"
+            )
+
+            doc_resp = self.supabase.table("document").select("id").eq("id", document_id).single().execute()
+            if getattr(doc_resp, "error", None):
+                error_msg = f"Document lookup failed: {doc_resp.error}"
+                print(f"[DocumentHandlers] {error_msg}")
+                return {"status": "error", "message": error_msg}
+
+            document = doc_resp.data
+            if not document:
+                return {"status": "error", "message": f"Document not found: {document_id}"}
+
+            print(f"[DocumentHandlers] Found document: {document_id}")
+
+            check_resp = (
+                self.supabase.table("document_line")
+                .select("id, position, document_id")
+                .eq("document_id", document_id)
+                .eq("position", line_index)
+                .execute()
+            )
+            print(f"[DocumentHandlers] Check response: {check_resp.data}")
+            if not check_resp.data or len(check_resp.data) == 0:
+                print(
+                    "[DocumentHandlers] WARNING: No document_line found for "
+                    f"doc={document_id}, position={line_index}"
+                )
+                all_lines_resp = (
+                    self.supabase.table("document_line")
+                    .select("position, document_id")
+                    .eq("document_id", document_id)
+                    .execute()
+                )
+                print(f"[DocumentHandlers] All lines for this document: {all_lines_resp.data}")
+
+            upd_resp = (
+                self.supabase.table("document_line")
+                .update(verification_fields)
+                .eq("document_id", document_id)
+                .eq("position", line_index)
+                .execute()
+            )
+
+            if getattr(upd_resp, "error", None):
+                error_msg = str(upd_resp.error)
+                print(f"[DocumentHandlers] Update error: {error_msg}")
+                if "Could not find the" in error_msg or "PGRST204" in error_msg:
+                    print("[DocumentHandlers] Schema cache error - Supabase needs to refresh. Retrying...")
+                    time.sleep(1)
+                    upd_resp = (
+                        self.supabase.table("document_line")
+                        .update(verification_fields)
+                        .eq("document_id", document_id)
+                        .eq("position", line_index)
+                        .execute()
+                    )
+                    if getattr(upd_resp, "error", None):
+                        return {"status": "error", "message": f"Failed to update line: {upd_resp.error}"}
+                else:
+                    return {"status": "error", "message": f"Failed to update line: {error_msg}"}
+
+            verify_resp = (
+                self.supabase.table("document_line")
+                .select("*")
+                .eq("document_id", document_id)
+                .eq("position", line_index)
+                .execute()
+            )
+
+            if getattr(verify_resp, "error", None):
+                error_msg = str(verify_resp.error)
+                print(f"[DocumentHandlers] VERIFICATION ERROR: {error_msg}")
+                return {"status": "error", "message": f"Failed to verify update: {error_msg}"}
+
+            if verify_resp.data and len(verify_resp.data) > 0:
+                record = verify_resp.data[0]
+                all_match = True
+                for field_name, field_value in verification_fields.items():
+                    db_value = record.get(field_name)
+                    if field_value != db_value:
+                        all_match = False
+                if not all_match:
+                    return {"status": "error", "message": "Update failed: values not persisted in database"}
+            else:
+                return {"status": "error", "message": "Update failed: record not found after update"}
+
+            return {"status": "ok"}
+
+        except Exception as e:  # noqa: BLE001
+            print(f"[DocumentHandlers] Error in handle_update_line_verification: {e}")
+            return {"status": "error", "message": str(e)}
+
     def get_form(self, body: bytes, content_type: str):
         boundary = self._extract_boundary(content_type)
         if not boundary:

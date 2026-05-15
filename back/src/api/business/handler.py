@@ -561,125 +561,14 @@ class BusinessHandlers:
         
 
     def handle_update_line_verification(self, document_id: str, line_index: int, verification_fields: dict = None, is_ref_verified: bool = None, user_id: str = None) -> Dict:
-        """Update verification status for a specific line in a quote document.
-        
-        Args:
-            document_id: ID of the quote document
-            line_index: Position/index of the line (1-based)
-            verification_fields: Dict of verification fields to update (e.g., {'is_ref_verified': True, 'is_quantity_verified': False})
-            is_ref_verified: (Deprecated) Single field for backward compatibility
-            user_id: ID of the user making the change
-        
-        Returns:
-            {"status": "ok"} or {"status": "error", "message": "..."}
-        """
-        supabase = get_supabase_service()
-        
-        try:
-            # Support both old and new interfaces
-            if verification_fields is None:
-                verification_fields = {}
-                if is_ref_verified is not None:
-                    verification_fields['is_ref_verified'] = is_ref_verified
-            
-            if not verification_fields:
-                return {"status": "error", "message": "No verification fields provided"}
-            
-            print(f"[BusinessHandlers] Starting line verification update: doc={document_id}, line={line_index}, fields={verification_fields}")
-            
-            # Verify document exists
-            doc_resp = supabase.table("document").select("id").eq("id", document_id).single().execute()
-            if getattr(doc_resp, "error", None):
-                error_msg = f"Document lookup failed: {doc_resp.error}"
-                print(f"[BusinessHandlers] {error_msg}")
-                return {"status": "error", "message": error_msg}
-            
-            document = doc_resp.data
-            if not document:
-                return {"status": "error", "message": f"Document not found: {document_id}"}
-            
-            print(f"[BusinessHandlers] Found document: {document_id}")
-            
-            # First, check if the document_line exists
-            print(f"[BusinessHandlers] Checking if document_line exists: document_id={document_id}, position={line_index}")
-            check_resp = supabase.table("document_line").select("id, position, document_id").eq("document_id", document_id).eq("position", line_index).execute()
-            
-            print(f"[BusinessHandlers] Check response: {check_resp.data}")
-            if not check_resp.data or len(check_resp.data) == 0:
-                print(f"[BusinessHandlers] WARNING: No document_line found for doc={document_id}, position={line_index}")
-                # Try to fetch all lines for this document to debug
-                all_lines_resp = supabase.table("document_line").select("position, document_id").eq("document_id", document_id).execute()
-                print(f"[BusinessHandlers] All lines for this document: {all_lines_resp.data}")
-            
-            # Update the specific line by document_id and position with all provided fields
-            print(f"[BusinessHandlers] Updating document_line where document_id={document_id} and position={line_index} with fields: {verification_fields}")
-            upd_resp = supabase.table("document_line").update(verification_fields).eq("document_id", document_id).eq("position", line_index).execute()
-            
-            print(f"[BusinessHandlers] Update response: {upd_resp}")
-            print(f"[BusinessHandlers] Update response error: {getattr(upd_resp, 'error', None)}")
-            print(f"[BusinessHandlers] Update response count: {getattr(upd_resp, 'count', None)}")
-            print(f"[BusinessHandlers] Update response data type: {type(upd_resp.data)}")
-            print(f"[BusinessHandlers] Update response data: {upd_resp.data}")
-            if upd_resp.data:
-                print(f"[BusinessHandlers] Number of rows updated: {len(upd_resp.data)}")
-            else:
-                print(f"[BusinessHandlers] WARNING: No rows updated (upd_resp.data is empty or None)")
-            
-            if getattr(upd_resp, "error", None):
-                error_msg = str(upd_resp.error)
-                print(f"[BusinessHandlers] Update error: {error_msg}")
-                
-                # Check if error is about schema cache not being updated
-                if "Could not find the" in error_msg or "PGRST204" in error_msg:
-                    print(f"[BusinessHandlers] Schema cache error - Supabase needs to refresh. Retrying...")
-                    # Supabase schema cache might not be updated yet
-                    # Try using raw SQL through the query builder
-                    import time
-                    time.sleep(1)  # Wait a moment
-                    
-                    # Try again with a slightly different approach
-                    upd_resp = supabase.table("document_line").update(verification_fields).eq("document_id", document_id).eq("position", line_index).execute()
-                    
-                    if getattr(upd_resp, "error", None):
-                        return {"status": "error", "message": f"Failed to update line: {upd_resp.error}"}
-                else:
-                    return {"status": "error", "message": f"Failed to update line: {error_msg}"}
-            
-            print(f"[BusinessHandlers] Update response data: {upd_resp.data}")
-            print(f"[BusinessHandlers] Updated line verification: doc={document_id}, line={line_index}, fields={verification_fields}")
-            
-            # Verify the update was actually persisted by reading it back
-            print(f"[BusinessHandlers] VERIFYING: Reading back the updated record from database...")
-            verify_resp = supabase.table("document_line").select("*").eq("document_id", document_id).eq("position", line_index).execute()
-            print(f"[BusinessHandlers] VERIFICATION READ: {verify_resp.data}")
-            
-            if getattr(verify_resp, "error", None):
-                error_msg = str(verify_resp.error)
-                print(f"[BusinessHandlers] VERIFICATION ERROR: {error_msg}")
-                return {"status": "error", "message": f"Failed to verify update: {error_msg}"}
-            
-            if verify_resp.data and len(verify_resp.data) > 0:
-                record = verify_resp.data[0]
-                all_match = True
-                for field_name, field_value in verification_fields.items():
-                    db_value = record.get(field_name)
-                    match = field_value == db_value
-                    print(f"[BusinessHandlers] VERIFY {field_name}: sent={field_value}, database has={db_value}, match={match}")
-                    if not match:
-                        all_match = False
-                
-                if not all_match:
-                    return {"status": "error", "message": f"Update failed: values not persisted in database"}
-            else:
-                return {"status": "error", "message": f"Update failed: record not found after update"}
-            
-            return {"status": "ok"}
-            
-        except Exception as e:
-            print(f"[BusinessHandlers] Error in handle_update_line_verification: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
+        """Update line verification via DocumentHandlers."""
+        return self.document_handlers.handle_update_line_verification(
+            document_id=document_id,
+            line_index=line_index,
+            verification_fields=verification_fields,
+            is_ref_verified=is_ref_verified,
+            user_id=user_id,
+        )
 
     def handle_get_document_file(self, filename: str) -> bytes:
         """Retrieve a document file (PDF, DOCX, etc.) from storage or assets directory.

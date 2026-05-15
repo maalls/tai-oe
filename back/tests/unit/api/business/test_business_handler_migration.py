@@ -162,6 +162,23 @@ class _DocumentHandlersStub:
             "content_type": content_type,
         }
 
+    def handle_update_line_verification(
+        self,
+        document_id: str,
+        line_index: int,
+        verification_fields: dict = None,
+        is_ref_verified: bool = None,
+        user_id: str = None,
+    ):
+        return {
+            "status": "ok",
+            "document_id": document_id,
+            "line_index": line_index,
+            "verification_fields": verification_fields,
+            "is_ref_verified": is_ref_verified,
+            "user_id": user_id,
+        }
+
 
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
@@ -341,4 +358,21 @@ def test_handle_chat_attachment_upload_delegates_to_document_handler():
     assert result["status"] == "ok"
     assert result["document_id"] == "doc-attach-1"
     assert result["opportunity_id"] == "opp-1"
+    assert result["user_id"] == "u-1"
+
+
+def test_handle_update_line_verification_delegates_to_document_handler():
+    handler = _make_handler()
+
+    result = handler.handle_update_line_verification(
+        document_id="doc-1",
+        line_index=2,
+        verification_fields={"is_ref_verified": True},
+        user_id="u-1",
+    )
+
+    assert result["status"] == "ok"
+    assert result["document_id"] == "doc-1"
+    assert result["line_index"] == 2
+    assert result["verification_fields"] == {"is_ref_verified": True}
     assert result["user_id"] == "u-1"
