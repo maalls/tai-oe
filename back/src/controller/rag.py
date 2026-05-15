@@ -328,7 +328,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             print(f"[RAG] DELETE result: {result}", file=sys.stderr)
             return self.json(result, status)
 
