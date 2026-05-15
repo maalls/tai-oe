@@ -24,6 +24,7 @@ from src.repository.email_repository import EmailRepository
 from src.api.business.opportunity_controller import Opportunity as OpportunityController
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
+from src.service.opportunity.document_content_service import DocumentContentService
 
 
 class BusinessHandlers:
@@ -42,6 +43,16 @@ class BusinessHandlers:
         )
         self.supabase = get_supabase_service()
         self.opportunity_controller = OpportunityController()
+        self._document_content_service = None
+
+    @property
+    def document_content_service(self) -> DocumentContentService:
+        if getattr(self, "_document_content_service", None) is None:
+            self._document_content_service = DocumentContentService(
+                supabase=self.supabase,
+                storage_dir_resolver=self._get_storage_dir,
+            )
+        return self._document_content_service
 
     @staticmethod
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
@@ -233,54 +244,11 @@ class BusinessHandlers:
         Dict
             Result with status
         """
-        try:
-            supabase = get_supabase_service()
-            
-            # 1. Get document to find storage_key and opportunity_id
-            doc_result = supabase.table("document").select("id, storage_key, type, opportunity_id").eq("id", document_id).single().execute()
-            if not doc_result.data:
-                return {"status": "error", "message": "Document not found"}
-            
-            document = doc_result.data
-            storage_key = document.get("storage_key")
-            opportunity_id = document.get("opportunity_id")
-            
-            if not storage_key:
-                return {"status": "error", "message": "Document has no storage file"}
-            
-            # 2. Get storage directory
-            storage_dir = self._get_storage_dir("rfp_upload")
-            file_path = storage_dir / storage_key
-            
-            if not file_path.exists():
-                return {"status": "error", "message": f"Document file not found: {storage_key}"}
-            
-            # 3. Update file content
-            file_path.write_text(content, encoding='utf-8')
-            print(f"[BusinessHandlers] Updated document content: {document_id} -> {storage_key}")
-            
-            # 4. Update opportunity's updated_at timestamp
-            if opportunity_id:
-                try:
-                    supabase.table("opportunity").update({"updated_at": datetime.utcnow().isoformat()}).eq("id", opportunity_id).execute()
-                    print(f"[BusinessHandlers] Updated opportunity timestamp: {opportunity_id}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Warning: Could not update opportunity timestamp: {e}")
-            
-            return {
-                "status": "ok",
-                "message": "Document content updated successfully",
-                "document_id": document_id
-            }
-            
-        except Exception as e:
-            print(f"[BusinessHandlers] Error updating document content: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Failed to update document content: {str(e)}"
-            }
+        _ = user_id
+        return self.document_content_service.update_document_content(
+            document_id=document_id,
+            content=content,
+        )
 
     def handle_create_opportunity_from_email(self, message_id: str, user_id: str = None) -> Dict:
         """Create a new_lead opportunity from an email message.

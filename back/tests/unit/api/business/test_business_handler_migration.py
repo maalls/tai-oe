@@ -61,11 +61,21 @@ class _OpportunityRepositoryStub:
         return {"status": "ok", "deleted": opportunity_ids}
 
 
+class _DocumentContentServiceStub:
+    def __init__(self):
+        self.calls = []
+
+    def update_document_content(self, document_id: str, content: str):
+        self.calls.append((document_id, content))
+        return {"status": "ok", "document_id": document_id}
+
+
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
     handler.email_handlers = _EmailHandlersStub()
     handler.opportunity_repository = _OpportunityRepositoryStub()
+    handler._document_content_service = _DocumentContentServiceStub()
     return handler
 
 
@@ -155,3 +165,12 @@ def test_business_handler_opportunity_wrappers_are_class_methods():
     assert search_result == {"status": "ok", "items": []}
     assert delete_result == {"status": "ok", "deleted": ["opp-1"]}
     assert generate_result == {"status": "ok", "opportunity_id": "opp-1"}
+
+
+def test_handle_update_document_content_delegates_to_document_content_service():
+    handler = _make_handler()
+
+    result = handler.handle_update_document_content("doc-1", "new content", user_id="u-1")
+
+    assert result == {"status": "ok", "document_id": "doc-1"}
+    assert handler._document_content_service.calls == [("doc-1", "new content")]
