@@ -375,7 +375,7 @@ def create_rag_handler(config):
 
                     # Invoice generation from quote
                     quote_invoice_match = re.match(r"^/api/quote/([^/]+)/invoice$", parsed.path)
-                    if quote_invoice_match and self.command == 'POST':
+                    if quote_invoice_match:
                         return self._handle_quote_invoice_post(quote_invoice_match)
 
                     # Invoice PDF generation
