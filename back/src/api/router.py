@@ -23,6 +23,7 @@ from src.api.auth.oauth_handler import OAuthHandler
 from src.api.quote.handler import Quote as QuoteController
 from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
+from src.service.email.opportunity_from_email_service import OpportunityFromEmailService
 
 
 class RequestHandlers:
@@ -53,6 +54,15 @@ class RequestHandlers:
             if isinstance(value, Enum):
                 payload[key] = value.value
         return payload
+
+    @property
+    def opportunity_from_email_service(self) -> OpportunityFromEmailService:
+        if getattr(self, "_opportunity_from_email_service", None) is None:
+            self._opportunity_from_email_service = OpportunityFromEmailService(
+                create_opportunity_from_email=self.business_handlers.handle_create_opportunity_from_email,
+                generate_quote_for_opportunity=self.business_handlers.handle_generate_quote_for_opportunity,
+            )
+        return self._opportunity_from_email_service
 
     # Auth operations
     def handle_auth_signup(self, body: bytes) -> Dict:
@@ -457,17 +467,10 @@ class RequestHandlers:
 
     def handle_create_opportunity_from_email(self, message_id: str, user_id: str = None) -> Dict:
         """Handle /api/opportunities/create-from-email request."""
-        result = self.business_handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
-        if result.get('status') == 'ok':
-            opportunity = result.get('opportunity', {})
-            opportunity_id = opportunity.get('id')
-            print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
-            self.business_handlers.handle_generate_quote_for_opportunity(
-                opportunity_id=opportunity_id,
-                user_id=user_id,
-            )
-
-        return result
+        return self.opportunity_from_email_service.create_opportunity_from_email(
+            message_id=message_id,
+            user_id=user_id,
+        )
 
     def handle_create_opportunity_manual(self, user_id: str, name: str) -> Dict:
         """Handle /api/opportunities/create-manual request."""
