@@ -109,6 +109,7 @@ from src.api.routes.server_post_utility_handlers import (
     handle_email_extract_contact_post,
     handle_email_resync_post,
     handle_email_senders_high_risk_post,
+    handle_email_senders_verified_post,
     handle_entity_update_post,
     handle_emails_classify_post,
     handle_fs_create_post,
@@ -402,18 +403,7 @@ def create_rag_handler(config):
 
         def _handle_email_senders_verified_post(self):
             """Handle /api/email/senders/verified POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            if not user_id:
-                return self.json({"error": "Unauthorized"}, 401)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_get_verified_senders(user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_email_senders_verified_post(self)
 
         def _handle_imap_config_post(self):
             """Handle /api/imap/config POST endpoint."""
