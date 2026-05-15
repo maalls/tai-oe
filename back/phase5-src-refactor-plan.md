@@ -430,41 +430,111 @@ domain/ & lib/
 
 ---
 
-## Décisions finales
+## Décisions finales (✅ CONFIRMÉES)
 
-| Dossier | Décision | Destination | Raison |
+| Dossier | Décision | Destination | Action |
 |---------|----------|------------|--------|
-| `api/` | GARDER | api/ | Point d'entrée HTTP |
-| `command/` | GARDER | command/ | CLI entrypoints |
-| `controller/` | **ÉCLATER** | api/* + infrastructure/ | Mixed concerns |
-| `domain/` | GARDER | domain/ | Domain models |
-| `infrastructure/` | GARDER & ENRICHIR | infrastructure/clients/ | External clients |
-| `repository/` | GARDER & RÉORGANISER | repository/* | Data access |
-| `service/` | GARDER & ENRICHIR | service/* | Business logic |
-| `adapters/` | ANALYSER | ? | À voir |
-| `denormalizer/` | DÉPLACER | lib/denormalizers/ | Utility |
-| `discount/` | DÉPLACER | lib/importers/ | Importer utility |
-| `embeddings/` | DÉPLACER | lib/encoders/ | Encoder utility |
-| `etim/` | DÉPLACER | lib/importers/ | Importer utility |
-| `fabdis/` | DÉPLACER | lib/importers/ | Importer utility |
-| `google_auth/` | DÉPLACER | infrastructure/clients/ | Client |
-| `google_drive/` | DÉPLACER | infrastructure/clients/ | Client |
-| `llm/` | DÉPLACER | infrastructure/clients/ | Client |
-| `net_price/` | DÉPLACER | lib/calculations/ | Calculator utility |
-| `pdf/` | DÉPLACER | lib/extractors/ | Extractor utility |
-| `prompt/` | ÉVALUER | infrastructure/prompts/ | Config |
-| `reader/` | DÉPLACER | lib/readers/ | Reader utility |
-| `supabase/` | DÉPLACER | infrastructure/clients/ | Client |
-| `text/` | DÉPLACER | lib/extractors/ | Extractor utility |
-| `utils/` | ÉVALUER | lib/ | Utility |
+| `api/` | ✅ GARDER & RÉORG | api/auth, action, business, email, csv, file, product, quote, classification, prompt/ | Restructurer par domaine |
+| `command/` | ✅ GARDER | command/ | Laisser comme est (CLI entrypoints) |
+| `controller/` | ✅ **ÉCLATER** | api/* + infrastructure/ + lib/ | 16 fichiers → destinations ciblées |
+| `domain/` | ✅ ENRICHIR | domain/ | Ajouter action, quote, product, business, classification |
+| `infrastructure/` | ✅ RESTRUCTURER | infrastructure/clients/, config/, prompts/, exceptions.py, factory.py | Créer sous-structure |
+| `repository/` | ✅ RESTRUCTURER | repository/action/, email/, opportunity/, oauth/, contracts/ | Organiser par aggregate + MOVE classifier |
+| `service/` | ✅ ENRICHIR | service/action/, email/, business/, classification/, quote/ | Créer services manquants |
+| `adapters/` | ✅ **SUPPRIMER** | FUSED into lib/email/ | Fusionner parser HTML → lib/email/html_parser.py |
+| `denormalizer/` | ✅ DÉPLACER | lib/denormalizers/ | Move denormalizer.py |
+| `discount/` | ✅ DÉPLACER | lib/importers/ | Move importer.py |
+| `embeddings/` | ✅ DÉPLACER | lib/encoders/ | Move embeddings.py |
+| `etim/` | ✅ DÉPLACER | lib/importers/ | Move etim.py |
+| `fabdis/` | ✅ DÉPLACER | lib/importers/ | Move importer.py |
+| `google_auth/` | ✅ DÉPLACER | infrastructure/clients/ | Move google_auth.py |
+| `google_drive/` | ✅ DÉPLACER | infrastructure/clients/ | Move gdrive_tool.py + helpers |
+| `llm/` | ✅ DÉPLACER | infrastructure/clients/ | Move client.py |
+| `net_price/` | ✅ DÉPLACER | lib/calculations/ | Move importer.py |
+| `pdf/` | ✅ DÉPLACER | lib/extractors/ | Move extract_text.py |
+| `prompt/` | ✅ **CENTRALISER** | infrastructure/prompts/ | Move prompt.md files |
+| `reader/` | ✅ DÉPLACER | lib/readers/ | Move csv.py, xls.py |
+| `supabase/` | ✅ DÉPLACER | infrastructure/clients/ | Move supabase_client.py |
+| `text/` | ✅ DÉPLACER | lib/extractors/ | Move reader.py, rfp_source_picker.py |
+| `utils/` | ✅ **SUPPRIMER** | FUSED into lib/email/ | Fusionner EmailHTMLParser → lib/email/html_parser.py |
+
+---
+
+## ✅ DÉCISIONS FINALES (Session d'analyse complète)
+
+### Session de Q&A résumé :
+
+#### adapters/ & utils/
+- **DÉCISION** : Fusionner HTML parser dans `lib/email/html_parser.py`, **SUPPRIMER** dossiers vides
+- **Action** : Move `adapters/email/html/parser.py` + `utils/Email/HTMLParser/EmailHTMLParser.py` → `lib/email/html_parser.py` (fusion)
+
+#### prompt/
+- **DÉCISION** : **CENTRALISER** dans `infrastructure/prompts/` (utilisé par controller/handlers.py, rag.py, text/reader.py)
+- **Action** : Move `back/src/prompt/opportunity/source/prompt.md` → `infrastructure/prompts/opportunity/source/prompt.md`
+
+#### controller/
+- **DÉCISION** : **ÉCLATER COMPLÈTEMENT** (16 fichiers) selon rôle :
+  - Handlers HTTP → `api/*` (9 handlers)
+  - Clients & factories → `infrastructure/clients/` (db_client.py) + `infrastructure/factory.py` (llm_factory.py)
+  - Utilitaires → `lib/email/` (mime.py, multipart.py)
+  - rag.py → `api/prompt/handler.py`
+- **Action** : Migration fichier par fichier avec mise à jour imports
+
+#### repository/
+- **DÉCISION** : **RESTRUCTURER** par aggregate root + **MOVE classifier** vers service/
+  - Plat → Organisé : action/, email/, opportunity/, oauth/ (chacun avec repository.py)
+  - **GARDER** `repository/contracts/` (interfaces abstraites)
+  - **MOVE** `repository/classifier/classifier.py` → `service/classification/service.py` (c'est un service, pas un repository)
+- **Action** : Micro-commits par aggregate
+
+#### domain/
+- **DÉCISION** : **ENRICHIR** avec entities manquantes (action.py, quote.py, product.py, business.py, classification.py)
+- **Action** : Créer fichiers entities vides avec structures minimales
+
+#### service/
+- **DÉCISION** : **CRÉER** services manquants pour : Email, Business, Classification, Quote, Product (actuellement logique dans controller/)
+- **Action** : Créer structures services avec services.py vides, remplir lors du refactor
+
+#### infrastructure/
+- **DÉCISION** : **RESTRUCTURER** en couches :
+  - `infrastructure/clients/` : tous les clients externes (supabase, google_auth, google_drive, llm, email SMTP, database)
+  - `infrastructure/config/` : configuration management
+  - `infrastructure/prompts/` : centraliser tous les prompts
+  - `infrastructure/exceptions.py`, `infrastructure/factory.py` : garder
+- **Action** : Créer structure, déplacer fichiers (20+ migrations)
+
+#### lib/ (NEW)
+- **DÉCISION** : **CRÉER** nouvelle couche utilitaires partagés :
+  - `lib/readers/` : csv.py, xls.py
+  - `lib/extractors/` : pdf.py, text.py, email_html_parser.py (fusionné)
+  - `lib/encoders/` : embeddings.py
+  - `lib/calculations/` : net_price.py
+  - `lib/importers/` : fabdis/, etim/, discount/
+  - `lib/denormalizers/` : denormalizer.py
+  - `lib/auth/` : oauth.py (moved from repository/)
+  - `lib/email/` : mime.py, multipart.py, html_parser.py (fusionné)
+  - `lib/formatting/` : formatting utils
+- **Action** : Créer structure complète, déplacer 10+ dossiers/fichiers
+
+#### api/
+- **DÉCISION** : Restructurer par domaine (9 domaines) + créer `api/prompt/`
+  - Auth, Action, Business, Email, CSV, File, Product, Quote, Classification, Prompt
+- **Action** : Éclater controller/ et réorganiser handlers
+
+#### Dossiers à SUPPRIMER (après migration)
+- ✅ adapters/
+- ✅ utils/
+- ✅ controller/ (après migration complète)
+- ✅ embeddings/, etim/, fabdis/, google_auth/, google_drive/, llm/, net_price/, pdf/, reader/, supabase/, text/, discount/, denormalizer/
+- ✅ prompt/ (après centralisation)
 
 ---
 
 ## Prochaines étapes
 
-1. **✅ Valider ce plan** : Discuter dossier par dossier
-2. **Créer structure vide** : Commencer par micro-commit 1
-3. **Migrer fichier par fichier** : Micro-commits atomiques
-4. **Mettre à jour imports** : Par couche, dans l'ordre critique
-5. **Tests en miroir** : Restructurer back/tests
-6. **Validation & cleanup** : Compiler, tester, documenter
+1. **✅ Session Q&A complète** : TERMINÉE
+2. **Créer structure vide** : Phase 5.1 (3-5 commits)
+3. **Migrer fichier par fichier** : Phase 5.2 (20-30 commits)
+4. **Mettre à jour imports** : Phase 5.3 (5-10 commits)
+5. **Tests en miroir** : Phase 5.4 (5-10 commits)
+6. **Validation & cleanup** : Phase 5.5 (5-10 commits)
