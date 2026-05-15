@@ -25,36 +25,12 @@ from src.api.file.handler import FileHandler
 from src.api.router import RequestHandlers
 from src.api.auth.handler import AuthHandler
 from src.infrastructure.llm_factory import LLMClientFactory
+from src.infrastructure.runtime.env_loader import load_runtime_env
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 
-# Load .env before reading config values
-try:
-    from dotenv import load_dotenv, find_dotenv, dotenv_values
-    env_file = find_dotenv(usecwd=True)
-    if env_file:
-        load_dotenv(env_file, override=False)
-        print(f"[dotenv] Loaded from {env_file}")
-
-    # Optional: load shared Supabase env (single source of truth)
-    shared_env_rel = os.environ.get("SUPABASE_ENV_FILE", "../supabase/.env.prod")
-    shared_env_path = Path(shared_env_rel)
-    if not shared_env_path.is_absolute():
-        base_dir = Path(env_file).parent if env_file else Path(__file__).resolve().parents[2]
-        shared_env_path = (base_dir / shared_env_path).resolve()
-
-    if shared_env_path.exists():
-        shared_env = dotenv_values(shared_env_path)
-        os.environ["SUPABASE_URL"] = (
-            shared_env.get("SUPABASE_PUBLIC_URL")
-            or shared_env.get("API_EXTERNAL_URL")
-            or shared_env.get("SITE_URL")
-            or os.environ.get("SUPABASE_URL", "")
-        )
-        os.environ["SUPABASE_ANON_KEY"] = shared_env.get("ANON_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
-        os.environ["SUPABASE_SERVICE_KEY"] = shared_env.get("SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY", "")
-except Exception:
-    pass
+# Load .env before reading config values.
+load_runtime_env(__file__)
 
 
 config = {
