@@ -1,5 +1,6 @@
 """HTTP method handlers for legacy API server."""
 
+import http.server
 import sys
 import traceback
 import urllib.parse
@@ -91,3 +92,20 @@ def handle_post_method(handler):
         print(f"[RAG] Error handling request: {e}")
 
         return handler._send_error(500, f"Internal server error 1: {e}")
+
+
+def handle_get_method(handler):
+    """Handle GET method."""
+    try:
+        parsed = urllib.parse.urlparse(handler.path)
+        qs = urllib.parse.parse_qs(parsed.query)
+
+        if dispatch_get_request(handler, parsed, qs):
+            return None
+
+        return http.server.SimpleHTTPRequestHandler.do_GET(handler)
+    except Exception as e:
+        traceback.print_exc()
+        print(f"[RAG] Error handling GET request: {e}")
+
+        return handler._send_error(500, f"Internal server error 3: {e}")

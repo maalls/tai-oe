@@ -42,7 +42,6 @@ from src.api.routes.server_auth_helpers import (
     require_auth_user_id,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_get_auth_handlers import (
     handle_auth_user_get,
     handle_oauth_callback_get,
@@ -91,6 +90,7 @@ from src.api.routes.server_get_misc_handlers import (
 )
 from src.api.routes.server_http_method_handlers import (
     handle_delete_method,
+    handle_get_method,
     handle_head_method,
     handle_options_method,
     handle_patch_method,
@@ -283,20 +283,7 @@ def create_rag_handler(config):
             return True
 
         def do_GET(self):
-            try:
-                parsed = urllib.parse.urlparse(self.path)
-                qs = urllib.parse.parse_qs(parsed.query)
-
-                if dispatch_get_request(self, parsed, qs):
-                    return
-
-                # Fallback to static file serving
-                return super().do_GET()
-            except Exception as e:
-                traceback.print_exc()
-                print(f"[RAG] Error handling GET request: {e}")
-
-                return self._send_error(500, f"Internal server error 3: {e}")
+            return handle_get_method(self)
 
         def _handle_storage_get(self, parsed_path: str):
             """Handle GET requests for storage files."""
