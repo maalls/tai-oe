@@ -10,7 +10,7 @@ import json
 import os
 
 from src.api.file.handler import FileHandler
-from src.controller.csv_handlers import CsvHandlers
+from src.api.csv.handler import CsvHandlers
 from src.api.database.handler import DatabaseHandlers
 from src.controller.product.product import ProductController
 from src.controller.business_handler import BusinessHandlers
