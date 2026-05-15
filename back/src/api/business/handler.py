@@ -25,6 +25,7 @@ from src.api.business.opportunity_controller import Opportunity as OpportunityCo
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
 from src.service.opportunity.document_content_service import DocumentContentService
+from src.service.opportunity.document_rfp_extraction_service import DocumentRfpExtractionService
 
 
 class BusinessHandlers:
@@ -44,6 +45,7 @@ class BusinessHandlers:
         self.supabase = get_supabase_service()
         self.opportunity_controller = OpportunityController()
         self._document_content_service = None
+        self._document_rfp_extraction_service = None
 
     @property
     def document_content_service(self) -> DocumentContentService:
@@ -53,6 +55,22 @@ class BusinessHandlers:
                 storage_dir_resolver=self._get_storage_dir,
             )
         return self._document_content_service
+
+    @property
+    def document_rfp_extraction_service(self) -> DocumentRfpExtractionService:
+        if getattr(self, "_document_rfp_extraction_service", None) is None:
+            self._document_rfp_extraction_service = DocumentRfpExtractionService(
+                supabase=self.supabase,
+                storage_path_resolver=self._get_storage_path,
+                clean_email_body=self._clean_email_body,
+                extract_rfp=extract_rfp_from_text,
+                extract_company=extract_company_from_text,
+                enrich_rfp=lambda message_clean, pre_extracted_data: self.opportunity_repository._extract_and_enrich_rfp_data(
+                    message_clean,
+                    pre_extracted_data=pre_extracted_data,
+                ),
+            )
+        return self._document_rfp_extraction_service
 
     @staticmethod
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
@@ -1136,92 +1154,8 @@ class BusinessHandlers:
         Dict
             Result with extracted RFP data
         """
-        try:
-            supabase = get_supabase_service()
-            
-            # Get document from database
-            doc_result = supabase.table("document").select("*").eq("id", document_id).single().execute()
-            if not doc_result.data:
-                return {"status": "error", "message": "Document not found"}
-            
-            document = doc_result.data
-            storage_key = document.get("storage_key")
-            
-            if not storage_key:
-                return {"status": "error", "message": "Document has no storage key"}
-            
-            # Read file from storage
-            file_path = self._get_storage_path("rfp_upload", storage_key)
-            
-            if not file_path.exists():
-                return {"status": "error", "message": "Document file not found in storage"}
-            
-            # Extract text based on file type
-            file_ext = file_path.suffix.lower()
-            
-            if file_ext == ".pdf":
-                # Extract text from PDF
-                try:
-                    from src.lib.extractors.pdf import extract_text
-                    content = extract_text(file_path)
-                    if not content:
-                        return {"status": "error", "message": "Could not extract text from PDF"}
-                except Exception as e:
-                    print(f"[BusinessHandlers] Error extracting PDF: {e}")
-                    return {"status": "error", "message": f"Failed to extract PDF: {str(e)}"}
-            else:
-                # Plain text file
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                except Exception as e:
-                    print(f"[BusinessHandlers] Error reading text file: {e}")
-                    return {"status": "error", "message": f"Failed to read file: {str(e)}"}
-            
-            if not content or not content.strip():
-                return {"status": "error", "message": "Document is empty"}
-            
-            # Clean content
-            message_clean = self._clean_email_body(content)
-            
-            # Extract RFP data
-            try:
-                rfp_data = extract_rfp_from_text(message_clean)
-                if not isinstance(rfp_data, dict):
-                    rfp_data = {"products": [], "contact": {}}
-                
-                # Extract contact/company information
-                try:
-                    company_data = extract_company_from_text(message_clean)
-                    if isinstance(company_data, dict) and company_data:
-                        rfp_data["contact"] = company_data
-                        print(f"[BusinessHandlers] Extracted company data from document: {company_data}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Warning: Failed to extract company data: {e}")
-                
-                # Normalize extracted pricing fields (same helper used by quote generation)
-                rfp_data = self.opportunity_repository._extract_and_enrich_rfp_data(
-                    message_clean,
-                    pre_extracted_data=rfp_data
-                )
-                
-                print(f"[BusinessHandlers] Extracted and enriched RFP data from document {document_id}")
-                
-                return {
-                    "status": "ok",
-                    "data": rfp_data,
-                    "document_id": document_id
-                }
-                
-            except Exception as e:
-                print(f"[BusinessHandlers] Error extracting RFP: {e}")
-                return {"status": "error", "message": f"Failed to extract RFP data: {str(e)}"}
-            
-        except Exception as e:
-            print(f"[BusinessHandlers] Error in handle_extract_rfp_from_document: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
+        _ = user_id
+        return self.document_rfp_extraction_service.extract_from_document(document_id=document_id)
 
     def handle_create_rfq_source_from_html_body(self, opportunity_id: str, body: bytes, content_type: str, user_id: str = None) -> Dict:
         return self.rfq_handlers.handle_create_rfq_source_from_html_body(

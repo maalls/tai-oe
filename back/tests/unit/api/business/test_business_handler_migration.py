@@ -70,12 +70,22 @@ class _DocumentContentServiceStub:
         return {"status": "ok", "document_id": document_id}
 
 
+class _DocumentRfpExtractionServiceStub:
+    def __init__(self):
+        self.calls = []
+
+    def extract_from_document(self, document_id: str):
+        self.calls.append(document_id)
+        return {"status": "ok", "document_id": document_id, "data": {"products": []}}
+
+
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
     handler.email_handlers = _EmailHandlersStub()
     handler.opportunity_repository = _OpportunityRepositoryStub()
     handler._document_content_service = _DocumentContentServiceStub()
+    handler._document_rfp_extraction_service = _DocumentRfpExtractionServiceStub()
     return handler
 
 
@@ -174,3 +184,12 @@ def test_handle_update_document_content_delegates_to_document_content_service():
 
     assert result == {"status": "ok", "document_id": "doc-1"}
     assert handler._document_content_service.calls == [("doc-1", "new content")]
+
+
+def test_handle_extract_rfp_from_document_delegates_to_document_rfp_service():
+    handler = _make_handler()
+
+    result = handler.handle_extract_rfp_from_document("doc-77", user_id="u-1")
+
+    assert result == {"status": "ok", "document_id": "doc-77", "data": {"products": []}}
+    assert handler._document_rfp_extraction_service.calls == ["doc-77"]
