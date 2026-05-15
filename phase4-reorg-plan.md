@@ -177,7 +177,12 @@ Recommended validation command set per micro-step:
 - Done: moved one-off extraction scripts to `back/script/`:
   - `extract_contact_from_file.py`
   - `extract_products_from_file.py`
-  while keeping root compatibility wrappers.
+    while keeping root compatibility wrappers.
+- Done: moved root test scripts under `back/tests/**` with compatibility wrappers:
+  - `test_action_cli.py` -> `tests/unit/command/test_action_cli.py`
+  - `test_action_cli_comprehensive.py` -> `tests/integration/command/test_action_cli_comprehensive.py`
+  - `test_llm_model.py` -> `tests/integration/llm/test_llm_model.py`
+  - `test_scroll_uniqueness.py` -> `tests/integration/qdrant/test_scroll_uniqueness.py`
 - Remaining: run full command regression suite in a Python environment with `pytest` available.
 
 ## 10. Back Root Cleanup (Top-level `back/` files)
@@ -204,10 +209,10 @@ Cleanup rule:
 | `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (move + wrapper)           | operational command                  |
 | `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | done (move + wrapper)           | one-off utility script               |
 | `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | done (move + wrapper)           | one-off utility script               |
-| `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | move + rename if needed         | tests must be under tests tree       |
-| `back/test_action_cli_comprehensive.py` | `back/tests/integration/command/test_action_cli_comprehensive.py` | move + classify                 | broad scenario test                  |
-| `back/test_llm_model.py`                | `back/tests/integration/llm/test_llm_model.py`                    | move                            | integration-level behavior           |
-| `back/test_scroll_uniqueness.py`        | `back/tests/unit/<target>/test_scroll_uniqueness.py`              | move after ownership identified | avoid tests at root                  |
+| `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | done (move + wrapper)           | tests must be under tests tree       |
+| `back/test_action_cli_comprehensive.py` | `back/tests/integration/command/test_action_cli_comprehensive.py` | done (move + wrapper)           | broad scenario test                  |
+| `back/test_llm_model.py`                | `back/tests/integration/llm/test_llm_model.py`                    | done (move + wrapper)           | integration-level behavior           |
+| `back/test_scroll_uniqueness.py`        | `back/tests/integration/qdrant/test_scroll_uniqueness.py`         | done (move + wrapper)           | avoid tests at root                  |
 | `back/TOKEN_REGENERATION.md`            | `back/README.md` section or `back/docs/token_regeneration.md`     | move/merge                      | keep operational docs grouped        |
 | `back/qrant-remove.plan.md`             | `back/docs/archive/qrant-remove.plan.md`                          | archive/move                    | planning artifact, not runtime       |
 | `back/rag_server.egg-info/**`           | n/a                                                               | ignore/delete local artifact    | generated packaging metadata         |
