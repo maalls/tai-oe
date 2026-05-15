@@ -46,24 +46,11 @@ from src.api.routes.server_body_helpers import read_body, read_json, read_json_o
 from src.api.routes.server_get_mail_message_handlers import (
     handle_email_attachment_get,
 )
-from src.api.routes.server_get_csv_handlers import (
-    handle_csv_files_get,
-    handle_csv_get,
-    handle_csv_preview_get,
-    handle_csv_query_get,
-    handle_csv_search_get,
-    handle_csv_sources_get,
-)
 from src.api.routes.server_get_download_handlers import handle_document_download, handle_quote_download
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_utility_handlers import (
-    handle_action_get,
-    handle_action_logs_get,
     handle_documents_download_get,
-    handle_opportunities_search_get,
-    handle_opportunity_actions_list_get,
     handle_quotes_download_get,
-    handle_quotes_list_get,
 )
 from src.api.routes.server_get_misc_handlers import (
     handle_email_fetch_loop_status_get,
@@ -499,22 +486,6 @@ def create_rag_handler(config):
             """Handle /api/email-attachment/<id> GET endpoint."""
             return handle_email_attachment_get(self, parsed_path)
 
-        def _handle_opportunities_search_get(self, qs, handlers):
-            """Handle /api/opportunities/search GET endpoint."""
-            return handle_opportunities_search_get(self, qs, handlers)
-
-        def _handle_opportunity_actions_list_get(self, list_actions_match, handlers):
-            """Handle /api/opportunities/<id>/actions GET endpoint."""
-            return handle_opportunity_actions_list_get(self, list_actions_match, handlers)
-
-        def _handle_action_get(self, get_action_match, handlers):
-            """Handle /api/actions/<id> GET endpoint."""
-            return handle_action_get(self, get_action_match, handlers)
-
-        def _handle_action_logs_get(self, get_action_logs_match, qs, handlers):
-            """Handle /api/actions/<id>/logs GET endpoint."""
-            return handle_action_logs_get(self, get_action_logs_match, qs, handlers)
-
         def _handle_quotes_download_get(self, parsed_path: str, qs, handlers):
             """Handle /api/quotes/download/<filename> GET endpoint."""
             return handle_quotes_download_get(self, parsed_path, qs, handlers)
@@ -522,34 +493,6 @@ def create_rag_handler(config):
         def _handle_documents_download_get(self, parsed_path: str, qs, handlers):
             """Handle /api/documents/download/<filename> GET endpoint."""
             return handle_documents_download_get(self, parsed_path, qs, handlers)
-
-        def _handle_csv_get(self, parsed_path: str, qs):
-            """Handle /api/csv* GET endpoints."""
-            return handle_csv_get(self, parsed_path, qs)
-
-        def _handle_csv_files_get(self, qs, handlers):
-            """Handle /api/csv/files GET endpoint."""
-            return handle_csv_files_get(self, qs, handlers)
-
-        def _handle_csv_preview_get(self, qs, handlers):
-            """Handle /api/csv/preview GET endpoint."""
-            return handle_csv_preview_get(self, qs, handlers)
-
-        def _handle_csv_sources_get(self, handlers):
-            """Handle /api/csv/sources GET endpoint."""
-            return handle_csv_sources_get(self, handlers)
-
-        def _handle_csv_query_get(self, qs, handlers):
-            """Handle /api/csv/query GET endpoint."""
-            return handle_csv_query_get(self, qs, handlers)
-
-        def _handle_csv_search_get(self, qs, handlers):
-            """Handle /api/csv/search* GET endpoints."""
-            return handle_csv_search_get(self, qs, handlers)
-
-        def _handle_quotes_list_get(self, handlers):
-            """Handle /api/quotes/list GET endpoint."""
-            return handle_quotes_list_get(self, handlers)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
