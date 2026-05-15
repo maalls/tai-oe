@@ -44,6 +44,7 @@ class RfqHandlers:
 
     def handle_rfq_generate(self, text: str = None, message_id: str = None, user_id: str = None) -> Dict:
         """Generate an RFQ draft from raw text or a stored email."""
+        _ = user_id
         try:
             content = text or ""
 
@@ -238,6 +239,7 @@ class RfqHandlers:
         except Exception as exc:
             print(f"[RfqHandlers] Error creating opportunity from RFP: {exc}")
             return {"status": "error", "message": f"Error: {str(exc)}"}
+
 
     def handle_create_rfq_source_from_html_body(
         self,

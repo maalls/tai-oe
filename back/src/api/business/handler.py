@@ -15,7 +15,7 @@ from weasyprint import HTML
 from html.parser import HTMLParser
 
 from src.api.email.handler import EmailHandlers
-from src.api.business.rfq_handler import RfqHandlers
+from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
@@ -206,10 +206,12 @@ class BusinessHandlers:
             user_id=user_id,
         )
 
-    
-
     def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None) -> Dict:
-        return self.opportunity_repository.handle_generate_quote_with_content(opportunity_id=opportunity_id, content=content, user_id=user_id)
+        return self.opportunity_repository.handle_generate_quote_with_content(
+            opportunity_id=opportunity_id,
+            content=content,
+            user_id=user_id,
+        )
 
     def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None) -> Dict:
         """Delegate quote generation for an opportunity to the current opportunity backend."""
@@ -244,6 +246,9 @@ class BusinessHandlers:
             opportunity_ids=opportunity_ids,
             user_id=user_id,
         )
+
+    
+
 
     def handle_update_document_content(self, document_id: str, content: str, user_id: str = None) -> Dict:
         """Update the content of a document stored as a text file.
@@ -806,26 +811,6 @@ class BusinessHandlers:
                 "message": f"Error generating PDF: {str(e)}",
             }
 
-    def update_line_from_product(self, document: Dict, product: Dict) -> None:
-        print(f"[BusinessHandlers][update_line_from_product] Updating line from product: {product}")
-
-        response = self.supabase.table("document_line").select("*").eq("id", product.get("id")).single().execute()
-        if not response.data:
-            line = {
-                "document_id": document.get("id"),
-            }
-        else:
-            line = response.data
-        line['description'] = product.get("description")
-        line['position'] = product.get("position")
-        line["sku"] = product.get("sku")
-        line['quantity'] = product.get("quantity")
-        line['unit'] = product.get("unit")
-        line['unit_price'] = product.get("price")
-        line['unit_price_excl_tax'] = product.get("price")
-        line['tax_rate'] = product.get("tax_rate", 20)
-        line['discount_rate'] = product.get("discount_rate", 0)
-        line['line_total_excl_tax'] = round(float(product.get("quantity", 1) or 1) * float(product.get("price", 0) or 0), 2)
         
 
     def handle_update_entity_field(self, table: str, field: str, record_id: str, value, user_id: str = None) -> Dict:
