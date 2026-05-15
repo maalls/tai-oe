@@ -111,6 +111,20 @@ class _DocumentRfpExtractionServiceStub:
         return {"status": "ok", "document_id": document_id, "data": {"products": []}}
 
 
+class _DocumentHandlersStub:
+    def __init__(self, content_service: _DocumentContentServiceStub, rfp_service: _DocumentRfpExtractionServiceStub):
+        self.content_service = content_service
+        self.rfp_service = rfp_service
+
+    def handle_update_document_content(self, document_id: str, content: str, user_id: str = None):
+        _ = user_id
+        return self.content_service.update_document_content(document_id=document_id, content=content)
+
+    def handle_extract_rfp_from_document(self, document_id: str, user_id: str = None):
+        _ = user_id
+        return self.rfp_service.extract_from_document(document_id=document_id)
+
+
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
@@ -119,6 +133,10 @@ def _make_handler(rfq_result=None):
     handler.opportunity_handlers = _OpportunityHandlersStub(handler.opportunity_repository)
     handler._document_content_service = _DocumentContentServiceStub()
     handler._document_rfp_extraction_service = _DocumentRfpExtractionServiceStub()
+    handler.document_handlers = _DocumentHandlersStub(
+        content_service=handler._document_content_service,
+        rfp_service=handler._document_rfp_extraction_service,
+    )
     return handler
 
 

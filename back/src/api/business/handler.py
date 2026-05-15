@@ -15,6 +15,7 @@ from weasyprint import HTML
 from html.parser import HTMLParser
 
 from src.api.email.handler import EmailHandlers
+from src.api.document.handler import DocumentHandlers
 from src.api.opportunity.handler import OpportunityHandlers
 from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
@@ -22,7 +23,6 @@ from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.repository.email_repository import EmailRepository
-from src.api.business.opportunity_controller import Opportunity as OpportunityController
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
 from src.service.opportunity.document_content_service import DocumentContentService
@@ -50,7 +50,16 @@ class BusinessHandlers:
             opportunity_repository=self.opportunity_repository,
             supabase=self.supabase,
         )
-        self.opportunity_controller = OpportunityController()
+        self.document_handlers = DocumentHandlers(
+            supabase=self.supabase,
+            storage_dir_resolver=self._get_storage_dir,
+            storage_path_resolver=self._get_storage_path,
+            clean_email_body=self._clean_email_body,
+            enrich_rfp=lambda message_clean, pre_extracted_data: self.opportunity_repository._extract_and_enrich_rfp_data(
+                message_clean,
+                pre_extracted_data=pre_extracted_data,
+            ),
+        )
         self._document_content_service = None
         self._document_rfp_extraction_service = None
 
@@ -274,10 +283,10 @@ class BusinessHandlers:
         Dict
             Result with status
         """
-        _ = user_id
-        return self.document_content_service.update_document_content(
+        return self.document_handlers.handle_update_document_content(
             document_id=document_id,
             content=content,
+            user_id=user_id,
         )
 
     def handle_create_opportunity_from_email(self, message_id: str, user_id: str = None) -> Dict:
@@ -1137,8 +1146,10 @@ class BusinessHandlers:
         Dict
             Result with extracted RFP data
         """
-        _ = user_id
-        return self.document_rfp_extraction_service.extract_from_document(document_id=document_id)
+        return self.document_handlers.handle_extract_rfp_from_document(
+            document_id=document_id,
+            user_id=user_id,
+        )
 
     def handle_create_rfq_source_from_html_body(self, opportunity_id: str, body: bytes, content_type: str, user_id: str = None) -> Dict:
         return self.rfq_handlers.handle_create_rfq_source_from_html_body(
