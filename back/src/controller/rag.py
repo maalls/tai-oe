@@ -361,21 +361,7 @@ def create_rag_handler(config):
                     # Opportunity-scoped RFQ/quote generation
                     opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
                     if opp_match:
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-                        user_id = user_data.get('id') if user_data else None
-                        opportunity_id = opp_match.group(1)
-                        handlers = self.get_request_handlers()
-                        print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
-                        result = handlers.handle_generate_quote_for_opportunity(
-                            opportunity_id=opportunity_id,
-                            user_id=user_id,
-                        )
-                        print('result:', result
-                              )
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_opportunity_rfq_generate_post(opp_match)
 
                     # Opportunity-scoped RFQ creation from text/file
                     opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
@@ -1237,6 +1223,24 @@ def create_rag_handler(config):
                 user_id=user_id,
                 opportunity_id=opportunity_id,
             )
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunity_rfq_generate_post(self, opp_match):
+            """Handle /api/opportunity/{id}/rfq/generate POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            opportunity_id = opp_match.group(1)
+            handlers = self.get_request_handlers()
+            print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
+            result = handlers.handle_generate_quote_for_opportunity(
+                opportunity_id=opportunity_id,
+                user_id=user_id,
+            )
+            print('result:', result)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
