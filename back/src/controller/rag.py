@@ -170,16 +170,7 @@ def create_rag_handler(config):
                 # Generic document delete (for all document types)
                 document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed.path)
                 if document_delete_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-                    user_id = user_data.get('id') if user_data else None
-                    document_id = document_delete_match.group(1)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_delete_document(document_id=document_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_document_delete(document_delete_match)
 
                 # Email attachment delete
                 attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed.path)
@@ -305,6 +296,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_document_delete(self, document_delete_match):
+            """Handle DELETE /api/document/{id}."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            document_id = document_delete_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_delete_document(document_id=document_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
