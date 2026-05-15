@@ -1074,7 +1074,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_get_verified_senders(user_id=user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_imap_config_post(self):
