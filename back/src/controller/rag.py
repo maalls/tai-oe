@@ -289,10 +289,7 @@ def create_rag_handler(config):
                     return
 
                 if parsed.path == '/api/products':
-                    payload = self._read_json(default={})
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_create_product(payload)
-                    return self.json(result, 201)
+                    return self._handle_products_post()
 
                 if parsed.path == '/api/fs/create':
                     payload = self._read_json(default={})
@@ -1166,6 +1163,13 @@ def create_rag_handler(config):
                 error_payload = handlers.handle_storage_read_error_payload(e)
                 self._send_text_response(500, error_payload['content_type'], error_payload['body'])
                 return
+
+        def _handle_products_post(self):
+            """Handle /api/products POST endpoint."""
+            payload = self._read_json(default={})
+            handlers = self.get_request_handlers()
+            result = handlers.handle_create_product(payload)
+            return self.json(result, 201)
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
