@@ -1,30 +1,18 @@
-"""Fetch emails for all users with Gmail authorization.
+"""Legacy wrapper for unified fetch-all email workflow.
 
-This script:
-1) Gets all users who have authorized Gmail access
-2) Fetches their latest emails
-3) Classifies unclassified emails
-4) Creates/updates contacts from sender information
-5) Creates/links accounts based on sender domain
-6) Updates sender verification records
-7) Outputs summary report
-
-Usage:
-	python -m src.command.fetch_all_users_emails [--max-results 50]
+Delegates execution to ``src.command.email_cli.fetch_for_all_users`` while
+preserving the historical module entrypoint:
+	python -m src.command.fetch_all_users_emails [--max-results 50] [--user-id <USER_ID>]
 """
 
 import argparse
 import sys
 
-from src.config import EMAIL_FETCH_MAX_RESULTS
-from src.command.email_cli import fetch_for_all_users
-
-
-
+from src.command.email_cli import DEFAULT_MAX_RESULTS, fetch_for_all_users
 
 def main(argv=None):
-	parser = argparse.ArgumentParser(description="Fetch Gmail emails for all authorized users.")
-	parser.add_argument("--max-results", type=int, default=EMAIL_FETCH_MAX_RESULTS, help="Max messages to fetch per user")
+	parser = argparse.ArgumentParser(description="Legacy wrapper for unified fetch-all email workflow.")
+	parser.add_argument("--max-results", type=int, default=DEFAULT_MAX_RESULTS, help="Max messages to fetch per user")
 	parser.add_argument("--user-id", type=str, default=None, help="Optional: Fetch only for specific user")
 
 	args = parser.parse_args(argv)
