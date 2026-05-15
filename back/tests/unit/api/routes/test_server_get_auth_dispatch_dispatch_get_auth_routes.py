@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-from src.api.routes.server_get_auth_dispatch import dispatch_get_auth_routes
-from src.api.routes import server_get_auth_dispatch
+from src.api.routes.server_get_dispatch import dispatch_get_auth_routes
+from src.api.routes import server_get_dispatch
 
 
 class _HandlerStub:
@@ -20,7 +20,7 @@ def test_dispatch_get_auth_routes_auth_user_path(monkeypatch):
         seen["qs"] = qs
         return True
 
-    monkeypatch.setattr(server_get_auth_dispatch, "dispatch_auth_routes", _fake_dispatch_auth_routes)
+    monkeypatch.setattr(server_get_dispatch, "dispatch_auth_routes", _fake_dispatch_auth_routes)
 
     handled = dispatch_get_auth_routes(handler, parsed, {})
 
@@ -37,7 +37,7 @@ def test_dispatch_get_auth_routes_oauth_login_path(monkeypatch):
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/oauth/login")
 
-    monkeypatch.setattr(server_get_auth_dispatch, "dispatch_auth_routes", lambda h, m, p, qs: True)
+    monkeypatch.setattr(server_get_dispatch, "dispatch_auth_routes", lambda h, m, p, qs: True)
 
     handled = dispatch_get_auth_routes(handler, parsed, {"provider": ["azure"]})
 
