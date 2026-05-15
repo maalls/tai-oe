@@ -356,26 +356,7 @@ def create_rag_handler(config):
 
                     # Chat attachment upload
                     if parsed.path == '/api/chat/attachments' and self.command == 'POST':
-                        body = self._read_body()
-                        content_type = self.headers.get('Content-Type', '')
-
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-
-                        user_id = user_data.get('id') if user_data else None
-                        qs = urllib.parse.parse_qs(parsed.query)
-                        opportunity_id = qs.get('opportunity_id', [None])[0]
-
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_chat_attachment_upload(
-                            body=body,
-                            content_type=content_type,
-                            user_id=user_id,
-                            opportunity_id=opportunity_id,
-                        )
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_chat_attachments_post(parsed)
 
                     # Opportunity-scoped RFQ/quote generation
                     opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
@@ -1232,6 +1213,29 @@ def create_rag_handler(config):
                 opportunity_id=opportunity_id,
                 payload=payload,
                 user_id=user_id,
+            )
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_chat_attachments_post(self, parsed):
+            """Handle /api/chat/attachments POST endpoint."""
+            body = self._read_body()
+            content_type = self.headers.get('Content-Type', '')
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            qs = urllib.parse.parse_qs(parsed.query)
+            opportunity_id = qs.get('opportunity_id', [None])[0]
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_chat_attachment_upload(
+                body=body,
+                content_type=content_type,
+                user_id=user_id,
+                opportunity_id=opportunity_id,
             )
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
