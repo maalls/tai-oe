@@ -3,6 +3,7 @@
 import re
 
 from src.api.action.handler import handle_action_get, handle_action_logs_get, handle_opportunity_actions_list_get
+from src.api.routes.server_get_utility_handlers import handle_documents_download_get, handle_quotes_download_get
 
 
 def dispatch_get_action_download_routes(handler, parsed, qs, request_handlers) -> bool:
@@ -23,11 +24,11 @@ def dispatch_get_action_download_routes(handler, parsed, qs, request_handlers) -
         return True
 
     if parsed.path.startswith('/api/quotes/download/'):
-        handler._handle_quotes_download_get(parsed.path, qs, request_handlers)
+        handle_quotes_download_get(handler, parsed.path, qs, request_handlers)
         return True
 
     if parsed.path.startswith('/api/documents/download/'):
-        handler._handle_documents_download_get(parsed.path, qs, request_handlers)
+        handle_documents_download_get(handler, parsed.path, qs, request_handlers)
         return True
 
     return False

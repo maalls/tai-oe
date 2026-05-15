@@ -2,41 +2,51 @@
 
 import re
 
+from src.api.routes.server_delete_handlers import (
+    handle_action_delete,
+    handle_document_delete,
+    handle_email_attachment_delete,
+    handle_email_delete,
+    handle_imap_config_delete,
+    handle_opportunity_delete,
+    handle_quote_delete,
+)
+
 
 def dispatch_delete_request(handler, parsed_path: str) -> bool:
     """Dispatch DELETE routes and return True when handled."""
     opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed_path)
     if opportunity_delete_match:
-        handler._handle_opportunity_delete(opportunity_delete_match)
+        handle_opportunity_delete(handler, opportunity_delete_match)
         return True
 
     quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed_path)
     if quote_delete_match:
-        handler._handle_quote_delete(quote_delete_match)
+        handle_quote_delete(handler, quote_delete_match)
         return True
 
     document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed_path)
     if document_delete_match:
-        handler._handle_document_delete(document_delete_match)
+        handle_document_delete(handler, document_delete_match)
         return True
 
     attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed_path)
     if attachment_delete_match:
-        handler._handle_email_attachment_delete(attachment_delete_match)
+        handle_email_attachment_delete(handler, attachment_delete_match)
         return True
 
     email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed_path)
     if email_delete_match:
-        handler._handle_email_delete(email_delete_match)
+        handle_email_delete(handler, email_delete_match)
         return True
 
     action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed_path)
     if action_delete_match:
-        handler._handle_action_delete(action_delete_match)
+        handle_action_delete(handler, action_delete_match)
         return True
 
     if parsed_path == '/api/imap/config':
-        handler._handle_imap_config_delete()
+        handle_imap_config_delete(handler)
         return True
 
     return False

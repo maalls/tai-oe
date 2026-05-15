@@ -27,15 +27,6 @@ from src.lib.encoders.embeddings import EmbeddingGenerator
 from src.lib.readers.csv import CSVReader
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
-from src.api.routes.server_delete_handlers import (
-    handle_action_delete,
-    handle_document_delete,
-    handle_email_attachment_delete,
-    handle_email_delete,
-    handle_imap_config_delete,
-    handle_opportunity_delete,
-    handle_quote_delete,
-)
 from src.api.routes.server_auth_helpers import (
     authorize_request,
     get_optional_user_id_from_auth,
@@ -45,10 +36,6 @@ from src.api.routes.server_auth_helpers import (
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
 from src.api.routes.server_get_download_handlers import handle_document_download, handle_quote_download
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
-from src.api.routes.server_get_utility_handlers import (
-    handle_documents_download_get,
-    handle_quotes_download_get,
-)
 from src.api.routes.server_get_misc_handlers import (
     handle_email_fetch_loop_status_get,
     handle_prompt_get,
@@ -62,7 +49,6 @@ from src.api.routes.server_http_method_handlers import (
     handle_post_method,
     handle_put_method,
 )
-from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_utility_handlers import (
@@ -168,10 +154,6 @@ def create_rag_handler(config):
         def do_PUT(self):
             return handle_put_method(self)
 
-        def _handle_action_update_put(self, update_action_match):
-            """Handle PUT /api/actions/{id}."""
-            return handle_action_update_put(self, update_action_match)
-
         def _status_from_result(self, result: Dict, ok: int = 200, error: int = 400) -> int:
             """Map handler result payload status to HTTP status code."""
             return status_from_result(result, ok=ok, error=error)
@@ -183,34 +165,6 @@ def create_rag_handler(config):
         def _status_from_error(self, result: Dict, ok: int = 200, error: int = 400, key: str = 'error') -> int:
             """Map payload error field presence to HTTP status code."""
             return status_from_error(result, ok=ok, error=error, key=key)
-
-        def _handle_imap_config_delete(self):
-            """Handle DELETE /api/imap/config."""
-            return handle_imap_config_delete(self)
-
-        def _handle_action_delete(self, action_delete_match):
-            """Handle DELETE /api/actions/{id}."""
-            return handle_action_delete(self, action_delete_match)
-
-        def _handle_email_delete(self, email_delete_match):
-            """Handle DELETE /api/email/{id}."""
-            return handle_email_delete(self, email_delete_match)
-
-        def _handle_email_attachment_delete(self, attachment_delete_match):
-            """Handle DELETE /api/email-attachment/{id}."""
-            return handle_email_attachment_delete(self, attachment_delete_match)
-
-        def _handle_document_delete(self, document_delete_match):
-            """Handle DELETE /api/document/{id}."""
-            return handle_document_delete(self, document_delete_match)
-
-        def _handle_quote_delete(self, quote_delete_match):
-            """Handle DELETE /api/quote/{id}."""
-            return handle_quote_delete(self, quote_delete_match)
-
-        def _handle_opportunity_delete(self, opportunity_delete_match):
-            """Handle DELETE /api/opportunities/{ids}."""
-            return handle_opportunity_delete(self, opportunity_delete_match)
 
         def do_POST(self):
             return handle_post_method(self)
@@ -293,14 +247,6 @@ def create_rag_handler(config):
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
             return handle_email_fetch_loop_status_get(self, __file__)
-
-        def _handle_quotes_download_get(self, parsed_path: str, qs, handlers):
-            """Handle /api/quotes/download/<filename> GET endpoint."""
-            return handle_quotes_download_get(self, parsed_path, qs, handlers)
-
-        def _handle_documents_download_get(self, parsed_path: str, qs, handlers):
-            """Handle /api/documents/download/<filename> GET endpoint."""
-            return handle_documents_download_get(self, parsed_path, qs, handlers)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
