@@ -268,7 +268,7 @@ def handle_quote_submit_post(handler):
     """Handle /api/quote POST endpoint."""
     content_type = handler.headers.get('Content-Type', '')
     body = read_body(handler)
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_quote_submit(body, content_type)
     return handler.json(result)
 
@@ -279,7 +279,7 @@ def handle_quote_send_post(handler):
     content_type = handler.headers.get('Content-Type', '')
     body = read_body(handler)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_quote_send(body, content_type)
     return handler.json(result)
 
@@ -295,7 +295,7 @@ def handle_quote_update_post(handler, quote_update_match):
     payload = read_json(handler, default={})
 
     print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
     status = status_from_error(result)
     return handler.json(result, status)
@@ -310,7 +310,7 @@ def handle_quote_pdf_post(handler, quote_pdf_match):
     user_id = user_data.get('id') if user_data else None
     document_id = quote_pdf_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)

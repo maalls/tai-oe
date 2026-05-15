@@ -65,12 +65,12 @@ class ProductController:
 def handle_products_post(handler):
     """Handle /api/products POST endpoint."""
     payload = read_json(handler, default={})
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_create_product(payload)
     return handler.json(result, 201)
 
 
 def handle_products_get(handler, qs):
     """Handle /api/products GET endpoint."""
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     return handler.json(request_handlers.handle_list_products(qs))

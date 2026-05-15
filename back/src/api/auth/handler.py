@@ -165,7 +165,7 @@ class AuthHandler:
 def handle_auth_signup_post(handler):
     """Handle /api/auth/signup POST endpoint."""
     body = read_body(handler)
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_auth_signup(body)
     status = pop_status(result)
     return handler.json(result, status)
@@ -174,7 +174,7 @@ def handle_auth_signup_post(handler):
 def handle_auth_login_post(handler):
     """Handle /api/auth/login POST endpoint."""
     body = read_body(handler)
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_auth_login(body)
     status = pop_status(result)
     return handler.json(result, status)
@@ -183,7 +183,7 @@ def handle_auth_login_post(handler):
 def handle_auth_logout_post(handler):
     """Handle /api/auth/logout POST endpoint."""
     auth_header = handler.headers.get('Authorization', '')
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_auth_logout(auth_header)
     status = pop_status(result)
     return handler.json(result, status)
@@ -192,7 +192,7 @@ def handle_auth_logout_post(handler):
 def handle_auth_user_get(handler):
     """Handle /api/auth/user GET endpoint."""
     auth_header = handler.headers.get('Authorization', '')
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_auth_user(auth_header)
     status = pop_status(result)
     return handler.json(result, status)
@@ -205,7 +205,7 @@ def handle_oauth_login_get(handler, qs):
         return send_error(handler, 400, 'Missing provider parameter')
     redirect_url = get_qs_value(qs, 'redirect_url')
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_oauth_login(provider=provider, redirect_url=redirect_url)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -221,7 +221,7 @@ def handle_oauth_callback_get(handler, qs):
     if not code:
         return send_error(handler, 400, 'Missing code parameter')
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_oauth_callback(provider=provider, code=code, state=state)
 
     if result.get('status') == 'ok' and result.get('redirect_url'):

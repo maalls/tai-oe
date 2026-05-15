@@ -76,22 +76,22 @@ def create_rag_handler(config):
         # Shared resources (class variables)
         _request_handlers = None
         _auth_handler = None
-        
-        @classmethod
-        def get_auth_handler(cls):
-            if cls._auth_handler is None:
-                cls._auth_handler = AuthHandler()
+
+        @property
+        def auth_handler(self):
+            if self.__class__._auth_handler is None:
+                self.__class__._auth_handler = AuthHandler()
                 print("[Rag] Initialized AuthHandler")
-            return cls._auth_handler
-        
-        @classmethod
-        def get_request_handlers(cls):
-            if cls._request_handlers is None:
-                cls._request_handlers = RequestHandlers(
+            return self.__class__._auth_handler
+
+        @property
+        def request_handlers(self):
+            if self.__class__._request_handlers is None:
+                self.__class__._request_handlers = RequestHandlers(
                     FileHandler(config["STORAGE_DIR"], CSVReader())
                 )
-            return cls._request_handlers
-        
+            return self.__class__._request_handlers
+
         def __init__(self, *args, **kwargs):
             self.config = config
             super().__init__(*args, **kwargs)
@@ -136,7 +136,7 @@ def create_rag_handler(config):
             if not isinstance(payload, dict):
                 payload = {}
 
-            handlers = self.get_request_handlers()
+            handlers = self.request_handlers
             handled, response_payload, status = handle_ddd_post_route(parsed.path, payload, handlers)
             if not handled:
                 return False
@@ -153,7 +153,7 @@ def create_rag_handler(config):
                 return True
 
             query = {key: values[0] for key, values in qs.items() if values}
-            handlers = self.get_request_handlers()
+            handlers = self.request_handlers
             handled, payload, status = handle_ddd_get_route(parsed.path, query, handlers)
             if not handled:
                 return False

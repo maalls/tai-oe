@@ -139,7 +139,7 @@ def handle_fs_create_post(handler):
         return None
 
     try:
-        request_handlers = handler.get_request_handlers()
+        request_handlers = handler.request_handlers
         result = request_handlers.handle_fs_create(target_path=target_path, kind=kind)
     except Exception as e:
         return send_error(handler, 500, f'Create failed: {e}')
@@ -162,7 +162,7 @@ def handle_fs_read_post(handler):
         return send_error(handler, 404, 'File not found')
 
     try:
-        request_handlers = handler.get_request_handlers()
+        request_handlers = handler.request_handlers
         result = request_handlers.handle_fs_read(target_path=target_path, max_chars=max_chars)
     except Exception as e:
         return send_error(handler, 500, f'Read failed: {e}')
@@ -193,7 +193,7 @@ def handle_curl_post(handler):
     timeout_ms = max(1000, min(timeout_ms, 20000))
 
     try:
-        request_handlers = handler.get_request_handlers()
+        request_handlers = handler.request_handlers
         result = request_handlers.handle_curl_request(
             target_url=target_url,
             method=method,
@@ -223,7 +223,7 @@ def handle_fetch_get(handler, qs):
     timeout_ms = max(1000, min(timeout_ms, 20000))
 
     try:
-        request_handlers = handler.get_request_handlers()
+        request_handlers = handler.request_handlers
         result = request_handlers.handle_fetch_url(
             target_url=target_url,
             max_chars=max_chars,
@@ -237,7 +237,7 @@ def handle_fetch_get(handler, qs):
 def handle_prompt_get(handler, parsed_path: str, current_file: str):
     """Handle GET requests for prompt markdown content."""
     relative_path = parsed_path[len('/api/prompt/'):].strip('/')
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     base_dir = Path(current_file).resolve().parents[1] / 'infrastructure' / 'prompts'
     try:
         content = request_handlers.handle_get_prompt_content(
@@ -257,7 +257,7 @@ def handle_prompt_get(handler, parsed_path: str, current_file: str):
 def handle_storage_head(handler, storage_dir, parsed_path: str):
     """Handle HEAD requests for storage files."""
     raw_filename = parsed_path[len('/api/storage/'):]
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     try:
         storage_info = request_handlers.handle_storage_resolve_file(storage_dir, raw_filename)
     except FileNotFoundError:
@@ -281,7 +281,7 @@ def handle_storage_head(handler, storage_dir, parsed_path: str):
 def handle_storage_get(handler, storage_dir, parsed_path: str):
     """Handle GET requests for storage files."""
     raw_filename = parsed_path[len('/api/storage/'):]
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     try:
         storage_info = request_handlers.handle_storage_resolve_file(storage_dir, raw_filename)
     except FileNotFoundError:

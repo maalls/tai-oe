@@ -399,7 +399,7 @@ def handle_quote_invoice_post(handler, quote_invoice_match):
     user_id = user_data.get('id') if user_data else None
     quote_id = quote_invoice_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -414,7 +414,7 @@ def handle_invoice_pdf_post(handler, invoice_pdf_match):
     user_id = user_data.get('id') if user_data else None
     invoice_id = invoice_pdf_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -433,7 +433,7 @@ def handle_invoice_send_post(handler, invoice_send_match):
     if payload is None:
         return None
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)

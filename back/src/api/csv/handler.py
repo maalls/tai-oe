@@ -84,14 +84,14 @@ def handle_csv_source_post(handler):
     body = read_body(handler)
     content_length = len(body)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_csv_source_upload(content_type, content_length, body)
     return handler.json(result)
 
 
 def handle_csv_get(handler, parsed_path: str, qs):
     """Handle /api/csv* GET endpoints."""
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
 
     if parsed_path == '/api/csv/files':
         return handle_csv_files_get(handler, qs, request_handlers)

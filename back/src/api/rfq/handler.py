@@ -605,7 +605,7 @@ def handle_rfq_generate_post(handler):
     text = payload.get('text') or payload.get('content')
     message_id = payload.get('message_id')
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -616,6 +616,6 @@ def handle_rfp_post(handler):
     content_type = handler.headers.get('Content-Type', '')
     body = read_body(handler)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_rfp_upload(body, content_type)
     return handler.json(result)

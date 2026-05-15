@@ -63,7 +63,7 @@ def handle_entity_update_post(handler, entity_update_match):
     if 'value' not in payload:
         return handler.json({"status": "error", "message": "Missing value"}, 400)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_update_entity_field(
         table=table,
         field=field,

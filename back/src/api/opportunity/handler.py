@@ -273,7 +273,7 @@ def handle_opportunities_create_from_email_post(handler):
     if not message_id:
         return handler.json({"error": "Missing message_id parameter"}, 400)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
     print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
     status = status_from_result(result)
@@ -293,7 +293,7 @@ def handle_opportunities_create_manual_post(handler):
     if not name:
         return handler.json({"status": "error", "message": "Missing name parameter"}, 400)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -313,7 +313,7 @@ def handle_opportunities_create_from_rfp_post(handler):
         return None
 
     user_id = user_data.get('id') if user_data else None
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
     print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
     status = status_from_result(result)
@@ -328,7 +328,7 @@ def handle_opportunity_rfq_generate_post(handler, opp_match):
 
     user_id = user_data.get('id') if user_data else None
     opportunity_id = opp_match.group(1)
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
     result = request_handlers.handle_generate_quote_for_opportunity(
         opportunity_id=opportunity_id,
@@ -349,7 +349,7 @@ def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
         return None
 
     user_id = user_data.get('id') if user_data else None
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     opportunity_id = opp_rfq_create_match.group(1)
 
     if opportunity_id == 'new':
@@ -388,7 +388,7 @@ def handle_send_quote_for_opportunity_post(handler, send_quote_match):
     if payload is None:
         return None
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_send_quote_for_opportunity(
         opportunity_id=opportunity_id,
         payload=payload,
@@ -412,7 +412,7 @@ def handle_opportunity_delete(handler, opportunity_delete_match):
     opportunity_ids = opportunity_delete_match.group(1)
     print(f"[RAG] DELETE opportunity(ies) {opportunity_ids} for user {user_id}", file=sys.stderr)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
     status = status_from_result(result)
     print(f"[RAG] DELETE result: {result}", file=sys.stderr)

@@ -379,7 +379,7 @@ def handle_actions_create_post(handler):
 
     user_id = user_data.get('id') if user_data else None
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_create_action(data, user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -394,7 +394,7 @@ def handle_action_pause_post(handler, pause_action_match):
     user_id = user_data.get('id') if user_data else None
     action_id = pause_action_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_pause_action(action_id, user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -409,7 +409,7 @@ def handle_action_resume_post(handler, resume_action_match):
     user_id = user_data.get('id') if user_data else None
     action_id = resume_action_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_resume_action(action_id, user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -424,7 +424,7 @@ def handle_action_execute_post(handler, execute_action_match):
     user_id = user_data.get('id') if user_data else None
     action_id = execute_action_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_execute_action(action_id, user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -438,7 +438,7 @@ def handle_action_delete(handler, action_delete_match):
 
     action_id = action_delete_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_delete_action(action_id=action_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
@@ -490,7 +490,7 @@ def handle_action_update_put(handler, update_action_match):
 
     action_id = update_action_match.group(1)
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_update_action(action_id, data, user_id)
     status = status_from_result(result)
     return handler.json(result, status)

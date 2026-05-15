@@ -11,7 +11,7 @@ def handle_email_fetch_loop_status_get(handler, current_file: str):
 
     status_path = Path(current_file).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
     legacy_path = Path(current_file).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
     return handler.json(result)
 

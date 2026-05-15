@@ -21,7 +21,7 @@ def dispatch_get_request(handler, parsed, qs) -> bool:
     if dispatch_get_mail_routes(handler, parsed, qs):
         return True
 
-    request_handlers = handler.get_request_handlers()
+    request_handlers = handler.request_handlers
     if dispatch_get_data_routes(handler, parsed, qs, request_handlers):
         return True
 
