@@ -227,15 +227,7 @@ def create_rag_handler(config):
                     return self.json(result, status)
 
                 if parsed.path == '/api/imap/config':
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_imap_config_delete(user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_imap_config_delete()
                 
                 return self._send_error(404, "Not found")
             except Exception as e:
@@ -291,6 +283,18 @@ def create_rag_handler(config):
             result = handlers.handle_update_action(action_id, data, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             self.json(result, status)
+
+        def _handle_imap_config_delete(self):
+            """Handle DELETE /api/imap/config."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            handlers = self.get_request_handlers()
+            result = handlers.handle_imap_config_delete(user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
 
         def do_POST(self):
             try:
