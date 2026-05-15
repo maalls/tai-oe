@@ -224,11 +224,10 @@ def create_rag_handler(config):
             if data is None:
                 return
 
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
 
-            user_id = user_data.get('id') if user_data else None
             action_id = update_action_match.group(1)
 
             handlers = self.get_request_handlers()
