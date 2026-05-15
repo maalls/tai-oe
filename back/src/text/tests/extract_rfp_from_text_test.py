@@ -6,7 +6,7 @@ import pytest
 
 from src.llm import extract_json_from_text
 from src.text.reader import extract_rfp_from_text
-from src.controller.llm_factory import DEFAULT_LLM_URL
+from src.infrastructure.llm_factory import DEFAULT_LLM_URL
 
 
 def _llm_available() -> tuple[bool, str]:

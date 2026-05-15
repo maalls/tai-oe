@@ -2892,7 +2892,7 @@ class EmailRepository:
             }
         
         try:
-            from src.controller.llm_factory import LLMClientFactory
+            from src.infrastructure.llm_factory import LLMClientFactory
             import re
             from html.parser import HTMLParser
             

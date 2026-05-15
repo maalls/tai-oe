@@ -7,7 +7,7 @@ from sys import argv
 from typing import Any, Dict, Optional
 
 from src.llm import LLMClient, extract_json_from_text
-from src.controller.llm_factory import LLMClientFactory
+from src.infrastructure.llm_factory import LLMClientFactory
 
 
 def _cache_llm_extraction(content: str, payload: Dict[str, Any], elapsed: float) -> None:
