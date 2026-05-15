@@ -4,7 +4,8 @@ Quick script to run SQL migrations on Supabase.
 import sys
 import os
 from pathlib import Path
-from src.supabase.supabase_client import get_supabase_service
+
+from src.infrastructure.clients.supabase import get_supabase_service
 import requests
 from dotenv import load_dotenv
 

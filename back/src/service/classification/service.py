@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from src.llm import LLMClient
 from src.infrastructure.llm_factory import LLMClientFactory
+from src.infrastructure.clients.llm import LLMClient
 
 
 class EmailClassifier:

@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from typing import Dict
 
+from src.infrastructure.clients.supabase import get_supabase_service
 from src.repository.opportunity import OpportunityRepository
-from src.supabase.supabase_client import get_supabase_service
 import uuid
 import yaml
 

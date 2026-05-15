@@ -3,8 +3,8 @@
 from pathlib import Path
 from typing import Dict, Any
 
-from src.reader.xls import XlsReader
 from src.lib.email.multipart import parse_multipart, extract_boundary_from_header
+from src.lib.readers.xls import XlsReader
 
 
 class FileHandler:

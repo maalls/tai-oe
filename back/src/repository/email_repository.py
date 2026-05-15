@@ -17,10 +17,10 @@ from email.header import decode_header
 from cryptography.fernet import Fernet, InvalidToken
 
 from src.service.classification.service import EmailClassifier
-from src.text.reader import extract_rfp_from_text
 from src.infrastructure.clients.gmail_client import GmailClient
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.lib.email.mime import parse_from_header
-from src.supabase import get_supabase_service
 from google_auth_oauthlib.flow import Flow
 from google_auth_oauthlib.flow import Flow
 
@@ -1692,7 +1692,7 @@ class EmailRepository:
             return result
     
     def get_contact_by_email(self, email_list: List[str], user_id: str) -> Dict:    
-        from src.supabase import get_supabase_service
+        from src.infrastructure.clients.supabase import get_supabase_service
         supabase = get_supabase_service()
         for email in email_list:
             fetch_result = supabase.table("email").select("from_email").eq("user_id", user_id).eq("from_email", email).limit(1).execute()
@@ -2019,10 +2019,10 @@ class EmailRepository:
         
         Scans both email body and PDF attachments for products, uses whichever has most products.
         """
-        from src.supabase.supabase_client import get_supabase_service
+        from src.infrastructure.clients.supabase import get_supabase_service
         from pathlib import Path
         import json
-        from src.text.rfp_source_picker import pick_best_rfp_source
+        from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 
 
         try:

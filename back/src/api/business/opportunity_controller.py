@@ -1,5 +1,5 @@
 
-from src.supabase.supabase_client import get_supabase_service
+from src.infrastructure.clients.supabase import get_supabase_service
 from src.repository.opportunity import OpportunityRepository
 
 

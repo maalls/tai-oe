@@ -5,10 +5,10 @@ import os
 
 from flask import json
 
-from src.text.reader import extract_rfp_from_text
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
+from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.repository.email_repository import EmailRepository
-from src.text.rfp_source_picker import pick_best_rfp_source
-from src.supabase.supabase_client import get_supabase_service
 from pathlib import Path
 
 

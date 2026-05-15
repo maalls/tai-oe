@@ -3,7 +3,8 @@ Authentication handler for Supabase user management.
 Integrates with the RAG HTTP server.
 """
 import json
-from src.supabase import get_supabase_anon
+
+from src.infrastructure.clients.supabase import get_supabase_anon
 from supabase import AuthApiError
 
 

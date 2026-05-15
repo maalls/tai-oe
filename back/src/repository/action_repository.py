@@ -4,7 +4,8 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 import json
-from src.supabase.supabase_client import get_supabase_service
+
+from src.infrastructure.clients.supabase import get_supabase_service
 
 
 class ActionRepository:

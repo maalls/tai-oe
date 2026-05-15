@@ -16,7 +16,7 @@ class SupabaseOpportunityRepository(OpportunityRepositoryContract):
         if supabase_client is not None:
             self.supabase = supabase_client
         else:
-            from src.supabase import get_supabase_service
+            from src.infrastructure.clients.supabase import get_supabase_service
 
             self.supabase = get_supabase_service()
 

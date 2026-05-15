@@ -19,12 +19,11 @@ from datetime import datetime
 from typing import List
 
 from dotenv import load_dotenv, find_dotenv
-
+from src.infrastructure.clients.supabase import get_supabase_service
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.repository.email_repository import EmailRepository
-from src.supabase import get_supabase_service
 
 # Load .env if available
 try:

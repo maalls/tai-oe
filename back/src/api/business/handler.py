@@ -14,13 +14,13 @@ from io import BytesIO
 from weasyprint import HTML
 from html.parser import HTMLParser
 
-from src.text.reader import extract_company_from_text, extract_rfp_from_text
-from src.text.rfp_source_picker import pick_best_rfp_source
 from src.api.email.handler import EmailHandlers
 from src.api.business.rfq_handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
+from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.repository.email_repository import EmailRepository
-from src.supabase.supabase_client import get_supabase_service
 from src.api.business.opportunity_controller import Opportunity as OpportunityController
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
@@ -1194,7 +1194,7 @@ class BusinessHandlers:
             if file_ext == ".pdf":
                 # Extract text from PDF
                 try:
-                    from src.pdf.extract_text import extract_text
+                    from src.lib.extractors.pdf import extract_text
                     content = extract_text(file_path)
                     if not content:
                         return {"status": "error", "message": "Could not extract text from PDF"}

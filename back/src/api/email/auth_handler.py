@@ -6,7 +6,8 @@ Manages sender verification, trust scoring, and auth status updates.
 from typing import Dict, Optional, List
 from datetime import datetime
 import json
-from src.supabase import get_supabase_service
+
+from src.infrastructure.clients.supabase import get_supabase_service
 from src.api.email.auth_parser import parse_email_auth, EmailAuthParser
 
 

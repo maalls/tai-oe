@@ -64,7 +64,7 @@ def regenerate_drive_token():
     print("Follow the Google login prompts to authorize Drive access.\n")
     
     try:
-        from src.google_drive.gdrive_tool import get_credentials
+        from src.infrastructure.clients.google_drive.gdrive_tool import get_credentials
         creds = get_credentials()
         print("\n✅ Google Drive token regenerated successfully!")
         print(f"   Token saved to: {token_path}")

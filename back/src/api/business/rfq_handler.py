@@ -6,12 +6,12 @@ from pathlib import Path
 import time
 
 from src.infrastructure.factory import ServiceFactory
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
+from src.lib.extractors.text_reader import extract_company_from_text
+from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
-from src.supabase.supabase_client import get_supabase_service
-from src.text.reader import extract_company_from_text
-from src.text.reader import extract_rfp_from_text
-from src.text.rfp_source_picker import pick_best_rfp_source
 
 
 class RfqHandlers:

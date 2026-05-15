@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import Dict
+
 from src.infrastructure.factory import ServiceFactory
-from src.supabase.supabase_client import get_supabase_service
+from src.infrastructure.clients.supabase import get_supabase_service
 
 
 def _get_legacy_repo():
