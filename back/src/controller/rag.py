@@ -355,7 +355,7 @@ def create_rag_handler(config):
                         return self._handle_send_quote_for_opportunity_post(send_quote_match)
 
                     # Chat attachment upload
-                    if parsed.path == '/api/chat/attachments' and self.command == 'POST':
+                    if parsed.path == '/api/chat/attachments':
                         return self._handle_chat_attachments_post(parsed)
 
                     # Opportunity-scoped RFQ/quote generation
