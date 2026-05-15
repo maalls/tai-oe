@@ -138,8 +138,8 @@ If successful, you should see emails or file listings.
 
 ## Token Details
 
-| Service   | Credentials Path              | Token Path              | Command                                                     |
-| --------- | ----------------------------- | ----------------------- | ----------------------------------------------------------- |
+| Service   | Credentials Path              | Token Path              | Command                                                                 |
+| --------- | ----------------------------- | ----------------------- | ----------------------------------------------------------------------- |
 | **Gmail** | `var/credentials.json`        | `var/token.pickle`      | `./venv/bin/python -m src.command.regenerate_google_token`              |
 | **Drive** | `var/gdrive/credentials.json` | `var/gdrive/token.json` | `./venv/bin/python -m src.command.regenerate_google_token --type drive` |
 
