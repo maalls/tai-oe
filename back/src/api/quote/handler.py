@@ -311,6 +311,41 @@ def handle_quote_pdf_post(handler, quote_pdf_match):
     status = handler._status_from_result(result)
     return handler.json(result, status)
 
+
+def handle_quotes_list_get(handler, request_handlers):
+    """Handle /api/quotes/list GET endpoint."""
+    return handler.json(request_handlers.handle_list_quotes())
+
+
+def handle_quotes_download_get(handler, parsed_path: str, qs, request_handlers):
+    """Handle /api/quotes/download/<filename> GET endpoint."""
+    filename = parsed_path.split('/api/quotes/download/')[-1]
+    return handler._handle_quote_download(filename, request_handlers, qs)
+
+
+def handle_quote_download(handler, filename, request_handlers, qs=None):
+    """Stream PDF quote file."""
+    try:
+        qs = qs or {}
+        is_inline = qs.get('inline', ['0'])[0] == '1'
+        content = request_handlers.handle_get_quote_file(filename)
+        handler.send_response(200)
+        handler.send_header('Content-Type', 'application/pdf')
+        disposition = 'inline' if is_inline else 'attachment'
+        handler.send_header('Content-Disposition', f'{disposition}; filename="{filename}"')
+        handler.send_header('Content-Length', str(len(content)))
+        handler.send_header('Access-Control-Allow-Origin', 'http://localhost:5173')
+        handler.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        handler.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+        handler.send_header('Access-Control-Allow-Credentials', 'true')
+        handler._cors_header_sent = True
+        handler.end_headers()
+        handler.wfile.write(content)
+    except FileNotFoundError:
+        return handler._send_error(404, 'Quote file not found')
+    except Exception as e:
+        return handler._send_error(500, f"Error streaming PDF: {e}")
+
     def handle_generate_quote_pdf(self, document_id: str, user_id: str = None) -> Dict:
         """Generate a PDF for an existing quote document and update storage_key."""
         _ = user_id

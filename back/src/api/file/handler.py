@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Dict, Any
+import traceback
 
 from src.lib.email.multipart import parse_multipart, extract_boundary_from_header
 from src.lib.readers.xls import XlsReader
@@ -201,3 +202,114 @@ def handle_curl_post(handler):
         return handler.json(result)
     except Exception as e:
         return handler._send_error(500, f'Curl failed: {e}')
+
+
+def handle_fetch_get(handler, qs):
+    """Handle /api/fetch GET endpoint."""
+    target_url = qs.get('url', [None])[0]
+    if not target_url:
+        return handler._send_error(400, 'Missing url parameter')
+
+    if not target_url.startswith('http://') and not target_url.startswith('https://'):
+        return handler._send_error(400, 'Invalid url scheme')
+
+    max_chars = handler._get_qs_int(qs, 'max_chars', 10000)
+    timeout_ms = handler._get_qs_int(qs, 'timeout_ms', 8000)
+
+    max_chars = max(100, min(max_chars, 50000))
+    timeout_ms = max(1000, min(timeout_ms, 20000))
+
+    try:
+        request_handlers = handler.get_request_handlers()
+        result = request_handlers.handle_fetch_url(
+            target_url=target_url,
+            max_chars=max_chars,
+            timeout_ms=timeout_ms,
+        )
+        return handler.json(result)
+    except Exception as e:
+        return handler._send_error(500, f'Fetch failed: {e}')
+
+
+def handle_prompt_get(handler, parsed_path: str, current_file: str):
+    """Handle GET requests for prompt markdown content."""
+    relative_path = parsed_path[len('/api/prompt/'):].strip('/')
+    request_handlers = handler.get_request_handlers()
+    base_dir = Path(current_file).resolve().parents[1] / 'infrastructure' / 'prompts'
+    try:
+        content = request_handlers.handle_get_prompt_content(
+            relative_path=relative_path,
+            prompt_base_dir=base_dir,
+        )
+    except ValueError as e:
+        return handler._send_error(400, str(e))
+    except FileNotFoundError as e:
+        return handler._send_error(404, str(e))
+    except Exception as e:
+        return handler._send_error(500, f"Error reading prompt: {e}")
+
+    return handler._send_text_response(200, 'text/plain; charset=utf-8', content.encode('utf-8'))
+
+
+def handle_storage_head(handler, storage_dir, parsed_path: str):
+    """Handle HEAD requests for storage files."""
+    raw_filename = parsed_path[len('/api/storage/'):]
+    request_handlers = handler.get_request_handlers()
+    try:
+        storage_info = request_handlers.handle_storage_resolve_file(storage_dir, raw_filename)
+    except FileNotFoundError:
+        not_found = request_handlers.handle_storage_not_found_payload(raw_filename, include_body=False)
+        print(f"[RAG] File not found in any storage location: {not_found['filename']}")
+        handler._send_text_response(404, not_found['content_type'])
+        return
+
+    filename = storage_info['filename']
+    metadata = storage_info['metadata']
+
+    print(f"[RAG] Storage HEAD request for file: {filename}")
+    response_headers = request_handlers.handle_storage_response_headers(metadata)
+
+    handler.send_response(200)
+    for header_name, header_value in response_headers.items():
+        handler.send_header(header_name, header_value)
+    handler.end_headers()
+
+
+def handle_storage_get(handler, storage_dir, parsed_path: str):
+    """Handle GET requests for storage files."""
+    raw_filename = parsed_path[len('/api/storage/'):]
+    request_handlers = handler.get_request_handlers()
+    try:
+        storage_info = request_handlers.handle_storage_resolve_file(storage_dir, raw_filename)
+    except FileNotFoundError:
+        not_found = request_handlers.handle_storage_not_found_payload(raw_filename, include_body=True)
+        print(f"[RAG] Storage request for file: {not_found['filename']}")
+        print(f"[RAG] File not found in any storage location: {not_found['filename']}")
+        handler._send_text_response(404, not_found['content_type'], not_found['body'])
+        return
+
+    filename = storage_info['filename']
+    storage_path = storage_info['storage_path']
+    metadata = storage_info['metadata']
+
+    print(f"[RAG] Storage request for file: {filename}")
+
+    try:
+        print(f"[RAG] Reading file: {storage_path}")
+        response_headers = request_handlers.handle_storage_response_headers(metadata)
+
+        handler.send_response(200)
+        for header_name, header_value in response_headers.items():
+            handler.send_header(header_name, header_value)
+        handler.end_headers()
+
+        for chunk in request_handlers.handle_storage_read_chunks(storage_path):
+            handler.wfile.write(chunk)
+        print(f"[RAG] File sent successfully: {filename} ({metadata['file_size']} bytes)")
+        return
+    except Exception as error:
+        print(f"[RAG] Error reading file {filename}: {error}")
+        traceback.print_exc()
+        error_payload = request_handlers.handle_storage_read_error_payload(error)
+        handler._send_text_response(500, error_payload['content_type'], error_payload['body'])
+        return

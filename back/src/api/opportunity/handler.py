@@ -414,3 +414,21 @@ def handle_opportunity_delete(handler, opportunity_delete_match):
     status = handler._status_from_result(result)
     print(f"[RAG] DELETE result: {result}", file=sys.stderr)
     return handler.json(result, status)
+
+
+def handle_opportunities_search_get(handler, qs, request_handlers):
+    """Handle /api/opportunities/search GET endpoint."""
+    source_reference_id = qs.get('source_reference_id', [None])[0]
+    name = qs.get('name', [None])[0]
+
+    user_id = handler._require_auth_user_id()
+    if user_id is None:
+        return None
+
+    result = request_handlers.handle_search_opportunities(
+        user_id=user_id,
+        source_reference_id=source_reference_id,
+        name=name,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
