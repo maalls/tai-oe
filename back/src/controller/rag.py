@@ -1075,11 +1075,7 @@ def create_rag_handler(config):
                     result = handlers.handle_gmail_oauth_start(redirect_url, user_id=user_id)
                     return self.json(result)
                 if parsed.path == '/api/gmail/authorize':
-                    handlers = self.get_request_handlers()
-                    # Get redirect_url from query params
-                    redirect_url = qs.get('redirect_url', [None])[0]
-                    result = handlers.handle_gmail_authorize(redirect_url)
-                    return self.json(result)
+                    return self._handle_gmail_authorize_get(qs)
                 elif parsed.path == '/api/gmail/status':
                     return self._handle_gmail_status_get(qs)
                 elif parsed.path == '/api/gmail/revoke':
@@ -1242,6 +1238,13 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             user_id = qs.get('user_id', [None])[0]
             result = handlers.handle_gmail_status(user_id=user_id)
+            return self.json(result)
+
+        def _handle_gmail_authorize_get(self, qs):
+            """Handle /api/gmail/authorize GET endpoint."""
+            handlers = self.get_request_handlers()
+            redirect_url = qs.get('redirect_url', [None])[0]
+            result = handlers.handle_gmail_authorize(redirect_url)
             return self.json(result)
 
         def _handle_gmail_revoke_get(self, qs):
