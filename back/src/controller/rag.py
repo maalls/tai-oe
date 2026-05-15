@@ -1395,11 +1395,9 @@ def create_rag_handler(config):
 
         def _handle_action_logs_get(self, get_action_logs_match, qs, handlers):
             """Handle /api/actions/<id>/logs GET endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
-
-            user_id = user_data.get('id') if user_data else None
             action_id = get_action_logs_match.group(1)
             limit = self._get_qs_int(qs, 'limit', 50)
             result = handlers.handle_get_action_logs(action_id, limit, user_id)
