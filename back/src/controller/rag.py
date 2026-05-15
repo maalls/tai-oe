@@ -365,7 +365,7 @@ def create_rag_handler(config):
 
                     # Opportunity-scoped RFQ creation from text/file
                     opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
-                    if opp_rfq_create_match and self.command == 'POST':
+                    if opp_rfq_create_match:
                         return self._handle_opportunity_rfq_create_from_text_post(opp_rfq_create_match)
 
                     # Quote PDF generation
