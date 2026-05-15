@@ -50,6 +50,14 @@ from src.api.routes.server_get_mail_message_handlers import (
     handle_gmail_message_get,
     handle_gmail_messages_get,
 )
+from src.api.routes.server_get_csv_handlers import (
+    handle_csv_files_get,
+    handle_csv_get,
+    handle_csv_preview_get,
+    handle_csv_query_get,
+    handle_csv_search_get,
+    handle_csv_sources_get,
+)
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1245,46 +1253,27 @@ def create_rag_handler(config):
 
         def _handle_csv_get(self, parsed_path: str, qs):
             """Handle /api/csv* GET endpoints."""
-            handlers = self.get_request_handlers()
-
-            if parsed_path == '/api/csv/files':
-                return self._handle_csv_files_get(qs, handlers)
-            if parsed_path == '/api/csv/preview':
-                return self._handle_csv_preview_get(qs, handlers)
-            if parsed_path == '/api/csv/raw':
-                return self._handle_raw_stream(qs, handlers)
-            if parsed_path == '/api/csv/source':
-                return self._handle_source_stream(qs, handlers)
-            if parsed_path == '/api/csv/download':
-                return self._handle_csv_download(qs, handlers)
-            if parsed_path == '/api/csv/sources':
-                return self._handle_csv_sources_get(handlers)
-            if parsed_path == '/api/csv/query':
-                return self._handle_csv_query_get(qs, handlers)
-            if parsed_path.startswith('/api/csv/search'):
-                return self._handle_csv_search_get(qs, handlers)
-
-            return None
+            return handle_csv_get(self, parsed_path, qs)
 
         def _handle_csv_files_get(self, qs, handlers):
             """Handle /api/csv/files GET endpoint."""
-            return self.json(handlers.handle_list_files(qs))
+            return handle_csv_files_get(self, qs, handlers)
 
         def _handle_csv_preview_get(self, qs, handlers):
             """Handle /api/csv/preview GET endpoint."""
-            return self.json(handlers.handle_preview(qs))
+            return handle_csv_preview_get(self, qs, handlers)
 
         def _handle_csv_sources_get(self, handlers):
             """Handle /api/csv/sources GET endpoint."""
-            return self.json(handlers.handle_sources())
+            return handle_csv_sources_get(self, handlers)
 
         def _handle_csv_query_get(self, qs, handlers):
             """Handle /api/csv/query GET endpoint."""
-            return self.json(handlers.handle_query(qs))
+            return handle_csv_query_get(self, qs, handlers)
 
         def _handle_csv_search_get(self, qs, handlers):
             """Handle /api/csv/search* GET endpoints."""
-            return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
+            return handle_csv_search_get(self, qs, handlers)
 
         def _handle_quotes_list_get(self, handlers):
             """Handle /api/quotes/list GET endpoint."""
