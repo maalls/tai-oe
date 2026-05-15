@@ -1,8 +1,9 @@
 """DELETE route dispatch for legacy API server."""
 
 import re
+from types import SimpleNamespace
 
-from src.api.action.handler import handle_action_delete
+from src.api.action.routes import dispatch_action_routes
 from src.api.document.handler import handle_document_delete, handle_quote_delete
 from src.api.email.handler import (
     handle_email_attachment_delete,
@@ -14,6 +15,11 @@ from src.api.opportunity.handler import handle_opportunity_delete
 
 def dispatch_delete_request(handler, parsed_path: str) -> bool:
     """Dispatch DELETE routes and return True when handled."""
+    parsed = SimpleNamespace(path=parsed_path)
+    request_handlers = handler.request_handlers
+    if dispatch_action_routes(handler, "DELETE", parsed, {}, request_handlers):
+        return True
+
     opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed_path)
     if opportunity_delete_match:
         handle_opportunity_delete(handler, opportunity_delete_match)
@@ -37,11 +43,6 @@ def dispatch_delete_request(handler, parsed_path: str) -> bool:
     email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed_path)
     if email_delete_match:
         handle_email_delete(handler, email_delete_match)
-        return True
-
-    action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed_path)
-    if action_delete_match:
-        handle_action_delete(handler, action_delete_match)
         return True
 
     if parsed_path == '/api/imap/config':

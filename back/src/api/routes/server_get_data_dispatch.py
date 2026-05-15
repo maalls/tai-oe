@@ -1,14 +1,13 @@
 """Data GET route dispatch for legacy API server."""
 
-from src.api.csv.handler import handle_csv_get
+from src.api.csv.routes import dispatch_csv_routes
 from src.api.opportunity.handler import handle_opportunities_search_get
 from src.api.quote.handler import handle_quotes_list_get
 
 
 def dispatch_get_data_routes(handler, parsed, qs, request_handlers) -> bool:
     """Dispatch csv/quotes/opportunity search GET routes and return True when handled."""
-    if parsed.path.startswith('/api/csv'):
-        handle_csv_get(handler, parsed.path, qs)
+    if dispatch_csv_routes(handler, "GET", parsed, qs):
         return True
 
     if parsed.path == '/api/quotes/list':
