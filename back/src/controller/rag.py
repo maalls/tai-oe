@@ -1085,10 +1085,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/revoke':
                     return self._handle_gmail_revoke_get(qs)
                 elif parsed.path == '/api/gmail/profile':
-                    handlers = self.get_request_handlers()
-                    user_id = qs.get('user_id', [None])[0]
-                    result = handlers.handle_gmail_profile(user_id=user_id)
-                    return self.json(result)
+                    return self._handle_gmail_profile_get(qs)
                 elif parsed.path == '/api/imap/status':
                     user_data = self._require_auth()
                     if user_data is None:
@@ -1397,6 +1394,13 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             user_id = qs.get('user_id', [None])[0]
             result = handlers.handle_gmail_revoke(user_id=user_id)
+            return self.json(result)
+
+        def _handle_gmail_profile_get(self, qs):
+            """Handle /api/gmail/profile GET endpoint."""
+            handlers = self.get_request_handlers()
+            user_id = qs.get('user_id', [None])[0]
+            result = handlers.handle_gmail_profile(user_id=user_id)
             return self.json(result)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
