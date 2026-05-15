@@ -23,7 +23,7 @@ from src.reader.csv import CSVReader
 from src.embeddings import EmbeddingGenerator
 from src.api.file.handler import FileHandler
 from src.controller.handlers import RequestHandlers
-from src.controller.auth.auth_handler import AuthHandler
+from src.api.auth.handler import AuthHandler
 from src.infrastructure.llm_factory import LLMClientFactory
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route

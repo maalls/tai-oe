@@ -18,7 +18,7 @@ from src.controller.email_handler import EmailHandlers
 from src.controller.classify_handler import ClassifyHandler
 from src.controller.action_handlers import ActionHandlers
 from src.infrastructure.clients.database import DatabaseHandler
-from src.controller.auth.auth_handler import AuthHandler
+from src.api.auth.handler import AuthHandler
 from src.controller.quote.quote import Quote as QuoteController
 from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
