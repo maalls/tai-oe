@@ -2,7 +2,7 @@
 
 from src.api.csv.routes import dispatch_csv_routes
 from src.api.opportunity.handler import handle_opportunities_search_get
-from src.api.quote.handler import handle_quotes_list_get
+from src.api.quote.routes import dispatch_quote_routes
 
 
 def dispatch_get_data_routes(handler, parsed, qs, request_handlers) -> bool:
@@ -10,8 +10,7 @@ def dispatch_get_data_routes(handler, parsed, qs, request_handlers) -> bool:
     if dispatch_csv_routes(handler, "GET", parsed, qs):
         return True
 
-    if parsed.path == '/api/quotes/list':
-        handle_quotes_list_get(handler, request_handlers)
+    if dispatch_quote_routes(handler, "GET", parsed, qs, request_handlers):
         return True
 
     if parsed.path == '/api/opportunities/search':

@@ -6,29 +6,43 @@ from src.api.routes.server_post_domain_dispatch import dispatch_post_domain_rout
 class _HandlerStub:
     def __init__(self):
         self.calls = []
+        self.request_handlers = object()
 
     def _handle_entity_update_post(self, match):
         self.calls.append(("entity", match.group(1), match.group(2)))
 
-    def _handle_emails_classify_post(self, parsed_path):
-        self.calls.append(("classify", parsed_path))
-
-
 def test_dispatch_post_domain_routes_entity_update_regex():
+    calls = []
+
+    def _entity_handler(handler, match):
+        calls.append((handler, match.group(1), match.group(2)))
+
+    from src.api.routes import server_post_domain_dispatch as module
+    module.dispatch_email_routes = lambda *_args, **_kwargs: False
+    module.handle_entity_update_post = _entity_handler
+
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/entity/opportunities/name")
 
     handled = dispatch_post_domain_routes(handler, parsed)
 
     assert handled is True
-    assert handler.calls == [("entity", "opportunities", "name")]
+    assert calls == [(handler, "opportunities", "name")]
 
 
-def test_dispatch_post_domain_routes_classify_path():
+def test_dispatch_post_domain_routes_delegates_email_router(monkeypatch):
+    calls = []
+
+    def _fake(handler, method, parsed, qs, request_handlers):
+        calls.append((handler, method, parsed.path, qs, request_handlers))
+        return True
+
+    monkeypatch.setattr("src.api.routes.server_post_domain_dispatch.dispatch_email_routes", _fake)
+
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/emails/classify/abc")
 
     handled = dispatch_post_domain_routes(handler, parsed)
 
     assert handled is True
-    assert handler.calls == [("classify", "/api/emails/classify/abc")]
+    assert calls == [(handler, "POST", "/api/emails/classify/abc", {}, handler.request_handlers)]

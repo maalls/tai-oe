@@ -155,7 +155,7 @@ Exemple de message de commit:
 ## Tracking d'avancement
 
 - [x] Lot 1 - Fondation domaine (auth/action/csv)
-- [ ] Lot 2 - Domaines HTTP mixtes (email/quote/invoice)
+- [x] Lot 2 - Domaines HTTP mixtes (email/quote/invoice)
 - [ ] Lot 3 - Domaines complexes (opportunity/document/rfq/entity/product/file)
 - [ ] Lot 4 - Orchestrateur final + cleanup
 
@@ -167,3 +167,6 @@ Ajouter ici les decisions importantes prises en cours de migration.
 - 2026-05-15: Lot 1 termine avec creation de `auth/routes.py`, `action/routes.py`, `csv/routes.py`.
 - 2026-05-15: Les dispatchers existants ont ete recables pour deleguer vers les routeurs domaine, afin de garder la compatibilite API.
 - 2026-05-15: Tests unitaires ajoutes pour les 3 nouveaux routeurs domaine (`9 passed`).
+- 2026-05-15: Lot 2 termine avec creation de `email/routes.py`, `quote/routes.py`, `invoice/routes.py` pour le serveur legacy.
+- 2026-05-15: Les dispatchers mail/data/business/domain/delete/legacy ont ete recables vers ces routeurs domaine.
+- 2026-05-15: Tests unitaires routing Lot 2 passes (`20 passed`).
