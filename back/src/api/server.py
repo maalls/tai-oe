@@ -30,6 +30,7 @@ from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_get_dispatch import dispatch_get_request
+from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_post_dispatch import dispatch_post_request
 
@@ -287,8 +288,8 @@ def create_rag_handler(config):
             try:
                 parsed = urllib.parse.urlparse(self.path)
 
-                if parsed.path.startswith('/api/storage/'):
-                    return self._handle_storage_head(parsed.path)
+                if dispatch_head_request(self, parsed.path):
+                    return
 
                 return self._send_error(404, "Not found")
             except Exception as e:
