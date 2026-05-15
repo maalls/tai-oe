@@ -1093,23 +1093,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/messages':
                     return self._handle_gmail_messages_get(qs)
                 elif parsed.path == '/api/gmail/classify-unclassified':
-                    handlers = self.get_request_handlers()
-                    user_id = qs.get('user_id', [None])[0]
-                    limit = self._get_qs_int(qs, 'limit', 200)
-
-                    if not user_id:
-                        auth_header = self.headers.get('Authorization', '')
-                        user_id = self._get_optional_user_id_from_auth(auth_header)
-
-                    if not user_id:
-                        return self._send_error(400, 'Missing user_id')
-
-                    result = handlers.handle_classify_unclassified(
-                        user_id=user_id,
-                        limit=limit,
-                    )
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_gmail_classify_unclassified_get(qs)
                 elif parsed.path.startswith('/api/gmail/message/'):
                     return self._handle_gmail_message_get(parsed.path)
                 elif parsed.path.startswith('/api/email-attachment/'):
@@ -1370,6 +1354,23 @@ def create_rag_handler(config):
                 force=force,
             )
             return self.json(result)
+
+        def _handle_gmail_classify_unclassified_get(self, qs):
+            """Handle /api/gmail/classify-unclassified GET endpoint."""
+            handlers = self.get_request_handlers()
+            user_id = qs.get('user_id', [None])[0]
+            limit = self._get_qs_int(qs, 'limit', 200)
+
+            if not user_id:
+                auth_header = self.headers.get('Authorization', '')
+                user_id = self._get_optional_user_id_from_auth(auth_header)
+
+            if not user_id:
+                return self._send_error(400, 'Missing user_id')
+
+            result = handlers.handle_classify_unclassified(user_id=user_id, limit=limit)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
 
         def _handle_gmail_message_get(self, parsed_path: str):
             """Handle /api/gmail/message/<id> GET endpoint."""
