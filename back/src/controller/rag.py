@@ -269,24 +269,28 @@ def create_rag_handler(config):
             """Handle PUT routes."""
             update_action_match = re.match(r"^/api/actions/([^/]+)$", parsed_path)
             if update_action_match:
-                data = self._read_json_or_error()
-                if data is None:
-                    return True
-
-                user_data = self._require_auth()
-                if user_data is None:
-                    return True
-
-                user_id = user_data.get('id') if user_data else None
-                action_id = update_action_match.group(1)
-
-                handlers = self.get_request_handlers()
-                result = handlers.handle_update_action(action_id, data, user_id)
-                status = 200 if result.get('status') == 'ok' else 400
-                self.json(result, status)
+                self._handle_action_update_put(update_action_match)
                 return True
 
             return False
+
+        def _handle_action_update_put(self, update_action_match):
+            """Handle PUT /api/actions/{id}."""
+            data = self._read_json_or_error()
+            if data is None:
+                return
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            action_id = update_action_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_update_action(action_id, data, user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            self.json(result, status)
 
         def do_POST(self):
             try:
