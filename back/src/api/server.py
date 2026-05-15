@@ -27,6 +27,7 @@ from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
+from src.api.routes.server_delete_handlers import handle_imap_config_delete
 from src.api.routes.server_auth_helpers import (
     authorize_request,
     get_optional_user_id_from_auth,
@@ -227,14 +228,7 @@ def create_rag_handler(config):
 
         def _handle_imap_config_delete(self):
             """Handle DELETE /api/imap/config."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_imap_config_delete(user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_imap_config_delete(self)
 
         def _handle_action_delete(self, action_delete_match):
             """Handle DELETE /api/actions/{id}."""
