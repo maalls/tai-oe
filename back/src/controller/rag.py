@@ -1624,7 +1624,7 @@ def create_rag_handler(config):
                 source_reference_id=source_reference_id,
                 name=name,
             )
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_opportunity_actions_list_get(self, list_actions_match, handlers):
