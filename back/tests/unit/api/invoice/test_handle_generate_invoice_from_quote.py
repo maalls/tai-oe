@@ -115,12 +115,10 @@ class _SupabaseStub:
 def test_handle_generate_invoice_from_quote_success_calls_pdf_generation():
     supabase = _SupabaseStub()
     pdf_calls = []
-
-    def _generate_invoice_pdf(document_id: str, user_id: str = None):
-        pdf_calls.append((document_id, user_id))
-        return {"status": "ok", "storage_key": "invoice_1.pdf"}
-
-    handler = InvoiceHandlers(supabase=supabase, generate_invoice_pdf=_generate_invoice_pdf)
+    handler = InvoiceHandlers(supabase=supabase)
+    handler.handle_generate_invoice_pdf = lambda document_id, user_id=None: (
+        pdf_calls.append((document_id, user_id)) or {"status": "ok", "storage_key": "invoice_1.pdf"}
+    )
 
     result = handler.handle_generate_invoice_from_quote("quote-1", user_id="u-1")
 
@@ -134,10 +132,8 @@ def test_handle_generate_invoice_from_quote_success_calls_pdf_generation():
 
 def test_handle_generate_invoice_from_quote_supports_opportunity_id_lookup():
     supabase = _SupabaseStub()
-    handler = InvoiceHandlers(
-        supabase=supabase,
-        generate_invoice_pdf=lambda document_id, user_id=None: {"status": "ok", "storage_key": f"{document_id}.pdf"},
-    )
+    handler = InvoiceHandlers(supabase=supabase)
+    handler.handle_generate_invoice_pdf = lambda document_id, user_id=None: {"status": "ok", "storage_key": f"{document_id}.pdf"}
 
     result = handler.handle_generate_invoice_from_quote("opp-1", user_id="u-1")
 
@@ -148,7 +144,8 @@ def test_handle_generate_invoice_from_quote_supports_opportunity_id_lookup():
 def test_handle_generate_invoice_from_quote_rejects_existing_invoice():
     supabase = _SupabaseStub()
     supabase.invoice_already_exists = True
-    handler = InvoiceHandlers(supabase=supabase, generate_invoice_pdf=lambda document_id, user_id=None: {"status": "ok"})
+    handler = InvoiceHandlers(supabase=supabase)
+    handler.handle_generate_invoice_pdf = lambda document_id, user_id=None: {"status": "ok"}
 
     result = handler.handle_generate_invoice_from_quote("quote-1", user_id="u-1")
 

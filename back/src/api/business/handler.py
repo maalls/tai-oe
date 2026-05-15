@@ -51,10 +51,7 @@ class BusinessHandlers:
             supabase=self.supabase,
         )
         self.quote_handlers = Quote()
-        self.invoice_handlers = InvoiceHandlers(
-            supabase=self.supabase,
-            generate_invoice_pdf=self.handle_generate_invoice_pdf,
-        )
+        self.invoice_handlers = InvoiceHandlers(supabase=self.supabase)
         self.document_handlers = DocumentHandlers(
             supabase=self.supabase,
             storage_dir_resolver=self._get_storage_dir,
@@ -701,99 +698,11 @@ class BusinessHandlers:
             }
 
     def handle_generate_invoice_pdf(self, document_id: str, user_id: str = None) -> Dict:
-        """Generate a PDF for an existing invoice document and update storage_key."""
-        supabase = get_supabase_service()
-
-        try:
-            # Load document with opportunity
-            doc_resp = supabase.table("document").select("*").eq("id", document_id).single().execute()
-            if getattr(doc_resp, "error", None):
-                return {"status": "error", "message": f"Document lookup failed: {doc_resp.error}"}
-            document = doc_resp.data
-            if not document:
-                return {"status": "error", "message": f"Document not found: {document_id}"}
-
-            if document.get("type") != "INVOICE":
-                return {"status": "error", "message": "PDF generation is only supported for invoices"}
-
-            # Load opportunity and account
-            opportunity_id = document.get("opportunity_id")
-            account_id = None
-            opportunity = {}
-            account = {}
-            
-            if opportunity_id:
-                opp_resp = supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-                if not getattr(opp_resp, "error", None) and opp_resp.data:
-                    opportunity = opp_resp.data
-                    account_id = opportunity.get("account_id")
-                    
-                    if account_id:
-                        acc_resp = supabase.table("account").select("*").eq("id", account_id).single().execute()
-                        if not getattr(acc_resp, "error", None) and acc_resp.data:
-                            account = acc_resp.data
-                            print(f"[BusinessHandlers] Loaded account: {account}")
-                    else:
-                        print(f"[BusinessHandlers] No account_id in opportunity {opportunity_id}")
-                else:
-                    print(f"[BusinessHandlers] Could not load opportunity {opportunity_id}")
-
-            # Load lines
-            line_resp = supabase.table("document_line").select("*").eq("document_id", document_id).order("position").execute()
-            if getattr(line_resp, "error", None):
-                return {"status": "error", "message": f"Document lines lookup failed: {line_resp.error}"}
-            lines = line_resp.data or []
-
-            # Build invoice-like structure for PDF generator
-            invoice_data = {
-                "invoice_id": document.get("id"),
-                "external_ref": document.get("external_ref") or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "title": document.get("title") or "Invoice",
-                "products": [],
-                "contact": {
-                    "company_name": account.get("name", ""),
-                    "address": self._normalize_account_address(account),
-                },
-                "account": account,
-                "issued_date": document.get("issued_at") or datetime.now().isoformat(),
-                "currency": document.get("currency", "EUR"),
-                "totals": {
-                    "subtotal": float(document.get("total_excl_tax", 0)),
-                    "tax": float(document.get("total_tax", 0)),
-                    "total": float(document.get("total_incl_tax", 0)),
-                }
-            }
-
-            for line in lines:
-                invoice_data["products"].append({
-                    "quantity": float(line.get("quantity", 1)),
-                    "manufacturer": line.get("brand", ""),
-                    "sku": line.get("sku"),
-                    "description": line.get("description"),
-                    "price": float(line.get("unit_price_excl_tax", 0)),
-                    "tax_rate": float(line.get("tax_rate", 20)),
-                    "unit": line.get("unit", "U"),
-                })
-
-            pdf_filename = self._generate_invoice_pdf(invoice_data)
-
-            upd_resp = supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
-            if getattr(upd_resp, "error", None):
-                return {"status": "error", "message": f"Failed to update document with PDF: {upd_resp.error}"}
-
-            return {
-                "status": "ok",
-                "storage_key": pdf_filename,
-            }
-
-        except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error generating PDF for invoice {document_id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error generating PDF: {str(e)}",
-            }
+        """Generate an invoice PDF via InvoiceHandlers."""
+        return self.invoice_handlers.handle_generate_invoice_pdf(
+            document_id=document_id,
+            user_id=user_id,
+        )
 
     def _generate_invoice_pdf(self, invoice_data: Dict) -> str:
         """Generate PDF from invoice data using HTML template.

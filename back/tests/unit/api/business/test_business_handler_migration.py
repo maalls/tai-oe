@@ -76,6 +76,10 @@ class _InvoiceHandlersStub:
             },
         }
 
+    def handle_generate_invoice_pdf(self, document_id: str, user_id: str = None):
+        self.calls.append(("generate_pdf", document_id, user_id))
+        return {"status": "ok", "storage_key": "invoice_1.pdf"}
+
 
 class _OpportunityRepositoryStub:
     def __init__(self):
@@ -329,6 +333,15 @@ def test_handle_generate_invoice_from_quote_delegates_to_invoice_handler():
     assert result["status"] == "ok"
     assert result["invoice_id"] == "inv-1"
     assert handler.invoice_handlers.calls == [("quote-1", "u-1")]
+
+
+def test_handle_generate_invoice_pdf_delegates_to_invoice_handler():
+    handler = _make_handler()
+
+    result = handler.handle_generate_invoice_pdf("inv-1", user_id="u-1")
+
+    assert result == {"status": "ok", "storage_key": "invoice_1.pdf"}
+    assert handler.invoice_handlers.calls == [("generate_pdf", "inv-1", "u-1")]
 
 
 def test_business_handler_opportunity_wrappers_are_class_methods():
