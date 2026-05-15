@@ -36,6 +36,7 @@ from src.api.routes.server_mutation_dispatch import dispatch_patch_request, disp
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
+from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
 
@@ -1754,55 +1755,19 @@ def create_rag_handler(config):
 
         def json(self, payload, status_code=200):
             """Send JSON response."""
-            try:
-                data = json.dumps(payload).encode('utf-8')
-                self.send_response(status_code)
-                self.send_header('Content-Type', 'application/json; charset=utf-8')
-                self.send_header('Content-Length', str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                # Client disconnected before receiving the response.
-                return
-            except Exception as e:
-                try:
-                    self._send_error(500, f"Error serializing JSON: {e}")
-                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                    return
+            return send_json(self, payload, status_code=status_code)
 
         def _send_error(self, code: int, message: str):
             """Send error response."""
-            try:
-                payload = json.dumps({"error": message}).encode('utf-8')
-                self.send_response(code)
-                self.send_header('Content-Type', 'application/json; charset=utf-8')
-                self.send_header('Content-Length', str(len(payload)))
-                self.end_headers()
-                self.wfile.write(payload)
-            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                return
+            return send_error(self, code=code, message=message)
 
         def _send_text_response(self, code: int, content_type: str, body: bytes = None):
             """Send plain text/binary response payload."""
-            try:
-                self.send_response(code)
-                self.send_header('Content-Type', content_type)
-                if body is not None:
-                    self.send_header('Content-Length', str(len(body)))
-                self.end_headers()
-                if body is not None:
-                    self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                return
+            return send_text_response(self, code=code, content_type=content_type, body=body)
 
         def _send_redirect(self, location: str, code: int = 302):
             """Send HTTP redirect response."""
-            try:
-                self.send_response(code)
-                self.send_header('Location', location)
-                self.end_headers()
-            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                return
+            return send_redirect(self, location=location, code=code)
     
     return Rag
 
