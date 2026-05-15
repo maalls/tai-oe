@@ -1254,14 +1254,14 @@ def create_rag_handler(config):
         def _handle_gmail_revoke_get(self, qs):
             """Handle /api/gmail/revoke GET endpoint."""
             handlers = self.get_request_handlers()
-            user_id = qs.get('user_id', [None])[0]
+            user_id = self._get_qs_value(qs, 'user_id')
             result = handlers.handle_gmail_revoke(user_id=user_id)
             return self.json(result)
 
         def _handle_gmail_profile_get(self, qs):
             """Handle /api/gmail/profile GET endpoint."""
             handlers = self.get_request_handlers()
-            user_id = qs.get('user_id', [None])[0]
+            user_id = self._get_qs_value(qs, 'user_id')
             result = handlers.handle_gmail_profile(user_id=user_id)
             return self.json(result)
 
