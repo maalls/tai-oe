@@ -365,21 +365,9 @@ def create_rag_handler(config):
                 # Action endpoints
                 elif parsed.path == '/api/actions':
                     return self._handle_actions_create_post()
-                
-                # Pause action
-                pause_action_match = re.match(r"^/api/actions/([^/]+)/pause$", parsed.path)
-                if pause_action_match:
-                    return self._handle_action_pause_post(pause_action_match)
-                
-                # Resume action
-                resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed.path)
-                if resume_action_match:
-                    return self._handle_action_resume_post(resume_action_match)
-                
-                # Execute action manually
-                execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed.path)
-                if execute_action_match:
-                    return self._handle_action_execute_post(execute_action_match)
+
+                if self._handle_action_post_routes(parsed.path):
+                    return
                 
                 else:
                     return self._send_error(404, "Not found")
@@ -636,6 +624,25 @@ def create_rag_handler(config):
             quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
             if quote_update_match:
                 self._handle_quote_update_post(quote_update_match)
+                return True
+
+            return False
+
+        def _handle_action_post_routes(self, parsed_path: str) -> bool:
+            """Handle action-specific POST regex routes."""
+            pause_action_match = re.match(r"^/api/actions/([^/]+)/pause$", parsed_path)
+            if pause_action_match:
+                self._handle_action_pause_post(pause_action_match)
+                return True
+
+            resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed_path)
+            if resume_action_match:
+                self._handle_action_resume_post(resume_action_match)
+                return True
+
+            execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed_path)
+            if execute_action_match:
+                self._handle_action_execute_post(execute_action_match)
                 return True
 
             return False
