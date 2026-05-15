@@ -32,3 +32,30 @@ def handle_email_fetch_loop_status_get(handler, current_file: str):
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
     return handler.json(result)
+
+
+def handle_fetch_get(handler, qs):
+    """Handle /api/fetch GET endpoint."""
+    target_url = qs.get('url', [None])[0]
+    if not target_url:
+        return handler._send_error(400, 'Missing url parameter')
+
+    if not target_url.startswith('http://') and not target_url.startswith('https://'):
+        return handler._send_error(400, 'Invalid url scheme')
+
+    max_chars = handler._get_qs_int(qs, 'max_chars', 10000)
+    timeout_ms = handler._get_qs_int(qs, 'timeout_ms', 8000)
+
+    max_chars = max(100, min(max_chars, 50000))
+    timeout_ms = max(1000, min(timeout_ms, 20000))
+
+    try:
+        request_handlers = handler.get_request_handlers()
+        result = request_handlers.handle_fetch_url(
+            target_url=target_url,
+            max_chars=max_chars,
+            timeout_ms=timeout_ms,
+        )
+        return handler.json(result)
+    except Exception as e:
+        return handler._send_error(500, f'Fetch failed: {e}')

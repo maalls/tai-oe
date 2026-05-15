@@ -70,6 +70,7 @@ from src.api.routes.server_get_business_handlers import (
     handle_quotes_list_get,
 )
 from src.api.routes.server_get_misc_handlers import (
+    handle_fetch_get,
     handle_email_fetch_loop_status_get,
     handle_google_oauth_callback_get,
     handle_products_get,
@@ -1124,29 +1125,7 @@ def create_rag_handler(config):
 
         def _handle_fetch_get(self, qs):
             """Handle /api/fetch GET endpoint."""
-            target_url = qs.get('url', [None])[0]
-            if not target_url:
-                return self._send_error(400, 'Missing url parameter')
-
-            if not target_url.startswith('http://') and not target_url.startswith('https://'):
-                return self._send_error(400, 'Invalid url scheme')
-
-            max_chars = self._get_qs_int(qs, 'max_chars', 10000)
-            timeout_ms = self._get_qs_int(qs, 'timeout_ms', 8000)
-
-            max_chars = max(100, min(max_chars, 50000))
-            timeout_ms = max(1000, min(timeout_ms, 20000))
-
-            try:
-                handlers = self.get_request_handlers()
-                result = handlers.handle_fetch_url(
-                    target_url=target_url,
-                    max_chars=max_chars,
-                    timeout_ms=timeout_ms,
-                )
-                return self.json(result)
-            except Exception as e:
-                return self._send_error(500, f'Fetch failed: {e}')
+            return handle_fetch_get(self, qs)
 
         def _handle_gmail_status_get(self, qs):
             """Handle /api/gmail/status GET endpoint."""
