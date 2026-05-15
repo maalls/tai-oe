@@ -352,25 +352,7 @@ def create_rag_handler(config):
                     # Send quote email for opportunity
                     send_quote_match = re.match(r"^/api/opportunity/([^/]+)/send-quote$", parsed.path)
                     if send_quote_match:
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-
-                        user_id = user_data.get('id') if user_data else None
-                        opportunity_id = send_quote_match.group(1)
-
-                        payload = self._read_json_or_error()
-                        if payload is None:
-                            return
-
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_send_quote_for_opportunity(
-                            opportunity_id=opportunity_id,
-                            payload=payload,
-                            user_id=user_id,
-                        )
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_send_quote_for_opportunity_post(send_quote_match)
 
                     # Chat attachment upload
                     if parsed.path == '/api/chat/attachments' and self.command == 'POST':
@@ -1228,6 +1210,28 @@ def create_rag_handler(config):
                 document_id=document_id,
                 content=content,
                 user_id=user_id
+            )
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_send_quote_for_opportunity_post(self, send_quote_match):
+            """Handle /api/opportunity/{id}/send-quote POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            opportunity_id = send_quote_match.group(1)
+
+            payload = self._read_json_or_error()
+            if payload is None:
+                return
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_send_quote_for_opportunity(
+                opportunity_id=opportunity_id,
+                payload=payload,
+                user_id=user_id,
             )
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
