@@ -386,21 +386,7 @@ def create_rag_handler(config):
                     # Invoice send
                     invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
                     if invoice_send_match and self.command == 'POST':
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-
-                        user_id = user_data.get('id') if user_data else None
-                        invoice_id = invoice_send_match.group(1)
-
-                        payload = self._read_json_or_error()
-                        if payload is None:
-                            return
-
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_invoice_send_post(invoice_send_match)
 
                     # Quote draft update
                     quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
@@ -1257,6 +1243,24 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_invoice_send_post(self, invoice_send_match):
+            """Handle /api/invoice/{id}/send POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            invoice_id = invoice_send_match.group(1)
+
+            payload = self._read_json_or_error()
+            if payload is None:
+                return
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
