@@ -33,6 +33,7 @@ from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, r
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
+from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
@@ -1623,31 +1624,7 @@ def create_rag_handler(config):
                 return None
 
         def _resolve_fs_path(self, raw_path: str):
-            if not raw_path:
-                self._send_error(400, 'Missing path')
-                return None
-
-            base_dir = Path(__file__).resolve().parents[3]
-            input_path = Path(raw_path)
-
-            if raw_path.startswith('~'):
-                raw_path = raw_path[1:].lstrip('/')
-                input_path = Path(raw_path)
-
-            if input_path.is_absolute():
-                try:
-                    input_path = input_path.relative_to(base_dir)
-                except Exception:
-                    self._send_error(400, 'Invalid path')
-                    return None
-
-            target_path = (base_dir / input_path).resolve()
-
-            if base_dir not in target_path.parents and target_path != base_dir:
-                self._send_error(400, 'Invalid path')
-                return None
-
-            return target_path
+            return resolve_fs_path(self, current_file=__file__, raw_path=raw_path)
         
         def _handle_raw_stream(self, qs, handlers):
             """Stream raw CSV file."""
