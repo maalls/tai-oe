@@ -104,3 +104,12 @@ def handle_auth_login_post(handler):
     result = request_handlers.handle_auth_login(body)
     status = handler._pop_status(result)
     return handler.json(result, status)
+
+
+def handle_auth_logout_post(handler):
+    """Handle /api/auth/logout POST endpoint."""
+    auth_header = handler.headers.get('Authorization', '')
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_auth_logout(auth_header)
+    status = handler._pop_status(result)
+    return handler.json(result, status)
