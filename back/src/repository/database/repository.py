@@ -19,3 +19,45 @@ class DatabaseRepository:
         """Execute a query and return rows as dictionaries."""
         return self.db_handler.execute_dict_query(query, params)
 
+    def list_public_tables_with_columns(self) -> List[Dict[str, Any]]:
+        """Return public tables enriched with column metadata."""
+        query = """
+            SELECT
+                t.table_name,
+                c.column_name,
+                c.data_type,
+                c.is_nullable,
+                c.column_default,
+                c.character_maximum_length,
+                c.numeric_precision,
+                c.numeric_scale
+            FROM information_schema.tables t
+            LEFT JOIN information_schema.columns c
+                ON t.table_name = c.table_name
+                AND t.table_schema = c.table_schema
+            WHERE t.table_schema = 'public'
+            ORDER BY t.table_name, c.ordinal_position;
+        """
+        return self.execute_dict_query(query)
+
+    def query_table(
+        self,
+        table: str,
+        columns_raw: str = "*",
+        where_clause: str = "",
+        sort_by: str = "",
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """Run a dynamic table query using current legacy query-shaping rules."""
+        columns = columns_raw if columns_raw != "*" else "*"
+        query = f"SELECT {columns} FROM {table}"
+
+        if where_clause:
+            query += f" WHERE {where_clause}"
+        if sort_by:
+            query += f" ORDER BY {sort_by}"
+
+        query += f" LIMIT {limit} OFFSET {offset}"
+        return self.execute_dict_query(query)
+
