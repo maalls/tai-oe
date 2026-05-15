@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, Tuple
 
-from src.api.routes.opportunity_routes import advance_opportunity_route
-from src.api.routes.rfp_routes import submit_rfp_route
+from src.api.opportunity.routes import advance_opportunity_route
+from src.api.rfq.routes import submit_rfp_route
 
 
 DDD_POST_ROUTE_MAP = {

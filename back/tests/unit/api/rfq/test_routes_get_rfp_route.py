@@ -1,6 +1,6 @@
 """Unit tests for RFP route adapter get_rfp_route."""
 
-from src.api.routes.rfp_routes import get_rfp_route
+from src.api.rfq.routes import get_rfp_route
 
 
 class _HandlersOK:

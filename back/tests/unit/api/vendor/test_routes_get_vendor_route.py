@@ -1,6 +1,6 @@
 """Unit tests for vendor route adapter get_vendor_route."""
 
-from src.api.routes.vendor_routes import get_vendor_route
+from src.api.vendor.routes import get_vendor_route
 
 
 class _HandlersOK:

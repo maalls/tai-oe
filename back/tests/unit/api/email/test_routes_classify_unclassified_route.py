@@ -1,6 +1,6 @@
 """Unit tests for email route adapter classify_unclassified_route."""
 
-from src.api.routes.email_routes import classify_unclassified_route
+from src.api.email.routes import classify_unclassified_route
 
 
 class _HandlersOK:

@@ -1,6 +1,6 @@
 """Unit tests for opportunity route adapter advance_opportunity_route."""
 
-from src.api.routes.opportunity_routes import advance_opportunity_route
+from src.api.opportunity.routes import advance_opportunity_route
 
 
 class _HandlersOK:
