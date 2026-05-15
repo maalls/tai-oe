@@ -91,6 +91,7 @@ from src.api.routes.server_get_misc_handlers import (
     handle_products_get,
 )
 from src.api.routes.server_head_dispatch import dispatch_head_request
+from src.api.routes.server_http_method_handlers import handle_options_method
 from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -176,8 +177,7 @@ def create_rag_handler(config):
             super().end_headers()
 
         def do_OPTIONS(self):
-            self.send_response(200)
-            self.end_headers()
+            return handle_options_method(self)
 
         def do_DELETE(self):
             try:
