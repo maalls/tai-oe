@@ -1655,7 +1655,7 @@ def create_rag_handler(config):
             action_id = get_action_logs_match.group(1)
             limit = self._get_qs_int(qs, 'limit', 50)
             result = handlers.handle_get_action_logs(action_id, limit, user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_quotes_download_get(self, parsed_path: str, qs, handlers):
