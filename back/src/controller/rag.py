@@ -1087,14 +1087,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/profile':
                     return self._handle_gmail_profile_get(qs)
                 elif parsed.path == '/api/imap/status':
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    handlers = self.get_request_handlers()
-                    user_id = user_data.get('id') if user_data else None
-                    result = handlers.handle_imap_status(user_id=user_id)
-                    return self.json(result)
+                    return self._handle_imap_status_get()
                 elif parsed.path == '/api/imap/config':
                     user_data = self._require_auth()
                     if user_data is None:
@@ -1401,6 +1394,17 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             user_id = qs.get('user_id', [None])[0]
             result = handlers.handle_gmail_profile(user_id=user_id)
+            return self.json(result)
+
+        def _handle_imap_status_get(self):
+            """Handle /api/imap/status GET endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            handlers = self.get_request_handlers()
+            user_id = user_data.get('id') if user_data else None
+            result = handlers.handle_imap_status(user_id=user_id)
             return self.json(result)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
