@@ -7,6 +7,7 @@ from typing import Dict
 
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
+from src.service.email.auth_status_service import AuthStatusService
 from src.service.email.quote_send_service import QuoteSendService
 
 
@@ -28,6 +29,7 @@ class EmailHandlers:
         """Initialize email handlers."""
         self._repository = None
         self._quote_send_service = None
+        self._auth_status_service = None
         self.service_factory = service_factory or ServiceFactory()
 
     @property
@@ -47,6 +49,12 @@ class EmailHandlers:
                 now_provider=datetime.now,
             )
         return self._quote_send_service
+
+    @property
+    def auth_status_service(self) -> AuthStatusService:
+        if getattr(self, "_auth_status_service", None) is None:
+            self._auth_status_service = AuthStatusService(repository=self.repository)
+        return self._auth_status_service
     
     def handle_gmail_authorize(self, redirect_url: str = None) -> Dict:
         """Trigger Gmail OAuth2 authorization flow.
@@ -350,34 +358,7 @@ class EmailHandlers:
         Dict
             Response with authentication status (SPF, DKIM, DMARC) and trust score
         """
-        try:
-            email = self.repository.db_handler.get_email(email_id, user_id)
-            
-            if not email:
-                return {
-                    "status": "error",
-                    "message": "Email not found"
-                }
-            
-            return {
-                "status": "ok",
-                "data": {
-                    "email_id": email_id,
-                    "from_email": email.get("from_email"),
-                    "from_name": email.get("from_name"),
-                    "spf_status": email.get("spf_status", "NONE"),
-                    "dkim_status": email.get("dkim_status", "NONE"),
-                    "dmarc_status": email.get("dmarc_status", "NONE"),
-                    "auth_score": email.get("auth_score", 0),
-                    "is_verified": email.get("is_verified", False),
-                    "sender_verified_at": email.get("sender_verified_at")
-                }
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": str(e)
-            }
+        return self.auth_status_service.get_email_auth_status(email_id=email_id, user_id=user_id)
 
     def handle_get_high_risk_senders(self, user_id: str) -> Dict:
         """Get list of high-risk senders (low trust score).
@@ -392,22 +373,7 @@ class EmailHandlers:
         Dict
             Response with list of high-risk senders
         """
-        try:
-            from src.api.email.auth_handler import EmailAuthHandler
-            
-            auth_handler = EmailAuthHandler()
-            senders = auth_handler.get_high_risk_senders(user_id, trust_score_threshold=30)
-            
-            return {
-                "status": "ok",
-                "data": senders,
-                "total": len(senders)
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": str(e)
-            }
+        return self.auth_status_service.get_high_risk_senders(user_id=user_id)
 
     def handle_get_verified_senders(self, user_id: str) -> Dict:
         """Get list of verified senders (SPF+DKIM+DMARC all pass).
@@ -422,19 +388,4 @@ class EmailHandlers:
         Dict
             Response with list of verified senders
         """
-        try:
-            from src.api.email.auth_handler import EmailAuthHandler
-            
-            auth_handler = EmailAuthHandler()
-            senders = auth_handler.get_verified_senders(user_id, limit=50)
-            
-            return {
-                "status": "ok",
-                "data": senders,
-                "total": len(senders)
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": str(e)
-            }
+        return self.auth_status_service.get_verified_senders(user_id=user_id)
