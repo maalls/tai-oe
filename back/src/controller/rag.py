@@ -182,12 +182,20 @@ def create_rag_handler(config):
             try:
                 parsed = urllib.parse.urlparse(self.path)
                 print(f"[RAG] PATCH request to: {parsed.path}")
+                if self._handle_patch_routes(parsed.path):
+                    return
+
                 print(f"[RAG] PATCH path not matched: {parsed.path}")
                 return self._send_error(404, "Not found")
             except Exception as e:
                 traceback.print_exc()
                 print(f"[RAG] PATCH error: {e}")
                 return self._send_error(500, f"Server error: {str(e)}")
+
+        def _handle_patch_routes(self, parsed_path: str) -> bool:
+            """Handle PATCH routes."""
+            _ = parsed_path
+            return False
 
         def do_PUT(self):
             try:
