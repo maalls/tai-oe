@@ -1094,9 +1094,9 @@ def create_rag_handler(config):
                     return self._handle_csv_get(parsed.path, qs)
 
                 handlers = self.get_request_handlers()
-                elif parsed.path == '/api/quotes/list':
+                if parsed.path == '/api/quotes/list':
                     return self._handle_quotes_list_get(handlers)
-                elif parsed.path == '/api/opportunities/search':
+                if parsed.path == '/api/opportunities/search':
                     return self._handle_opportunities_search_get(qs, handlers)
                 
                 # Action endpoints - List actions for opportunity
@@ -1114,9 +1114,9 @@ def create_rag_handler(config):
                 if get_action_logs_match:
                     return self._handle_action_logs_get(get_action_logs_match, qs, handlers)
                 
-                elif parsed.path.startswith('/api/quotes/download/'):
+                if parsed.path.startswith('/api/quotes/download/'):
                     return self._handle_quotes_download_get(parsed.path, qs, handlers)
-                elif parsed.path.startswith('/api/documents/download/'):
+                if parsed.path.startswith('/api/documents/download/'):
                     return self._handle_documents_download_get(parsed.path, qs, handlers)
                 else:
                     # Fallback to static file serving
