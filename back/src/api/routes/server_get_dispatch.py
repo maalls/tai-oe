@@ -3,6 +3,7 @@
 import re
 
 from src.api.routes.server_get_misc_dispatch import dispatch_get_misc_routes
+from src.api.routes.server_get_auth_dispatch import dispatch_get_auth_routes
 
 
 def dispatch_get_request(handler, parsed, qs) -> bool:
@@ -13,14 +14,7 @@ def dispatch_get_request(handler, parsed, qs) -> bool:
     if dispatch_get_misc_routes(handler, parsed, qs):
         return True
 
-    if parsed.path == '/api/auth/user':
-        handler._handle_auth_user_get()
-        return True
-    if parsed.path == '/api/oauth/login':
-        handler._handle_oauth_login_get(qs)
-        return True
-    if parsed.path == '/api/oauth/callback':
-        handler._handle_oauth_callback_get(qs)
+    if dispatch_get_auth_routes(handler, parsed, qs):
         return True
 
     if parsed.path == '/api/gmail/oauth/start':
