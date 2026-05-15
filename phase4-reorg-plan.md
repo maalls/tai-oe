@@ -163,6 +163,16 @@ Recommended validation command set per micro-step:
 4. Mirror tests and keep green.
 5. Commit.
 
+## 9.1 Execution Log (Current)
+
+- Done: removed legacy email wrappers from `back/src/command/`:
+  - `fetch_all_users_emails.py`
+  - `fetch_emails.py`
+  - `fetch_emails_loop.py`
+- Done: removed wrapper-specific unit tests under `back/tests/unit/command/`.
+- Done: updated command usage docs to `python -m src.command.email_cli ...`.
+- Remaining: run full command regression suite in a Python environment with `pytest` available.
+
 ## 10. Back Root Cleanup (Top-level `back/` files)
 
 Current issue:
