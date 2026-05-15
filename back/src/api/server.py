@@ -28,7 +28,9 @@ from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
+from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_get_dispatch import dispatch_get_request
+from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_post_dispatch import dispatch_post_request
 
 # Load .env before reading config values.
@@ -110,7 +112,7 @@ def create_rag_handler(config):
                 print(f"[RAG] do_DELETE called with path: {self.path}", file=sys.stderr)
                 parsed = urllib.parse.urlparse(self.path)
 
-                if self._handle_delete_routes(parsed.path):
+                if dispatch_delete_request(self, parsed.path):
                     return
                 
                 return self._send_error(404, "Not found")
@@ -118,49 +120,11 @@ def create_rag_handler(config):
                 traceback.print_exc()
                 return self._send_error(500, f"Server error: {str(e)}")
 
-        def _handle_delete_routes(self, parsed_path: str) -> bool:
-            """Handle DELETE routes."""
-            opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed_path)
-            if opportunity_delete_match:
-                self._handle_opportunity_delete(opportunity_delete_match)
-                return True
-
-            quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed_path)
-            if quote_delete_match:
-                self._handle_quote_delete(quote_delete_match)
-                return True
-
-            document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed_path)
-            if document_delete_match:
-                self._handle_document_delete(document_delete_match)
-                return True
-
-            attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed_path)
-            if attachment_delete_match:
-                self._handle_email_attachment_delete(attachment_delete_match)
-                return True
-
-            email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed_path)
-            if email_delete_match:
-                self._handle_email_delete(email_delete_match)
-                return True
-
-            action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed_path)
-            if action_delete_match:
-                self._handle_action_delete(action_delete_match)
-                return True
-
-            if parsed_path == '/api/imap/config':
-                self._handle_imap_config_delete()
-                return True
-
-            return False
-
         def do_PATCH(self):
             try:
                 parsed = urllib.parse.urlparse(self.path)
                 print(f"[RAG] PATCH request to: {parsed.path}")
-                if self._handle_patch_routes(parsed.path):
+                if dispatch_patch_request(self, parsed.path):
                     return
 
                 print(f"[RAG] PATCH path not matched: {parsed.path}")
@@ -170,30 +134,17 @@ def create_rag_handler(config):
                 print(f"[RAG] PATCH error: {e}")
                 return self._send_error(500, f"Server error: {str(e)}")
 
-        def _handle_patch_routes(self, _parsed_path: str) -> bool:
-            """Handle PATCH routes."""
-            return False
-
         def do_PUT(self):
             try:
                 parsed = urllib.parse.urlparse(self.path)
 
-                if self._handle_put_routes(parsed.path):
+                if dispatch_put_request(self, parsed.path):
                     return
                 
                 return self._send_error(404, "Not found")
             except Exception as e:
                 traceback.print_exc()
                 return self._send_error(500, f"Server error: {str(e)}")
-
-        def _handle_put_routes(self, parsed_path: str) -> bool:
-            """Handle PUT routes."""
-            update_action_match = re.match(r"^/api/actions/([^/]+)$", parsed_path)
-            if update_action_match:
-                self._handle_action_update_put(update_action_match)
-                return True
-
-            return False
 
         def _handle_action_update_put(self, update_action_match):
             """Handle PUT /api/actions/{id}."""
