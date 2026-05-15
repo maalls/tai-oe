@@ -43,11 +43,6 @@ from src.api.routes.server_auth_helpers import (
     require_auth_user_id,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_get_auth_handlers import (
-    handle_auth_user_get,
-    handle_oauth_callback_get,
-    handle_oauth_login_get,
-)
 from src.api.routes.server_get_mail_basic_handlers import (
     handle_gmail_authorize_get,
     handle_gmail_oauth_start_get,
@@ -83,11 +78,8 @@ from src.api.routes.server_get_utility_handlers import (
     handle_quotes_list_get,
 )
 from src.api.routes.server_get_misc_handlers import (
-    handle_fetch_get,
     handle_email_fetch_loop_status_get,
-    handle_google_oauth_callback_get,
     handle_prompt_get,
-    handle_products_get,
 )
 from src.api.routes.server_http_method_handlers import (
     handle_delete_method,
@@ -511,33 +503,9 @@ def create_rag_handler(config):
             """Handle /api/actions/{id}/execute POST endpoint."""
             return handle_action_execute_post(self, execute_action_match)
 
-        def _handle_products_get(self, qs):
-            """Handle /api/products GET endpoint."""
-            return handle_products_get(self, qs)
-
-        def _handle_google_oauth_callback_get(self, qs):
-            """Handle Google OAuth callback route."""
-            return handle_google_oauth_callback_get(self, qs)
-
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
             return handle_email_fetch_loop_status_get(self, __file__)
-
-        def _handle_auth_user_get(self):
-            """Handle /api/auth/user GET endpoint."""
-            return handle_auth_user_get(self)
-
-        def _handle_oauth_login_get(self, qs):
-            """Handle /api/oauth/login GET endpoint."""
-            return handle_oauth_login_get(self, qs)
-
-        def _handle_oauth_callback_get(self, qs):
-            """Handle /api/oauth/callback GET endpoint."""
-            return handle_oauth_callback_get(self, qs)
-
-        def _handle_fetch_get(self, qs):
-            """Handle /api/fetch GET endpoint."""
-            return handle_fetch_get(self, qs)
 
         def _handle_gmail_status_get(self, qs):
             """Handle /api/gmail/status GET endpoint."""
