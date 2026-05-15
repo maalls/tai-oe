@@ -1083,10 +1083,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/status':
                     return self._handle_gmail_status_get(qs)
                 elif parsed.path == '/api/gmail/revoke':
-                    handlers = self.get_request_handlers()
-                    user_id = qs.get('user_id', [None])[0]
-                    result = handlers.handle_gmail_revoke(user_id=user_id)
-                    return self.json(result)
+                    return self._handle_gmail_revoke_get(qs)
                 elif parsed.path == '/api/gmail/profile':
                     handlers = self.get_request_handlers()
                     user_id = qs.get('user_id', [None])[0]
@@ -1393,6 +1390,13 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             user_id = qs.get('user_id', [None])[0]
             result = handlers.handle_gmail_status(user_id=user_id)
+            return self.json(result)
+
+        def _handle_gmail_revoke_get(self, qs):
+            """Handle /api/gmail/revoke GET endpoint."""
+            handlers = self.get_request_handlers()
+            user_id = qs.get('user_id', [None])[0]
+            result = handlers.handle_gmail_revoke(user_id=user_id)
             return self.json(result)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
