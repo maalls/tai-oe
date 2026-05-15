@@ -1239,7 +1239,7 @@ def create_rag_handler(config):
         def _handle_gmail_authorize_get(self, qs):
             """Handle /api/gmail/authorize GET endpoint."""
             handlers = self.get_request_handlers()
-            redirect_url = qs.get('redirect_url', [None])[0]
+            redirect_url = self._get_qs_value(qs, 'redirect_url')
             result = handlers.handle_gmail_authorize(redirect_url)
             return self.json(result)
 
