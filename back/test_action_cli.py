@@ -1,35 +1,8 @@
 #!/usr/bin/env python3
-"""
-Test script for action CLI - lists actions for opportunity c32c94d9-66ea-427b-8ba0-4946191f4c31
-"""
+"""Compatibility wrapper for tests/unit/command/test_action_cli.py."""
 
-import subprocess
-import sys
-import json
-
-def run_command(cmd):
-    """Run a command and return output."""
-    print(f"\n{'='*100}")
-    print(f"Running: {cmd}")
-    print(f"{'='*100}\n")
-    
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    print(result.stdout)
-    
-    if result.stderr:
-        print("STDERR:", result.stderr, file=sys.stderr)
-    
-    return result.returncode
+from tests.unit.command.test_action_cli import main
 
 
-def main():
-    """Run test queries."""
-    
-    opportunity_id = "c32c94d9-66ea-427b-8ba0-4946191f4c31"
-    
-    # List actions for the opportunity
-    run_command(f"cd /Users/malo/Documents/Projects/rkllm-server/external/rag && python -m src.command.action_cli list-actions {opportunity_id}")
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
