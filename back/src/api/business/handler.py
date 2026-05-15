@@ -21,7 +21,7 @@ from src.api.business.rfq_handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.supabase.supabase_client import get_supabase_service
-from src.controller.opportunity.opportunity import Opportunity as OpportunityController
+from src.api.business.opportunity_controller import Opportunity as OpportunityController
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
 
