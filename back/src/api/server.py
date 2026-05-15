@@ -43,20 +43,8 @@ from src.api.routes.server_auth_helpers import (
     require_auth_user_id,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_get_mail_basic_handlers import (
-    handle_gmail_authorize_get,
-    handle_gmail_oauth_start_get,
-    handle_gmail_profile_get,
-    handle_gmail_revoke_get,
-    handle_gmail_status_get,
-    handle_imap_config_get,
-    handle_imap_status_get,
-)
 from src.api.routes.server_get_mail_message_handlers import (
     handle_email_attachment_get,
-    handle_gmail_classify_unclassified_get,
-    handle_gmail_message_get,
-    handle_gmail_messages_get,
 )
 from src.api.routes.server_get_csv_handlers import (
     handle_csv_files_get,
@@ -506,46 +494,6 @@ def create_rag_handler(config):
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
             return handle_email_fetch_loop_status_get(self, __file__)
-
-        def _handle_gmail_status_get(self, qs):
-            """Handle /api/gmail/status GET endpoint."""
-            return handle_gmail_status_get(self, qs)
-
-        def _handle_gmail_authorize_get(self, qs):
-            """Handle /api/gmail/authorize GET endpoint."""
-            return handle_gmail_authorize_get(self, qs)
-
-        def _handle_gmail_oauth_start_get(self, qs):
-            """Handle /api/gmail/oauth/start GET endpoint."""
-            return handle_gmail_oauth_start_get(self, qs)
-
-        def _handle_gmail_revoke_get(self, qs):
-            """Handle /api/gmail/revoke GET endpoint."""
-            return handle_gmail_revoke_get(self, qs)
-
-        def _handle_gmail_profile_get(self, qs):
-            """Handle /api/gmail/profile GET endpoint."""
-            return handle_gmail_profile_get(self, qs)
-
-        def _handle_imap_status_get(self):
-            """Handle /api/imap/status GET endpoint."""
-            return handle_imap_status_get(self)
-
-        def _handle_imap_config_get(self):
-            """Handle /api/imap/config GET endpoint."""
-            return handle_imap_config_get(self)
-
-        def _handle_gmail_messages_get(self, qs):
-            """Handle /api/gmail/messages GET endpoint."""
-            return handle_gmail_messages_get(self, qs)
-
-        def _handle_gmail_classify_unclassified_get(self, qs):
-            """Handle /api/gmail/classify-unclassified GET endpoint."""
-            return handle_gmail_classify_unclassified_get(self, qs)
-
-        def _handle_gmail_message_get(self, parsed_path: str):
-            """Handle /api/gmail/message/<id> GET endpoint."""
-            return handle_gmail_message_get(self, parsed_path)
 
         def _handle_email_attachment_get(self, parsed_path: str):
             """Handle /api/email-attachment/<id> GET endpoint."""
