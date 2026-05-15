@@ -471,6 +471,10 @@ def create_rag_handler(config):
                 # Auth endpoint
                 if parsed.path == '/api/auth/user':
                     return self._handle_auth_user_get()
+                if parsed.path == '/api/oauth/login':
+                    return self._handle_oauth_login_get(qs)
+                if parsed.path == '/api/oauth/callback':
+                    return self._handle_oauth_callback_get(qs)
                 
                 # Existing endpoints
                 if parsed.path == '/api/gmail/oauth/start':
@@ -1463,6 +1467,38 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_user(auth_header)
             status = self._pop_status(result)
+            return self.json(result, status)
+
+        def _handle_oauth_login_get(self, qs):
+            """Handle /api/oauth/login GET endpoint."""
+            provider = self._get_qs_value(qs, 'provider')
+            if not provider:
+                return self._send_error(400, 'Missing provider parameter')
+            redirect_url = self._get_qs_value(qs, 'redirect_url')
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_oauth_login(provider=provider, redirect_url=redirect_url)
+            status = self._status_from_result(result)
+            return self.json(result, status)
+
+        def _handle_oauth_callback_get(self, qs):
+            """Handle /api/oauth/callback GET endpoint."""
+            provider = self._get_qs_value(qs, 'provider')
+            code = self._get_qs_value(qs, 'code')
+            state = self._get_qs_value(qs, 'state')
+            if not provider:
+                return self._send_error(400, 'Missing provider parameter')
+            if not code:
+                return self._send_error(400, 'Missing code parameter')
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_oauth_callback(provider=provider, code=code, state=state)
+
+            # Keep browser flow ergonomic when callback contains a redirect target.
+            if result.get('status') == 'ok' and result.get('redirect_url'):
+                return self._send_redirect(result['redirect_url'])
+
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_fetch_get(self, qs):

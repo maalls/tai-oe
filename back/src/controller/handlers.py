@@ -19,6 +19,7 @@ from src.api.classification.handler import ClassifyHandler
 from src.api.action.handler import ActionHandlers
 from src.infrastructure.clients.database import DatabaseHandler
 from src.api.auth.handler import AuthHandler
+from src.api.auth.oauth_handler import OAuthHandler
 from src.api.quote.handler import Quote as QuoteController
 from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
@@ -73,6 +74,16 @@ class RequestHandlers:
         """Handle /api/auth/user request."""
         auth_handler = AuthHandler()
         return auth_handler.handle_get_user(auth_header)
+
+    def handle_oauth_login(self, provider: str, redirect_url: Optional[str] = None) -> Dict:
+        """Handle provider-agnostic OAuth login URL generation."""
+        oauth_handler = OAuthHandler()
+        return oauth_handler.handle_login(provider=provider, redirect_url=redirect_url)
+
+    def handle_oauth_callback(self, provider: str, code: str, state: Optional[str] = None) -> Dict:
+        """Handle provider-agnostic OAuth callback exchange."""
+        oauth_handler = OAuthHandler()
+        return oauth_handler.handle_callback(provider=provider, code=code, state=state)
                     
     
 
