@@ -1578,7 +1578,7 @@ def create_rag_handler(config):
                 return self._send_error(400, 'Missing user_id')
 
             result = handlers.handle_classify_unclassified(user_id=user_id, limit=limit)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_gmail_message_get(self, parsed_path: str):
