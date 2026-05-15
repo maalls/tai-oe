@@ -1246,8 +1246,8 @@ def create_rag_handler(config):
         def _handle_gmail_oauth_start_get(self, qs):
             """Handle /api/gmail/oauth/start GET endpoint."""
             handlers = self.get_request_handlers()
-            redirect_url = qs.get('redirect_url', [None])[0]
-            user_id = qs.get('user_id', [None])[0]
+            redirect_url = self._get_qs_value(qs, 'redirect_url')
+            user_id = self._get_qs_value(qs, 'user_id')
             result = handlers.handle_gmail_oauth_start(redirect_url, user_id=user_id)
             return self.json(result)
 
