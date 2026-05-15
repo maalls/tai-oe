@@ -36,3 +36,30 @@ def test_dispatch_get_data_routes_quotes_list_path(monkeypatch):
 
     assert handled is True
     assert calls == [(handler, "GET", "/api/quotes/list", {}, request_handlers)]
+
+
+def test_dispatch_get_data_routes_delegates_opportunity_router(monkeypatch):
+    monkeypatch.setattr(
+        "src.api.routes.server_get_data_dispatch.dispatch_csv_routes",
+        lambda *_args, **_kwargs: False,
+    )
+    monkeypatch.setattr(
+        "src.api.routes.server_get_data_dispatch.dispatch_quote_routes",
+        lambda *_args, **_kwargs: False,
+    )
+    calls = []
+
+    def _fake(handler, method, parsed, qs, request_handlers):
+        calls.append((handler, method, parsed.path, qs, request_handlers))
+        return True
+
+    monkeypatch.setattr("src.api.routes.server_get_data_dispatch.dispatch_opportunity_routes", _fake)
+
+    handler = object()
+    parsed = SimpleNamespace(path="/api/opportunities/search")
+    request_handlers = object()
+
+    handled = dispatch_get_data_routes(handler, parsed, {"q": ["acme"]}, request_handlers=request_handlers)
+
+    assert handled is True
+    assert calls == [(handler, "GET", "/api/opportunities/search", {"q": ["acme"]}, request_handlers)]

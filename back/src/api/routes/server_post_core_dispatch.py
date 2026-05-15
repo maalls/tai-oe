@@ -1,29 +1,20 @@
 """Core POST route dispatch for legacy API server."""
 
-from src.api.file.handler import (
-    handle_curl_post,
-    handle_fs_create_post,
-    handle_fs_read_post,
-)
-from src.api.product.handler import handle_products_post
+from types import SimpleNamespace
+
+from src.api.file.routes import dispatch_file_routes
+from src.api.product.routes import dispatch_product_routes
 
 
 def dispatch_post_core_routes(handler, parsed_path: str) -> bool:
     """Dispatch core POST routes and return True when handled."""
-    if parsed_path == '/api/products':
-        handle_products_post(handler)
+    parsed = SimpleNamespace(path=parsed_path)
+    request_handlers = handler.request_handlers
+
+    if dispatch_product_routes(handler, "POST", parsed, {}, request_handlers):
         return True
 
-    if parsed_path == '/api/fs/create':
-        handle_fs_create_post(handler)
-        return True
-
-    if parsed_path == '/api/fs/read':
-        handle_fs_read_post(handler)
-        return True
-
-    if parsed_path == '/api/curl':
-        handle_curl_post(handler)
+    if dispatch_file_routes(handler, "POST", parsed, {}, request_handlers):
         return True
 
     return False

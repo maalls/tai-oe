@@ -14,12 +14,13 @@ class _HandlerStub:
 def test_dispatch_post_domain_routes_entity_update_regex():
     calls = []
 
-    def _entity_handler(handler, match):
-        calls.append((handler, match.group(1), match.group(2)))
+    def _entity_router(handler, method, parsed, qs, request_handlers):
+        calls.append((handler, method, parsed.path, qs, request_handlers))
+        return True
 
     from src.api.routes import server_post_domain_dispatch as module
     module.dispatch_email_routes = lambda *_args, **_kwargs: False
-    module.handle_entity_update_post = _entity_handler
+    module.dispatch_entity_routes = _entity_router
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/entity/opportunities/name")
@@ -27,7 +28,7 @@ def test_dispatch_post_domain_routes_entity_update_regex():
     handled = dispatch_post_domain_routes(handler, parsed)
 
     assert handled is True
-    assert calls == [(handler, "opportunities", "name")]
+    assert calls == [(handler, "POST", "/api/entity/opportunities/name", {}, handler.request_handlers)]
 
 
 def test_dispatch_post_domain_routes_delegates_email_router(monkeypatch):

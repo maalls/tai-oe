@@ -14,19 +14,24 @@ class _HandlerStub:
 def test_dispatch_post_business_routes_send_quote_regex():
     calls = []
 
-    def _quote_router(*_args, **_kwargs):
+    def _opp_router(handler, method, parsed, qs, request_handlers):
+        calls.append((handler, method, parsed.path, qs, request_handlers))
+        return True
+
+    def _doc_router(*_args, **_kwargs):
         return False
 
     def _invoice_router(*_args, **_kwargs):
         return False
 
-    def _send_quote_handler(handler, match):
-        calls.append((handler, match.group(1)))
+    def _quote_router(*_args, **_kwargs):
+        return False
 
     from src.api.routes import server_post_business_dispatch as module
+    module.dispatch_opportunity_routes = _opp_router
+    module.dispatch_document_routes = _doc_router
     module.dispatch_quote_routes = _quote_router
     module.dispatch_invoice_routes = _invoice_router
-    module.handle_send_quote_for_opportunity_post = _send_quote_handler
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/opportunity/opp-1/send-quote")
@@ -34,10 +39,18 @@ def test_dispatch_post_business_routes_send_quote_regex():
     handled = dispatch_post_business_routes(handler, parsed)
 
     assert handled is True
-    assert calls == [(handler, "opp-1")]
+    assert calls == [(handler, "POST", "/api/opportunity/opp-1/send-quote", {}, handler.request_handlers)]
 
 
 def test_dispatch_post_business_routes_delegates_quote_router(monkeypatch):
+    monkeypatch.setattr(
+        "src.api.routes.server_post_business_dispatch.dispatch_opportunity_routes",
+        lambda *_args, **_kwargs: False,
+    )
+    monkeypatch.setattr(
+        "src.api.routes.server_post_business_dispatch.dispatch_document_routes",
+        lambda *_args, **_kwargs: False,
+    )
     calls = []
 
     def _quote_router(handler, method, parsed, qs, request_handlers):

@@ -156,7 +156,7 @@ Exemple de message de commit:
 
 - [x] Lot 1 - Fondation domaine (auth/action/csv)
 - [x] Lot 2 - Domaines HTTP mixtes (email/quote/invoice)
-- [ ] Lot 3 - Domaines complexes (opportunity/document/rfq/entity/product/file)
+- [x] Lot 3 - Domaines complexes (opportunity/document/rfq/entity/product/file)
 - [ ] Lot 4 - Orchestrateur final + cleanup
 
 ## Journal de decisions
@@ -170,3 +170,6 @@ Ajouter ici les decisions importantes prises en cours de migration.
 - 2026-05-15: Lot 2 termine avec creation de `email/routes.py`, `quote/routes.py`, `invoice/routes.py` pour le serveur legacy.
 - 2026-05-15: Les dispatchers mail/data/business/domain/delete/legacy ont ete recables vers ces routeurs domaine.
 - 2026-05-15: Tests unitaires routing Lot 2 passes (`20 passed`).
+- 2026-05-15: Lot 3 termine avec creation de `opportunity/routes.py`, `document/routes.py`, `rfq/routes.py`, `entity/routes.py`, `product/routes.py`, `file/routes.py`.
+- 2026-05-15: Les dispatchers misc/core/domain/business/data/action-download/head/delete/legacy deleguent maintenant vers ces routeurs domaine.
+- 2026-05-15: Tests unitaires routing Lot 3 passes (`34 passed`).

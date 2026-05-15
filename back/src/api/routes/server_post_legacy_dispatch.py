@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from src.api.action.routes import dispatch_action_routes
 from src.api.csv.routes import dispatch_csv_routes
 from src.api.quote.routes import dispatch_quote_routes
-from src.api.rfq.handler import handle_rfp_post
+from src.api.rfq.routes import dispatch_rfq_routes
 
 
 def dispatch_action_post_routes(handler, parsed_path: str) -> bool:
@@ -23,8 +23,7 @@ def dispatch_post_legacy_and_action_routes(handler, parsed_path: str) -> bool:
     if dispatch_csv_routes(handler, "POST", parsed, {}):
         return True
 
-    if parsed_path == '/api/rfp':
-        handle_rfp_post(handler)
+    if dispatch_rfq_routes(handler, "POST", parsed, {}, request_handlers):
         return True
 
     if dispatch_quote_routes(handler, "POST", parsed, {}, request_handlers):

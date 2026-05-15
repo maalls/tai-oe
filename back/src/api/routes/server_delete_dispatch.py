@@ -1,12 +1,11 @@
 """DELETE route dispatch for legacy API server."""
 
-import re
 from types import SimpleNamespace
 
 from src.api.action.routes import dispatch_action_routes
-from src.api.document.handler import handle_document_delete
+from src.api.document.routes import dispatch_document_routes
 from src.api.email.routes import dispatch_email_routes
-from src.api.opportunity.handler import handle_opportunity_delete
+from src.api.opportunity.routes import dispatch_opportunity_routes
 from src.api.quote.routes import dispatch_quote_routes
 
 
@@ -24,14 +23,10 @@ def dispatch_delete_request(handler, parsed_path: str) -> bool:
     if dispatch_quote_routes(handler, "DELETE", parsed, {}, request_handlers):
         return True
 
-    opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed_path)
-    if opportunity_delete_match:
-        handle_opportunity_delete(handler, opportunity_delete_match)
+    if dispatch_opportunity_routes(handler, "DELETE", parsed, {}, request_handlers):
         return True
 
-    document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed_path)
-    if document_delete_match:
-        handle_document_delete(handler, document_delete_match)
+    if dispatch_document_routes(handler, "DELETE", parsed, {}, request_handlers):
         return True
 
     return False
