@@ -33,7 +33,7 @@ from src.api.routes.server_auth_helpers import (
     require_auth,
     require_auth_user_id,
 )
-from src.api.routes.server_body_helpers import read_body
+from src.api.routes.server_body_helpers import read_body, read_json
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_get_auth_handlers import (
     handle_auth_user_get,
@@ -1267,11 +1267,7 @@ def create_rag_handler(config):
             return read_body(self)
 
         def _read_json(self, default=None):
-            body = self._read_body()
-            try:
-                return json.loads(body.decode('utf-8') or '{}')
-            except Exception:
-                return {} if default is None else default
+            return read_json(self, default=default)
 
         def _read_json_or_error(self, error_payload=None, status_code=400):
             body = self._read_body()
