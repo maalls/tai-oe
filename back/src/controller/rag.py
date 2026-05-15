@@ -1120,17 +1120,7 @@ def create_rag_handler(config):
                 # Get action logs
                 get_action_logs_match = re.match(r"^/api/actions/([^/]+)/logs$", parsed.path)
                 if get_action_logs_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    action_id = get_action_logs_match.group(1)
-                    limit = self._get_qs_int(qs, 'limit', 50)
-
-                    result = handlers.handle_get_action_logs(action_id, limit, user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_action_logs_get(get_action_logs_match, qs, handlers)
                 
                 elif parsed.path.startswith('/api/quotes/download/'):
                     filename = parsed.path.split('/api/quotes/download/')[-1]
@@ -1405,6 +1395,19 @@ def create_rag_handler(config):
             user_id = user_data.get('id') if user_data else None
             action_id = get_action_match.group(1)
             result = handlers.handle_get_action(action_id, user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_action_logs_get(self, get_action_logs_match, qs, handlers):
+            """Handle /api/actions/<id>/logs GET endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            action_id = get_action_logs_match.group(1)
+            limit = self._get_qs_int(qs, 'limit', 50)
+            result = handlers.handle_get_action_logs(action_id, limit, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
