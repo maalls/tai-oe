@@ -314,21 +314,7 @@ def create_rag_handler(config):
                 elif parsed.path.startswith('/api/emails/classify/'):
                     return self._handle_emails_classify_post(parsed.path)
                 elif parsed.path == '/api/rfq/generate':
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-
-                    payload = self._read_json(default={})
-
-                    text = payload.get('text') or payload.get('content')
-                    message_id = payload.get('message_id')
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_rfq_generate_post()
                 elif parsed.path == '/api/opportunities/create-from-email':
                     user_data = self._require_auth()
                     if user_data is None:
@@ -1186,6 +1172,23 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_rfq_generate_post(self):
+            """Handle /api/rfq/generate POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            payload = self._read_json(default={})
+
+            text = payload.get('text') or payload.get('content')
+            message_id = payload.get('message_id')
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
