@@ -135,7 +135,7 @@ def test_set_brand_raises_when_brand_not_found() -> None:
 
 def test_load_pdf_reads_text_from_asset() -> None:
 	importer = NetPriceImporter(FakeSupabaseClient(), llm_client=object())
-	asset_path = Path(__file__).resolve().parents[1] / "assets" / "test_asset_abb_2026.pdf"
+	asset_path = Path(__file__).resolve().parents[4] / "fixtures" / "files" / "net_price" / "test_asset_abb_2026.pdf"
 
 	text = importer.load_pdf(asset_path)
 

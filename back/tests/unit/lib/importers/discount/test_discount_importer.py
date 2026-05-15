@@ -251,7 +251,7 @@ def test_upsert_discount_raises_when_missing_and_skip_disabled() -> None:
         )
 
 
-def test_run_parses_and_updates_discounts() -> None:
+def test_run_parses_and_updates_discounts(monkeypatch) -> None:
     client = FakeSupabaseClient()
     client.families = [
         {"id": "f-1", "brand_id": "brand-1", "code": "A10", "name": "Family A10", "quantity": 1.0, "discount": 2.0}
@@ -271,6 +271,14 @@ def test_run_parses_and_updates_discounts() -> None:
     importer.brand = {"id": "brand-1", "name": "ABB"}
     importer.pdf_path = Path("dummy.pdf")
     importer.pdf_text = "sample extracted text"
+    monkeypatch.setattr(importer, "parseDiscountsUsingVision", lambda pdf_path=None: [
+        {
+            "family_code": "A10",
+            "description": "Family A10",
+            "quantity": 3,
+            "discount": 77,
+        }
+    ])
 
     summary = importer.run()
 

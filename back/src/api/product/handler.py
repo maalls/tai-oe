@@ -35,8 +35,19 @@ class ProductController:
         return product
 
     def upsert_family(self, product, payload):
+        brand_id = (product.get('brand') or {}).get('id') or product.get('brand_id')
+        if not brand_id:
+            raise ValueError("Missing product brand_id for family upsert")
+
         print("Validating family codes in the database:", payload['family_codes'])
-        db_families = self.supabase.from_('family').select('*').in_('code', payload['family_codes']).execute()
+        db_families = (
+            self.supabase
+            .from_('family')
+            .select('*')
+            .eq('brand_id', brand_id)
+            .in_('code', payload['family_codes'])
+            .execute()
+        )
         print('found families: ', len(db_families.data))
         families = db_families.data
         print("Families found in database:", families)
@@ -44,7 +55,7 @@ class ProductController:
         codes = {family['code'] for family in db_families.data}
         for code in payload['family_codes']:
             if code not in codes:
-                family = self.create_family(code)
+                family = self.create_family(code, brand_id)
                 families.append(family)
             else:
                 family = next(f for f in db_families.data if f['code'] == code)
@@ -63,9 +74,9 @@ class ProductController:
         product['families'] = families
         return product
 
-    def create_family(self, code):
+    def create_family(self, code, brand_id):
         print(f"Creating missing family code '{code}' in database")
-        data = {"code": code, "type": "NET_PRICE", "name": code}
+        data = {"brand_id": brand_id, "code": code, "type": "NET_PRICE", "name": code}
         result = self.supabase.from_('family').insert(data).execute()
         print("Database insert result for family code:", result)
         if result.data is None:

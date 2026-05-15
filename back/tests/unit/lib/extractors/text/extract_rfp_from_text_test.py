@@ -25,7 +25,7 @@ def _llm_available() -> tuple[bool, str]:
 @pytest.mark.timeout(180)
 def test_extract_rfp_from_text_counts_products():
 	if os.getenv("RUN_LLM_LIVE") != "1":
-		pytest.fail("Set RUN_LLM_LIVE=1 to run live LLM extraction test")
+		pytest.skip("Set RUN_LLM_LIVE=1 to run live LLM extraction test")
 
 	reachable, detail = _llm_available()
 	if not reachable:
@@ -51,7 +51,7 @@ def test_extract_rfp_from_text_counts_products():
 @pytest.mark.timeout(300)
 def test_extract_rfp_from_text_large_products():
 	if os.getenv("RUN_LLM_LIVE") != "1":
-		pytest.fail("Set RUN_LLM_LIVE=1 to run live LLM extraction test")
+		pytest.skip("Set RUN_LLM_LIVE=1 to run live LLM extraction test")
 
 	reachable, detail = _llm_available()
 	if not reachable:

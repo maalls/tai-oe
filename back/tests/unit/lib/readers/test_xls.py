@@ -5,7 +5,7 @@ from src.lib.readers.xls import XlsReader
 
 
 def test_convert_to_csv_creates_expected_files(tmp_path: Path):
-	assets_dir = Path(__file__).resolve().parent / "assets"
+	assets_dir = Path(__file__).resolve().parents[3] / "fixtures" / "files" / "readers"
 
 	# Prefer .xlsx asset (present in repo) but fall back to .xls if provided later
 	input_file = assets_dir / "dummy.xlsx"

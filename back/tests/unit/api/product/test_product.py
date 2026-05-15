@@ -7,15 +7,23 @@ class TestProductController(unittest.TestCase):
     def setUp(self):
         self.supabase = get_supabase_service()
         # Clean up any test products that might exist from previous test runs
+
+    def _resolve_brand_id(self):
+        brands = self.supabase.from_('brand').select('id').eq('marque', 'ABB').limit(1).execute()
+        if not brands.data:
+            self.skipTest("Brand ABB not found in database")
+        return brands.data[0]['id']
         
 
     def test_get(self):
         controller = ProductController()
+        brand_id = self._resolve_brand_id()
         # Insert a test product directly into the database for retrieval
         test_product = {
             "sku": "TESTSKU123",
             "name": "Test Product",
-            "price": 99.99
+            "price": 99.99,
+            "brand_id": brand_id,
         }
         tp = self.supabase.from_('product').select('*').eq('sku', test_product['sku']).execute();
         if len(tp.data) > 0:
@@ -34,6 +42,7 @@ class TestProductController(unittest.TestCase):
 
     def test_post_returns_expected_json(self):
         controller = ProductController()
+        self._resolve_brand_id()
         payload = {
             "family_codes": ["NET_PRICE"],
             "libelle240": "Test Product",

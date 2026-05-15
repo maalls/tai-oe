@@ -4,7 +4,7 @@ from src.lib.extractors.pdf import extract_text
 
 
 def test_extract_text_hello_world():
-	pdf_path = Path(__file__).parent / "Hello_World.pdf"
+	pdf_path = Path(__file__).resolve().parents[4] / "fixtures" / "files" / "pdf" / "Hello_World.pdf"
 	assert pdf_path.exists(), "Fixture PDF missing"
 
 	content = extract_text(pdf_path)

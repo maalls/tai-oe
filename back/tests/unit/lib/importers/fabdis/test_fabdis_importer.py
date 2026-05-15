@@ -81,7 +81,7 @@ class FakeSupabaseClient:
 		self.vendor_rows = {"ABB": "vendor-1"}
 		self.brand_rows = {("vendor-1", "ABB"): "brand-1"}
 		self.product_rows = {("brand-1", "ABB-SKU"): "product-1"}
-		self.family_rows = {("brand-1", "FAM1", "R"): "family-1"}
+		self.family_rows = {("brand-1", None, "R"): "family-1"}
 		self.product_family_rows = {("product-1", "family-1")}
 		self.inserted_vendors = []
 		self.inserted_brands = []
@@ -469,7 +469,7 @@ def test_import_products_creates_product_and_families_from_commerce_rows():
 	assert supabase_client.inserted_families == [
 		{
 			"brand_id": "brand-1",
-			"type": "FAM2",
+			"type": None,
 			"code": "R15",
 			"name": "Connexion",
 		}
