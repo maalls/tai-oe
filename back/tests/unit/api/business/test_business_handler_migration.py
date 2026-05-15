@@ -40,6 +40,19 @@ class _EmailHandlersStub:
         return {"status": "ok", "message": "Quote email sent successfully"}
 
 
+class _QuoteHandlersStub:
+    def __init__(self):
+        self.calls = []
+
+    def handle_list_quotes(self):
+        self.calls.append(("list",))
+        return {"status": "ok", "quotes": ["quote_1.pdf"], "total": 1}
+
+    def handle_get_quote_file(self, filename: str):
+        self.calls.append(("get", filename))
+        return b"pdf-bytes"
+
+
 class _OpportunityRepositoryStub:
     def __init__(self):
         self.calls = []
@@ -129,6 +142,7 @@ def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
     handler.email_handlers = _EmailHandlersStub()
+    handler.quote_handlers = _QuoteHandlersStub()
     handler.opportunity_repository = _OpportunityRepositoryStub()
     handler.opportunity_handlers = _OpportunityHandlersStub(handler.opportunity_repository)
     handler._document_content_service = _DocumentContentServiceStub()
@@ -212,6 +226,24 @@ def test_handle_send_quote_for_opportunity_delegates_to_email_handler():
 
     assert result == {"status": "ok", "message": "Quote email sent successfully"}
     assert handler.email_handlers.quote_calls[-1] == ("send_for_opp", "opp-99", payload, "u-2")
+
+
+def test_handle_list_quotes_delegates_to_quote_handler():
+    handler = _make_handler()
+
+    result = handler.handle_list_quotes()
+
+    assert result == {"status": "ok", "quotes": ["quote_1.pdf"], "total": 1}
+    assert handler.quote_handlers.calls == [("list",)]
+
+
+def test_handle_get_quote_file_delegates_to_quote_handler():
+    handler = _make_handler()
+
+    result = handler.handle_get_quote_file("quote_1.pdf")
+
+    assert result == b"pdf-bytes"
+    assert handler.quote_handlers.calls == [("get", "quote_1.pdf")]
 
 
 def test_business_handler_opportunity_wrappers_are_class_methods():

@@ -77,4 +77,68 @@ class Quote:
     def _compute_totals(self, rfp_data: Dict) -> Dict[str, float]:
         return self.quote_service._compute_totals(rfp_data)
 
+    @staticmethod
+    def _get_storage_dir(source: str) -> Path:
+        base_storage = Path("var/storage")
+        source_map = {
+            "rfp_upload": "rfp_uploads",
+            "email": "emails",
+            "quote": "quotes",
+            "invoice": "invoices",
+            "attachment": "attachments",
+        }
+        subdir = source_map.get(source, source)
+        return base_storage / subdir
+
+    @staticmethod
+    def _get_storage_path(source: str, filename: str) -> Path:
+        return Quote._get_storage_dir(source) / filename
+
+    def handle_list_quotes(self) -> Dict:
+        """List all generated quote files."""
+        try:
+            assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
+            assets_dir.mkdir(parents=True, exist_ok=True)
+
+            pdf_files = sorted(
+                [f.name for f in assets_dir.glob("quote_*.pdf")],
+                reverse=True,
+            )
+
+            return {
+                "status": "ok",
+                "quotes": pdf_files,
+                "total": len(pdf_files),
+            }
+        except Exception as e:  # noqa: BLE001
+            print(f"[QuoteController] Error listing quotes: {e}")
+            return {
+                "status": "error",
+                "message": f"Error listing quotes: {str(e)}",
+            }
+
+    def handle_get_quote_file(self, filename: str) -> bytes:
+        """Retrieve a quote PDF file from storage."""
+        try:
+            if not filename.startswith("quote_") or not filename.endswith(".pdf"):
+                raise ValueError(f"Invalid filename format: {filename}")
+
+            pdf_path = self._get_storage_path("quote", filename)
+
+            if not pdf_path.exists():
+                legacy_assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
+                legacy_pdf_path = legacy_assets_dir / filename
+
+                if legacy_pdf_path.exists():
+                    pdf_path = legacy_pdf_path
+                else:
+                    raise FileNotFoundError(f"Quote file not found: {filename}")
+
+            return pdf_path.read_bytes()
+        except FileNotFoundError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            print(f"[QuoteController] Error retrieving quote: {e}")
+            raise FileNotFoundError(f"Error retrieving quote: {str(e)}")
+
 

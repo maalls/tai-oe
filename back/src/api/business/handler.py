@@ -17,6 +17,7 @@ from html.parser import HTMLParser
 from src.api.email.handler import EmailHandlers
 from src.api.document.handler import DocumentHandlers
 from src.api.opportunity.handler import OpportunityHandlers
+from src.api.quote.handler import Quote
 from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
@@ -50,6 +51,7 @@ class BusinessHandlers:
             opportunity_repository=self.opportunity_repository,
             supabase=self.supabase,
         )
+        self.quote_handlers = Quote()
         self.document_handlers = DocumentHandlers(
             supabase=self.supabase,
             storage_dir_resolver=self._get_storage_dir,
@@ -991,77 +993,12 @@ class BusinessHandlers:
             }
     
     def handle_list_quotes(self) -> Dict:
-        """List all generated quotes.
-        
-        Returns
-        -------
-        Dict
-            List of available quote files
-        """
-        try:
-            assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-            assets_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Find all PDF files
-            pdf_files = sorted(
-                [f.name for f in assets_dir.glob('quote_*.pdf')],
-                reverse=True
-            )
-            
-            return {
-                "status": "ok",
-                "quotes": pdf_files,
-                "total": len(pdf_files)
-            }
-        except Exception as e:
-            print(f"[BusinessHandlers] Error listing quotes: {e}")
-            return {
-                "status": "error",
-                "message": f"Error listing quotes: {str(e)}"
-            }
+        """List all generated quotes via the dedicated quote handler."""
+        return self.quote_handlers.handle_list_quotes()
     
     def handle_get_quote_file(self, filename: str) -> bytes:
-        """Retrieve a quote PDF file.
-        
-        Parameters
-        ----------
-        filename : str
-            PDF filename
-        
-        Returns
-        -------
-        bytes
-            PDF file content
-        
-        Raises
-        ------
-        FileNotFoundError
-            If file doesn't exist
-        """
-        try:
-            # Validate filename format to prevent path traversal
-            if not filename.startswith('quote_') or not filename.endswith('.pdf'):
-                raise ValueError(f"Invalid filename format: {filename}")
-            
-            # Primary check: new organized storage structure
-            pdf_path = self._get_storage_path("quote", filename)
-            
-            if not pdf_path.exists():
-                # Fallback: check old /var/assets location for legacy PDFs
-                legacy_assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                legacy_pdf_path = legacy_assets_dir / filename
-                
-                if legacy_pdf_path.exists():
-                    pdf_path = legacy_pdf_path
-                else:
-                    raise FileNotFoundError(f"Quote file not found: {filename}")
-            
-            return pdf_path.read_bytes()
-        except FileNotFoundError:
-            raise
-        except Exception as e:
-            print(f"[BusinessHandlers] Error retrieving quote: {e}")
-            raise FileNotFoundError(f"Error retrieving quote: {str(e)}")
+        """Retrieve a quote PDF file via the dedicated quote handler."""
+        return self.quote_handlers.handle_get_quote_file(filename)
     
     def handle_quote_send(self, body: bytes, content_type: str) -> Dict:
         """Delegate quote send flow to EmailHandlers."""
