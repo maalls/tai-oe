@@ -17,7 +17,7 @@ from html.parser import HTMLParser
 from src.text.reader import extract_company_from_text, extract_rfp_from_text
 from src.text.rfp_source_picker import pick_best_rfp_source
 from src.api.email.handler import EmailHandlers
-from src.controller.rfq_handler import RfqHandlers
+from src.api.business.rfq_handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.supabase.supabase_client import get_supabase_service
