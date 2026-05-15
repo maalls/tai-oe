@@ -1139,14 +1139,8 @@ def create_rag_handler(config):
             headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
             body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
 
-            try:
-                max_chars = int(payload.get('max_chars') or 10000)
-            except Exception:
-                max_chars = 10000
-            try:
-                timeout_ms = int(payload.get('timeout_ms') or 8000)
-            except Exception:
-                timeout_ms = 8000
+            max_chars = self._get_payload_int(payload, 'max_chars', 10000)
+            timeout_ms = self._get_payload_int(payload, 'timeout_ms', 8000)
 
             max_chars = max(100, min(max_chars, 50000))
             timeout_ms = max(1000, min(timeout_ms, 20000))
