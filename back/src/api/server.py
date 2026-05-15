@@ -73,6 +73,7 @@ from src.api.routes.server_get_misc_handlers import (
     handle_fetch_get,
     handle_email_fetch_loop_status_get,
     handle_google_oauth_callback_get,
+    handle_prompt_get,
     handle_products_get,
 )
 from src.api.routes.server_head_dispatch import dispatch_head_request
@@ -1249,22 +1250,7 @@ def create_rag_handler(config):
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
-            relative_path = parsed_path[len('/api/prompt/'):].strip('/')
-            handlers = self.get_request_handlers()
-            base_dir = Path(__file__).resolve().parents[1] / 'infrastructure' / 'prompts'
-            try:
-                content = handlers.handle_get_prompt_content(
-                    relative_path=relative_path,
-                    prompt_base_dir=base_dir,
-                )
-            except ValueError as e:
-                return self._send_error(400, str(e))
-            except FileNotFoundError as e:
-                return self._send_error(404, str(e))
-            except Exception as e:
-                return self._send_error(500, f"Error reading prompt: {e}")
-
-            return self._send_text_response(200, 'text/plain; charset=utf-8', content.encode('utf-8'))
+            return handle_prompt_get(self, parsed_path, __file__)
 
         def authorize(self) -> Dict:
             user_data = self._require_auth()

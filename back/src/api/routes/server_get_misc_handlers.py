@@ -59,3 +59,23 @@ def handle_fetch_get(handler, qs):
         return handler.json(result)
     except Exception as e:
         return handler._send_error(500, f'Fetch failed: {e}')
+
+
+def handle_prompt_get(handler, parsed_path: str, current_file: str):
+    """Handle GET requests for prompt markdown content."""
+    relative_path = parsed_path[len('/api/prompt/'):].strip('/')
+    request_handlers = handler.get_request_handlers()
+    base_dir = Path(current_file).resolve().parents[1] / 'infrastructure' / 'prompts'
+    try:
+        content = request_handlers.handle_get_prompt_content(
+            relative_path=relative_path,
+            prompt_base_dir=base_dir,
+        )
+    except ValueError as e:
+        return handler._send_error(400, str(e))
+    except FileNotFoundError as e:
+        return handler._send_error(404, str(e))
+    except Exception as e:
+        return handler._send_error(500, f"Error reading prompt: {e}")
+
+    return handler._send_text_response(200, 'text/plain; charset=utf-8', content.encode('utf-8'))
