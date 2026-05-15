@@ -862,135 +862,18 @@ class BusinessHandlers:
             return {"status": "error", "message": str(e)}
     
     def handle_delete_quote_document(self, document_id: str, user_id: str = None) -> Dict:
-        """Delete a quote document and its related data.
-        
-        Parameters
-        ----------
-        document_id : str
-            Document UUID
-        user_id : str, optional
-            User ID (for authorization)
-        
-        Returns
-        -------
-        Dict
-            Response with status and details
-        """
-        try:
-            supabase = get_supabase_service()
-
-            # Verify document exists and belongs to user
-            doc_resp = supabase.table("document").select("id, type, storage_key, opportunity_id").eq("id", document_id).maybe_single().execute()
-            document = doc_resp.data if doc_resp and doc_resp.data else None
-
-            if not document:
-                return {"status": "error", "message": "Quote document not found"}
-
-            if document.get("type") != "QUOTE":
-                return {"status": "error", "message": "Document is not a quote"}
-
-            # Delete PDF file if exists
-            if document.get("storage_key"):
-                try:
-                    # Try storage directories first
-                    storage_path = self._get_storage_path("quote", document.get("storage_key"))
-                    if storage_path.exists():
-                        storage_path.unlink()
-                        print(f"[BusinessHandlers] Deleted PDF file: {storage_path}")
-                    else:
-                        # Fallback to legacy assets directory
-                        assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                        pdf_path = assets_dir / document.get("storage_key")
-                        if pdf_path.exists():
-                            pdf_path.unlink()
-                            print(f"[BusinessHandlers] Deleted PDF file: {pdf_path}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Warning: Could not delete PDF file: {e}")
-
-            # Delete document (cascade will delete document_line and quote entries)
-            delete_resp = supabase.table("document").delete().eq("id", document_id).execute()
-            if getattr(delete_resp, "error", None):
-                return {"status": "error", "message": f"Failed to delete quote: {delete_resp.error}"}
-
-            return {
-                "status": "ok",
-                "message": "Quote deleted successfully",
-            }
-
-        except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error deleting quote document {document_id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error deleting quote: {str(e)}",
-            }
+        """Delete a quote document and its related data via DocumentHandlers."""
+        return self.document_handlers.handle_delete_quote_document(
+            document_id=document_id,
+            user_id=user_id,
+        )
 
     def handle_delete_document(self, document_id: str, user_id: str = None) -> Dict:
-        """Delete any document and its related data (generic handler for all document types).
-        
-        Parameters
-        ----------
-        document_id : str
-            Document UUID
-        user_id : str, optional
-            User ID (for authorization)
-        
-        Returns
-        -------
-        Dict
-            Response with status and details
-        """
-        try:
-            supabase = get_supabase_service()
-
-            # Verify document exists
-            doc_resp = supabase.table("document").select("id, type, storage_key, opportunity_id").eq("id", document_id).maybe_single().execute()
-            document = doc_resp.data if doc_resp and doc_resp.data else None
-
-            if not document:
-                return {"status": "error", "message": "Document not found"}
-
-            doc_type = document.get("type", "").lower()
-
-            # Delete PDF/file if exists
-            if document.get("storage_key"):
-                try:
-                    # Determine storage directory based on document type
-                    storage_type = "quote" if doc_type == "quote" else "invoice" if doc_type == "invoice" else "rfp_upload"
-                    storage_path = self._get_storage_path(storage_type, document.get("storage_key"))
-                    
-                    if storage_path.exists():
-                        storage_path.unlink()
-                        print(f"[BusinessHandlers] Deleted file: {storage_path}")
-                    else:
-                        # Fallback to legacy assets directory
-                        assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                        file_path = assets_dir / document.get("storage_key")
-                        if file_path.exists():
-                            file_path.unlink()
-                            print(f"[BusinessHandlers] Deleted file: {file_path}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Warning: Could not delete file: {e}")
-
-            # Delete document (cascade will delete document_line entries)
-            delete_resp = supabase.table("document").delete().eq("id", document_id).execute()
-            if getattr(delete_resp, "error", None):
-                return {"status": "error", "message": f"Failed to delete document: {delete_resp.error}"}
-
-            return {
-                "status": "ok",
-                "message": f"{document.get('type', 'Document')} deleted successfully",
-            }
-
-        except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error deleting document {document_id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error deleting document: {str(e)}",
-            }
+        """Delete any document and its related data via DocumentHandlers."""
+        return self.document_handlers.handle_delete_document(
+            document_id=document_id,
+            user_id=user_id,
+        )
     
     def handle_list_quotes(self) -> Dict:
         """List all generated quotes via the dedicated quote handler."""

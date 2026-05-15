@@ -137,6 +137,14 @@ class _DocumentHandlersStub:
         _ = user_id
         return self.rfp_service.extract_from_document(document_id=document_id)
 
+    def handle_delete_quote_document(self, document_id: str, user_id: str = None):
+        _ = user_id
+        return {"status": "ok", "message": "Quote deleted successfully", "document_id": document_id}
+
+    def handle_delete_document(self, document_id: str, user_id: str = None):
+        _ = user_id
+        return {"status": "ok", "message": "Document deleted successfully", "document_id": document_id}
+
 
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
@@ -276,3 +284,19 @@ def test_handle_extract_rfp_from_document_delegates_to_document_rfp_service():
 
     assert result == {"status": "ok", "document_id": "doc-77", "data": {"products": []}}
     assert handler._document_rfp_extraction_service.calls == ["doc-77"]
+
+
+def test_handle_delete_quote_document_delegates_to_document_handler():
+    handler = _make_handler()
+
+    result = handler.handle_delete_quote_document("doc-q-1", user_id="u-1")
+
+    assert result == {"status": "ok", "message": "Quote deleted successfully", "document_id": "doc-q-1"}
+
+
+def test_handle_delete_document_delegates_to_document_handler():
+    handler = _make_handler()
+
+    result = handler.handle_delete_document("doc-1", user_id="u-1")
+
+    assert result == {"status": "ok", "message": "Document deleted successfully", "document_id": "doc-1"}
