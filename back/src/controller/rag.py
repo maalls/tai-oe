@@ -312,21 +312,7 @@ def create_rag_handler(config):
                 if entity_update_match:
                     return self._handle_entity_update_post(entity_update_match)
                 elif parsed.path.startswith('/api/emails/classify/'):
-                    # Extract email_uuid from path
-                    email_uuid = parsed.path.split('/')[-1]
-                    
-                    # Verify auth
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-                    
-                    user_id = user_data.get('id')
-                    print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
-                    
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_emails_classify_post(parsed.path)
                 elif parsed.path == '/api/rfq/generate':
                     user_data = self._require_auth()
                     if user_data is None:
@@ -1184,6 +1170,22 @@ def create_rag_handler(config):
                 value=payload.get('value'),
                 user_id=user_id,
             )
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_emails_classify_post(self, parsed_path):
+            """Handle /api/emails/classify/{email_uuid} POST endpoint."""
+            email_uuid = parsed_path.split('/')[-1]
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id')
+            print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
