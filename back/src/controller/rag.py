@@ -1267,12 +1267,10 @@ def create_rag_handler(config):
 
         def _handle_imap_status_get(self):
             """Handle /api/imap/status GET endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
-
             handlers = self.get_request_handlers()
-            user_id = user_data.get('id') if user_data else None
             result = handlers.handle_imap_status(user_id=user_id)
             return self.json(result)
 
@@ -1485,6 +1483,13 @@ def create_rag_handler(config):
             if not auth_header:
                 return None
             user_data = self._require_auth(auth_header=auth_header, required=False)
+            return user_data.get('id') if user_data else None
+
+        def _require_auth_user_id(self):
+            """Require authenticated user and return its id."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return None
             return user_data.get('id') if user_data else None
 
         def _get_qs_bool(self, qs, key: str, default: bool = False) -> bool:
