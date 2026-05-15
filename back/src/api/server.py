@@ -100,7 +100,7 @@ from src.api.routes.server_http_method_handlers import (
 from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
-from src.api.routes.server_post_utility_handlers import handle_fs_create_post, handle_products_post
+from src.api.routes.server_post_utility_handlers import handle_fs_create_post, handle_fs_read_post, handle_products_post
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
@@ -324,25 +324,7 @@ def create_rag_handler(config):
 
         def _handle_fs_read_post(self):
             """Handle /api/fs/read POST endpoint."""
-            payload = self._read_json(default={})
-            raw_path = str(payload.get('path') or '').strip()
-
-            max_chars = self._get_payload_int(payload, 'max_chars', 10000)
-            max_chars = max(100, min(max_chars, 50000))
-
-            target_path = self._resolve_fs_path(raw_path)
-            if target_path is None:
-                return
-
-            if not target_path.exists() or not target_path.is_file():
-                return self._send_error(404, 'File not found')
-
-            try:
-                handlers = self.get_request_handlers()
-                result = handlers.handle_fs_read(target_path=target_path, max_chars=max_chars)
-            except Exception as e:
-                return self._send_error(500, f'Read failed: {e}')
-            return self.json(result)
+            return handle_fs_read_post(self)
 
         def _handle_curl_post(self):
             """Handle /api/curl POST endpoint."""
