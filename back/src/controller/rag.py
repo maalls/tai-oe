@@ -349,50 +349,8 @@ def create_rag_handler(config):
                     return self._handle_document_update_content_post()
                 
                 else:
-                    # Send quote email for opportunity
-                    send_quote_match = re.match(r"^/api/opportunity/([^/]+)/send-quote$", parsed.path)
-                    if send_quote_match:
-                        return self._handle_send_quote_for_opportunity_post(send_quote_match)
-
-                    # Chat attachment upload
-                    if parsed.path == '/api/chat/attachments':
-                        return self._handle_chat_attachments_post(parsed)
-
-                    # Opportunity-scoped RFQ/quote generation
-                    opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
-                    if opp_match:
-                        return self._handle_opportunity_rfq_generate_post(opp_match)
-
-                    # Opportunity-scoped RFQ creation from text/file
-                    opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
-                    if opp_rfq_create_match:
-                        return self._handle_opportunity_rfq_create_from_text_post(opp_rfq_create_match)
-
-                    # Quote PDF generation
-                    quote_pdf_match = re.match(r"^/api/quote/([^/]+)/pdf$", parsed.path)
-                    if quote_pdf_match:
-                        return self._handle_quote_pdf_post(quote_pdf_match)
-
-                    # Invoice generation from quote
-                    quote_invoice_match = re.match(r"^/api/quote/([^/]+)/invoice$", parsed.path)
-                    if quote_invoice_match:
-                        return self._handle_quote_invoice_post(quote_invoice_match)
-
-                    # Invoice PDF generation
-                    invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
-                    if invoice_pdf_match:
-                        return self._handle_invoice_pdf_post(invoice_pdf_match)
-
-                    # Invoice send
-                    invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
-                    if invoice_send_match:
-                        return self._handle_invoice_send_post(invoice_send_match)
-
-                    # Quote draft update
-                    quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
-
-                    if quote_update_match:
-                        return self._handle_quote_update_post(quote_update_match)
+                    if self._handle_post_opportunity_quote_invoice_routes(parsed):
+                        return
                 
                 # Existing endpoints
                 if parsed.path == '/api/csv/source':
@@ -633,6 +591,54 @@ def create_rag_handler(config):
                 error_payload = handlers.handle_storage_read_error_payload(e)
                 self._send_text_response(500, error_payload['content_type'], error_payload['body'])
                 return
+
+        def _handle_post_opportunity_quote_invoice_routes(self, parsed):
+            """Handle secondary POST routes for opportunity/quote/invoice flows."""
+            send_quote_match = re.match(r"^/api/opportunity/([^/]+)/send-quote$", parsed.path)
+            if send_quote_match:
+                self._handle_send_quote_for_opportunity_post(send_quote_match)
+                return True
+
+            if parsed.path == '/api/chat/attachments':
+                self._handle_chat_attachments_post(parsed)
+                return True
+
+            opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
+            if opp_match:
+                self._handle_opportunity_rfq_generate_post(opp_match)
+                return True
+
+            opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
+            if opp_rfq_create_match:
+                self._handle_opportunity_rfq_create_from_text_post(opp_rfq_create_match)
+                return True
+
+            quote_pdf_match = re.match(r"^/api/quote/([^/]+)/pdf$", parsed.path)
+            if quote_pdf_match:
+                self._handle_quote_pdf_post(quote_pdf_match)
+                return True
+
+            quote_invoice_match = re.match(r"^/api/quote/([^/]+)/invoice$", parsed.path)
+            if quote_invoice_match:
+                self._handle_quote_invoice_post(quote_invoice_match)
+                return True
+
+            invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
+            if invoice_pdf_match:
+                self._handle_invoice_pdf_post(invoice_pdf_match)
+                return True
+
+            invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
+            if invoice_send_match:
+                self._handle_invoice_send_post(invoice_send_match)
+                return True
+
+            quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
+            if quote_update_match:
+                self._handle_quote_update_post(quote_update_match)
+                return True
+
+            return False
 
         def _handle_products_post(self):
             """Handle /api/products POST endpoint."""
