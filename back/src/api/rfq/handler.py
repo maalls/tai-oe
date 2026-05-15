@@ -588,3 +588,31 @@ class RfqHandlers:
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
         return get_storage_dir(source)
+
+
+def handle_rfq_generate_post(handler):
+    """Handle /api/rfq/generate POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    payload = handler._read_json(default={})
+
+    text = payload.get('text') or payload.get('content')
+    message_id = payload.get('message_id')
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_rfp_post(handler):
+    """Handle /api/rfp POST endpoint."""
+    content_type = handler.headers.get('Content-Type', '')
+    body = handler._read_body()
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_rfp_upload(body, content_type)
+    return handler.json(result)

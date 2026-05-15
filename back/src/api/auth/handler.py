@@ -156,3 +156,30 @@ class AuthHandler:
         except Exception as e:
             print(f"[AuthHandler] Exception during token verification: {e}")
             return False, None
+
+
+def handle_auth_signup_post(handler):
+    """Handle /api/auth/signup POST endpoint."""
+    body = handler._read_body()
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_auth_signup(body)
+    status = handler._pop_status(result)
+    return handler.json(result, status)
+
+
+def handle_auth_login_post(handler):
+    """Handle /api/auth/login POST endpoint."""
+    body = handler._read_body()
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_auth_login(body)
+    status = handler._pop_status(result)
+    return handler.json(result, status)
+
+
+def handle_auth_logout_post(handler):
+    """Handle /api/auth/logout POST endpoint."""
+    auth_header = handler.headers.get('Authorization', '')
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_auth_logout(auth_header)
+    status = handler._pop_status(result)
+    return handler.json(result, status)

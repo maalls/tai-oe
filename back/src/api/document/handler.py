@@ -430,3 +430,79 @@ class DocumentHandlers:
                 print(f"[DocumentHandlers] Error parsing multipart part: {e}")
                 continue
         return form_data
+
+
+def handle_document_extract_rfp_post(handler):
+    """Handle /api/document/extract-rfp POST endpoint."""
+    payload = handler._read_json(default={})
+
+    auth_header = handler.headers.get('Authorization', '')
+    print(f"[RAG] Document extract-rfp - Auth header: {auth_header[:50] if auth_header else 'None'}")
+
+    user_data = handler._require_auth(auth_header=auth_header)
+    print(f"[RAG] Document extract-rfp - Token valid: {bool(user_data)}")
+    if user_data is None:
+        print("[RAG] Document extract-rfp - Auth failed")
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    document_id = payload.get('document_id')
+
+    if not document_id:
+        return handler.json({"error": "Missing document_id parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_document_update_content_post(handler):
+    """Handle /api/document/update-content POST endpoint."""
+    payload = handler._read_json(default={})
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    document_id = payload.get('document_id')
+    content = payload.get('content', '')
+
+    if not document_id:
+        return handler.json({"error": "Missing document_id parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_update_document_content(
+        document_id=document_id,
+        content=content,
+        user_id=user_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_chat_attachments_post(handler, parsed):
+    """Handle /api/chat/attachments POST endpoint."""
+    body = handler._read_body()
+    content_type = handler.headers.get('Content-Type', '')
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    from urllib.parse import parse_qs
+
+    qs = parse_qs(parsed.query)
+    opportunity_id = qs.get('opportunity_id', [None])[0]
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_chat_attachment_upload(
+        body=body,
+        content_type=content_type,
+        user_id=user_id,
+        opportunity_id=opportunity_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)

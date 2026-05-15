@@ -315,7 +315,7 @@ class EmailHandlers:
 
     def handle_extract_contact_from_email(self, email_id: str = None, email_body: str = None, user_id: str = None) -> Dict:
         """Extract contact and account information from email body using LLM.
-        
+
         Parameters
         ----------
         email_id : str, optional
@@ -324,7 +324,7 @@ class EmailHandlers:
             Email body content to extract from
         user_id : str, optional
             User ID for database operations
-        
+
         Returns
         -------
         Dict
@@ -337,48 +337,156 @@ class EmailHandlers:
         return self.repository.create_opportunity_from_email(message_id, user_id)
 
     def handle_get_email_auth_status(self, email_id: str, user_id: str) -> Dict:
-        """Get authentication status for an email.
-        
-        Parameters
-        ----------
-        email_id : str
-            ID of the email
-        user_id : str
-            User ID for authorization
-        
-        Returns
-        -------
-        Dict
-            Response with authentication status (SPF, DKIM, DMARC) and trust score
-        """
+        """Get authentication status for an email."""
         return self.auth_status_service.get_email_auth_status(email_id=email_id, user_id=user_id)
 
     def handle_get_high_risk_senders(self, user_id: str) -> Dict:
-        """Get list of high-risk senders (low trust score).
-        
-        Parameters
-        ----------
-        user_id : str
-            User ID
-        
-        Returns
-        -------
-        Dict
-            Response with list of high-risk senders
-        """
+        """Get list of high-risk senders (low trust score)."""
         return self.auth_status_service.get_high_risk_senders(user_id=user_id)
 
     def handle_get_verified_senders(self, user_id: str) -> Dict:
-        """Get list of verified senders (SPF+DKIM+DMARC all pass).
-        
-        Parameters
-        ----------
-        user_id : str
-            User ID
-        
-        Returns
-        -------
-        Dict
-            Response with list of verified senders
-        """
+        """Get list of verified senders (SPF+DKIM+DMARC all pass)."""
         return self.auth_status_service.get_verified_senders(user_id=user_id)
+
+
+def handle_emails_classify_post(handler, parsed_path):
+    """Handle /api/emails/classify/{email_uuid} POST endpoint."""
+    email_uuid = parsed_path.split('/')[-1]
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id')
+    print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_extract_contact_post(handler):
+    """Handle /api/email/extract-contact POST endpoint."""
+    payload = handler._read_json(default={})
+
+    email_id = payload.get('email_id')
+    email_body = payload.get('email_body')
+
+    if not email_body:
+        return handler.json({"error": "Missing email_body parameter"}, 400)
+
+    auth_header = handler.headers.get('Authorization', '')
+    user_data = handler._require_auth(auth_header=auth_header, required=False)
+    user_id = user_data.get('id') if user_data else None
+    print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_auth_status_post(handler, parsed_path):
+    """Handle /api/email/auth/{email_id} POST endpoint."""
+    email_id = parsed_path.split('/api/email/auth/')[-1]
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    if not user_id:
+        return handler.json({"error": "Unauthorized"}, 401)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_resync_post(handler, parsed_path):
+    """Handle /api/email/{email_id}/resync POST endpoint."""
+    path_parts = parsed_path.split('/')
+    email_id = path_parts[-2] if len(path_parts) >= 4 else None
+
+    if not email_id:
+        return handler.json({"error": "Missing email_id"}, 400)
+
+    payload = handler._read_json(default={})
+    provider_message_id = payload.get('provider_message_id')
+    if not provider_message_id:
+        return handler.json({"error": "Missing provider_message_id"}, 400)
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    if not user_id:
+        return handler.json({"error": "Unauthorized"}, 401)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_email_resync(email_id=email_id, provider_message_id=provider_message_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_senders_high_risk_post(handler):
+    """Handle /api/email/senders/high-risk POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    if not user_id:
+        return handler.json({"error": "Unauthorized"}, 401)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_get_high_risk_senders(user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_senders_verified_post(handler):
+    """Handle /api/email/senders/verified POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    if not user_id:
+        return handler.json({"error": "Unauthorized"}, 401)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_get_verified_senders(user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_imap_config_post(handler):
+    """Handle /api/imap/config POST endpoint."""
+    payload = handler._read_json(default={})
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_imap_config_save(user_id=user_id, payload=payload)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_imap_test_post(handler):
+    """Handle /api/imap/test POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_imap_test(user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)

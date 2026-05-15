@@ -255,3 +255,141 @@ class OpportunityHandlers:
         except Exception as exc:
             print(f"[OpportunityHandlers] Error creating opportunity from RFP: {exc}")
             return {"status": "error", "message": f"Error: {str(exc)}"}
+
+
+def handle_opportunities_create_from_email_post(handler):
+    """Handle /api/opportunities/create-from-email POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    payload = handler._read_json(default={})
+
+    message_id = payload.get('message_id')
+    if not message_id:
+        return handler.json({"error": "Missing message_id parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
+    print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunities_create_manual_post(handler):
+    """Handle /api/opportunities/create-manual POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    payload = handler._read_json(default={})
+
+    name = payload.get('name')
+    if not name:
+        return handler.json({"status": "error", "message": "Missing name parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunities_create_from_rfp_post(handler):
+    """Handle /api/opportunities/create-from-rfp POST endpoint."""
+    body = handler._read_body()
+    content_type = handler.headers.get('Content-Type', '')
+
+    auth_header = handler.headers.get('Authorization', '')
+    print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
+    user_data = handler._require_auth(auth_header=auth_header)
+    print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
+    if user_data is None:
+        print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
+    print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunity_rfq_generate_post(handler, opp_match):
+    """Handle /api/opportunity/{id}/rfq/generate POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    opportunity_id = opp_match.group(1)
+    request_handlers = handler.get_request_handlers()
+    print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
+    result = request_handlers.handle_generate_quote_for_opportunity(
+        opportunity_id=opportunity_id,
+        user_id=user_id,
+    )
+    print('result:', result)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
+    """Handle /api/opportunity/{id}/rfq/create-from-text POST endpoint."""
+    body = handler._read_body()
+    content_type = handler.headers.get('Content-Type', '')
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    opportunity_id = opp_rfq_create_match.group(1)
+
+    if opportunity_id == 'new':
+        result = request_handlers.handle_create_opportunity_from_rfp(
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
+        )
+        if result.get('status') == 'ok':
+            opportunity = result.get('opportunity', {})
+            opportunity_id = opportunity.get('id')
+            print(f"[ServerPostUtilityHandlers] Generating quote for opportunity {opportunity_id} by user")
+            request_handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
+    else:
+        result = request_handlers.handle_create_rfq_source_from_html_body(
+            opportunity_id=opportunity_id,
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
+        )
+
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_send_quote_for_opportunity_post(handler, send_quote_match):
+    """Handle /api/opportunity/{id}/send-quote POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    opportunity_id = send_quote_match.group(1)
+
+    payload = handler._read_json_or_error()
+    if payload is None:
+        return None
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_send_quote_for_opportunity(
+        opportunity_id=opportunity_id,
+        payload=payload,
+        user_id=user_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)

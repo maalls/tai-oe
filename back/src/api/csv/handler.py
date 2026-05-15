@@ -74,3 +74,14 @@ class CsvHandlers:
             raise ValueError(f"Source file {candidate} not found or invalid")
 
         return candidate.read_bytes()
+
+
+def handle_csv_source_post(handler):
+    """Handle /api/csv/source POST endpoint."""
+    content_type = handler.headers.get('Content-Type', '')
+    body = handler._read_body()
+    content_length = len(body)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_csv_source_upload(content_type, content_length, body)
+    return handler.json(result)
