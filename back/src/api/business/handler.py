@@ -48,7 +48,11 @@ class BusinessHandlers:
             supabase=self.supabase,
         )
         self.quote_handlers = Quote()
-        self.invoice_handlers = InvoiceHandlers(supabase=self.supabase)
+        self.invoice_handlers = InvoiceHandlers(
+            supabase=self.supabase,
+            send_email_with_attachments=self.email_handlers.handle_send_email_with_attachments,
+            storage_path_resolver=self._get_storage_path,
+        )
         self.document_handlers = DocumentHandlers(
             supabase=self.supabase,
             storage_dir_resolver=self._get_storage_dir,
@@ -549,121 +553,12 @@ class BusinessHandlers:
         )
 
     def handle_send_invoice(self, invoice_id: str, payload: Dict, user_id: str = None) -> Dict:
-        """Send invoice email with PDF attachment.
-        
-        Parameters
-        ----------
-        invoice_id : str
-            The invoice document UUID
-        payload : Dict
-            Email data: {to: [emails], cc: [emails], subject, body}
-        user_id : str, optional
-            User ID for authorization
-        
-        Returns
-        -------
-        Dict
-            Response with status and message
-        """
-        try:
-            supabase = get_supabase_service()
-            
-            # Load invoice document
-            invoice_resp = supabase.table("document").select("*").eq("id", invoice_id).single().execute()
-            if getattr(invoice_resp, "error", None) or not invoice_resp.data:
-                return {"status": "error", "message": "Invoice not found"}
-            
-            invoice = invoice_resp.data
-            
-            if invoice.get("type") != "INVOICE":
-                return {"status": "error", "message": "Document is not an invoice"}
-            
-            storage_key = invoice.get("storage_key")
-            if not storage_key:
-                return {"status": "error", "message": "Invoice PDF not generated yet"}
-            
-            # Validate required fields
-            to_emails = payload.get('to', [])
-            cc_emails = payload.get('cc', [])
-            subject = payload.get('subject', f"Invoice {invoice.get('external_ref', '')}")
-            body = payload.get('body', 'Please find attached your invoice.')
-            
-            if not to_emails or not isinstance(to_emails, list) or len(to_emails) == 0:
-                return {"status": "error", "message": "At least one 'to' email is required"}
-            
-            if not subject:
-                return {"status": "error", "message": "Email subject is required"}
-            
-            # Get PDF file path
-            invoice_path = self._get_storage_path("invoice", storage_key)
-            if not invoice_path.exists():
-                # Fallback to assets directory
-                assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                invoice_path = assets_dir / storage_key
-                if not invoice_path.exists():
-                    return {"status": "error", "message": f"Invoice PDF file not found: {storage_key}"}
-            
-            # Send email using EmailHandlers
-            result = self.email_handlers.handle_send_email_with_attachments(
-                to=to_emails,
-                cc=cc_emails,
-                subject=subject,
-                body=body,
-                attachment_paths=[str(invoice_path)],
-                user_id=user_id,
-            )
-            
-            if result.get('status') == 'ok':
-                # Update invoice status to SENT
-                supabase.table("document").update({"status": "SENT"}).eq("id", invoice_id).execute()
-                
-                # Store sent email data in sent_email table
-                opportunity_id = invoice.get('opportunity_id')
-                sent_email_data = {
-                    "document_id": invoice_id,
-                    "opportunity_id": opportunity_id,
-                    "from_email": "maalls@gmail.com",  # TODO: Get from authenticated user
-                    "to_emails": to_emails,
-                    "cc_emails": cc_emails if cc_emails else [],
-                    "subject": subject,
-                    "body": body,
-                    "provider": "gmail",
-                    "provider_message_id": result.get('message_id'),
-                    "status": "sent",
-                    "sent_at": datetime.now().isoformat(),
-                    "attachment_names": [storage_key] if storage_key else [],
-                    # "sent_by_user_id": user_id,  # TODO: Add when user auth is implemented
-                }
-                
-                print(f"[BusinessHandlers] Preparing to insert sent_email data: {sent_email_data}")
-                
-                try:
-                    insert_result = supabase.table("sent_email").insert(sent_email_data).execute()
-                    print(f"[BusinessHandlers] Sent email record created for invoice {invoice_id}: {insert_result.data}")
-                except Exception as e:
-                    # Log error but don't fail the request - email was already sent
-                    print(f"[BusinessHandlers] Warning: Failed to save sent_email record: {e}")
-                    import traceback
-                    traceback.print_exc()
-                
-                print(f"[BusinessHandlers] Invoice {invoice_id} sent successfully to {to_emails}")
-                return {
-                    "status": "ok",
-                    "message": "Invoice sent successfully",
-                    "recipients": to_emails,
-                    "message_id": result.get('message_id')
-                }
-            else:
-                return result
-            
-        except Exception as e:
-            print(f"[BusinessHandlers] Error sending invoice {invoice_id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error sending invoice: {str(e)}",
-            }
+        """Send invoice via InvoiceHandlers."""
+        return self.invoice_handlers.handle_send_invoice(
+            invoice_id=invoice_id,
+            payload=payload,
+            user_id=user_id,
+        )
 
     def handle_generate_invoice_pdf(self, document_id: str, user_id: str = None) -> Dict:
         """Generate an invoice PDF via InvoiceHandlers."""

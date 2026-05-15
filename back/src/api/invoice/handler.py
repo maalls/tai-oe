@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Callable, Dict
 import uuid
 
 from jinja2 import Environment, FileSystemLoader
@@ -14,8 +14,10 @@ from src.infrastructure.clients.supabase import get_supabase_service
 class InvoiceHandlers:
     """Handle invoice-related API requests."""
 
-    def __init__(self, supabase=None):
+    def __init__(self, supabase=None, send_email_with_attachments: Callable = None, storage_path_resolver: Callable = None):
         self.supabase = supabase or get_supabase_service()
+        self.send_email_with_attachments = send_email_with_attachments
+        self.storage_path_resolver = storage_path_resolver
 
     def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str = None) -> Dict:
         """Generate an invoice document from an accepted quote."""
@@ -307,3 +309,87 @@ class InvoiceHandlers:
         html_content = template.render(**template_data)
         HTML(string=html_content).write_pdf(str(pdf_path))
         return pdf_filename
+
+    def handle_send_invoice(self, invoice_id: str, payload: Dict, user_id: str = None) -> Dict:
+        """Send invoice email with PDF attachment."""
+        try:
+            invoice_resp = self.supabase.table("document").select("*").eq("id", invoice_id).single().execute()
+            if getattr(invoice_resp, "error", None) or not invoice_resp.data:
+                return {"status": "error", "message": "Invoice not found"}
+
+            invoice = invoice_resp.data
+            if invoice.get("type") != "INVOICE":
+                return {"status": "error", "message": "Document is not an invoice"}
+
+            storage_key = invoice.get("storage_key")
+            if not storage_key:
+                return {"status": "error", "message": "Invoice PDF not generated yet"}
+
+            to_emails = payload.get("to", [])
+            cc_emails = payload.get("cc", [])
+            subject = payload.get("subject", f"Invoice {invoice.get('external_ref', '')}")
+            body = payload.get("body", "Please find attached your invoice.")
+
+            if not to_emails or not isinstance(to_emails, list) or len(to_emails) == 0:
+                return {"status": "error", "message": "At least one 'to' email is required"}
+            if not subject:
+                return {"status": "error", "message": "Email subject is required"}
+
+            if self.storage_path_resolver is not None:
+                invoice_path = self.storage_path_resolver("invoice", storage_key)
+            else:
+                invoice_path = self._get_storage_dir("invoice") / storage_key
+
+            if not invoice_path.exists():
+                assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
+                invoice_path = assets_dir / storage_key
+                if not invoice_path.exists():
+                    return {"status": "error", "message": f"Invoice PDF file not found: {storage_key}"}
+
+            if self.send_email_with_attachments is None:
+                return {"status": "error", "message": "Email sender is not configured"}
+
+            result = self.send_email_with_attachments(
+                to=to_emails,
+                cc=cc_emails,
+                subject=subject,
+                body=body,
+                attachment_paths=[str(invoice_path)],
+                user_id=user_id,
+            )
+
+            if result.get("status") != "ok":
+                return result
+
+            self.supabase.table("document").update({"status": "SENT"}).eq("id", invoice_id).execute()
+
+            sent_email_data = {
+                "document_id": invoice_id,
+                "opportunity_id": invoice.get("opportunity_id"),
+                "from_email": "maalls@gmail.com",
+                "to_emails": to_emails,
+                "cc_emails": cc_emails if cc_emails else [],
+                "subject": subject,
+                "body": body,
+                "provider": "gmail",
+                "provider_message_id": result.get("message_id"),
+                "status": "sent",
+                "sent_at": datetime.now().isoformat(),
+                "attachment_names": [storage_key] if storage_key else [],
+            }
+
+            try:
+                self.supabase.table("sent_email").insert(sent_email_data).execute()
+            except Exception as e:  # noqa: BLE001
+                print(f"[InvoiceHandlers] Warning: Failed to save sent_email record: {e}")
+
+            return {
+                "status": "ok",
+                "message": "Invoice sent successfully",
+                "recipients": to_emails,
+                "message_id": result.get("message_id"),
+            }
+
+        except Exception as e:  # noqa: BLE001
+            print(f"[InvoiceHandlers] Error sending invoice {invoice_id}: {e}")
+            return {"status": "error", "message": f"Error sending invoice: {str(e)}"}

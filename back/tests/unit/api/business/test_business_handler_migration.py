@@ -80,6 +80,15 @@ class _InvoiceHandlersStub:
         self.calls.append(("generate_pdf", document_id, user_id))
         return {"status": "ok", "storage_key": "invoice_1.pdf"}
 
+    def handle_send_invoice(self, invoice_id: str, payload: dict, user_id: str = None):
+        self.calls.append(("send_invoice", invoice_id, payload, user_id))
+        return {
+            "status": "ok",
+            "message": "Invoice sent successfully",
+            "recipients": payload.get("to", []),
+            "message_id": "msg-1",
+        }
+
 
 class _OpportunityRepositoryStub:
     def __init__(self):
@@ -342,6 +351,17 @@ def test_handle_generate_invoice_pdf_delegates_to_invoice_handler():
 
     assert result == {"status": "ok", "storage_key": "invoice_1.pdf"}
     assert handler.invoice_handlers.calls == [("generate_pdf", "inv-1", "u-1")]
+
+
+def test_handle_send_invoice_delegates_to_invoice_handler():
+    handler = _make_handler()
+    payload = {"to": ["client@example.com"], "subject": "Invoice", "body": "Please find attached"}
+
+    result = handler.handle_send_invoice("inv-1", payload, user_id="u-1")
+
+    assert result["status"] == "ok"
+    assert result["message"] == "Invoice sent successfully"
+    assert handler.invoice_handlers.calls == [("send_invoice", "inv-1", payload, "u-1")]
 
 
 def test_business_handler_opportunity_wrappers_are_class_methods():
