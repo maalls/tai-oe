@@ -274,11 +274,10 @@ def create_rag_handler(config):
 
         def _handle_email_attachment_delete(self, attachment_delete_match):
             """Handle DELETE /api/email-attachment/{id}."""
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
 
-            user_id = user_data.get('id') if user_data else None
             attachment_id = attachment_delete_match.group(1)
 
             handlers = self.get_request_handlers()
