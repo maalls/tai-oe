@@ -891,7 +891,7 @@ def create_rag_handler(config):
                 value=payload.get('value'),
                 user_id=user_id,
             )
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_emails_classify_post(self, parsed_path):
