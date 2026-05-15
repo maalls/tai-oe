@@ -36,6 +36,7 @@ from src.api.routes.server_mutation_dispatch import dispatch_patch_request, disp
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
+from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
 from src.api.routes.server_post_auth_dispatch import dispatch_post_auth_routes
@@ -384,46 +385,11 @@ def create_rag_handler(config):
 
         def _handle_action_post_routes(self, parsed_path: str) -> bool:
             """Handle action-specific POST regex routes."""
-            pause_action_match = re.match(r"^/api/actions/([^/]+)/pause$", parsed_path)
-            if pause_action_match:
-                self._handle_action_pause_post(pause_action_match)
-                return True
-
-            resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed_path)
-            if resume_action_match:
-                self._handle_action_resume_post(resume_action_match)
-                return True
-
-            execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed_path)
-            if execute_action_match:
-                self._handle_action_execute_post(execute_action_match)
-                return True
-
-            return False
+            return dispatch_action_post_routes(self, parsed_path)
 
         def _handle_post_legacy_and_action_routes(self, parsed_path: str) -> bool:
             """Handle remaining legacy and action POST routes."""
-            if parsed_path == '/api/csv/source':
-                self._handle_csv_source_post()
-                return True
-
-            if parsed_path == '/api/rfp':
-                self._handle_rfp_post()
-                return True
-
-            if parsed_path == '/api/quote':
-                self._handle_quote_submit_post()
-                return True
-
-            if parsed_path == '/api/quote/send':
-                self._handle_quote_send_post()
-                return True
-
-            if parsed_path == '/api/actions':
-                self._handle_actions_create_post()
-                return True
-
-            return self._handle_action_post_routes(parsed_path)
+            return dispatch_post_legacy_and_action_routes(self, parsed_path)
 
         def _handle_products_post(self):
             """Handle /api/products POST endpoint."""
