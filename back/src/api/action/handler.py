@@ -1,16 +1,14 @@
 """Action management API handlers."""
 
-from typing import Dict, Any, Optional, List
-from src.repository.action_repository import ActionRepository
-from src.service.action_scheduler import ActionScheduler
+from typing import Dict, Any, Optional
+from src.service.action.service import ActionService
 
 
 class ActionHandlers:
     """Handler for action-related API endpoints."""
     
-    def __init__(self):
-        self.action_repo = ActionRepository()
-        self.scheduler = ActionScheduler()
+    def __init__(self, action_service: Optional[ActionService] = None):
+        self.action_service = action_service or ActionService()
     
     def handle_list_actions(self, opportunity_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -27,7 +25,7 @@ class ActionHandlers:
             }
         """
         try:
-            actions = self.action_repo.list_actions(opportunity_id)
+            actions = self.action_service.list_actions(opportunity_id, user_id=user_id)
             
             return {
                 "status": "ok",
@@ -65,26 +63,7 @@ class ActionHandlers:
             }
         """
         try:
-            # Validate required fields
-            required_fields = ['opportunity_id', 'action_type', 'schedule_type']
-            for field in required_fields:
-                if field not in data:
-                    return {
-                        "status": "error",
-                        "error_code": "MISSING_FIELD",
-                        "message": f"Missing required field: {field}"
-                    }
-            
-            # Create action
-            action = self.action_repo.create_action(
-                user_id=user_id,
-                opportunity_id=data['opportunity_id'],
-                action_type=data['action_type'],
-                schedule_type=data['schedule_type'],
-                schedule_config=data.get('schedule_config', {}),
-                config=data.get('config', {}),
-                max_executions=data.get('max_executions')
-            )
+            action = self.action_service.create_action(data, user_id=user_id)
             
             if not action:
                 return {
@@ -96,6 +75,18 @@ class ActionHandlers:
             return {
                 "status": "ok",
                 "action": action
+            }
+        except ValueError as e:
+            if str(e).startswith("Missing required field:"):
+                return {
+                    "status": "error",
+                    "error_code": "MISSING_FIELD",
+                    "message": str(e),
+                }
+            return {
+                "status": "error",
+                "error_code": "CREATE_ACTION_ERROR",
+                "message": str(e),
             }
         except Exception as e:
             print(f"[ActionHandlers] Error creating action: {e}")
@@ -122,7 +113,7 @@ class ActionHandlers:
             }
         """
         try:
-            action = self.action_repo.get_action(action_id)
+            action = self.action_service.get_action(action_id, user_id=user_id)
             
             if not action:
                 return {
@@ -161,18 +152,14 @@ class ActionHandlers:
             }
         """
         try:
-            # Check if action exists
-            action = self.action_repo.get_action(action_id)
-            if not action:
+            updated_action = self.action_service.update_action(action_id, data, user_id=user_id)
+            if not updated_action:
                 return {
                     "status": "error",
                     "error_code": "NOT_FOUND",
                     "message": f"Action {action_id} not found"
                 }
-            
-            # Update action
-            updated_action = self.action_repo.update_action(action_id, data)
-            
+
             if not updated_action:
                 return {
                     "status": "error",
@@ -208,17 +195,13 @@ class ActionHandlers:
             }
         """
         try:
-            # Check if action exists
-            action = self.action_repo.get_action(action_id)
-            if not action:
+            deleted = self.action_service.delete_action(action_id, user_id=user_id)
+            if not deleted:
                 return {
                     "status": "error",
                     "error_code": "NOT_FOUND",
                     "message": f"Action {action_id} not found"
                 }
-            
-            # Delete action
-            self.action_repo.delete_action(action_id)
             
             return {
                 "status": "ok",
@@ -249,7 +232,7 @@ class ActionHandlers:
             }
         """
         try:
-            action = self.action_repo.pause_action(action_id)
+            action = self.action_service.pause_action(action_id, user_id=user_id)
             
             if not action:
                 return {
@@ -287,7 +270,7 @@ class ActionHandlers:
             }
         """
         try:
-            action = self.action_repo.resume_action(action_id)
+            action = self.action_service.resume_action(action_id, user_id=user_id)
             
             if not action:
                 return {
@@ -330,7 +313,7 @@ class ActionHandlers:
             }
         """
         try:
-            result = self.scheduler.execute_manually(action_id)
+            result = self.action_service.execute_action(action_id, user_id=user_id)
             
             return {
                 "status": "ok",
@@ -362,7 +345,7 @@ class ActionHandlers:
             }
         """
         try:
-            logs = self.action_repo.get_execution_logs(action_id, limit=limit)
+            logs = self.action_service.get_action_logs(action_id, limit=limit, user_id=user_id)
             
             return {
                 "status": "ok",
