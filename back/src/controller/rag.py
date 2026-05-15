@@ -1404,9 +1404,9 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
 
             if parsed_path == '/api/csv/files':
-                return self.json(handlers.handle_list_files(qs))
+                return self._handle_csv_files_get(qs, handlers)
             if parsed_path == '/api/csv/preview':
-                return self.json(handlers.handle_preview(qs))
+                return self._handle_csv_preview_get(qs, handlers)
             if parsed_path == '/api/csv/raw':
                 return self._handle_raw_stream(qs, handlers)
             if parsed_path == '/api/csv/source':
@@ -1414,13 +1414,33 @@ def create_rag_handler(config):
             if parsed_path == '/api/csv/download':
                 return self._handle_csv_download(qs, handlers)
             if parsed_path == '/api/csv/sources':
-                return self.json(handlers.handle_sources())
+                return self._handle_csv_sources_get(handlers)
             if parsed_path == '/api/csv/query':
-                return self.json(handlers.handle_query(qs))
+                return self._handle_csv_query_get(qs, handlers)
             if parsed_path.startswith('/api/csv/search'):
-                return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
+                return self._handle_csv_search_get(qs, handlers)
 
             return None
+
+        def _handle_csv_files_get(self, qs, handlers):
+            """Handle /api/csv/files GET endpoint."""
+            return self.json(handlers.handle_list_files(qs))
+
+        def _handle_csv_preview_get(self, qs, handlers):
+            """Handle /api/csv/preview GET endpoint."""
+            return self.json(handlers.handle_preview(qs))
+
+        def _handle_csv_sources_get(self, handlers):
+            """Handle /api/csv/sources GET endpoint."""
+            return self.json(handlers.handle_sources())
+
+        def _handle_csv_query_get(self, qs, handlers):
+            """Handle /api/csv/query GET endpoint."""
+            return self.json(handlers.handle_query(qs))
+
+        def _handle_csv_search_get(self, qs, handlers):
+            """Handle /api/csv/search* GET endpoints."""
+            return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
