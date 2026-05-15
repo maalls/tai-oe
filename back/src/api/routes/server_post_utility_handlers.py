@@ -337,3 +337,18 @@ def handle_email_senders_verified_post(handler):
     result = request_handlers.handle_get_verified_senders(user_id=user_id)
     status = handler._status_from_result(result)
     return handler.json(result, status)
+
+
+def handle_imap_config_post(handler):
+    """Handle /api/imap/config POST endpoint."""
+    payload = handler._read_json(default={})
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_imap_config_save(user_id=user_id, payload=payload)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
