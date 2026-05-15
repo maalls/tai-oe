@@ -52,6 +52,10 @@ class _QuoteHandlersStub:
         self.calls.append(("get", filename))
         return b"pdf-bytes"
 
+    def handle_generate_quote_pdf(self, document_id: str, user_id: str = None):
+        self.calls.append(("generate_pdf", document_id, user_id))
+        return {"status": "ok", "pdf_filename": "quote_generated.pdf"}
+
 
 class _OpportunityRepositoryStub:
     def __init__(self):
@@ -252,6 +256,15 @@ def test_handle_get_quote_file_delegates_to_quote_handler():
 
     assert result == b"pdf-bytes"
     assert handler.quote_handlers.calls == [("get", "quote_1.pdf")]
+
+
+def test_handle_generate_quote_pdf_delegates_to_quote_handler():
+    handler = _make_handler()
+
+    result = handler.handle_generate_quote_pdf("doc-q-1", user_id="u-1")
+
+    assert result == {"status": "ok", "pdf_filename": "quote_generated.pdf"}
+    assert handler.quote_handlers.calls == [("generate_pdf", "doc-q-1", "u-1")]
 
 
 def test_business_handler_opportunity_wrappers_are_class_methods():
