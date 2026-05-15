@@ -4,7 +4,7 @@ from typing import Optional, Dict
 from datetime import date, datetime
 from decimal import Decimal
 
-from src.controller.db_client import DatabaseHandler
+from src.infrastructure.clients.database import DatabaseHandler
 
 
 class DatabaseHandlers:
