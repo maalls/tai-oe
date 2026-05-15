@@ -242,6 +242,10 @@ def create_rag_handler(config):
             """Extract and remove status code from handler payload."""
             return result.pop('status', default)
 
+        def _status_from_error(self, result: Dict, ok: int = 200, error: int = 400, key: str = 'error') -> int:
+            """Map payload error field presence to HTTP status code."""
+            return error if result.get(key) else ok
+
         def _handle_imap_config_delete(self):
             """Handle DELETE /api/imap/config."""
             user_id = self._require_auth_user_id()
@@ -1326,7 +1330,7 @@ def create_rag_handler(config):
             print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
             handlers = self.get_request_handlers()
             result = handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
-            status = 400 if result.get('error') else 200
+            status = self._status_from_error(result)
             return self.json(result, status)
 
         def _handle_quote_submit_post(self):
