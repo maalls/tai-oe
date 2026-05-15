@@ -1139,22 +1139,7 @@ def create_rag_handler(config):
                 elif parsed.path.startswith('/api/gmail/message/'):
                     return self._handle_gmail_message_get(parsed.path)
                 elif parsed.path.startswith('/api/email-attachment/'):
-                    # Extract attachment ID from path
-                    attachment_id = parsed.path.split('/api/email-attachment/')[-1].split('/')[0]
-                    
-                    # Get user_id from auth header
-                    auth_header = self.headers.get('Authorization', '')
-                    user_id = self._get_optional_user_id_from_auth(auth_header)
-                    
-                    handlers = self.get_request_handlers()
-                    status_code, headers, file_content = handlers.handle_email_attachment_download(attachment_id, user_id)
-                    
-                    self.send_response(status_code)
-                    for header_name, header_value in headers.items():
-                        self.send_header(header_name, header_value)
-                    self.end_headers()
-                    self.wfile.write(file_content)
-                    return
+                    return self._handle_email_attachment_get(parsed.path)
                 handlers = self.get_request_handlers()
                 
                 if parsed.path == '/api/csv/files':
@@ -1411,6 +1396,22 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_get_message_body(message_id, user_id)
             return self.json(result)
+
+        def _handle_email_attachment_get(self, parsed_path: str):
+            """Handle /api/email-attachment/<id> GET endpoint."""
+            attachment_id = parsed_path.split('/api/email-attachment/')[-1].split('/')[0]
+            auth_header = self.headers.get('Authorization', '')
+            user_id = self._get_optional_user_id_from_auth(auth_header)
+
+            handlers = self.get_request_handlers()
+            status_code, headers, file_content = handlers.handle_email_attachment_download(attachment_id, user_id)
+
+            self.send_response(status_code)
+            for header_name, header_value in headers.items():
+                self.send_header(header_name, header_value)
+            self.end_headers()
+            self.wfile.write(file_content)
+            return
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
