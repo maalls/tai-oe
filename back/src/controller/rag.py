@@ -865,7 +865,7 @@ def create_rag_handler(config):
             auth_header = self.headers.get('Authorization', '')
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_logout(auth_header)
-            status = result.pop('status', 200)
+            status = self._pop_status(result)
             return self.json(result, status)
 
         def _handle_entity_update_post(self, entity_update_match):
