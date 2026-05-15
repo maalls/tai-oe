@@ -12,7 +12,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 from googleapiclient.errors import HttpError
-from src.google_auth import GoogleAPIClient
+from src.infrastructure.clients.oauth.google_client import GoogleAPIClient
 
 
 class GmailClient(GoogleAPIClient):

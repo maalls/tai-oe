@@ -15,7 +15,7 @@ BACK_DIR = Path(__file__).resolve().parents[2]
 
 def regenerate_gmail_token():
     """Regenerate Gmail token."""
-    from src.google_auth.google_auth import GoogleAPIClient
+    from src.infrastructure.clients.oauth.google_client import GoogleAPIClient
     
     print("[Gmail Token Regeneration]")
     print("Deleting old token...")

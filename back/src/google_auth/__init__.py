@@ -1,5 +1,5 @@
 """Google API authentication utilities."""
 
-from .google_auth import GoogleAPIClient
+from src.infrastructure.clients.oauth.google_client import GoogleAPIClient
 
 __all__ = ["GoogleAPIClient"]
