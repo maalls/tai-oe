@@ -58,6 +58,7 @@ from src.api.routes.server_get_csv_handlers import (
     handle_csv_search_get,
     handle_csv_sources_get,
 )
+from src.api.routes.server_get_stream_handlers import handle_raw_stream
 from src.api.routes.server_get_business_handlers import (
     handle_action_get,
     handle_action_logs_get,
@@ -1336,15 +1337,7 @@ def create_rag_handler(config):
         
         def _handle_raw_stream(self, qs, handlers):
             """Stream raw CSV file."""
-            try:
-                content = handlers.handle_raw(qs)
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/csv; charset=utf-8')
-                self.send_header('Content-Length', str(len(content)))
-                self.end_headers()
-                self.wfile.write(content)
-            except Exception as e:
-                return self._send_error(500, f"Error streaming CSV: {e}")
+            return handle_raw_stream(self, qs, handlers)
 
         def _handle_csv_download(self, qs, handlers):
             """Download CSV file with proper filename."""
