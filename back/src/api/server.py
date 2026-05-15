@@ -24,6 +24,7 @@ from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_json
+from src.api.file.handler import handle_prompt_get
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
