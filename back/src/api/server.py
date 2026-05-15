@@ -31,6 +31,11 @@ from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_ro
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth_user_id
 from src.api.routes.server_get_dispatch import dispatch_get_request
+from src.api.routes.server_get_auth_handlers import (
+    handle_auth_user_get,
+    handle_oauth_callback_get,
+    handle_oauth_login_get,
+)
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1085,43 +1090,15 @@ def create_rag_handler(config):
 
         def _handle_auth_user_get(self):
             """Handle /api/auth/user GET endpoint."""
-            auth_header = self.headers.get('Authorization', '')
-            handlers = self.get_request_handlers()
-            result = handlers.handle_auth_user(auth_header)
-            status = self._pop_status(result)
-            return self.json(result, status)
+            return handle_auth_user_get(self)
 
         def _handle_oauth_login_get(self, qs):
             """Handle /api/oauth/login GET endpoint."""
-            provider = self._get_qs_value(qs, 'provider')
-            if not provider:
-                return self._send_error(400, 'Missing provider parameter')
-            redirect_url = self._get_qs_value(qs, 'redirect_url')
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_oauth_login(provider=provider, redirect_url=redirect_url)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_oauth_login_get(self, qs)
 
         def _handle_oauth_callback_get(self, qs):
             """Handle /api/oauth/callback GET endpoint."""
-            provider = self._get_qs_value(qs, 'provider')
-            code = self._get_qs_value(qs, 'code')
-            state = self._get_qs_value(qs, 'state')
-            if not provider:
-                return self._send_error(400, 'Missing provider parameter')
-            if not code:
-                return self._send_error(400, 'Missing code parameter')
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_oauth_callback(provider=provider, code=code, state=state)
-
-            # Keep browser flow ergonomic when callback contains a redirect target.
-            if result.get('status') == 'ok' and result.get('redirect_url'):
-                return self._send_redirect(result['redirect_url'])
-
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_oauth_callback_get(self, qs)
 
         def _handle_fetch_get(self, qs):
             """Handle /api/fetch GET endpoint."""
