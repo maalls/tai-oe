@@ -328,31 +328,7 @@ def create_rag_handler(config):
                     return self._handle_email_auth_status_post(parsed.path)
                 
                 elif parsed.path.startswith('/api/email/') and parsed.path.endswith('/resync'):
-                    # POST /api/email/{email_id}/resync - Resync email from Gmail
-                    path_parts = parsed.path.split('/')
-                    email_id = path_parts[-2] if len(path_parts) >= 4 else None
-                    
-                    if not email_id:
-                        return self.json({"error": "Missing email_id"}, 400)
-                    
-                    payload = self._read_json(default={})
-                    
-                    provider_message_id = payload.get('provider_message_id')
-                    if not provider_message_id:
-                        return self.json({"error": "Missing provider_message_id"}, 400)
-
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    if not user_id:
-                        return self.json({"error": "Unauthorized"}, 401)
-                    
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_email_resync(email_id=email_id, provider_message_id=provider_message_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_email_resync_post(parsed.path)
                 
                 elif parsed.path == '/api/email/senders/high-risk':
                     # GET /api/email/senders/high-risk - Get high-risk senders
@@ -1205,6 +1181,32 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_email_resync_post(self, parsed_path):
+            """Handle /api/email/{email_id}/resync POST endpoint."""
+            path_parts = parsed_path.split('/')
+            email_id = path_parts[-2] if len(path_parts) >= 4 else None
+
+            if not email_id:
+                return self.json({"error": "Missing email_id"}, 400)
+
+            payload = self._read_json(default={})
+            provider_message_id = payload.get('provider_message_id')
+            if not provider_message_id:
+                return self.json({"error": "Missing provider_message_id"}, 400)
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            if not user_id:
+                return self.json({"error": "Unauthorized"}, 401)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_email_resync(email_id=email_id, provider_message_id=provider_message_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
