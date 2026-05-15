@@ -1001,7 +1001,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_email_auth_status_post(self, parsed_path):
