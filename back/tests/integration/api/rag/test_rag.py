@@ -8,7 +8,7 @@ import pytest
 # Provide a lightweight stub for the embeddings module so rag.rag imports cleanly during tests
 sys.modules.setdefault("embeddings", types.SimpleNamespace(EmbeddingGenerator=lambda: None))
 
-from src.controller.rag import make_handler
+from src.api.server import make_handler
 
 
 def _build_handler(storage_dir: Path):
