@@ -2094,7 +2094,7 @@ class EmailRepository:
                 print(f"[EmailRepository] Using email body (most products: {product_count})")
 
             # Create opportunity using the same business logic as the UI
-            from src.controller.business_handler import BusinessHandlers
+            from src.api.business.handler import BusinessHandlers
 
             handlers = BusinessHandlers()
             create_result = handlers.handle_create_opportunity_from_email(
