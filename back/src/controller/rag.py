@@ -391,7 +391,7 @@ def create_rag_handler(config):
                     # Quote draft update
                     quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
 
-                    if quote_update_match and self.command == 'POST':
+                    if quote_update_match:
                         return self._handle_quote_update_post(quote_update_match)
                 
                 # Existing endpoints
