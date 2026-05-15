@@ -1054,35 +1054,7 @@ def create_rag_handler(config):
                     return self._handle_prompt_get(parsed.path)
 
                 if parsed.path == '/api/fetch':
-                    target_url = qs.get('url', [None])[0]
-                    if not target_url:
-                        return self._send_error(400, 'Missing url parameter')
-
-                    if not target_url.startswith('http://') and not target_url.startswith('https://'):
-                        return self._send_error(400, 'Invalid url scheme')
-
-                    try:
-                        max_chars = int(qs.get('max_chars', [10000])[0])
-                    except Exception:
-                        max_chars = 10000
-                    try:
-                        timeout_ms = int(qs.get('timeout_ms', [8000])[0])
-                    except Exception:
-                        timeout_ms = 8000
-
-                    max_chars = max(100, min(max_chars, 50000))
-                    timeout_ms = max(1000, min(timeout_ms, 20000))
-
-                    try:
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_fetch_url(
-                            target_url=target_url,
-                            max_chars=max_chars,
-                            timeout_ms=timeout_ms,
-                        )
-                        return self.json(result)
-                    except Exception as e:
-                        return self._send_error(500, f'Fetch failed: {e}')
+                    return self._handle_fetch_get(qs)
 
                 if parsed.path == '/api/email-fetch-loop/status':
                     return self._handle_email_fetch_loop_status_get()
@@ -1409,6 +1381,38 @@ def create_rag_handler(config):
             result = handlers.handle_auth_user(auth_header)
             status = result.pop('status', 200)
             return self.json(result, status)
+
+        def _handle_fetch_get(self, qs):
+            """Handle /api/fetch GET endpoint."""
+            target_url = qs.get('url', [None])[0]
+            if not target_url:
+                return self._send_error(400, 'Missing url parameter')
+
+            if not target_url.startswith('http://') and not target_url.startswith('https://'):
+                return self._send_error(400, 'Invalid url scheme')
+
+            try:
+                max_chars = int(qs.get('max_chars', [10000])[0])
+            except Exception:
+                max_chars = 10000
+            try:
+                timeout_ms = int(qs.get('timeout_ms', [8000])[0])
+            except Exception:
+                timeout_ms = 8000
+
+            max_chars = max(100, min(max_chars, 50000))
+            timeout_ms = max(1000, min(timeout_ms, 20000))
+
+            try:
+                handlers = self.get_request_handlers()
+                result = handlers.handle_fetch_url(
+                    target_url=target_url,
+                    max_chars=max_chars,
+                    timeout_ms=timeout_ms,
+                )
+                return self.json(result)
+            except Exception as e:
+                return self._send_error(500, f'Fetch failed: {e}')
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
