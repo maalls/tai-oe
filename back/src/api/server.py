@@ -58,7 +58,7 @@ from src.api.routes.server_get_csv_handlers import (
     handle_csv_search_get,
     handle_csv_sources_get,
 )
-from src.api.routes.server_get_stream_handlers import handle_raw_stream
+from src.api.routes.server_get_stream_handlers import handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_business_handlers import (
     handle_action_get,
     handle_action_logs_get,
@@ -1374,25 +1374,7 @@ def create_rag_handler(config):
 
         def _handle_source_stream(self, qs, handlers):
             """Stream original Excel source file."""
-            try:
-                source = (qs.get('source') or [None])[0]
-                if not source:
-                    return self._send_error(400, "Missing 'source' parameter")
-                content = handlers.handle_source_raw(qs)
-                ext = source.lower().split('.')[-1] if '.' in source else ''
-                content_type_map = {
-                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'xls': 'application/vnd.ms-excel',
-                }
-                content_type = content_type_map.get(ext, 'application/octet-stream')
-                self.send_response(200)
-                self.send_header('Content-Type', content_type)
-                self.send_header('Content-Disposition', f'attachment; filename="{source}"')
-                self.send_header('Content-Length', str(len(content)))
-                self.end_headers()
-                self.wfile.write(content)
-            except Exception as e:
-                return self._send_error(500, f"Error streaming source: {e}")
+            return handle_source_stream(self, qs, handlers)
 
         def _handle_quote_download(self, filename, handlers, qs=None):
             """Stream PDF quote file."""
