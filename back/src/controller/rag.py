@@ -192,9 +192,8 @@ def create_rag_handler(config):
                 print(f"[RAG] PATCH error: {e}")
                 return self._send_error(500, f"Server error: {str(e)}")
 
-        def _handle_patch_routes(self, parsed_path: str) -> bool:
+        def _handle_patch_routes(self, _parsed_path: str) -> bool:
             """Handle PATCH routes."""
-            _ = parsed_path
             return False
 
         def do_PUT(self):
