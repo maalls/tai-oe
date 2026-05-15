@@ -8,10 +8,10 @@ The simplest way to regenerate your Google tokens:
 cd back/
 
 # Regenerate Gmail token
-./venv/bin/python regenerate_google_token.py
+./venv/bin/python -m src.command.regenerate_google_token
 
 # Or regenerate Google Drive token
-./venv/bin/python regenerate_google_token.py --type drive
+./venv/bin/python -m src.command.regenerate_google_token --type drive
 ```
 
 A browser window will open. Complete the Google login, and your token will be automatically saved.
@@ -57,7 +57,7 @@ rm -f var/gdrive/token.json
 This error means the token is missing or invalid. Run:
 
 ```bash
-./venv/bin/python regenerate_google_token.py
+./venv/bin/python -m src.command.regenerate_google_token
 ```
 
 ### Network Error: "nodename nor servname provided"
@@ -140,8 +140,8 @@ If successful, you should see emails or file listings.
 
 | Service   | Credentials Path              | Token Path              | Command                                                     |
 | --------- | ----------------------------- | ----------------------- | ----------------------------------------------------------- |
-| **Gmail** | `var/credentials.json`        | `var/token.pickle`      | `./venv/bin/python regenerate_google_token.py`              |
-| **Drive** | `var/gdrive/credentials.json` | `var/gdrive/token.json` | `./venv/bin/python regenerate_google_token.py --type drive` |
+| **Gmail** | `var/credentials.json`        | `var/token.pickle`      | `./venv/bin/python -m src.command.regenerate_google_token`              |
+| **Drive** | `var/gdrive/credentials.json` | `var/gdrive/token.json` | `./venv/bin/python -m src.command.regenerate_google_token --type drive` |
 
 Both tokens are cached and reused automatically. Deleting the token forces re-authentication on the next use.
 

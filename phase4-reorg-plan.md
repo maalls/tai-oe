@@ -172,6 +172,7 @@ Recommended validation command set per micro-step:
 - Done: removed wrapper-specific unit tests under `back/tests/unit/command/`.
 - Done: updated command usage docs to `python -m src.command.email_cli ...`.
 - Done: moved development server logic to `back/src/command/dev_server.py` and kept `back/dev.py` as compatibility wrapper.
+- Done: moved token regeneration command to `back/src/command/regenerate_google_token.py` and kept `back/regenerate_google_token.py` as compatibility wrapper.
 - Remaining: run full command regression suite in a Python environment with `pytest` available.
 
 ## 10. Back Root Cleanup (Top-level `back/` files)
@@ -195,7 +196,7 @@ Cleanup rule:
 | --------------------------------------- | ----------------------------------------------------------------- | ------------------------------- | ------------------------------------ |
 | `back/dev.py`                           | `back/src/command/dev_server.py`                                  | done (move + wrapper)           | productized command entrypoint       |
 | `back/run_migration.py`                 | `back/src/command/run_migration.py`                               | move + wrapper                  | command should live in command layer |
-| `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | move + wrapper                  | operational command                  |
+| `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (move + wrapper)           | operational command                  |
 | `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | move                            | one-off utility script               |
 | `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | move                            | one-off utility script               |
 | `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | move + rename if needed         | tests must be under tests tree       |
