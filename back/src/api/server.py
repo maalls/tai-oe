@@ -70,35 +70,25 @@ from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_utility_handlers import (
     handle_action_execute_post,
-    handle_action_pause_post,
     handle_action_resume_post,
     handle_actions_create_post,
     handle_auth_login_post,
     handle_auth_logout_post,
     handle_auth_signup_post,
-    handle_chat_attachments_post,
     handle_csv_source_post,
     handle_curl_post,
     handle_document_extract_rfp_post,
     handle_document_update_content_post,
     handle_email_senders_verified_post,
-    handle_invoice_pdf_post,
-    handle_invoice_send_post,
     handle_imap_config_post,
     handle_imap_test_post,
     handle_emails_classify_post,
     handle_fs_create_post,
     handle_fs_read_post,
-    handle_opportunity_rfq_create_from_text_post,
-    handle_opportunity_rfq_generate_post,
     handle_products_post,
-    handle_quote_invoice_post,
-    handle_quote_pdf_post,
     handle_quote_send_post,
     handle_quote_submit_post,
-    handle_quote_update_post,
     handle_rfp_post,
-    handle_send_quote_for_opportunity_post,
 )
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
@@ -361,42 +351,6 @@ def create_rag_handler(config):
             """Handle /api/document/update-content POST endpoint."""
             return handle_document_update_content_post(self)
 
-        def _handle_send_quote_for_opportunity_post(self, send_quote_match):
-            """Handle /api/opportunity/{id}/send-quote POST endpoint."""
-            return handle_send_quote_for_opportunity_post(self, send_quote_match)
-
-        def _handle_chat_attachments_post(self, parsed):
-            """Handle /api/chat/attachments POST endpoint."""
-            return handle_chat_attachments_post(self, parsed)
-
-        def _handle_opportunity_rfq_generate_post(self, opp_match):
-            """Handle /api/opportunity/{id}/rfq/generate POST endpoint."""
-            return handle_opportunity_rfq_generate_post(self, opp_match)
-
-        def _handle_opportunity_rfq_create_from_text_post(self, opp_rfq_create_match):
-            """Handle /api/opportunity/{id}/rfq/create-from-text POST endpoint."""
-            return handle_opportunity_rfq_create_from_text_post(self, opp_rfq_create_match)
-
-        def _handle_quote_pdf_post(self, quote_pdf_match):
-            """Handle /api/quote/{id}/pdf POST endpoint."""
-            return handle_quote_pdf_post(self, quote_pdf_match)
-
-        def _handle_quote_invoice_post(self, quote_invoice_match):
-            """Handle /api/quote/{id}/invoice POST endpoint."""
-            return handle_quote_invoice_post(self, quote_invoice_match)
-
-        def _handle_invoice_pdf_post(self, invoice_pdf_match):
-            """Handle /api/invoice/{id}/pdf POST endpoint."""
-            return handle_invoice_pdf_post(self, invoice_pdf_match)
-
-        def _handle_invoice_send_post(self, invoice_send_match):
-            """Handle /api/invoice/{id}/send POST endpoint."""
-            return handle_invoice_send_post(self, invoice_send_match)
-
-        def _handle_quote_update_post(self, quote_update_match):
-            """Handle /api/quote/{id} POST endpoint."""
-            return handle_quote_update_post(self, quote_update_match)
-
         def _handle_quote_submit_post(self):
             """Handle /api/quote POST endpoint."""
             return handle_quote_submit_post(self)
@@ -416,10 +370,6 @@ def create_rag_handler(config):
         def _handle_actions_create_post(self):
             """Handle /api/actions POST endpoint."""
             return handle_actions_create_post(self)
-
-        def _handle_action_pause_post(self, pause_action_match):
-            """Handle /api/actions/{id}/pause POST endpoint."""
-            return handle_action_pause_post(self, pause_action_match)
 
         def _handle_action_resume_post(self, resume_action_match):
             """Handle /api/actions/{id}/resume POST endpoint."""

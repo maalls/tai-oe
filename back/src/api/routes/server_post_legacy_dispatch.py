@@ -2,12 +2,14 @@
 
 import re
 
+from src.api.routes.server_post_utility_handlers import handle_action_pause_post
+
 
 def dispatch_action_post_routes(handler, parsed_path: str) -> bool:
     """Dispatch action-specific POST regex routes and return True when handled."""
     pause_action_match = re.match(r"^/api/actions/([^/]+)/pause$", parsed_path)
     if pause_action_match:
-        handler._handle_action_pause_post(pause_action_match)
+        handle_action_pause_post(handler, pause_action_match)
         return True
 
     resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed_path)
