@@ -1170,7 +1170,7 @@ def create_rag_handler(config):
                 payload=payload,
                 user_id=user_id,
             )
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_chat_attachments_post(self, parsed):
