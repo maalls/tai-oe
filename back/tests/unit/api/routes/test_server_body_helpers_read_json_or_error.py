@@ -1,13 +1,13 @@
+from io import BytesIO
+
 from src.api.routes.server_body_helpers import read_json_or_error
 
 
 class _HandlerStub:
     def __init__(self, body):
-        self.body = body
+        self.headers = {"Content-Length": str(len(body))}
+        self.rfile = BytesIO(body)
         self.json_calls = []
-
-    def _read_body(self):
-        return self.body
 
     def json(self, payload, status_code=200):
         self.json_calls.append((payload, status_code))

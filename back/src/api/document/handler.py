@@ -456,7 +456,7 @@ def handle_document_extract_rfp_post(handler):
         return handler.json({"error": "Missing document_id parameter"}, 400)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
+    result = request_handlers.business_handlers.document_handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
 
@@ -477,7 +477,7 @@ def handle_document_update_content_post(handler):
         return handler.json({"error": "Missing document_id parameter"}, 400)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_update_document_content(
+    result = request_handlers.business_handlers.document_handlers.handle_update_document_content(
         document_id=document_id,
         content=content,
         user_id=user_id,
@@ -502,7 +502,7 @@ def handle_chat_attachments_post(handler, parsed):
     opportunity_id = qs.get('opportunity_id', [None])[0]
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_chat_attachment_upload(
+    result = request_handlers.business_handlers.document_handlers.handle_chat_attachment_upload(
         body=body,
         content_type=content_type,
         user_id=user_id,
@@ -521,7 +521,7 @@ def handle_document_delete(handler, document_delete_match):
     document_id = document_delete_match.group(1)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_delete_document(document_id=document_id, user_id=user_id)
+    result = request_handlers.business_handlers.document_handlers.handle_delete_document(document_id=document_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
 
@@ -535,7 +535,7 @@ def handle_quote_delete(handler, quote_delete_match):
     document_id = quote_delete_match.group(1)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
+    result = request_handlers.business_handlers.document_handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
 
@@ -554,7 +554,7 @@ def handle_document_download(handler, filename, request_handlers, qs=None):
     try:
         qs = qs or {}
         is_inline = qs.get('inline', ['0'])[0] == '1'
-        content = request_handlers.handle_get_document_file(filename)
+        content = request_handlers.business_handlers.document_handlers.handle_get_document_file(filename)
 
         ext = filename.lower().split('.')[-1] if '.' in filename else ''
         content_type_map = {

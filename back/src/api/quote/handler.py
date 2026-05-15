@@ -143,6 +143,122 @@ class Quote:
             print(f"[QuoteController] Error retrieving quote: {e}")
             raise FileNotFoundError(f"Error retrieving quote: {str(e)}")
 
+    def handle_generate_quote_pdf(self, document_id: str, user_id: str = None) -> Dict:
+        """Generate a PDF for an existing quote document and update storage_key."""
+        _ = user_id
+        supabase = get_supabase_service()
+
+        try:
+            doc_resp = supabase.table("document").select("*").eq("id", document_id).single().execute()
+            if getattr(doc_resp, "error", None):
+                return {"status": "error", "message": f"Document lookup failed: {doc_resp.error}"}
+            document = doc_resp.data
+            if not document:
+                return {"status": "error", "message": f"Document not found: {document_id}"}
+
+            if document.get("type") != "QUOTE":
+                return {"status": "error", "message": "PDF generation is only supported for quotes"}
+
+            opportunity_id = document.get("opportunity_id")
+            account = {}
+
+            if opportunity_id:
+                opp_resp = supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
+                if not getattr(opp_resp, "error", None) and opp_resp.data:
+                    account_id = opp_resp.data.get("account_id")
+                    if account_id:
+                        acc_resp = supabase.table("account").select("*").eq("id", account_id).single().execute()
+                        if not getattr(acc_resp, "error", None) and acc_resp.data:
+                            account = acc_resp.data
+
+            line_resp = supabase.table("document_line").select("*").eq("document_id", document_id).order("position").execute()
+            if getattr(line_resp, "error", None):
+                return {"status": "error", "message": f"Document lines lookup failed: {line_resp.error}"}
+            lines = line_resp.data or []
+
+            rfp_data = {
+                "quote_id": document.get("id"),
+                "title": document.get("title") or "Quote",
+                "products": [],
+                "contact": {
+                    "company_name": account.get("name", ""),
+                    "address": self._normalize_account_address(account),
+                },
+                "account": account,
+                "issued_date": document.get("issued_at") or datetime.now().isoformat(),
+                "valid_until": document.get("valid_until"),
+                "currency": document.get("currency", "EUR"),
+                "totals": {"subtotal": 0.0, "tax": 0.0, "total": 0.0},
+            }
+
+            computed_subtotal = 0.0
+            computed_tax = 0.0
+            for line in lines:
+                quantity = float(line.get("quantity", 1) or 1)
+                unit_price_excl_tax = float(line.get("unit_price_excl_tax", 0) or 0)
+                client_discount_rate = float(line.get("client_discount_rate", 0) or 0)
+                discounted_unit_price = unit_price_excl_tax * (1 - client_discount_rate / 100.0)
+                line_total_excl_tax = float(line.get("line_total_excl_tax", 0) or 0)
+                if line_total_excl_tax <= 0:
+                    line_total_excl_tax = quantity * discounted_unit_price
+                tax_rate = float(line.get("tax_rate", 20) or 20)
+
+                computed_subtotal += line_total_excl_tax
+                computed_tax += line_total_excl_tax * (tax_rate / 100.0)
+
+                rfp_data["products"].append(
+                    {
+                        "quantity": quantity,
+                        "brand": line.get("brand", ""),
+                        "manufacturer": line.get("brand", ""),
+                        "sku": line.get("sku"),
+                        "description": line.get("description"),
+                        "price": unit_price_excl_tax,
+                        "unit_price_excl_tax": unit_price_excl_tax,
+                        "client_discount_rate": client_discount_rate,
+                        "discounted_unit_price": discounted_unit_price,
+                        "line_total_excl_tax": line_total_excl_tax,
+                        "tax_rate": tax_rate,
+                        "unit": line.get("unit", "U"),
+                    }
+                )
+
+            computed_subtotal = round(computed_subtotal, 2)
+            computed_tax = round(computed_tax, 2)
+            computed_total = round(computed_subtotal + computed_tax, 2)
+            rfp_data["totals"] = {
+                "subtotal": computed_subtotal,
+                "tax": computed_tax,
+                "total": computed_total,
+            }
+
+            pdf_filename = self._generate_quote_pdf(rfp_data)
+
+            update_payload = {
+                "storage_key": pdf_filename,
+                "total_excl_tax": computed_subtotal,
+                "total_tax": computed_tax,
+                "total_incl_tax": computed_total,
+            }
+
+            upd_resp = supabase.table("document").update(update_payload).eq("id", document_id).execute()
+            if getattr(upd_resp, "error", None):
+                fallback_resp = supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
+                if getattr(fallback_resp, "error", None):
+                    return {
+                        "status": "error",
+                        "message": f"Failed to update document with PDF: {fallback_resp.error}",
+                    }
+
+            return {"status": "ok", "pdf_filename": pdf_filename}
+
+        except Exception as e:  # noqa: BLE001
+            print(f"[QuoteController] Error generating PDF for document {document_id}: {e}")
+            return {
+                "status": "error",
+                "message": f"Error generating PDF: {str(e)}",
+            }
+
     @staticmethod
     def _normalize_account_address(account: Dict) -> Dict[str, str]:
         account = account or {}
@@ -266,8 +382,9 @@ def handle_quote_submit_post(handler):
     """Handle /api/quote POST endpoint."""
     content_type = handler.headers.get('Content-Type', '')
     body = read_body(handler)
+    _ = content_type
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_quote_submit(body, content_type)
+    result = request_handlers.business_handlers.quote_handlers.handle_quote_submit(body)
     return handler.json(result)
 
 
@@ -278,7 +395,7 @@ def handle_quote_send_post(handler):
     body = read_body(handler)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_quote_send(body, content_type)
+    result = request_handlers.business_handlers.email_handlers.handle_quote_send(body, content_type)
     return handler.json(result)
 
 
@@ -293,8 +410,7 @@ def handle_quote_update_post(handler, quote_update_match):
     payload = read_json(handler, default={})
 
     print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
-    request_handlers = handler.request_handlers
-    result = request_handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
+    result = Quote().update(document_id=document_id, payload=payload, user_id=user_id)
     status = status_from_error(result)
     return handler.json(result, status)
 
@@ -309,14 +425,14 @@ def handle_quote_pdf_post(handler, quote_pdf_match):
     document_id = quote_pdf_match.group(1)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+    result = request_handlers.business_handlers.quote_handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
 
 
 def handle_quotes_list_get(handler, request_handlers):
     """Handle /api/quotes/list GET endpoint."""
-    return handler.json(request_handlers.handle_list_quotes())
+    return handler.json(request_handlers.business_handlers.quote_handlers.handle_list_quotes())
 
 
 def handle_quotes_download_get(handler, parsed_path: str, qs, request_handlers):
@@ -330,7 +446,7 @@ def handle_quote_download(handler, filename, request_handlers, qs=None):
     try:
         qs = qs or {}
         is_inline = qs.get('inline', ['0'])[0] == '1'
-        content = request_handlers.handle_get_quote_file(filename)
+        content = request_handlers.business_handlers.quote_handlers.handle_get_quote_file(filename)
         handler.send_response(200)
         handler.send_header('Content-Type', 'application/pdf')
         disposition = 'inline' if is_inline else 'attachment'
@@ -347,121 +463,5 @@ def handle_quote_download(handler, filename, request_handlers, qs=None):
         return send_error(handler, 404, 'Quote file not found')
     except Exception as e:
         return send_error(handler, 500, f"Error streaming PDF: {e}")
-
-    def handle_generate_quote_pdf(self, document_id: str, user_id: str = None) -> Dict:
-        """Generate a PDF for an existing quote document and update storage_key."""
-        _ = user_id
-        supabase = get_supabase_service()
-
-        try:
-            doc_resp = supabase.table("document").select("*").eq("id", document_id).single().execute()
-            if getattr(doc_resp, "error", None):
-                return {"status": "error", "message": f"Document lookup failed: {doc_resp.error}"}
-            document = doc_resp.data
-            if not document:
-                return {"status": "error", "message": f"Document not found: {document_id}"}
-
-            if document.get("type") != "QUOTE":
-                return {"status": "error", "message": "PDF generation is only supported for quotes"}
-
-            opportunity_id = document.get("opportunity_id")
-            account = {}
-
-            if opportunity_id:
-                opp_resp = supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-                if not getattr(opp_resp, "error", None) and opp_resp.data:
-                    account_id = opp_resp.data.get("account_id")
-                    if account_id:
-                        acc_resp = supabase.table("account").select("*").eq("id", account_id).single().execute()
-                        if not getattr(acc_resp, "error", None) and acc_resp.data:
-                            account = acc_resp.data
-
-            line_resp = supabase.table("document_line").select("*").eq("document_id", document_id).order("position").execute()
-            if getattr(line_resp, "error", None):
-                return {"status": "error", "message": f"Document lines lookup failed: {line_resp.error}"}
-            lines = line_resp.data or []
-
-            rfp_data = {
-                "quote_id": document.get("id"),
-                "title": document.get("title") or "Quote",
-                "products": [],
-                "contact": {
-                    "company_name": account.get("name", ""),
-                    "address": self._normalize_account_address(account),
-                },
-                "account": account,
-                "issued_date": document.get("issued_at") or datetime.now().isoformat(),
-                "valid_until": document.get("valid_until"),
-                "currency": document.get("currency", "EUR"),
-                "totals": {"subtotal": 0.0, "tax": 0.0, "total": 0.0},
-            }
-
-            computed_subtotal = 0.0
-            computed_tax = 0.0
-            for line in lines:
-                quantity = float(line.get("quantity", 1) or 1)
-                unit_price_excl_tax = float(line.get("unit_price_excl_tax", 0) or 0)
-                client_discount_rate = float(line.get("client_discount_rate", 0) or 0)
-                discounted_unit_price = unit_price_excl_tax * (1 - client_discount_rate / 100.0)
-                line_total_excl_tax = float(line.get("line_total_excl_tax", 0) or 0)
-                if line_total_excl_tax <= 0:
-                    line_total_excl_tax = quantity * discounted_unit_price
-                tax_rate = float(line.get("tax_rate", 20) or 20)
-
-                computed_subtotal += line_total_excl_tax
-                computed_tax += line_total_excl_tax * (tax_rate / 100.0)
-
-                rfp_data["products"].append(
-                    {
-                        "quantity": quantity,
-                        "brand": line.get("brand", ""),
-                        "manufacturer": line.get("brand", ""),
-                        "sku": line.get("sku"),
-                        "description": line.get("description"),
-                        "price": unit_price_excl_tax,
-                        "unit_price_excl_tax": unit_price_excl_tax,
-                        "client_discount_rate": client_discount_rate,
-                        "discounted_unit_price": discounted_unit_price,
-                        "line_total_excl_tax": line_total_excl_tax,
-                        "tax_rate": tax_rate,
-                        "unit": line.get("unit", "U"),
-                    }
-                )
-
-            computed_subtotal = round(computed_subtotal, 2)
-            computed_tax = round(computed_tax, 2)
-            computed_total = round(computed_subtotal + computed_tax, 2)
-            rfp_data["totals"] = {
-                "subtotal": computed_subtotal,
-                "tax": computed_tax,
-                "total": computed_total,
-            }
-
-            pdf_filename = self._generate_quote_pdf(rfp_data)
-
-            update_payload = {
-                "storage_key": pdf_filename,
-                "total_excl_tax": computed_subtotal,
-                "total_tax": computed_tax,
-                "total_incl_tax": computed_total,
-            }
-
-            upd_resp = supabase.table("document").update(update_payload).eq("id", document_id).execute()
-            if getattr(upd_resp, "error", None):
-                fallback_resp = supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
-                if getattr(fallback_resp, "error", None):
-                    return {
-                        "status": "error",
-                        "message": f"Failed to update document with PDF: {fallback_resp.error}",
-                    }
-
-            return {"status": "ok", "pdf_filename": pdf_filename}
-
-        except Exception as e:  # noqa: BLE001
-            print(f"[QuoteController] Error generating PDF for document {document_id}: {e}")
-            return {
-                "status": "error",
-                "message": f"Error generating PDF: {str(e)}",
-            }
 
 

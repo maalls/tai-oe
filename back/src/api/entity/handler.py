@@ -64,7 +64,7 @@ def handle_entity_update_post(handler, entity_update_match):
         return handler.json({"status": "error", "message": "Missing value"}, 400)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_update_entity_field(
+    result = request_handlers.business_handlers.entity_handlers.handle_update_entity_field(
         table=table,
         field=field,
         record_id=record_id,

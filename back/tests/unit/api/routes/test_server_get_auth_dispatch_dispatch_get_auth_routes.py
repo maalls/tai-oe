@@ -1,34 +1,44 @@
 from types import SimpleNamespace
 
 from src.api.routes.server_get_auth_dispatch import dispatch_get_auth_routes
+from src.api.routes import server_get_auth_dispatch
 
 
 class _HandlerStub:
-    def __init__(self):
-        self.calls = []
-
-    def _handle_auth_user_get(self):
-        self.calls.append("auth_user")
-
-    def _handle_oauth_login_get(self, qs):
-        self.calls.append(("oauth_login", qs))
+    pass
 
 
-def test_dispatch_get_auth_routes_auth_user_path():
+def test_dispatch_get_auth_routes_auth_user_path(monkeypatch):
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/auth/user")
+    seen = {}
+
+    def _fake_dispatch_auth_routes(h, method, p, qs):
+        seen["handler"] = h
+        seen["method"] = method
+        seen["path"] = p.path
+        seen["qs"] = qs
+        return True
+
+    monkeypatch.setattr(server_get_auth_dispatch, "dispatch_auth_routes", _fake_dispatch_auth_routes)
 
     handled = dispatch_get_auth_routes(handler, parsed, {})
 
     assert handled is True
-    assert handler.calls == ["auth_user"]
+    assert seen == {
+        "handler": handler,
+        "method": "GET",
+        "path": "/api/auth/user",
+        "qs": {},
+    }
 
 
-def test_dispatch_get_auth_routes_oauth_login_path():
+def test_dispatch_get_auth_routes_oauth_login_path(monkeypatch):
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/oauth/login")
+
+    monkeypatch.setattr(server_get_auth_dispatch, "dispatch_auth_routes", lambda h, m, p, qs: True)
 
     handled = dispatch_get_auth_routes(handler, parsed, {"provider": ["azure"]})
 
     assert handled is True
-    assert handler.calls == [("oauth_login", {"provider": ["azure"]})]

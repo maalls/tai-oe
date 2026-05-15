@@ -1,12 +1,12 @@
+from io import BytesIO
+
 from src.api.routes.server_body_helpers import read_json
 
 
 class _HandlerStub:
     def __init__(self, body):
-        self.body = body
-
-    def _read_body(self):
-        return self.body
+        self.headers = {"Content-Length": str(len(body))}
+        self.rfile = BytesIO(body)
 
 
 def test_read_json_returns_decoded_payload():

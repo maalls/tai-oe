@@ -85,7 +85,7 @@ def handle_csv_source_post(handler):
     content_length = len(body)
 
     request_handlers = handler.request_handlers
-    result = request_handlers.handle_csv_source_upload(content_type, content_length, body)
+    result = request_handlers.file_handler.handle_file_upload(content_type, content_length, body)
     return handler.json(result)
 
 
@@ -115,33 +115,33 @@ def handle_csv_get(handler, parsed_path: str, qs):
 
 def handle_csv_files_get(handler, qs, request_handlers):
     """Handle /api/csv/files GET endpoint."""
-    return handler.json(request_handlers.handle_list_files(qs))
+    return handler.json(request_handlers.csv_handlers.handle_list_files(qs))
 
 
 def handle_csv_preview_get(handler, qs, request_handlers):
     """Handle /api/csv/preview GET endpoint."""
-    return handler.json(request_handlers.handle_preview(qs))
+    return handler.json(request_handlers.csv_handlers.handle_preview(qs))
 
 
 def handle_csv_sources_get(handler, request_handlers):
     """Handle /api/csv/sources GET endpoint."""
-    return handler.json(request_handlers.handle_sources())
+    return handler.json(request_handlers.csv_handlers.handle_sources())
 
 
 def handle_csv_query_get(handler, qs, request_handlers):
     """Handle /api/csv/query GET endpoint."""
-    return handler.json(request_handlers.handle_query(qs))
+    return handler.json(request_handlers.database_handlers.handle_query(qs))
 
 
 def handle_csv_search_get(handler, qs, request_handlers):
     """Handle /api/csv/search* GET endpoints."""
-    return handler.json(request_handlers.handle_search(qs))
+    return handler.json(request_handlers.database_handlers.handle_search(qs, request_handlers.embedding_generator))
 
 
 def handle_raw_stream(handler, qs, request_handlers):
     """Stream raw CSV file."""
     try:
-        content = request_handlers.handle_raw(qs)
+        content = request_handlers.csv_handlers.handle_raw(qs)
         handler.send_response(200)
         handler.send_header('Content-Type', 'text/csv; charset=utf-8')
         handler.send_header('Content-Length', str(len(content)))
@@ -157,7 +157,7 @@ def handle_source_stream(handler, qs, request_handlers):
         source = (qs.get('source') or [None])[0]
         if not source:
             return send_error(handler, 400, "Missing 'source' parameter")
-        content = request_handlers.handle_source_raw(qs)
+        content = request_handlers.csv_handlers.handle_source_raw(qs)
         ext = source.lower().split('.')[-1] if '.' in source else ''
         content_type_map = {
             'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
