@@ -1085,11 +1085,7 @@ def create_rag_handler(config):
                         return self._send_error(500, f'Fetch failed: {e}')
 
                 if parsed.path == '/api/email-fetch-loop/status':
-                    status_path = Path(__file__).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
-                    legacy_path = Path(__file__).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
-                    return self.json(result)
+                    return self._handle_email_fetch_loop_status_get()
                 
                 # Storage endpoint for serving uploaded files
                 if parsed.path.startswith('/api/storage/'):
@@ -1401,6 +1397,14 @@ def create_rag_handler(config):
                 return
 
             return self.json(result, 500)
+
+        def _handle_email_fetch_loop_status_get(self):
+            """Handle /api/email-fetch-loop/status GET endpoint."""
+            status_path = Path(__file__).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
+            legacy_path = Path(__file__).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
+            handlers = self.get_request_handlers()
+            result = handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
+            return self.json(result)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
