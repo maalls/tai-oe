@@ -89,9 +89,14 @@ from src.api.routes.server_get_misc_handlers import (
     handle_prompt_get,
     handle_products_get,
 )
-from src.api.routes.server_http_method_handlers import handle_delete_method, handle_head_method, handle_options_method
+from src.api.routes.server_http_method_handlers import (
+    handle_delete_method,
+    handle_head_method,
+    handle_options_method,
+    handle_patch_method,
+)
 from src.api.routes.server_mutation_handlers import handle_action_update_put
-from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
+from src.api.routes.server_mutation_dispatch import dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
@@ -181,18 +186,7 @@ def create_rag_handler(config):
             return handle_delete_method(self)
 
         def do_PATCH(self):
-            try:
-                parsed = urllib.parse.urlparse(self.path)
-                print(f"[RAG] PATCH request to: {parsed.path}")
-                if dispatch_patch_request(self, parsed.path):
-                    return
-
-                print(f"[RAG] PATCH path not matched: {parsed.path}")
-                return self._send_error(404, "Not found")
-            except Exception as e:
-                traceback.print_exc()
-                print(f"[RAG] PATCH error: {e}")
-                return self._send_error(500, f"Server error: {str(e)}")
+            return handle_patch_method(self)
 
         def do_PUT(self):
             try:
