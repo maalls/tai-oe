@@ -1,15 +1,15 @@
-"""Backward-compatible shim — real implementation in src.infrastructure.clients.llm."""
+"""OpenAI-compatible LLM client."""
 
-from src.infrastructure.clients.llm import LLMClient, extract_json_from_text, get_llm_service
+import json
+import os
+import re
+from typing import Any, Dict, List, Optional, Union
 
-__all__ = ["LLMClient", "extract_json_from_text", "get_llm_service"]
+from openai import OpenAI
 
 
 def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
-    """Extract JSON from plain text or fenced code blocks.
-
-    Supports ```json ... ``` fences and returns dict if parsed, else None.
-    """
+    """Extract JSON from plain text or fenced code blocks."""
     fence = re.search(r"```(?:json|JSON)?\s*([\s\S]*?)```", text)
     if fence:
         candidate = fence.group(1).strip()
@@ -32,28 +32,24 @@ def _balanced_prefix(text: str) -> Optional[str]:
     """Repair truncated JSON by finding the largest valid JSON prefix with balanced braces/brackets."""
     if not text:
         return None
-    
+
     stack = []
     in_string = False
     escaped = False
     last_close_pos = -1
-    
+
     for i, char in enumerate(text):
         if escaped:
             escaped = False
             continue
-        
         if char == '\\':
             escaped = True
             continue
-        
         if char == '"':
             in_string = not in_string
             continue
-        
         if in_string:
             continue
-        
         if char in '{[':
             stack.append((char, i))
         elif char in '}]':
@@ -63,7 +59,7 @@ def _balanced_prefix(text: str) -> Optional[str]:
             if (char == '}' and opening == '{') or (char == ']' and opening == '['):
                 if not stack:
                     last_close_pos = i
-    
+
     if last_close_pos >= 0:
         candidate = text[:last_close_pos + 1]
         try:
@@ -71,15 +67,11 @@ def _balanced_prefix(text: str) -> Optional[str]:
             return candidate
         except Exception:
             pass
-    
     return None
 
 
 class LLMClient:
-    """Minimal OpenAI-compatible chat completions client using `openai` SDK.
-
-    Works with custom `base_url` servers (e.g., local OpenAI-compatible endpoints).
-    """
+    """Minimal OpenAI-compatible chat completions client using `openai` SDK."""
 
     def __init__(
         self,
@@ -88,8 +80,6 @@ class LLMClient:
         api_key: Optional[str] = None,
         timeout: Optional[float] = 60,
     ):
-        # Some local servers ignore api_key; provide a default if none is given.
-        # Apply timeout directly on the SDK client to avoid hanging requests.
         self.client = OpenAI(
             base_url=base_url.rstrip("/"),
             api_key=api_key or "sk-local",
@@ -120,8 +110,6 @@ class LLMClient:
             resp = self.client.chat.completions.create(**params)
             return resp.model_dump() if hasattr(resp, "model_dump") else resp
         except Exception as e:
-            # If json_object format is not supported, try without response_format
-            # The LLM will return JSON in plain text that we'll extract later
             error_msg = str(e).lower()
             if json_mode and ("json_object" in error_msg or "json_schema" in error_msg or "response_format" in error_msg):
                 print(f"[LLMClient] json_mode not supported, retrying without response_format: {e}")
@@ -167,22 +155,10 @@ class LLMClient:
 
 
 def get_llm_service() -> LLMClient:
-    """
-    Get an instantiated LLMClient using parameters from environment variables.
-    
-    Environment variables required:
-    - LLM_URL: Base URL of the LLM service (e.g., http://127.0.0.1:1234)
-    - LLM_MODEL: Model name (e.g., Qwen2.5-7B-Instruct)
-    
-    Returns:
-        LLMClient: Configured LLM client instance
-        
-    Raises:
-        ImportError: If LLM_URL or LLM_MODEL environment variables are not set
-    """
+    """Get an LLMClient configured from LLM_URL and LLM_MODEL env vars."""
     llm_url = os.getenv("LLM_URL")
     llm_model = os.getenv("LLM_MODEL")
-    
+
     if not llm_url:
         raise ImportError("LLM_URL environment variable is not set")
     if not llm_model:
@@ -193,3 +169,6 @@ def get_llm_service() -> LLMClient:
         normalized_url = f"{normalized_url}/v1"
 
     return LLMClient(base_url=normalized_url, model=llm_model)
+
+
+__all__ = ["LLMClient", "extract_json_from_text", "get_llm_service"]

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 import yaml
-from src.llm import LLMClient
+from src.infrastructure.clients.llm import LLMClient
 
 # FIXME: refactor to use src/llm get_llm_service which is configured with the back/.env environment.
 DEFAULT_LLM_URL = os.environ.get("LLM_URL", "http://127.0.0.1:1234/v1/chat/completions")
