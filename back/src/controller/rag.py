@@ -385,7 +385,7 @@ def create_rag_handler(config):
 
                     # Invoice send
                     invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
-                    if invoice_send_match and self.command == 'POST':
+                    if invoice_send_match:
                         return self._handle_invoice_send_post(invoice_send_match)
 
                     # Quote draft update
