@@ -76,7 +76,6 @@ def create_rag_handler(config):
     class Rag(http.server.SimpleHTTPRequestHandler):
         # Shared resources (class variables)
         _embedding_generator = None
-        _file_handler = None
         _request_handlers = None
         _auth_handler = None
 
@@ -86,12 +85,6 @@ def create_rag_handler(config):
                 print("[Rag] Initializing embedding generator...")
                 cls._embedding_generator = EmbeddingGenerator()
             return cls._embedding_generator
-        
-        @classmethod
-        def get_file_handler(cls):
-            if cls._file_handler is None:
-                cls._file_handler = FileHandler(config["STORAGE_DIR"], CSVReader())
-            return cls._file_handler
         
         @classmethod
         def get_auth_handler(cls):
@@ -104,7 +97,7 @@ def create_rag_handler(config):
         def get_request_handlers(cls):
             if cls._request_handlers is None:
                 cls._request_handlers = RequestHandlers(
-                    cls.get_file_handler()
+                    FileHandler(config["STORAGE_DIR"], CSVReader())
                 )
             return cls._request_handlers
         
