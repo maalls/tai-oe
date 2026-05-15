@@ -961,7 +961,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_opportunities_create_from_rfp_post(self):
