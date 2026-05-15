@@ -1123,8 +1123,7 @@ def create_rag_handler(config):
                     return self._handle_action_logs_get(get_action_logs_match, qs, handlers)
                 
                 elif parsed.path.startswith('/api/quotes/download/'):
-                    filename = parsed.path.split('/api/quotes/download/')[-1]
-                    return self._handle_quote_download(filename, handlers, qs)
+                    return self._handle_quotes_download_get(parsed.path, qs, handlers)
                 elif parsed.path.startswith('/api/documents/download/'):
                     filename = parsed.path.split('/api/documents/download/')[-1]
                     filename = urllib.parse.unquote(filename)
@@ -1410,6 +1409,11 @@ def create_rag_handler(config):
             result = handlers.handle_get_action_logs(action_id, limit, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
+
+        def _handle_quotes_download_get(self, parsed_path: str, qs, handlers):
+            """Handle /api/quotes/download/<filename> GET endpoint."""
+            filename = parsed_path.split('/api/quotes/download/')[-1]
+            return self._handle_quote_download(filename, handlers, qs)
 
         def _handle_csv_get(self, parsed_path: str, qs):
             """Handle /api/csv* GET endpoints."""
