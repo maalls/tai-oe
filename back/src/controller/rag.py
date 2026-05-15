@@ -366,38 +366,7 @@ def create_rag_handler(config):
                     # Opportunity-scoped RFQ creation from text/file
                     opp_rfq_create_match = re.match(r"^/api/opportunity/([^/]+)/rfq/create-from-text$", parsed.path)
                     if opp_rfq_create_match and self.command == 'POST':
-                        body = self._read_body()
-                        content_type = self.headers.get('Content-Type', '')
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-                        user_id = user_data.get('id') if user_data else None
-                        handlers = self.get_request_handlers()
-                        opportunity_id = opp_rfq_create_match.group(1)
-
-
-                        if opportunity_id == "new":
-                            # create new opportunity first
-                            result = handlers.handle_create_opportunity_from_rfp(
-                                body=body,
-                                content_type=content_type,
-                                user_id=user_id
-                            )
-                            if result.get('status') == 'ok':
-                                o = result.get('opportunity', {})
-                                opportunity_id = o.get('id')
-                                print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
-                                handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
-                        
-                        else:
-                            result = handlers.handle_create_rfq_source_from_html_body(
-                                opportunity_id=opportunity_id,
-                                body=body,
-                                content_type=content_type,
-                                user_id=user_id
-                            )
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_opportunity_rfq_create_from_text_post(opp_rfq_create_match)
 
                     # Quote PDF generation
                     quote_pdf_match = re.match(r"^/api/quote/([^/]+)/pdf$", parsed.path)
@@ -1241,6 +1210,41 @@ def create_rag_handler(config):
                 user_id=user_id,
             )
             print('result:', result)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunity_rfq_create_from_text_post(self, opp_rfq_create_match):
+            """Handle /api/opportunity/{id}/rfq/create-from-text POST endpoint."""
+            body = self._read_body()
+            content_type = self.headers.get('Content-Type', '')
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            handlers = self.get_request_handlers()
+            opportunity_id = opp_rfq_create_match.group(1)
+
+            if opportunity_id == "new":
+                result = handlers.handle_create_opportunity_from_rfp(
+                    body=body,
+                    content_type=content_type,
+                    user_id=user_id
+                )
+                if result.get('status') == 'ok':
+                    opportunity = result.get('opportunity', {})
+                    opportunity_id = opportunity.get('id')
+                    print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
+                    handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
+            else:
+                result = handlers.handle_create_rfq_source_from_html_body(
+                    opportunity_id=opportunity_id,
+                    body=body,
+                    content_type=content_type,
+                    user_id=user_id
+                )
+
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
