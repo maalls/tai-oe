@@ -28,6 +28,8 @@ from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
+from src.api.routes.server_get_dispatch import dispatch_get_request
+from src.api.routes.server_post_dispatch import dispatch_post_request
 
 # Load .env before reading config values.
 load_runtime_env(__file__)
@@ -320,22 +322,7 @@ def create_rag_handler(config):
             try:
                 parsed = urllib.parse.urlparse(self.path)
 
-                if self._handle_ddd_post_routes(parsed):
-                    return
-
-                if self._handle_post_core_routes(parsed.path):
-                    return
-                
-                if self._handle_post_auth_routes(parsed.path):
-                    return
-                
-                if self._handle_post_domain_routes(parsed):
-                    return
-
-                if self._handle_post_opportunity_quote_invoice_routes(parsed):
-                    return
-                
-                if self._handle_post_legacy_and_action_routes(parsed.path):
+                if dispatch_post_request(self, parsed):
                     return
 
                 return self._send_error(404, "Not found")
@@ -421,91 +408,11 @@ def create_rag_handler(config):
                 parsed = urllib.parse.urlparse(self.path)
                 qs = urllib.parse.parse_qs(parsed.query)
 
-                if self._handle_ddd_get_routes(parsed, qs):
+                if dispatch_get_request(self, parsed, qs):
                     return
 
-                if parsed.path == '/api/products':
-                    return self._handle_products_get(qs)
-
-                if parsed.path.startswith('/api/google/oauth/callback'):
-                    return self._handle_google_oauth_callback_get(qs)
-
-                # Prompt endpoint: /api/prompt/<relative_path> -> back/src/infrastructure/prompts/<relative_path>/prompt.md
-                if parsed.path.startswith('/api/prompt/'):
-                    return self._handle_prompt_get(parsed.path)
-
-                if parsed.path == '/api/fetch':
-                    return self._handle_fetch_get(qs)
-
-                if parsed.path == '/api/email-fetch-loop/status':
-                    return self._handle_email_fetch_loop_status_get()
-                
-                # Storage endpoint for serving uploaded files
-                if parsed.path.startswith('/api/storage/'):
-                    return self._handle_storage_get(parsed.path)
-                
-                # Auth endpoint
-                if parsed.path == '/api/auth/user':
-                    return self._handle_auth_user_get()
-                if parsed.path == '/api/oauth/login':
-                    return self._handle_oauth_login_get(qs)
-                if parsed.path == '/api/oauth/callback':
-                    return self._handle_oauth_callback_get(qs)
-                
-                # Existing endpoints
-                if parsed.path == '/api/gmail/oauth/start':
-                    return self._handle_gmail_oauth_start_get(qs)
-                if parsed.path == '/api/gmail/authorize':
-                    return self._handle_gmail_authorize_get(qs)
-                elif parsed.path == '/api/gmail/status':
-                    return self._handle_gmail_status_get(qs)
-                elif parsed.path == '/api/gmail/revoke':
-                    return self._handle_gmail_revoke_get(qs)
-                elif parsed.path == '/api/gmail/profile':
-                    return self._handle_gmail_profile_get(qs)
-                elif parsed.path == '/api/imap/status':
-                    return self._handle_imap_status_get()
-                elif parsed.path == '/api/imap/config':
-                    return self._handle_imap_config_get()
-                elif parsed.path == '/api/gmail/messages':
-                    return self._handle_gmail_messages_get(qs)
-                elif parsed.path == '/api/gmail/classify-unclassified':
-                    return self._handle_gmail_classify_unclassified_get(qs)
-                elif parsed.path.startswith('/api/gmail/message/'):
-                    return self._handle_gmail_message_get(parsed.path)
-                elif parsed.path.startswith('/api/email-attachment/'):
-                    return self._handle_email_attachment_get(parsed.path)
-                if parsed.path.startswith('/api/csv'):
-                    return self._handle_csv_get(parsed.path, qs)
-
-                handlers = self.get_request_handlers()
-                if parsed.path == '/api/quotes/list':
-                    return self._handle_quotes_list_get(handlers)
-                if parsed.path == '/api/opportunities/search':
-                    return self._handle_opportunities_search_get(qs, handlers)
-                
-                # Action endpoints - List actions for opportunity
-                list_actions_match = re.match(r"^/api/opportunities/([^/]+)/actions$", parsed.path)
-                if list_actions_match:
-                    return self._handle_opportunity_actions_list_get(list_actions_match, handlers)
-                
-                # Get action details
-                get_action_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
-                if get_action_match:
-                    return self._handle_action_get(get_action_match, handlers)
-                
-                # Get action logs
-                get_action_logs_match = re.match(r"^/api/actions/([^/]+)/logs$", parsed.path)
-                if get_action_logs_match:
-                    return self._handle_action_logs_get(get_action_logs_match, qs, handlers)
-                
-                if parsed.path.startswith('/api/quotes/download/'):
-                    return self._handle_quotes_download_get(parsed.path, qs, handlers)
-                if parsed.path.startswith('/api/documents/download/'):
-                    return self._handle_documents_download_get(parsed.path, qs, handlers)
-                else:
-                    # Fallback to static file serving
-                    return super().do_GET()
+                # Fallback to static file serving
+                return super().do_GET()
             except Exception as e:
                 traceback.print_exc()
                 print(f"[RAG] Error handling GET request: {e}")
