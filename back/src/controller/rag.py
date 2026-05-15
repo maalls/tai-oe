@@ -380,7 +380,7 @@ def create_rag_handler(config):
 
                     # Invoice PDF generation
                     invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
-                    if invoice_pdf_match and self.command == 'POST':
+                    if invoice_pdf_match:
                         return self._handle_invoice_pdf_post(invoice_pdf_match)
 
                     # Invoice send
