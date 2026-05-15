@@ -1,6 +1,5 @@
 """Email-related request handlers for Gmail operations."""
 
-import json
 from pathlib import Path
 from datetime import datetime
 from typing import Dict

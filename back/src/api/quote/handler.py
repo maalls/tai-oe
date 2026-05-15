@@ -1,5 +1,4 @@
 import json
-import os
 import uuid
 from pathlib import Path
 from typing import Dict
@@ -14,7 +13,6 @@ from src.api.routes.server_status_helpers import status_from_error, status_from_
 from src.service.quote.service import QuoteService
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.storage_paths import get_storage_dir, get_storage_path
-import yaml
 
 
 class Quote:
