@@ -1634,7 +1634,7 @@ def create_rag_handler(config):
                 return
             opportunity_id = list_actions_match.group(1)
             result = handlers.handle_list_actions(opportunity_id, user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_action_get(self, get_action_match, handlers):
