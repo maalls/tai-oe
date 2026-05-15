@@ -33,6 +33,7 @@ from src.api.routes.server_delete_handlers import (
     handle_email_attachment_delete,
     handle_email_delete,
     handle_imap_config_delete,
+    handle_quote_delete,
 )
 from src.api.routes.server_auth_helpers import (
     authorize_request,
@@ -254,16 +255,7 @@ def create_rag_handler(config):
 
         def _handle_quote_delete(self, quote_delete_match):
             """Handle DELETE /api/quote/{id}."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-
-            document_id = quote_delete_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_quote_delete(self, quote_delete_match)
 
         def _handle_opportunity_delete(self, opportunity_delete_match):
             """Handle DELETE /api/opportunities/{ids}."""
