@@ -171,13 +171,13 @@ Recommended validation command set per micro-step:
   - `fetch_emails_loop.py`
 - Done: removed wrapper-specific unit tests under `back/tests/unit/command/`.
 - Done: updated command usage docs to `python -m src.command.email_cli ...`.
-- Done: moved development server logic to `back/src/command/dev_server.py` and kept `back/dev.py` as compatibility wrapper.
-- Done: moved token regeneration command to `back/src/command/regenerate_google_token.py` and kept `back/regenerate_google_token.py` as compatibility wrapper.
-- Done: moved migration runner command to `back/src/command/run_migration.py` and kept `back/run_migration.py` as compatibility wrapper.
+- Done: moved development server logic to `back/src/command/dev_server.py` and removed root wrapper.
+- Done: moved token regeneration command to `back/src/command/regenerate_google_token.py` and removed root wrapper.
+- Done: moved migration runner command to `back/src/command/run_migration.py` and removed root wrapper.
 - Done: moved one-off extraction scripts to `back/script/`:
   - `extract_contact_from_file.py`
   - `extract_products_from_file.py`
-    while keeping root compatibility wrappers.
+    and removed root wrappers.
 - Done: moved root test scripts under `back/tests/**` and removed root wrappers:
   - `test_action_cli.py` -> `tests/unit/command/test_action_cli.py`
   - `test_action_cli_comprehensive.py` -> `tests/integration/command/test_action_cli_comprehensive.py`
@@ -204,11 +204,11 @@ Cleanup rule:
 
 | Current path                            | Proposed destination                                              | Action                       | Rationale                            |
 | --------------------------------------- | ----------------------------------------------------------------- | ---------------------------- | ------------------------------------ |
-| `back/dev.py`                           | `back/src/command/dev_server.py`                                  | done (move + wrapper)        | productized command entrypoint       |
-| `back/run_migration.py`                 | `back/src/command/run_migration.py`                               | done (move + wrapper)        | command should live in command layer |
-| `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (move + wrapper)        | operational command                  |
-| `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | done (move + wrapper)        | one-off utility script               |
-| `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | done (move + wrapper)        | one-off utility script               |
+| `back/dev.py`                           | `back/src/command/dev_server.py`                                  | done (moved, root removed)   | productized command entrypoint       |
+| `back/run_migration.py`                 | `back/src/command/run_migration.py`                               | done (moved, root removed)   | command should live in command layer |
+| `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (moved, root removed)   | operational command                  |
+| `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | done (moved, root removed)   | one-off utility script               |
+| `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | done (moved, root removed)   | one-off utility script               |
 | `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | done (moved, root removed)   | tests must be under tests tree       |
 | `back/test_action_cli_comprehensive.py` | `back/tests/integration/command/test_action_cli_comprehensive.py` | done (moved, root removed)   | broad scenario test                  |
 | `back/test_llm_model.py`                | `back/tests/integration/llm/test_llm_model.py`                    | done (moved, root removed)   | integration-level behavior           |
