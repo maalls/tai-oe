@@ -69,6 +69,7 @@ from src.api.routes.server_get_business_handlers import (
     handle_quotes_download_get,
     handle_quotes_list_get,
 )
+from src.api.routes.server_get_misc_handlers import handle_products_get
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1095,8 +1096,7 @@ def create_rag_handler(config):
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
-            handlers = self.get_request_handlers()
-            return self.json(handlers.handle_list_products(qs))
+            return handle_products_get(self, qs)
 
         def _handle_google_oauth_callback_get(self, qs):
             """Handle Google OAuth callback route."""
