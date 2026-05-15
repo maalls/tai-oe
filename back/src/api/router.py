@@ -18,6 +18,7 @@ from src.api.entity.handler import EntityHandlers
 from src.api.invoice.handler import InvoiceHandlers
 from src.api.opportunity.handler import OpportunityHandlers
 from src.api.rfq.handler import RfqHandlers
+from src.api.quote.handler import Quote as QuoteController
 from src.api.action.handler import ActionHandlers
 from src.infrastructure.clients.database import DatabaseHandler
 from src.infrastructure.clients.supabase import get_supabase_service
@@ -241,6 +242,7 @@ class RequestHandlers:
             )
         return self._opportunity_from_email_service
 
+    # Utility operations used by server/file routes
     def handle_fetch_url(self, target_url: str, max_chars: int, timeout_ms: int) -> Dict:
         """Handle /api/fetch request."""
         with urllib.request.urlopen(target_url, timeout=timeout_ms / 1000) as resp:
