@@ -5,13 +5,15 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from src.infrastructure.clients.database import DatabaseHandler
+from src.repository.database.repository import DatabaseRepository
 
 
 class DatabaseHandlers:
     """Handlers for PostgreSQL database operations."""
     
-    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
+    def __init__(self, db_handler: Optional[DatabaseHandler] = None, repository: Optional[DatabaseRepository] = None):
         self.db_handler = db_handler
+        self.repository = repository or DatabaseRepository(db_handler=db_handler)
     
     @staticmethod
     def serialize_value(value):
@@ -65,7 +67,7 @@ class DatabaseHandlers:
                 WHERE t.table_schema = 'public'
                 ORDER BY t.table_name, c.ordinal_position;
             """
-            rows = self.db_handler.execute_dict_query(query)
+            rows = self.repository.execute_dict_query(query)
             
             # Group columns by table
             tables = {}
@@ -118,7 +120,7 @@ class DatabaseHandlers:
         query += f" LIMIT {limit} OFFSET {offset}"
         
         try:
-            results = self.db_handler.execute_dict_query(query)
+            results = self.repository.execute_dict_query(query)
             
             # Serialize results to handle date/datetime/decimal objects
             serialized_results = [self.serialize_row(row) for row in results]
