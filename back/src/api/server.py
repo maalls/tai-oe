@@ -29,6 +29,7 @@ from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_ro
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_delete_handlers import (
     handle_action_delete,
+    handle_email_attachment_delete,
     handle_email_delete,
     handle_imap_config_delete,
 )
@@ -244,16 +245,7 @@ def create_rag_handler(config):
 
         def _handle_email_attachment_delete(self, attachment_delete_match):
             """Handle DELETE /api/email-attachment/{id}."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-
-            attachment_id = attachment_delete_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_email_attachment_delete(self, attachment_delete_match)
 
         def _handle_document_delete(self, document_delete_match):
             """Handle DELETE /api/document/{id}."""
