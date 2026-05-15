@@ -325,21 +325,7 @@ def create_rag_handler(config):
                     return self._handle_email_extract_contact_post()
                 
                 elif parsed.path.startswith('/api/email/auth/'):
-                    # GET /api/email/auth/{email_id} - Get authentication status for an email
-                    email_id = parsed.path.split('/api/email/auth/')[-1]
-
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    if not user_id:
-                        return self.json({"error": "Unauthorized"}, 401)
-                    
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_email_auth_status_post(parsed.path)
                 
                 elif parsed.path.startswith('/api/email/') and parsed.path.endswith('/resync'):
                     # POST /api/email/{email_id}/resync - Resync email from Gmail
@@ -1202,6 +1188,23 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_email_auth_status_post(self, parsed_path):
+            """Handle /api/email/auth/{email_id} POST endpoint."""
+            email_id = parsed_path.split('/api/email/auth/')[-1]
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            if not user_id:
+                return self.json({"error": "Unauthorized"}, 401)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
