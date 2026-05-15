@@ -94,9 +94,9 @@ from src.api.routes.server_http_method_handlers import (
     handle_head_method,
     handle_options_method,
     handle_patch_method,
+    handle_put_method,
 )
 from src.api.routes.server_mutation_handlers import handle_action_update_put
-from src.api.routes.server_mutation_dispatch import dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
@@ -189,16 +189,7 @@ def create_rag_handler(config):
             return handle_patch_method(self)
 
         def do_PUT(self):
-            try:
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_put_request(self, parsed.path):
-                    return
-                
-                return self._send_error(404, "Not found")
-            except Exception as e:
-                traceback.print_exc()
-                return self._send_error(500, f"Server error: {str(e)}")
+            return handle_put_method(self)
 
         def _handle_action_update_put(self, update_action_match):
             """Handle PUT /api/actions/{id}."""
