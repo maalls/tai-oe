@@ -33,6 +33,7 @@ from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_post_dispatch import dispatch_post_request
+from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
 
 # Load .env before reading config values.
@@ -167,15 +168,15 @@ def create_rag_handler(config):
 
         def _status_from_result(self, result: Dict, ok: int = 200, error: int = 400) -> int:
             """Map handler result payload status to HTTP status code."""
-            return ok if result.get('status') == 'ok' else error
+            return status_from_result(result, ok=ok, error=error)
 
         def _pop_status(self, result: Dict, default: int = 200) -> int:
             """Extract and remove status code from handler payload."""
-            return result.pop('status', default)
+            return pop_status(result, default=default)
 
         def _status_from_error(self, result: Dict, ok: int = 200, error: int = 400, key: str = 'error') -> int:
             """Map payload error field presence to HTTP status code."""
-            return error if result.get(key) else ok
+            return status_from_error(result, ok=ok, error=error, key=key)
 
         def _handle_imap_config_delete(self):
             """Handle DELETE /api/imap/config."""
