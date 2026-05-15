@@ -1,1 +1,1 @@
-"""Google Drive integration tools for downloading and exporting files."""
+"""Backward-compatible shim — real implementation in src.infrastructure.clients.google_drive."""
