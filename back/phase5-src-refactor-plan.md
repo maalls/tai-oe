@@ -47,7 +47,7 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
 - **Action** :
   - Structurer par aggregate root : `repository/action/`, `repository/email/`, `repository/opportunity/`, `repository/oauth/`
   - Éviter les mixed concerns
-  - azure_oauth.py → peut aller dans infrastructure/ ou lib/auth/
+  - OAuth persistence uniquement dans repository : `repository/oauth/token_repository.py` + `repository/oauth/state_repository.py`
 
 #### 4. **service/** → Service/Business Logic Layer ✓
 
@@ -75,7 +75,6 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
 - **Création** : CRÉER
 - **Contenu** :
   - `lib/readers/` : reader/csv.py, reader/xls.py, text/reader.py, text/rfp_source_picker.py → fusionner logiquement
-  - `lib/auth/` : google_auth logic
   - `lib/extractors/` : pdf extraction, text extraction
   - `lib/importers/` : fabdis, discount, net_price importers
   - `lib/calculations/` : net_price logic
@@ -141,8 +140,19 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
 #### 13. **google_auth/** → INFRASTRUCTURE ✓
 
 - **Rôle** : Google auth client
-- **Décision** : DÉPLACER → `infrastructure/clients/google_auth.py`
-- **Action** : Fusionner avec `repository/azure_oauth.py` dans une couche d'authentification
+- **Décision** : DÉPLACER → `infrastructure/clients/oauth/google_client.py`
+- **Action** : Ne pas fusionner Google et Azure. Découpler par provider + service d'orchestration OAuth.
+
+#### 13.b **azure_oauth.py** → SPLIT PAR RESPONSABILITÉ ✓
+
+- **Problème** : Mélange URL auth, callback HTTP, échange token, et logique provider dans un seul fichier.
+- **Décision** : DÉCOUPLER en plusieurs fichiers.
+- **Action** :
+  - `infrastructure/clients/oauth/azure_client.py` : appels provider Microsoft (authorize URL, token exchange)
+  - `service/auth/oauth_service.py` : orchestration login/callback (state, flux, erreurs métier)
+  - `repository/oauth/token_repository.py` : persistance des tokens
+  - `repository/oauth/state_repository.py` : persistance/validation du state OAuth
+  - `api/auth/oauth_handler.py` : endpoints login + callback
 
 #### 14. **google_drive/** → INFRASTRUCTURE ✓
 
@@ -252,7 +262,10 @@ back/src/
 │   ├── clients/
 │   │   ├── __init__.py
 │   │   ├── supabase.py           # Supabase client
-│   │   ├── google_auth.py        # Google authentication
+│   │   ├── oauth/
+│   │   │   ├── __init__.py
+│   │   │   ├── azure_client.py   # Microsoft OAuth provider client
+│   │   │   └── google_client.py  # Google OAuth provider client
 │   │   ├── google_drive.py       # Google Drive access
 │   │   ├── llm.py                # LLM client
 │   │   ├── database.py           # Generic DB handler
@@ -284,7 +297,10 @@ back/src/
 │   │   └── repository.py
 │   ├── oauth/
 │   │   ├── __init__.py
-│   │   └── repository.py
+│   │   ├── token_repository.py
+│   │   └── state_repository.py
+│   ├── contracts/
+│   │   └── ...
 │   └── base.py                   # Base repository interface
 │
 ├── service/                      # Business logic & orchestration
@@ -302,6 +318,9 @@ back/src/
 │   ├── classification/
 │   │   ├── __init__.py
 │   │   └── service.py
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   └── oauth_service.py
 │   ├── quote/
 │   │   ├── __init__.py
 │   │   └── service.py
@@ -333,9 +352,6 @@ back/src/
 │   ├── denormalizers/
 │   │   ├── __init__.py
 │   │   └── denormalizer.py
-│   ├── auth/
-│   │   ├── __init__.py
-│   │   └── oauth.py
 │   ├── email/
 │   │   ├── __init__.py
 │   │   ├── mime.py               # MIME utilities
@@ -385,6 +401,7 @@ back/tests/
 │   │   └── oauth/
 │   ├── service/
 │   │   ├── action/
+│   │   ├── auth/
 │   │   ├── email/
 │   │   ├── business/
 │   │   ├── classification/
@@ -396,7 +413,6 @@ back/tests/
 │       ├── calculations/
 │       ├── importers/
 │       ├── denormalizers/
-│       ├── auth/
 │       ├── email/
 │       └── formatting/
 ├── integration/
@@ -473,31 +489,31 @@ domain/ & lib/
 
 ## Décisions finales (✅ CONFIRMÉES)
 
-| Dossier           | Décision           | Destination                                                                           | Action                                                   |
-| ----------------- | ------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Dossier           | Décision           | Destination                                                                                     | Action                                                   |
+| ----------------- | ------------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `api/`            | ✅ GARDER & RÉORG  | api/auth, action, business, csv, database, email, file, product, quote, classification, prompt/ | Restructurer par domaine                                 |
-| `command/`        | ✅ GARDER          | command/                                                                              | Laisser comme est (CLI entrypoints)                      |
-| `controller/`     | ✅ **ÉCLATER**     | api/\* + infrastructure/ + lib/                                                       | 16 fichiers → destinations ciblées                       |
-| `domain/`         | ✅ ENRICHIR        | domain/                                                                               | Ajouter action, quote, product, business, classification |
-| `infrastructure/` | ✅ RESTRUCTURER    | infrastructure/clients/, config/, prompts/, exceptions.py, factory.py                 | Créer sous-structure                                     |
-| `repository/`     | ✅ RESTRUCTURER    | repository/action/, email/, opportunity/, oauth/, contracts/                          | Organiser par aggregate + MOVE classifier                |
-| `service/`        | ✅ ENRICHIR        | service/action/, email/, business/, classification/, quote/                           | Créer services manquants                                 |
-| `adapters/`       | ✅ **SUPPRIMER**   | FUSED into lib/email/                                                                 | Fusionner parser HTML → lib/email/html_parser.py         |
-| `denormalizer/`   | ✅ DÉPLACER        | lib/denormalizers/                                                                    | Move denormalizer.py                                     |
-| `discount/`       | ✅ DÉPLACER        | lib/importers/                                                                        | Move importer.py                                         |
-| `embeddings/`     | ✅ DÉPLACER        | lib/encoders/                                                                         | Move embeddings.py                                       |
-| `etim/`           | ✅ DÉPLACER        | lib/importers/                                                                        | Move etim.py                                             |
-| `fabdis/`         | ✅ DÉPLACER        | lib/importers/                                                                        | Move importer.py                                         |
-| `google_auth/`    | ✅ DÉPLACER        | infrastructure/clients/                                                               | Move google_auth.py                                      |
-| `google_drive/`   | ✅ DÉPLACER        | infrastructure/clients/                                                               | Move gdrive_tool.py + helpers                            |
-| `llm/`            | ✅ DÉPLACER        | infrastructure/clients/                                                               | Move client.py                                           |
-| `net_price/`      | ✅ DÉPLACER        | lib/calculations/                                                                     | Move importer.py                                         |
-| `pdf/`            | ✅ DÉPLACER        | lib/extractors/                                                                       | Move extract_text.py                                     |
-| `prompt/`         | ✅ **CENTRALISER** | infrastructure/prompts/                                                               | Move prompt.md files                                     |
-| `reader/`         | ✅ DÉPLACER        | lib/readers/                                                                          | Move csv.py, xls.py                                      |
-| `supabase/`       | ✅ DÉPLACER        | infrastructure/clients/                                                               | Move supabase_client.py                                  |
-| `text/`           | ✅ DÉPLACER        | lib/extractors/                                                                       | Move reader.py, rfp_source_picker.py                     |
-| `utils/`          | ✅ **SUPPRIMER**   | FUSED into lib/email/                                                                 | Fusionner EmailHTMLParser → lib/email/html_parser.py     |
+| `command/`        | ✅ GARDER          | command/                                                                                        | Laisser comme est (CLI entrypoints)                      |
+| `controller/`     | ✅ **ÉCLATER**     | api/\* + infrastructure/ + lib/                                                                 | 16 fichiers → destinations ciblées                       |
+| `domain/`         | ✅ ENRICHIR        | domain/                                                                                         | Ajouter action, quote, product, business, classification |
+| `infrastructure/` | ✅ RESTRUCTURER    | infrastructure/clients/, config/, prompts/, exceptions.py, factory.py                           | Créer sous-structure                                     |
+| `repository/`     | ✅ RESTRUCTURER    | repository/action/, email/, opportunity/, oauth/, contracts/                                    | Organiser par aggregate + MOVE classifier                |
+| `service/`        | ✅ ENRICHIR        | service/action/, email/, business/, classification/, quote/                                     | Créer services manquants                                 |
+| `adapters/`       | ✅ **SUPPRIMER**   | FUSED into lib/email/                                                                           | Fusionner parser HTML → lib/email/html_parser.py         |
+| `denormalizer/`   | ✅ DÉPLACER        | lib/denormalizers/                                                                              | Move denormalizer.py                                     |
+| `discount/`       | ✅ DÉPLACER        | lib/importers/                                                                                  | Move importer.py                                         |
+| `embeddings/`     | ✅ DÉPLACER        | lib/encoders/                                                                                   | Move embeddings.py                                       |
+| `etim/`           | ✅ DÉPLACER        | lib/importers/                                                                                  | Move etim.py                                             |
+| `fabdis/`         | ✅ DÉPLACER        | lib/importers/                                                                                  | Move importer.py                                         |
+| `google_auth/`    | ✅ DÉPLACER        | infrastructure/clients/oauth/                                                                   | Move vers google_client.py                               |
+| `google_drive/`   | ✅ DÉPLACER        | infrastructure/clients/                                                                         | Move gdrive_tool.py + helpers                            |
+| `llm/`            | ✅ DÉPLACER        | infrastructure/clients/                                                                         | Move client.py                                           |
+| `net_price/`      | ✅ DÉPLACER        | lib/calculations/                                                                               | Move importer.py                                         |
+| `pdf/`            | ✅ DÉPLACER        | lib/extractors/                                                                                 | Move extract_text.py                                     |
+| `prompt/`         | ✅ **CENTRALISER** | infrastructure/prompts/                                                                         | Move prompt.md files                                     |
+| `reader/`         | ✅ DÉPLACER        | lib/readers/                                                                                    | Move csv.py, xls.py                                      |
+| `supabase/`       | ✅ DÉPLACER        | infrastructure/clients/                                                                         | Move supabase_client.py                                  |
+| `text/`           | ✅ DÉPLACER        | lib/extractors/                                                                                 | Move reader.py, rfp_source_picker.py                     |
+| `utils/`          | ✅ **SUPPRIMER**   | FUSED into lib/email/                                                                           | Fusionner EmailHTMLParser → lib/email/html_parser.py     |
 
 ---
 
@@ -527,7 +543,7 @@ domain/ & lib/
 #### repository/
 
 - **DÉCISION** : **RESTRUCTURER** par aggregate root + **MOVE classifier** vers service/
-  - Plat → Organisé : action/, email/, opportunity/, oauth/ (chacun avec repository.py)
+  - Plat → Organisé : action/, email/, opportunity/, oauth/ (token_repository.py + state_repository.py)
   - **GARDER** `repository/contracts/` (interfaces abstraites)
   - **MOVE** `repository/classifier/classifier.py` → `service/classification/service.py` (c'est un service, pas un repository)
 - **Action** : Micro-commits par aggregate
@@ -545,7 +561,7 @@ domain/ & lib/
 #### infrastructure/
 
 - **DÉCISION** : **RESTRUCTURER** en couches :
-  - `infrastructure/clients/` : tous les clients externes (supabase, google_auth, google_drive, llm, email SMTP, database)
+  - `infrastructure/clients/` : tous les clients externes (supabase, oauth/azure_client.py, oauth/google_client.py, google_drive, llm, email SMTP, database)
   - `infrastructure/config/` : configuration management
   - `infrastructure/prompts/` : centraliser tous les prompts
   - `infrastructure/exceptions.py`, `infrastructure/factory.py` : garder
@@ -560,10 +576,20 @@ domain/ & lib/
   - `lib/calculations/` : net_price.py
   - `lib/importers/` : fabdis/, etim/, discount/
   - `lib/denormalizers/` : denormalizer.py
-  - `lib/auth/` : oauth.py (moved from repository/)
   - `lib/email/` : mime.py, multipart.py, html_parser.py (fusionné)
   - `lib/formatting/` : formatting utils
 - **Action** : Créer structure complète, déplacer 10+ dossiers/fichiers
+
+#### oauth (Point traité avec découplage)
+
+- **DÉCISION** : Séparer strictement provider, orchestration, persistance et transport HTTP.
+- **Découpage final** :
+  - `infrastructure/clients/oauth/azure_client.py`
+  - `infrastructure/clients/oauth/google_client.py`
+  - `service/auth/oauth_service.py`
+  - `repository/oauth/token_repository.py`
+  - `repository/oauth/state_repository.py`
+  - `api/auth/oauth_handler.py`
 
 #### api/
 
