@@ -1091,33 +1091,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/imap/config':
                     return self._handle_imap_config_get()
                 elif parsed.path == '/api/gmail/messages':
-                    handlers = self.get_request_handlers()
-                    # Get max_results and user_id from query params
-                    max_results = self._get_qs_int(qs, 'max_results', EMAIL_FETCH_MAX_RESULTS)
-                    user_id = qs.get('user_id', [None])[0]
-                    force = self._get_qs_bool(qs, 'force', False)
-                    
-                    print(f"[RAG] /api/gmail/messages - user_id from query: {user_id}, force: {force}")
-                    
-                    # Get user from auth header if not provided
-                    if not user_id:
-                        auth_header = self.headers.get('Authorization', '')
-                        print(f"[RAG] Auth header: {auth_header[:50] if auth_header else 'None'}...")
-                        user_id = self._get_optional_user_id_from_auth(auth_header)
-                        print(f"[RAG] Extracted user_id from token: {user_id}")
-                    
-                    print(f"[RAG] Final user_id: {user_id}")
-
-                    if not user_id:
-                        return self._send_error(400, 'Missing user_id')
-                    
-                    result = handlers.handle_gmail_list_messages(
-                        max_results=max_results,
-                        user_id=user_id,
-                        save_to_db=True,
-                        force=force
-                    )
-                    return self.json(result)
+                    return self._handle_gmail_messages_get(qs)
                 elif parsed.path == '/api/gmail/classify-unclassified':
                     handlers = self.get_request_handlers()
                     user_id = qs.get('user_id', [None])[0]
@@ -1368,6 +1342,33 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             user_id = user_data.get('id') if user_data else None
             result = handlers.handle_imap_config(user_id=user_id)
+            return self.json(result)
+
+        def _handle_gmail_messages_get(self, qs):
+            """Handle /api/gmail/messages GET endpoint."""
+            handlers = self.get_request_handlers()
+            max_results = self._get_qs_int(qs, 'max_results', EMAIL_FETCH_MAX_RESULTS)
+            user_id = qs.get('user_id', [None])[0]
+            force = self._get_qs_bool(qs, 'force', False)
+
+            print(f"[RAG] /api/gmail/messages - user_id from query: {user_id}, force: {force}")
+
+            if not user_id:
+                auth_header = self.headers.get('Authorization', '')
+                print(f"[RAG] Auth header: {auth_header[:50] if auth_header else 'None'}...")
+                user_id = self._get_optional_user_id_from_auth(auth_header)
+                print(f"[RAG] Extracted user_id from token: {user_id}")
+
+            print(f"[RAG] Final user_id: {user_id}")
+            if not user_id:
+                return self._send_error(400, 'Missing user_id')
+
+            result = handlers.handle_gmail_list_messages(
+                max_results=max_results,
+                user_id=user_id,
+                save_to_db=True,
+                force=force,
+            )
             return self.json(result)
 
         def _handle_gmail_message_get(self, parsed_path: str):
