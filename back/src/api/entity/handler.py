@@ -5,6 +5,7 @@ import re
 
 from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_json
+from src.api.routes.server_status_helpers import status_from_result
 from src.infrastructure.clients.supabase import get_supabase_service
 
 
@@ -70,5 +71,5 @@ def handle_entity_update_post(handler, entity_update_match):
         value=payload.get('value'),
         user_id=user_id,
     )
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)

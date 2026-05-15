@@ -6,6 +6,8 @@ import json
 
 from src.api.routes.server_body_helpers import read_body
 from src.api.routes.server_query_helpers import get_qs_value
+from src.api.routes.server_response_helpers import send_error, send_redirect
+from src.api.routes.server_status_helpers import pop_status, status_from_result
 from src.infrastructure.clients.supabase import get_supabase_anon
 from supabase import AuthApiError
 
@@ -165,7 +167,7 @@ def handle_auth_signup_post(handler):
     body = read_body(handler)
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_auth_signup(body)
-    status = handler._pop_status(result)
+    status = pop_status(result)
     return handler.json(result, status)
 
 
@@ -174,7 +176,7 @@ def handle_auth_login_post(handler):
     body = read_body(handler)
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_auth_login(body)
-    status = handler._pop_status(result)
+    status = pop_status(result)
     return handler.json(result, status)
 
 
@@ -183,7 +185,7 @@ def handle_auth_logout_post(handler):
     auth_header = handler.headers.get('Authorization', '')
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_auth_logout(auth_header)
-    status = handler._pop_status(result)
+    status = pop_status(result)
     return handler.json(result, status)
 
 
@@ -192,7 +194,7 @@ def handle_auth_user_get(handler):
     auth_header = handler.headers.get('Authorization', '')
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_auth_user(auth_header)
-    status = handler._pop_status(result)
+    status = pop_status(result)
     return handler.json(result, status)
 
 
@@ -200,12 +202,12 @@ def handle_oauth_login_get(handler, qs):
     """Handle /api/oauth/login GET endpoint."""
     provider = get_qs_value(qs, 'provider')
     if not provider:
-        return handler._send_error(400, 'Missing provider parameter')
+        return send_error(handler, 400, 'Missing provider parameter')
     redirect_url = get_qs_value(qs, 'redirect_url')
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_oauth_login(provider=provider, redirect_url=redirect_url)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -215,15 +217,15 @@ def handle_oauth_callback_get(handler, qs):
     code = get_qs_value(qs, 'code')
     state = get_qs_value(qs, 'state')
     if not provider:
-        return handler._send_error(400, 'Missing provider parameter')
+        return send_error(handler, 400, 'Missing provider parameter')
     if not code:
-        return handler._send_error(400, 'Missing code parameter')
+        return send_error(handler, 400, 'Missing code parameter')
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_oauth_callback(provider=provider, code=code, state=state)
 
     if result.get('status') == 'ok' and result.get('redirect_url'):
-        return handler._send_redirect(result['redirect_url'])
+        return send_redirect(handler, result['redirect_url'])
 
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)

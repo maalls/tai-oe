@@ -2,6 +2,7 @@
 
 from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
+from src.api.routes.server_status_helpers import status_from_result
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
@@ -275,7 +276,7 @@ def handle_opportunities_create_from_email_post(handler):
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
     print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -294,7 +295,7 @@ def handle_opportunities_create_manual_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -315,7 +316,7 @@ def handle_opportunities_create_from_rfp_post(handler):
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
     print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -334,7 +335,7 @@ def handle_opportunity_rfq_generate_post(handler, opp_match):
         user_id=user_id,
     )
     print('result:', result)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -370,7 +371,7 @@ def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
             user_id=user_id,
         )
 
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -393,7 +394,7 @@ def handle_send_quote_for_opportunity_post(handler, send_quote_match):
         payload=payload,
         user_id=user_id,
     )
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -413,7 +414,7 @@ def handle_opportunity_delete(handler, opportunity_delete_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     print(f"[RAG] DELETE result: {result}", file=sys.stderr)
     return handler.json(result, status)
 
@@ -432,5 +433,5 @@ def handle_opportunities_search_get(handler, qs, request_handlers):
         source_reference_id=source_reference_id,
         name=name,
     )
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)

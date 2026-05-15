@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
 from src.api.routes.server_body_helpers import read_json_or_error
 from src.api.routes.server_query_helpers import get_qs_int
+from src.api.routes.server_status_helpers import status_from_result
 from src.service.action.service import ActionService
 
 
@@ -380,7 +381,7 @@ def handle_actions_create_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_create_action(data, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -395,7 +396,7 @@ def handle_action_pause_post(handler, pause_action_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_pause_action(action_id, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -410,7 +411,7 @@ def handle_action_resume_post(handler, resume_action_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_resume_action(action_id, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -425,7 +426,7 @@ def handle_action_execute_post(handler, execute_action_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_execute_action(action_id, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -439,7 +440,7 @@ def handle_action_delete(handler, action_delete_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_delete_action(action_id=action_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -450,7 +451,7 @@ def handle_opportunity_actions_list_get(handler, list_actions_match, request_han
         return None
     opportunity_id = list_actions_match.group(1)
     result = request_handlers.handle_list_actions(opportunity_id, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -461,7 +462,7 @@ def handle_action_get(handler, get_action_match, request_handlers):
         return None
     action_id = get_action_match.group(1)
     result = request_handlers.handle_get_action(action_id, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -473,7 +474,7 @@ def handle_action_logs_get(handler, get_action_logs_match, qs, request_handlers)
     action_id = get_action_logs_match.group(1)
     limit = get_qs_int(qs, 'limit', 50)
     result = request_handlers.handle_get_action_logs(action_id, limit, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -491,5 +492,5 @@ def handle_action_update_put(handler, update_action_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_update_action(action_id, data, user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)

@@ -9,6 +9,7 @@ import time
 
 from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_body, read_json
+from src.api.routes.server_status_helpers import status_from_result
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
@@ -606,7 +607,7 @@ def handle_rfq_generate_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 

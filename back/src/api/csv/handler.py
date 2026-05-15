@@ -4,6 +4,7 @@ import json
 from typing import Dict
 
 from src.api.routes.server_body_helpers import read_body
+from src.api.routes.server_response_helpers import send_error
 from src.api.file.handler import FileHandler
 
 
@@ -147,7 +148,7 @@ def handle_raw_stream(handler, qs, request_handlers):
         handler.end_headers()
         handler.wfile.write(content)
     except Exception as e:
-        return handler._send_error(500, f"Error streaming CSV: {e}")
+        return send_error(handler, 500, f"Error streaming CSV: {e}")
 
 
 def handle_source_stream(handler, qs, request_handlers):
@@ -155,7 +156,7 @@ def handle_source_stream(handler, qs, request_handlers):
     try:
         source = (qs.get('source') or [None])[0]
         if not source:
-            return handler._send_error(400, "Missing 'source' parameter")
+            return send_error(handler, 400, "Missing 'source' parameter")
         content = request_handlers.handle_source_raw(qs)
         ext = source.lower().split('.')[-1] if '.' in source else ''
         content_type_map = {
@@ -170,7 +171,7 @@ def handle_source_stream(handler, qs, request_handlers):
         handler.end_headers()
         handler.wfile.write(content)
     except Exception as e:
-        return handler._send_error(500, f"Error streaming source: {e}")
+        return send_error(handler, 500, f"Error streaming source: {e}")
 
 
 def handle_csv_download(handler, qs, request_handlers):
@@ -180,7 +181,7 @@ def handle_csv_download(handler, qs, request_handlers):
         sheet = (qs.get('file') or [None])[0]
 
         if not source or not sheet:
-            return handler._send_error(400, "Missing 'source' or 'file' parameter")
+            return send_error(handler, 400, "Missing 'source' or 'file' parameter")
 
         file_handler = request_handlers.file_handler
         csv_path = file_handler.safe_file_from_query(source, sheet)
@@ -200,4 +201,4 @@ def handle_csv_download(handler, qs, request_handlers):
                     break
                 handler.wfile.write(chunk)
     except Exception as e:
-        return handler._send_error(500, f"Error downloading CSV: {e}")
+        return send_error(handler, 500, f"Error downloading CSV: {e}")

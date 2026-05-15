@@ -11,6 +11,7 @@ from src.api.routes.server_mutation_dispatch import dispatch_patch_request
 from src.api.routes.server_mutation_dispatch import dispatch_put_request
 from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
+from src.api.routes.server_response_helpers import send_error
 
 
 def handle_options_method(handler):
@@ -28,9 +29,9 @@ def handle_head_method(handler):
         if dispatch_head_request(handler, parsed.path):
             return None
 
-        return handler._send_error(404, "Not found")
+        return send_error(handler, 404, "Not found")
     except Exception as e:
-        return handler._send_error(500, f"Internal server error 2: {e}")
+        return send_error(handler, 500, f"Internal server error 2: {e}")
 
 
 def handle_delete_method(handler):
@@ -42,10 +43,10 @@ def handle_delete_method(handler):
         if dispatch_delete_request(handler, parsed.path):
             return None
 
-        return handler._send_error(404, "Not found")
+        return send_error(handler, 404, "Not found")
     except Exception as e:
         traceback.print_exc()
-        return handler._send_error(500, f"Server error: {str(e)}")
+        return send_error(handler, 500, f"Server error: {str(e)}")
 
 
 def handle_patch_method(handler):
@@ -57,11 +58,11 @@ def handle_patch_method(handler):
             return None
 
         print(f"[RAG] PATCH path not matched: {parsed.path}")
-        return handler._send_error(404, "Not found")
+        return send_error(handler, 404, "Not found")
     except Exception as e:
         traceback.print_exc()
         print(f"[RAG] PATCH error: {e}")
-        return handler._send_error(500, f"Server error: {str(e)}")
+        return send_error(handler, 500, f"Server error: {str(e)}")
 
 
 def handle_put_method(handler):
@@ -72,10 +73,10 @@ def handle_put_method(handler):
         if dispatch_put_request(handler, parsed.path):
             return None
 
-        return handler._send_error(404, "Not found")
+        return send_error(handler, 404, "Not found")
     except Exception as e:
         traceback.print_exc()
-        return handler._send_error(500, f"Server error: {str(e)}")
+        return send_error(handler, 500, f"Server error: {str(e)}")
 
 
 def handle_post_method(handler):
@@ -86,12 +87,12 @@ def handle_post_method(handler):
         if dispatch_post_request(handler, parsed):
             return None
 
-        return handler._send_error(404, "Not found")
+        return send_error(handler, 404, "Not found")
     except Exception as e:
         traceback.print_exc()
         print(f"[RAG] Error handling request: {e}")
 
-        return handler._send_error(500, f"Internal server error 1: {e}")
+        return send_error(handler, 500, f"Internal server error 1: {e}")
 
 
 def handle_get_method(handler):
@@ -108,4 +109,4 @@ def handle_get_method(handler):
         traceback.print_exc()
         print(f"[RAG] Error handling GET request: {e}")
 
-        return handler._send_error(500, f"Internal server error 3: {e}")
+        return send_error(handler, 500, f"Internal server error 3: {e}")

@@ -15,8 +15,6 @@ import signal
 import traceback
 from pathlib import Path
 
-from typing import Dict
-
 from src.api.file.handler import FileHandler
 from src.api.router import RequestHandlers
 from src.api.auth.handler import AuthHandler
@@ -58,8 +56,7 @@ from src.api.routes.server_post_utility_handlers import (
     handle_rfp_post,
 )
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
-from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
-from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
+from src.api.routes.server_response_helpers import send_json
 
 # Load .env before reading config values.
 load_runtime_env(__file__)
@@ -143,18 +140,6 @@ def create_rag_handler(config):
         def do_PUT(self):
             return handle_put_method(self)
 
-        def _status_from_result(self, result: Dict, ok: int = 200, error: int = 400) -> int:
-            """Map handler result payload status to HTTP status code."""
-            return status_from_result(result, ok=ok, error=error)
-
-        def _pop_status(self, result: Dict, default: int = 200) -> int:
-            """Extract and remove status code from handler payload."""
-            return pop_status(result, default=default)
-
-        def _status_from_error(self, result: Dict, ok: int = 200, error: int = 400, key: str = 'error') -> int:
-            """Map payload error field presence to HTTP status code."""
-            return status_from_error(result, ok=ok, error=error, key=key)
-
         def do_POST(self):
             return handle_post_method(self)
 
@@ -215,18 +200,6 @@ def create_rag_handler(config):
         def json(self, payload, status_code=200):
             """Send JSON response."""
             return send_json(self, payload, status_code=status_code)
-
-        def _send_error(self, code: int, message: str):
-            """Send error response."""
-            return send_error(self, code=code, message=message)
-
-        def _send_text_response(self, code: int, content_type: str, body: bytes = None):
-            """Send plain text/binary response payload."""
-            return send_text_response(self, code=code, content_type=content_type, body=body)
-
-        def _send_redirect(self, location: str, code: int = 302):
-            """Send HTTP redirect response."""
-            return send_redirect(self, location=location, code=code)
     
     return Rag
 

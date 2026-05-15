@@ -9,6 +9,8 @@ from weasyprint import HTML
 
 from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_body, read_json
+from src.api.routes.server_response_helpers import send_error
+from src.api.routes.server_status_helpers import status_from_error, status_from_result
 from src.service.quote.service import QuoteService
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.storage_paths import get_storage_dir, get_storage_path
@@ -295,7 +297,7 @@ def handle_quote_update_post(handler, quote_update_match):
     print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
-    status = handler._status_from_error(result)
+    status = status_from_error(result)
     return handler.json(result, status)
 
 
@@ -310,7 +312,7 @@ def handle_quote_pdf_post(handler, quote_pdf_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -344,9 +346,9 @@ def handle_quote_download(handler, filename, request_handlers, qs=None):
         handler.end_headers()
         handler.wfile.write(content)
     except FileNotFoundError:
-        return handler._send_error(404, 'Quote file not found')
+        return send_error(handler, 404, 'Quote file not found')
     except Exception as e:
-        return handler._send_error(500, f"Error streaming PDF: {e}")
+        return send_error(handler, 500, f"Error streaming PDF: {e}")
 
     def handle_generate_quote_pdf(self, document_id: str, user_id: str = None) -> Dict:
         """Generate a PDF for an existing quote document and update storage_key."""

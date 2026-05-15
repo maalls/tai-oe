@@ -6,6 +6,7 @@ import traceback
 
 from src.api.routes.server_body_helpers import read_json
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_int
+from src.api.routes.server_response_helpers import send_error, send_text_response
 from src.lib.email.multipart import parse_multipart, extract_boundary_from_header
 from src.lib.readers.xls import XlsReader
 
@@ -141,7 +142,7 @@ def handle_fs_create_post(handler):
         request_handlers = handler.get_request_handlers()
         result = request_handlers.handle_fs_create(target_path=target_path, kind=kind)
     except Exception as e:
-        return handler._send_error(500, f'Create failed: {e}')
+        return send_error(handler, 500, f'Create failed: {e}')
     return handler.json(result)
 
 
@@ -158,13 +159,13 @@ def handle_fs_read_post(handler):
         return None
 
     if not target_path.exists() or not target_path.is_file():
-        return handler._send_error(404, 'File not found')
+        return send_error(handler, 404, 'File not found')
 
     try:
         request_handlers = handler.get_request_handlers()
         result = request_handlers.handle_fs_read(target_path=target_path, max_chars=max_chars)
     except Exception as e:
-        return handler._send_error(500, f'Read failed: {e}')
+        return send_error(handler, 500, f'Read failed: {e}')
     return handler.json(result)
 
 
@@ -174,13 +175,13 @@ def handle_curl_post(handler):
 
     target_url = str(payload.get('url') or '').strip()
     if not target_url:
-        return handler._send_error(400, 'Missing url')
+        return send_error(handler, 400, 'Missing url')
     if not target_url.startswith('http://') and not target_url.startswith('https://'):
-        return handler._send_error(400, 'Invalid url scheme')
+        return send_error(handler, 400, 'Invalid url scheme')
 
     method = str(payload.get('method') or 'GET').upper()
     if method not in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
-        return handler._send_error(400, 'Invalid method')
+        return send_error(handler, 400, 'Invalid method')
 
     headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
     body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
@@ -203,17 +204,17 @@ def handle_curl_post(handler):
         )
         return handler.json(result)
     except Exception as e:
-        return handler._send_error(500, f'Curl failed: {e}')
+        return send_error(handler, 500, f'Curl failed: {e}')
 
 
 def handle_fetch_get(handler, qs):
     """Handle /api/fetch GET endpoint."""
     target_url = qs.get('url', [None])[0]
     if not target_url:
-        return handler._send_error(400, 'Missing url parameter')
+        return send_error(handler, 400, 'Missing url parameter')
 
     if not target_url.startswith('http://') and not target_url.startswith('https://'):
-        return handler._send_error(400, 'Invalid url scheme')
+        return send_error(handler, 400, 'Invalid url scheme')
 
     max_chars = get_qs_int(qs, 'max_chars', 10000)
     timeout_ms = get_qs_int(qs, 'timeout_ms', 8000)
@@ -230,7 +231,7 @@ def handle_fetch_get(handler, qs):
         )
         return handler.json(result)
     except Exception as e:
-        return handler._send_error(500, f'Fetch failed: {e}')
+        return send_error(handler, 500, f'Fetch failed: {e}')
 
 
 def handle_prompt_get(handler, parsed_path: str, current_file: str):
@@ -244,13 +245,13 @@ def handle_prompt_get(handler, parsed_path: str, current_file: str):
             prompt_base_dir=base_dir,
         )
     except ValueError as e:
-        return handler._send_error(400, str(e))
+        return send_error(handler, 400, str(e))
     except FileNotFoundError as e:
-        return handler._send_error(404, str(e))
+        return send_error(handler, 404, str(e))
     except Exception as e:
-        return handler._send_error(500, f"Error reading prompt: {e}")
+        return send_error(handler, 500, f"Error reading prompt: {e}")
 
-    return handler._send_text_response(200, 'text/plain; charset=utf-8', content.encode('utf-8'))
+    return send_text_response(handler, 200, 'text/plain; charset=utf-8', content.encode('utf-8'))
 
 
 def handle_storage_head(handler, storage_dir, parsed_path: str):
@@ -262,7 +263,7 @@ def handle_storage_head(handler, storage_dir, parsed_path: str):
     except FileNotFoundError:
         not_found = request_handlers.handle_storage_not_found_payload(raw_filename, include_body=False)
         print(f"[RAG] File not found in any storage location: {not_found['filename']}")
-        handler._send_text_response(404, not_found['content_type'])
+        send_text_response(handler, 404, not_found['content_type'])
         return
 
     filename = storage_info['filename']
@@ -287,7 +288,7 @@ def handle_storage_get(handler, storage_dir, parsed_path: str):
         not_found = request_handlers.handle_storage_not_found_payload(raw_filename, include_body=True)
         print(f"[RAG] Storage request for file: {not_found['filename']}")
         print(f"[RAG] File not found in any storage location: {not_found['filename']}")
-        handler._send_text_response(404, not_found['content_type'], not_found['body'])
+        send_text_response(handler, 404, not_found['content_type'], not_found['body'])
         return
 
     filename = storage_info['filename']
@@ -313,5 +314,5 @@ def handle_storage_get(handler, storage_dir, parsed_path: str):
         print(f"[RAG] Error reading file {filename}: {error}")
         traceback.print_exc()
         error_payload = request_handlers.handle_storage_read_error_payload(error)
-        handler._send_text_response(500, error_payload['content_type'], error_payload['body'])
+        send_text_response(handler, 500, error_payload['content_type'], error_payload['body'])
         return

@@ -8,6 +8,8 @@ from typing import Dict
 from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth, require_auth_user_id
 from src.api.routes.server_body_helpers import read_json
 from src.api.routes.server_query_helpers import get_qs_bool, get_qs_int, get_qs_value
+from src.api.routes.server_response_helpers import send_error, send_redirect
+from src.api.routes.server_status_helpers import status_from_result
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.service.email.auth_status_service import AuthStatusService
@@ -366,7 +368,7 @@ def handle_emails_classify_post(handler, parsed_path):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -387,7 +389,7 @@ def handle_email_extract_contact_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -405,7 +407,7 @@ def handle_email_auth_status_post(handler, parsed_path):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -432,7 +434,7 @@ def handle_email_resync_post(handler, parsed_path):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_email_resync(email_id=email_id, provider_message_id=provider_message_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -448,7 +450,7 @@ def handle_email_senders_high_risk_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_get_high_risk_senders(user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -464,7 +466,7 @@ def handle_email_senders_verified_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_get_verified_senders(user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -479,7 +481,7 @@ def handle_imap_config_post(handler):
     user_id = user_data.get('id') if user_data else None
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_imap_config_save(user_id=user_id, payload=payload)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -492,7 +494,7 @@ def handle_imap_test_post(handler):
     user_id = user_data.get('id') if user_data else None
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_imap_test(user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -504,7 +506,7 @@ def handle_imap_config_delete(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_imap_config_delete(user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -518,7 +520,7 @@ def handle_email_delete(handler, email_delete_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_email_delete(email_id=email_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -532,7 +534,7 @@ def handle_email_attachment_delete(handler, attachment_delete_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -614,7 +616,7 @@ def handle_gmail_messages_get(handler, qs):
 
     print(f"[RAG] Final user_id: {user_id}")
     if not user_id:
-        return handler._send_error(400, 'Missing user_id')
+        return send_error(handler, 400, 'Missing user_id')
 
     result = request_handlers.handle_gmail_list_messages(
         max_results=max_results,
@@ -636,10 +638,10 @@ def handle_gmail_classify_unclassified_get(handler, qs):
         user_id = get_optional_user_id_from_auth(handler, auth_header)
 
     if not user_id:
-        return handler._send_error(400, 'Missing user_id')
+        return send_error(handler, 400, 'Missing user_id')
 
     result = request_handlers.handle_classify_unclassified(user_id=user_id, limit=limit)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -680,11 +682,11 @@ def handle_google_oauth_callback_get(handler, qs):
     code = qs.get('code', [None])[0]
     state = qs.get('state', [None])[0]
     if not code:
-        return handler._send_error(400, 'Missing code parameter')
+        return send_error(handler, 400, 'Missing code parameter')
 
     result = request_handlers.handle_gmail_oauth_callback(code, state)
     if result.get('status') == 'ok':
         redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
-        return handler._send_redirect(redirect_url)
+        return send_redirect(handler, redirect_url)
 
     return handler.json(result, 500)

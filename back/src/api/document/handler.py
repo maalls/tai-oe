@@ -8,6 +8,8 @@ from typing import Callable, Dict
 
 from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
 from src.api.routes.server_body_helpers import read_body, read_json
+from src.api.routes.server_response_helpers import send_error
+from src.api.routes.server_status_helpers import status_from_result
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.service.opportunity.document_content_service import DocumentContentService
@@ -455,7 +457,7 @@ def handle_document_extract_rfp_post(handler):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -480,7 +482,7 @@ def handle_document_update_content_post(handler):
         content=content,
         user_id=user_id,
     )
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -506,7 +508,7 @@ def handle_chat_attachments_post(handler, parsed):
         user_id=user_id,
         opportunity_id=opportunity_id,
     )
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -520,7 +522,7 @@ def handle_document_delete(handler, document_delete_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_delete_document(document_id=document_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -534,7 +536,7 @@ def handle_quote_delete(handler, quote_delete_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -578,6 +580,6 @@ def handle_document_download(handler, filename, request_handlers, qs=None):
         handler.end_headers()
         handler.wfile.write(content)
     except FileNotFoundError:
-        return handler._send_error(404, 'Document file not found')
+        return send_error(handler, 404, 'Document file not found')
     except Exception as e:
-        return handler._send_error(500, f"Error streaming document: {e}")
+        return send_error(handler, 500, f"Error streaming document: {e}")

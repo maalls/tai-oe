@@ -10,6 +10,7 @@ from weasyprint import HTML
 
 from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_json_or_error
+from src.api.routes.server_status_helpers import status_from_result
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.storage_paths import get_storage_dir
 
@@ -400,7 +401,7 @@ def handle_quote_invoice_post(handler, quote_invoice_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -415,7 +416,7 @@ def handle_invoice_pdf_post(handler, invoice_pdf_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
 
 
@@ -434,5 +435,5 @@ def handle_invoice_send_post(handler, invoice_send_match):
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
-    status = handler._status_from_result(result)
+    status = status_from_result(result)
     return handler.json(result, status)
