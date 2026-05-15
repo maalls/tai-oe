@@ -1359,10 +1359,7 @@ def create_rag_handler(config):
             result = handlers.handle_gmail_oauth_callback(code, state)
             if result.get('status') == 'ok':
                 redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
-                self.send_response(302)
-                self.send_header('Location', redirect_url)
-                self.end_headers()
-                return
+                return self._send_redirect(redirect_url)
 
             return self.json(result, 500)
 
@@ -1662,6 +1659,15 @@ def create_rag_handler(config):
                 self.end_headers()
                 if body is not None:
                     self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                return
+
+        def _send_redirect(self, location: str, code: int = 302):
+            """Send HTTP redirect response."""
+            try:
+                self.send_response(code)
+                self.send_header('Location', location)
+                self.end_headers()
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 return
     
