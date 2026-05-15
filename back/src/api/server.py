@@ -100,7 +100,7 @@ from src.api.routes.server_http_method_handlers import (
 from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
-from src.api.routes.server_post_utility_handlers import handle_products_post
+from src.api.routes.server_post_utility_handlers import handle_fs_create_post, handle_products_post
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
@@ -320,20 +320,7 @@ def create_rag_handler(config):
 
         def _handle_fs_create_post(self):
             """Handle /api/fs/create POST endpoint."""
-            payload = self._read_json(default={})
-            raw_path = str(payload.get('path') or '').strip()
-            kind = payload.get('type') or 'dir'
-
-            target_path = self._resolve_fs_path(raw_path)
-            if target_path is None:
-                return
-
-            try:
-                handlers = self.get_request_handlers()
-                result = handlers.handle_fs_create(target_path=target_path, kind=kind)
-            except Exception as e:
-                return self._send_error(500, f'Create failed: {e}')
-            return self.json(result)
+            return handle_fs_create_post(self)
 
         def _handle_fs_read_post(self):
             """Handle /api/fs/read POST endpoint."""
