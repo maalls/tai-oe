@@ -1375,11 +1375,9 @@ def create_rag_handler(config):
 
         def _handle_opportunity_actions_list_get(self, list_actions_match, handlers):
             """Handle /api/opportunities/<id>/actions GET endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
-
-            user_id = user_data.get('id') if user_data else None
             opportunity_id = list_actions_match.group(1)
             result = handlers.handle_list_actions(opportunity_id, user_id)
             status = 200 if result.get('status') == 'ok' else 400
