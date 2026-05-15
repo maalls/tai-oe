@@ -89,7 +89,7 @@ class ActionSchedulerDaemon:
         print(f"[ActionSchedulerDaemon] Daemon stopped")
 
 
-def main():
+def main(argv=None):
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Action Scheduler Daemon - Continuously execute scheduled actions",
@@ -120,7 +120,10 @@ Examples:
         help='Run as daemon in background (not yet implemented)'
     )
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    if args.interval <= 0:
+        parser.error("--interval must be a positive integer")
     
     if args.daemon:
         print("Error: Daemon mode not yet implemented. Run in foreground for now.")
