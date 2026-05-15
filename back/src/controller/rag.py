@@ -316,23 +316,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/rfq/generate':
                     return self._handle_rfq_generate_post()
                 elif parsed.path == '/api/opportunities/create-from-email':
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-
-                    payload = self._read_json(default={})
-
-                    message_id = payload.get('message_id')
-                    if not message_id:
-                        return self.json({"error": "Missing message_id parameter"}, 400)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
-                    print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_opportunities_create_from_email_post()
                 elif parsed.path == '/api/opportunities/create-manual':
                     user_data = self._require_auth()
                     if user_data is None:
@@ -1189,6 +1173,25 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunities_create_from_email_post(self):
+            """Handle /api/opportunities/create-from-email POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            payload = self._read_json(default={})
+
+            message_id = payload.get('message_id')
+            if not message_id:
+                return self.json({"error": "Missing message_id parameter"}, 400)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
+            print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
