@@ -278,3 +278,30 @@ def handle_email_auth_status_post(handler, parsed_path):
     result = request_handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
     status = handler._status_from_result(result)
     return handler.json(result, status)
+
+
+def handle_email_resync_post(handler, parsed_path):
+    """Handle /api/email/{email_id}/resync POST endpoint."""
+    path_parts = parsed_path.split('/')
+    email_id = path_parts[-2] if len(path_parts) >= 4 else None
+
+    if not email_id:
+        return handler.json({"error": "Missing email_id"}, 400)
+
+    payload = handler._read_json(default={})
+    provider_message_id = payload.get('provider_message_id')
+    if not provider_message_id:
+        return handler.json({"error": "Missing provider_message_id"}, 400)
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    if not user_id:
+        return handler.json({"error": "Unauthorized"}, 401)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_email_resync(email_id=email_id, provider_message_id=provider_message_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
