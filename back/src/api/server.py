@@ -58,7 +58,7 @@ from src.api.routes.server_get_csv_handlers import (
     handle_csv_search_get,
     handle_csv_sources_get,
 )
-from src.api.routes.server_get_download_handlers import handle_quote_download
+from src.api.routes.server_get_download_handlers import handle_document_download, handle_quote_download
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_business_handlers import (
     handle_action_get,
@@ -1354,39 +1354,7 @@ def create_rag_handler(config):
 
         def _handle_document_download(self, filename, handlers, qs=None):
             """Stream document file (PDF, DOCX, etc.)."""
-            try:
-                qs = qs or {}
-                is_inline = qs.get('inline', ['0'])[0] == '1'
-                content = handlers.handle_get_document_file(filename)
-                
-                # Determine content type based on file extension
-                ext = filename.lower().split('.')[-1] if '.' in filename else ''
-                content_type_map = {
-                    'pdf': 'application/pdf',
-                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'doc': 'application/msword',
-                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'xls': 'application/vnd.ms-excel',
-                    'txt': 'text/plain; charset=utf-8',
-                }
-                content_type = content_type_map.get(ext, 'application/octet-stream')
-                
-                self.send_response(200)
-                self.send_header('Content-Type', content_type)
-                disposition = 'inline' if is_inline else 'attachment'
-                self.send_header('Content-Disposition', f'{disposition}; filename="{filename}"')
-                self.send_header('Content-Length', str(len(content)))
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:5173')
-                self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-                self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-                self.send_header('Access-Control-Allow-Credentials', 'true')
-                self._cors_header_sent = True
-                self.end_headers()
-                self.wfile.write(content)
-            except FileNotFoundError:
-                return self._send_error(404, "Document file not found")
-            except Exception as e:
-                return self._send_error(500, f"Error streaming document: {e}")
+            return handle_document_download(self, filename, handlers, qs)
 
         def json(self, payload, status_code=200):
             """Send JSON response."""
