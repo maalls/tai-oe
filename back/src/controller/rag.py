@@ -1148,7 +1148,7 @@ def create_rag_handler(config):
                 content=content,
                 user_id=user_id
             )
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_send_quote_for_opportunity_post(self, send_quote_match):
