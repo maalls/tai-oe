@@ -1145,7 +1145,7 @@ def create_rag_handler(config):
 
                 handlers = self.get_request_handlers()
                 elif parsed.path == '/api/quotes/list':
-                    return self.json(handlers.handle_list_quotes())
+                    return self._handle_quotes_list_get(handlers)
                 elif parsed.path == '/api/opportunities/search':
                     # Get query parameters
                     source_reference_id = qs.get('source_reference_id', [None])[0]
@@ -1441,6 +1441,10 @@ def create_rag_handler(config):
         def _handle_csv_search_get(self, qs, handlers):
             """Handle /api/csv/search* GET endpoints."""
             return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
+
+        def _handle_quotes_list_get(self, handlers):
+            """Handle /api/quotes/list GET endpoint."""
+            return self.json(handlers.handle_list_quotes())
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
