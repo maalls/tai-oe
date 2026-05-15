@@ -1,56 +1,50 @@
 """Unit tests for fetch_emails.run."""
 
-from types import SimpleNamespace
-import pytest
-
 from src.command import fetch_emails
 
 
-class _WorkflowOK:
-    def __init__(self):
-        self.email_service = SimpleNamespace(
-            get_all_unclassified=lambda limit, user_id: [SimpleNamespace(id="e-1"), SimpleNamespace(id="e-2")]
-        )
+def test_run_delegates_to_unified_runner(monkeypatch):
+    captured = {}
 
-    def process_new_email(self, email_id: str):
-        return {"email_id": email_id, "category": "quote", "status": "classified"}
+    def _fake_unified_runner(**kwargs):
+        captured.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(fetch_emails, "unified_run_fetch_emails", _fake_unified_runner)
+
+    code = fetch_emails.run(
+        user_id="u-1",
+        max_results=42,
+        classify_limit=10,
+        after_date="2026/05/01",
+    )
+
+    assert code == 0
+    assert captured == {
+        "user_id": "u-1",
+        "max_results": 42,
+        "classify_limit": 10,
+        "after_date": "2026/05/01",
+    }
 
 
-class _FactoryOK:
-    def create_email_workflow_service(self):
-        return _WorkflowOK()
+def test_run_ignores_legacy_workflow_argument(monkeypatch):
+    def _fake_unified_runner(**_kwargs):
+        return 0
 
+    monkeypatch.setattr(fetch_emails, "unified_run_fetch_emails", _fake_unified_runner)
 
-def test_run_uses_injected_workflow_without_factory(monkeypatch):
-    class _WorkflowInjected(_WorkflowOK):
-        pass
-
-    workflow = _WorkflowInjected()
-
-    def _boom(*_args, **_kwargs):
-        raise AssertionError("factory should not be used when workflow is injected")
-
-    monkeypatch.setattr("src.infrastructure.factory.ServiceFactory", _boom)
-
-    code = fetch_emails.run(user_id="u-1", classify_limit=10, workflow=workflow)
+    code = fetch_emails.run(user_id="u-1", workflow=object())
 
     assert code == 0
 
 
-def test_run_new_workflow_success(monkeypatch):
-    monkeypatch.setattr("src.infrastructure.factory.ServiceFactory", _FactoryOK)
+def test_run_propagates_unified_runner_exit_code(monkeypatch):
+    def _fake_unified_runner(**_kwargs):
+        return 1
 
-    code = fetch_emails.run(user_id="u-1", classify_limit=10)
+    monkeypatch.setattr(fetch_emails, "unified_run_fetch_emails", _fake_unified_runner)
 
-    assert code == 0
+    code = fetch_emails.run(user_id="u-1")
 
-
-def test_run_new_workflow_fails_fast_without_legacy_fallback(monkeypatch):
-    class _FactoryBoom:
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError("factory error")
-
-    monkeypatch.setattr("src.infrastructure.factory.ServiceFactory", _FactoryBoom)
-
-    with pytest.raises(RuntimeError, match="factory error"):
-        fetch_emails.run(user_id="u-1")
+    assert code == 1

@@ -12,6 +12,7 @@ import argparse
 import os
 import sys
 from src.config import EMAIL_FETCH_MAX_RESULTS
+from src.command.email_cli import run_fetch_emails as unified_run_fetch_emails
 
 # Load .env if available
 try:
@@ -25,55 +26,6 @@ except Exception:
 default_user_id = os.environ.get("SUPABASE_USER_ID") or os.environ.get("DEFAULT_USER_ID")
 
 
-def _get_legacy_repo():
-	"""Create the legacy repository lazily to avoid import-time side effects."""
-	from src.repository.email_repository import EmailRepository
-
-	return EmailRepository()
-
-
-def _run_new_workflow(user_id: str, classify_limit: int = 200) -> int:
-	"""Run the new DDD workflow (classification only)."""
-	return _run_new_workflow_with_service(
-		user_id=user_id,
-		classify_limit=classify_limit,
-	)
-
-
-def _run_new_workflow_with_service(
-	user_id: str,
-	classify_limit: int = 200,
-	workflow=None,
-) -> int:
-	"""Run the new DDD workflow (classification only)."""
-	from src.infrastructure.factory import ServiceFactory
-
-	if workflow is None:
-		factory = ServiceFactory()
-		workflow = factory.create_email_workflow_service()
-
-	emails = workflow.email_service.get_all_unclassified(limit=classify_limit, user_id=user_id)
-
-	classified = 0
-	errors = 0
-	for email in emails:
-		try:
-			workflow.process_new_email(email.id)
-			classified += 1
-		except Exception as exc:
-			errors += 1
-			print(f"[fetch-emails:new-workflow] Failed on {email.id}: {exc}")
-
-	print("\n[fetch-emails] Summary:")
-	print("  Status: ok" if errors == 0 else "  Status: partial")
-	print("  Workflow: new")
-	print("  Emails fetched: 0 (classification-only mode)")
-	print(f"  Emails classified: {classified}")
-	print(f"  Errors: {errors}")
-
-	return 0 if errors == 0 else 1
-
-
 def run(
 	user_id: str,
 	max_results: int = EMAIL_FETCH_MAX_RESULTS,
@@ -81,13 +33,14 @@ def run(
 	after_date: str = None,
 	workflow=None,
 ) -> int:
-	"""Run the new workflow for email classification."""
-	if workflow is None:
-		return _run_new_workflow(user_id=user_id, classify_limit=classify_limit)
-	return _run_new_workflow_with_service(
+	"""Run email fetch/classification through the unified email CLI workflow."""
+	# Keep workflow in signature for backward compatibility with older call sites.
+	_ = workflow
+	return unified_run_fetch_emails(
 		user_id=user_id,
+		max_results=max_results,
 		classify_limit=classify_limit,
-		workflow=workflow,
+		after_date=after_date,
 	)
 
 
