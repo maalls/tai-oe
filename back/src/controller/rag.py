@@ -237,11 +237,10 @@ def create_rag_handler(config):
 
         def _handle_imap_config_delete(self):
             """Handle DELETE /api/imap/config."""
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
 
-            user_id = user_data.get('id') if user_data else None
             handlers = self.get_request_handlers()
             result = handlers.handle_imap_config_delete(user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
