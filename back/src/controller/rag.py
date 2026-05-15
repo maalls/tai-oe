@@ -322,24 +322,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/opportunities/create-from-rfp':
                     return self._handle_opportunities_create_from_rfp_post()
                 elif parsed.path == '/api/email/extract-contact':
-                    payload = self._read_json(default={})
-                    
-                    email_id = payload.get('email_id')
-                    email_body = payload.get('email_body')
-                    
-                    if not email_body:
-                        return self.json({"error": "Missing email_body parameter"}, 400)
-                    
-                    # Get user_id from auth header
-                    auth_header = self.headers.get('Authorization', '')
-                    user_data = self._require_auth(auth_header=auth_header, required=False)
-                    user_id = user_data.get('id') if user_data else None  # Use 'id' not 'sub'
-                    print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
-                    
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_email_extract_contact_post()
                 
                 elif parsed.path.startswith('/api/email/auth/'):
                     # GET /api/email/auth/{email_id} - Get authentication status for an email
@@ -1199,6 +1182,26 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
             print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_email_extract_contact_post(self):
+            """Handle /api/email/extract-contact POST endpoint."""
+            payload = self._read_json(default={})
+
+            email_id = payload.get('email_id')
+            email_body = payload.get('email_body')
+
+            if not email_body:
+                return self.json({"error": "Missing email_body parameter"}, 400)
+
+            auth_header = self.headers.get('Authorization', '')
+            user_data = self._require_auth(auth_header=auth_header, required=False)
+            user_id = user_data.get('id') if user_data else None
+            print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
