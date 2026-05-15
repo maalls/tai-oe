@@ -50,24 +50,7 @@ class DatabaseHandlers:
         
         if qs.get('tables') is not None:
             # return the list of tables with their columns and metadata
-            query = """
-                SELECT 
-                    t.table_name,
-                    c.column_name,
-                    c.data_type,
-                    c.is_nullable,
-                    c.column_default,
-                    c.character_maximum_length,
-                    c.numeric_precision,
-                    c.numeric_scale
-                FROM information_schema.tables t
-                LEFT JOIN information_schema.columns c 
-                    ON t.table_name = c.table_name 
-                    AND t.table_schema = c.table_schema
-                WHERE t.table_schema = 'public'
-                ORDER BY t.table_name, c.ordinal_position;
-            """
-            rows = self.repository.execute_dict_query(query)
+            rows = self.repository.list_public_tables_with_columns()
             
             # Group columns by table
             tables = {}
@@ -107,20 +90,15 @@ class DatabaseHandlers:
         limit = max(1, min(limit, 1000))
         offset = max(0, offset)
         
-        # Build PostgreSQL query
-        columns = columns_raw if columns_raw != '*' else '*'
-        query = f"SELECT {columns} FROM {table}"
-        
-        if where_clause:
-            query += f" WHERE {where_clause}"
-        
-        if sort_by:
-            query += f" ORDER BY {sort_by}"
-        
-        query += f" LIMIT {limit} OFFSET {offset}"
-        
         try:
-            results = self.repository.execute_dict_query(query)
+            results = self.repository.query_table(
+                table=table,
+                columns_raw=columns_raw,
+                where_clause=where_clause,
+                sort_by=sort_by,
+                limit=limit,
+                offset=offset,
+            )
             
             # Serialize results to handle date/datetime/decimal objects
             serialized_results = [self.serialize_row(row) for row in results]
@@ -141,7 +119,11 @@ class DatabaseHandlers:
         except Exception as e:
             import traceback
             print(f"CSV Query Error: {e}", flush=True)
-            print(f"Query: {query}", flush=True)
+            print(
+                f"Query params: table={table}, columns={columns_raw}, where={where_clause}, "
+                f"sortBy={sort_by}, limit={limit}, offset={offset}",
+                flush=True,
+            )
             traceback.print_exc()
             return {"error": str(e)}
     
