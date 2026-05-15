@@ -69,7 +69,11 @@ from src.api.routes.server_get_business_handlers import (
     handle_quotes_download_get,
     handle_quotes_list_get,
 )
-from src.api.routes.server_get_misc_handlers import handle_google_oauth_callback_get, handle_products_get
+from src.api.routes.server_get_misc_handlers import (
+    handle_email_fetch_loop_status_get,
+    handle_google_oauth_callback_get,
+    handle_products_get,
+)
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1104,11 +1108,7 @@ def create_rag_handler(config):
 
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
-            status_path = Path(__file__).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
-            legacy_path = Path(__file__).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
-            handlers = self.get_request_handlers()
-            result = handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
-            return self.json(result)
+            return handle_email_fetch_loop_status_get(self, __file__)
 
         def _handle_auth_user_get(self):
             """Handle /api/auth/user GET endpoint."""
