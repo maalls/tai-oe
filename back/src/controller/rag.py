@@ -1105,24 +1105,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/quotes/list':
                     return self._handle_quotes_list_get(handlers)
                 elif parsed.path == '/api/opportunities/search':
-                    # Get query parameters
-                    source_reference_id = qs.get('source_reference_id', [None])[0]
-                    name = qs.get('name', [None])[0]
-                    
-                    # Verify authentication
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-                    
-                    user_id = user_data.get('id') if user_data else None
-                    
-                    result = handlers.handle_search_opportunities(
-                        user_id=user_id,
-                        source_reference_id=source_reference_id,
-                        name=name,
-                    )
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_opportunities_search_get(qs, handlers)
                 
                 # Action endpoints - List actions for opportunity
                 list_actions_match = re.match(r"^/api/opportunities/([^/]+)/actions$", parsed.path)
@@ -1400,6 +1383,24 @@ def create_rag_handler(config):
             self.end_headers()
             self.wfile.write(file_content)
             return
+
+        def _handle_opportunities_search_get(self, qs, handlers):
+            """Handle /api/opportunities/search GET endpoint."""
+            source_reference_id = qs.get('source_reference_id', [None])[0]
+            name = qs.get('name', [None])[0]
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+            user_id = user_data.get('id') if user_data else None
+
+            result = handlers.handle_search_opportunities(
+                user_id=user_id,
+                source_reference_id=source_reference_id,
+                name=name,
+            )
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
 
         def _handle_csv_get(self, parsed_path: str, qs):
             """Handle /api/csv* GET endpoints."""
