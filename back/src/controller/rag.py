@@ -392,20 +392,7 @@ def create_rag_handler(config):
                     quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
 
                     if quote_update_match and self.command == 'POST':
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-
-                        user_id = user_data.get('id') if user_data else None
-                        document_id = quote_update_match.group(1)
-
-                        payload = self._read_json(default={})
-
-                        print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
-                        status = 400 if result.get('error') else 200
-                        return self.json(result, status)
+                        return self._handle_quote_update_post(quote_update_match)
                 
                 # Existing endpoints
                 if parsed.path == '/api/csv/source':
@@ -1262,6 +1249,22 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_quote_update_post(self, quote_update_match):
+            """Handle /api/quote/{id} POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            document_id = quote_update_match.group(1)
+            payload = self._read_json(default={})
+
+            print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
+            handlers = self.get_request_handlers()
+            result = handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
+            status = 400 if result.get('error') else 200
             return self.json(result, status)
 
         def _handle_products_get(self, qs):
