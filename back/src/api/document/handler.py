@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Callable, Dict
 
+from src.api.routes.server_auth_helpers import require_auth_user_id
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.service.opportunity.document_content_service import DocumentContentService
@@ -510,7 +511,7 @@ def handle_chat_attachments_post(handler, parsed):
 
 def handle_document_delete(handler, document_delete_match):
     """Handle DELETE /api/document/{id}."""
-    user_id = handler._require_auth_user_id()
+    user_id = require_auth_user_id(handler)
     if user_id is None:
         return None
 
@@ -524,7 +525,7 @@ def handle_document_delete(handler, document_delete_match):
 
 def handle_quote_delete(handler, quote_delete_match):
     """Handle DELETE /api/quote/{id}."""
-    user_id = handler._require_auth_user_id()
+    user_id = require_auth_user_id(handler)
     if user_id is None:
         return None
 

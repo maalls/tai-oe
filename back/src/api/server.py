@@ -29,9 +29,7 @@ from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_auth_helpers import (
     authorize_request,
-    get_optional_user_id_from_auth,
     require_auth,
-    require_auth_user_id,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
@@ -62,7 +60,6 @@ from src.api.routes.server_post_utility_handlers import (
     handle_rfp_post,
 )
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
-from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 
@@ -209,30 +206,6 @@ def create_rag_handler(config):
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
             return handle_email_fetch_loop_status_get(self, __file__)
-
-        def _get_qs_int(self, qs, key: str, default: int) -> int:
-            """Read integer query-string parameter with fallback."""
-            return get_qs_int(qs, key=key, default=default)
-
-        def _get_qs_value(self, qs, key: str, default=None):
-            """Read first query-string value with fallback."""
-            return get_qs_value(qs, key=key, default=default)
-
-        def _get_payload_int(self, payload: Dict, key: str, default: int) -> int:
-            """Read integer payload value with fallback."""
-            return get_payload_int(payload, key=key, default=default)
-
-        def _get_optional_user_id_from_auth(self, auth_header: str):
-            """Extract user id from auth header without enforcing auth."""
-            return get_optional_user_id_from_auth(self, auth_header)
-
-        def _require_auth_user_id(self):
-            """Require authenticated user and return its id."""
-            return require_auth_user_id(self)
-
-        def _get_qs_bool(self, qs, key: str, default: bool = False) -> bool:
-            """Read boolean query-string parameter with fallback."""
-            return get_qs_bool(qs, key=key, default=default)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""

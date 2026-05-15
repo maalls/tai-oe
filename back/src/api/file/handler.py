@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Any
 import traceback
 
+from src.api.routes.server_query_helpers import get_payload_int, get_qs_int
 from src.lib.email.multipart import parse_multipart, extract_boundary_from_header
 from src.lib.readers.xls import XlsReader
 
@@ -148,7 +149,7 @@ def handle_fs_read_post(handler):
     payload = handler._read_json(default={})
     raw_path = str(payload.get('path') or '').strip()
 
-    max_chars = handler._get_payload_int(payload, 'max_chars', 10000)
+    max_chars = get_payload_int(payload, 'max_chars', 10000)
     max_chars = max(100, min(max_chars, 50000))
 
     target_path = handler._resolve_fs_path(raw_path)
@@ -183,8 +184,8 @@ def handle_curl_post(handler):
     headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
     body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
 
-    max_chars = handler._get_payload_int(payload, 'max_chars', 10000)
-    timeout_ms = handler._get_payload_int(payload, 'timeout_ms', 8000)
+    max_chars = get_payload_int(payload, 'max_chars', 10000)
+    timeout_ms = get_payload_int(payload, 'timeout_ms', 8000)
 
     max_chars = max(100, min(max_chars, 50000))
     timeout_ms = max(1000, min(timeout_ms, 20000))
@@ -213,8 +214,8 @@ def handle_fetch_get(handler, qs):
     if not target_url.startswith('http://') and not target_url.startswith('https://'):
         return handler._send_error(400, 'Invalid url scheme')
 
-    max_chars = handler._get_qs_int(qs, 'max_chars', 10000)
-    timeout_ms = handler._get_qs_int(qs, 'timeout_ms', 8000)
+    max_chars = get_qs_int(qs, 'max_chars', 10000)
+    timeout_ms = get_qs_int(qs, 'timeout_ms', 8000)
 
     max_chars = max(100, min(max_chars, 50000))
     timeout_ms = max(1000, min(timeout_ms, 20000))

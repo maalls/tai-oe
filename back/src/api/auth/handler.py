@@ -4,6 +4,7 @@ Integrates with the RAG HTTP server.
 """
 import json
 
+from src.api.routes.server_query_helpers import get_qs_value
 from src.infrastructure.clients.supabase import get_supabase_anon
 from supabase import AuthApiError
 
@@ -196,10 +197,10 @@ def handle_auth_user_get(handler):
 
 def handle_oauth_login_get(handler, qs):
     """Handle /api/oauth/login GET endpoint."""
-    provider = handler._get_qs_value(qs, 'provider')
+    provider = get_qs_value(qs, 'provider')
     if not provider:
         return handler._send_error(400, 'Missing provider parameter')
-    redirect_url = handler._get_qs_value(qs, 'redirect_url')
+    redirect_url = get_qs_value(qs, 'redirect_url')
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_oauth_login(provider=provider, redirect_url=redirect_url)
@@ -209,9 +210,9 @@ def handle_oauth_login_get(handler, qs):
 
 def handle_oauth_callback_get(handler, qs):
     """Handle /api/oauth/callback GET endpoint."""
-    provider = handler._get_qs_value(qs, 'provider')
-    code = handler._get_qs_value(qs, 'code')
-    state = handler._get_qs_value(qs, 'state')
+    provider = get_qs_value(qs, 'provider')
+    code = get_qs_value(qs, 'code')
+    state = get_qs_value(qs, 'state')
     if not provider:
         return handler._send_error(400, 'Missing provider parameter')
     if not code:

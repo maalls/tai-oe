@@ -1,5 +1,6 @@
 """Opportunity-related request handlers (migrated from rfq/business split)."""
 
+from src.api.routes.server_auth_helpers import require_auth_user_id
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
@@ -421,7 +422,7 @@ def handle_opportunities_search_get(handler, qs, request_handlers):
     source_reference_id = qs.get('source_reference_id', [None])[0]
     name = qs.get('name', [None])[0]
 
-    user_id = handler._require_auth_user_id()
+    user_id = require_auth_user_id(handler)
     if user_id is None:
         return None
 
