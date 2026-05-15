@@ -38,6 +38,7 @@ from src.api.routes.server_post_dispatch import dispatch_post_request
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
+from src.api.routes.server_post_auth_dispatch import dispatch_post_auth_routes
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
 
@@ -417,19 +418,7 @@ def create_rag_handler(config):
 
         def _handle_post_auth_routes(self, parsed_path: str) -> bool:
             """Handle auth POST routes."""
-            if parsed_path == '/api/auth/signup':
-                self._handle_auth_signup_post()
-                return True
-
-            if parsed_path == '/api/auth/login':
-                self._handle_auth_login_post()
-                return True
-
-            if parsed_path == '/api/auth/logout':
-                self._handle_auth_logout_post()
-                return True
-
-            return False
+            return dispatch_post_auth_routes(self, parsed_path)
 
         def _handle_post_domain_routes(self, parsed) -> bool:
             """Handle entity/email/opportunity/imap/document POST routes."""
