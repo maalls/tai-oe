@@ -4,14 +4,11 @@ from typing import Dict, Optional
 import json
 import hashlib
 import os
-import uuid
 import time
 import re
 from datetime import datetime
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
 from io import BytesIO
-from weasyprint import HTML
 from html.parser import HTMLParser
 
 from src.api.email.handler import EmailHandlers
@@ -66,35 +63,6 @@ class BusinessHandlers:
     @staticmethod
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
         return EmailRepository._clean_email_body(email_body, max_length=max_length)
-
-    @staticmethod
-    def _normalize_account_address(account: Dict) -> Dict[str, str]:
-        """Return a stable address shape for PDF templates.
-
-        The database has used both `address_line1/address_line2` and
-        `street_address`, so we normalize all known variants here and keep
-        missing fields empty to avoid rendering `None` in the PDF.
-        """
-        account = account or {}
-        street_address = (
-            account.get('street_address')
-            or account.get('address_line1')
-            or account.get('address1')
-            or ''
-        )
-        address_line2 = account.get('address_line2') or account.get('address2') or ''
-        city = account.get('city') or ''
-        postal_code = account.get('postal_code') or ''
-        country_name = account.get('country_name') or account.get('country') or ''
-
-        return {
-            'street_address': street_address,
-            'address_line1': account.get('address_line1') or street_address,
-            'address_line2': address_line2,
-            'city': city,
-            'postal_code': postal_code,
-            'country_name': country_name,
-        }
 
     def getForm(self, body: bytes, content_type: str):
         boundary = self._extract_boundary(content_type)
@@ -703,88 +671,3 @@ class BusinessHandlers:
             document_id=document_id,
             user_id=user_id,
         )
-
-    def _generate_invoice_pdf(self, invoice_data: Dict) -> str:
-        """Generate PDF from invoice data using HTML template.
-        
-        Parameters
-        ----------
-        invoice_data : Dict
-            Invoice data with products, contact, invoice_id, etc.
-        
-        Returns
-        -------
-        str
-            Filename of generated PDF
-        """
-        try:
-            # Create invoices storage directory if it doesn't exist
-            storage_dir = self._get_storage_dir("invoice")
-            storage_dir.mkdir(parents=True, exist_ok=True)
-            templates_dir = Path(__file__).parent.parent.parent / "templates"
-            
-            # Generate unique filename
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            invoice_id_num = str(uuid.uuid4())[:8]
-            pdf_filename = f"invoice_{timestamp}_{invoice_id_num}.pdf"
-            pdf_path = storage_dir / pdf_filename
-            
-            # Setup Jinja2 environment
-            env = Environment(loader=FileSystemLoader(str(templates_dir)))
-            
-            # Add custom currency format filter
-            def format_currency(value, currency):
-                """Format number based on currency decimal places."""
-                # Currencies with 0 decimal places
-                if currency.upper() in ['JPY', 'YEN', 'KRW', 'CNY', 'RUB']:
-                    decimals = 0
-                # Currencies with 3 decimal places
-                elif currency.upper() in ['BHD', 'JOD', 'KWD', 'OMR', 'TND']:
-                    decimals = 3
-                # Default to 2 decimal places
-                else:
-                    decimals = 2
-                
-                return f"{float(value):.{decimals}f}"
-            
-            env.filters['format_currency'] = format_currency
-            template = env.get_template('invoice.html')
-            
-            # Prepare template data
-            template_data = {
-                'quote_id': invoice_data.get('external_ref', f"INV-{invoice_id_num}"),
-                'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'issued_date': invoice_data.get('issued_date', ''),
-                'title': invoice_data.get('title', ''),
-                'contact': invoice_data.get('contact', {}),
-                'account': invoice_data.get('account', {}),
-                'products': [],
-                'currency': invoice_data.get('currency', 'EUR'),
-                'totals': invoice_data.get('totals', {}),
-            }
-            
-            # Format products for template
-            for product in invoice_data.get('products', []):
-                template_data['products'].append({
-                    'quantity': product.get('quantity', 1),
-                    'manufacturer': product.get('manufacturer', ''),
-                    'part_number': product.get('sku', ''),
-                    'description': product.get('description', ''),
-                    'price': product.get('price', 0),
-                    'price_found': product.get('price', 0) > 0,
-                })
-            
-            # Render HTML
-            html_content = template.render(**template_data)
-            
-            # Generate PDF from HTML using WeasyPrint
-            HTML(string=html_content).write_pdf(str(pdf_path))
-            
-            print(f"[BusinessHandlers] Invoice PDF saved to {pdf_path}")
-            return pdf_filename
-            
-        except Exception as e:
-            print(f"[BusinessHandlers] Error generating invoice PDF: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
