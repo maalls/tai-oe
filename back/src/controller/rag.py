@@ -136,21 +136,7 @@ def create_rag_handler(config):
                 # Opportunity delete
                 opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed.path)
                 if opportunity_delete_match:
-                    print(f"[RAG] DELETE /api/opportunities matched, processing deletion", file=sys.stderr)
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        print(f"[RAG] DELETE - Auth failed", file=sys.stderr)
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    opportunity_ids = opportunity_delete_match.group(1)
-                    print(f"[RAG] DELETE opportunity(ies) {opportunity_ids} for user {user_id}", file=sys.stderr)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    print(f"[RAG] DELETE result: {result}", file=sys.stderr)
-                    return self.json(result, status)
+                    return self._handle_opportunity_delete(opportunity_delete_match)
                 
                 # Quote delete
                 quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
@@ -315,6 +301,24 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunity_delete(self, opportunity_delete_match):
+            """Handle DELETE /api/opportunities/{ids}."""
+            print(f"[RAG] DELETE /api/opportunities matched, processing deletion", file=sys.stderr)
+            user_data = self._require_auth()
+            if user_data is None:
+                print(f"[RAG] DELETE - Auth failed", file=sys.stderr)
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            opportunity_ids = opportunity_delete_match.group(1)
+            print(f"[RAG] DELETE opportunity(ies) {opportunity_ids} for user {user_id}", file=sys.stderr)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            print(f"[RAG] DELETE result: {result}", file=sys.stderr)
             return self.json(result, status)
 
         def do_POST(self):
