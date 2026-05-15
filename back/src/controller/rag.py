@@ -1137,19 +1137,7 @@ def create_rag_handler(config):
                     status = 200 if result.get('status') == 'ok' else 400
                     return self.json(result, status)
                 elif parsed.path.startswith('/api/gmail/message/'):
-                    # Extract message ID from path
-                    message_id = parsed.path.split('/api/gmail/message/')[-1]
-                    
-                    # Get user_id from auth header
-                    auth_header = self.headers.get('Authorization', '')
-                    print(f"[RAG] /api/gmail/message/{message_id} - Auth header: {auth_header[:50] if auth_header else 'None'}...")
-                    user_id = self._get_optional_user_id_from_auth(auth_header)
-                    print(f"[RAG] Extracted user_id from token: {user_id}")
-                    
-                    print(f"[RAG] Final user_id for message body: {user_id}")
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_get_message_body(message_id, user_id)
-                    return self.json(result)
+                    return self._handle_gmail_message_get(parsed.path)
                 elif parsed.path.startswith('/api/email-attachment/'):
                     # Extract attachment ID from path
                     attachment_id = parsed.path.split('/api/email-attachment/')[-1].split('/')[0]
@@ -1409,6 +1397,19 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             user_id = user_data.get('id') if user_data else None
             result = handlers.handle_imap_config(user_id=user_id)
+            return self.json(result)
+
+        def _handle_gmail_message_get(self, parsed_path: str):
+            """Handle /api/gmail/message/<id> GET endpoint."""
+            message_id = parsed_path.split('/api/gmail/message/')[-1]
+            auth_header = self.headers.get('Authorization', '')
+            print(f"[RAG] /api/gmail/message/{message_id} - Auth header: {auth_header[:50] if auth_header else 'None'}...")
+            user_id = self._get_optional_user_id_from_auth(auth_header)
+            print(f"[RAG] Extracted user_id from token: {user_id}")
+            print(f"[RAG] Final user_id for message body: {user_id}")
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_get_message_body(message_id, user_id)
             return self.json(result)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
