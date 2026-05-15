@@ -295,29 +295,7 @@ def create_rag_handler(config):
                     return self._handle_fs_create_post()
 
                 if parsed.path == '/api/fs/read':
-                    payload = self._read_json(default={})
-
-                    raw_path = str(payload.get('path') or '').strip()
-
-                    try:
-                        max_chars = int(payload.get('max_chars') or 10000)
-                    except Exception:
-                        max_chars = 10000
-                    max_chars = max(100, min(max_chars, 50000))
-
-                    target_path = self._resolve_fs_path(raw_path)
-                    if target_path is None:
-                        return
-
-                    if not target_path.exists() or not target_path.is_file():
-                        return self._send_error(404, 'File not found')
-
-                    try:
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_fs_read(target_path=target_path, max_chars=max_chars)
-                    except Exception as e:
-                        return self._send_error(500, f'Read failed: {e}')
-                    return self.json(result)
+                    return self._handle_fs_read_post()
 
                 if parsed.path == '/api/curl':
                     payload = self._read_json(default={})
@@ -1172,6 +1150,31 @@ def create_rag_handler(config):
                 result = handlers.handle_fs_create(target_path=target_path, kind=kind)
             except Exception as e:
                 return self._send_error(500, f'Create failed: {e}')
+            return self.json(result)
+
+        def _handle_fs_read_post(self):
+            """Handle /api/fs/read POST endpoint."""
+            payload = self._read_json(default={})
+            raw_path = str(payload.get('path') or '').strip()
+
+            try:
+                max_chars = int(payload.get('max_chars') or 10000)
+            except Exception:
+                max_chars = 10000
+            max_chars = max(100, min(max_chars, 50000))
+
+            target_path = self._resolve_fs_path(raw_path)
+            if target_path is None:
+                return
+
+            if not target_path.exists() or not target_path.is_file():
+                return self._send_error(404, 'File not found')
+
+            try:
+                handlers = self.get_request_handlers()
+                result = handlers.handle_fs_read(target_path=target_path, max_chars=max_chars)
+            except Exception as e:
+                return self._send_error(500, f'Read failed: {e}')
             return self.json(result)
 
         def _handle_products_get(self, qs):
