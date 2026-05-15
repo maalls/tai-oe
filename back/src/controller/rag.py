@@ -155,17 +155,7 @@ def create_rag_handler(config):
                 # Quote delete
                 quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
                 if quote_delete_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    document_id = quote_delete_match.group(1)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_quote_delete(quote_delete_match)
 
                 # Generic document delete (for all document types)
                 document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed.path)
@@ -310,6 +300,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_delete_document(document_id=document_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_quote_delete(self, quote_delete_match):
+            """Handle DELETE /api/quote/{id}."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            document_id = quote_delete_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
