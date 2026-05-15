@@ -1116,7 +1116,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/messages':
                     handlers = self.get_request_handlers()
                     # Get max_results and user_id from query params
-                    max_results = int(qs.get('max_results', [EMAIL_FETCH_MAX_RESULTS])[0])
+                    max_results = self._get_qs_int(qs, 'max_results', EMAIL_FETCH_MAX_RESULTS)
                     user_id = qs.get('user_id', [None])[0]
                     force = qs.get('force', ['false'])[0].lower() == 'true'
                     
@@ -1147,7 +1147,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/gmail/classify-unclassified':
                     handlers = self.get_request_handlers()
                     user_id = qs.get('user_id', [None])[0]
-                    limit = int(qs.get('limit', [200])[0])
+                    limit = self._get_qs_int(qs, 'limit', 200)
 
                     if not user_id:
                         auth_header = self.headers.get('Authorization', '')
@@ -1281,7 +1281,7 @@ def create_rag_handler(config):
 
                     user_id = user_data.get('id') if user_data else None
                     action_id = get_action_logs_match.group(1)
-                    limit = int(qs.get('limit', [50])[0])
+                    limit = self._get_qs_int(qs, 'limit', 50)
 
                     result = handlers.handle_get_action_logs(action_id, limit, user_id)
                     status = 200 if result.get('status') == 'ok' else 400
