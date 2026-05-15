@@ -1276,12 +1276,10 @@ def create_rag_handler(config):
 
         def _handle_imap_config_get(self):
             """Handle /api/imap/config GET endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
-
             handlers = self.get_request_handlers()
-            user_id = user_data.get('id') if user_data else None
             result = handlers.handle_imap_config(user_id=user_id)
             return self.json(result)
 
