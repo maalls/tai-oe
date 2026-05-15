@@ -6,12 +6,11 @@ import sys
 
 def test_delete_endpoint():
     """Test opportunity deletion endpoint."""
-    # You'll need to update these with real values
-    api_url = "http://localhost:8088/api/opportunities/test-opportunity-id"
+    # Mise à jour de l'URL pour utiliser le bon port
+    api_url = "http://localhost:8089/api/opportunities/test-opportunity-id"
     
-    # Get a token from your auth system (this is just a placeholder)
-    # You might need to authenticate first to get a valid token
-    token = "your-bearer-token-here"
+    # Remplacer 'your-bearer-token-here' par un jeton valide
+    token = "votre-jeton-valide-ici"
     
     headers = {
         "Authorization": f"Bearer {token}",

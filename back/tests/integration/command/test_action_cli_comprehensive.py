@@ -18,12 +18,17 @@ import sys
 import json
 from datetime import datetime
 from pathlib import Path
+import pytest
 
 BACK_DIR = Path(__file__).resolve().parents[3]
 
 OPPORTUNITY_ID = "c32c94d9-66ea-427b-8ba0-4946191f4c31"
 USER_ID = "393be11f-807f-4f0d-bfbe-5aa93f409b48"
 
+@pytest.fixture
+def action_id():
+    # Génère un action_id fictif pour les tests
+    return "test-action-id"
 
 def run_cli(command: str) -> tuple[int, str]:
     """Run an action CLI command and return exit code and output."""
@@ -31,13 +36,11 @@ def run_cli(command: str) -> tuple[int, str]:
     result = subprocess.run(full_cmd, shell=True, capture_output=True, text=True)
     return result.returncode, result.stdout + (result.stderr if result.returncode != 0 else "")
 
-
 def print_section(title: str):
     """Print a formatted section header."""
     print(f"\n{'='*100}")
     print(f"TEST: {title}")
     print(f"{'='*100}\n")
-
 
 def test_list_actions():
     """Test listing all actions for an opportunity."""
@@ -45,7 +48,6 @@ def test_list_actions():
     code, output = run_cli(f"list-actions {OPPORTUNITY_ID}")
     print(output)
     return code == 0
-
 
 def test_create_recurring_quote():
     """Test creating a recurring quote action."""
@@ -55,7 +57,6 @@ def test_create_recurring_quote():
     )
     print(output)
     return code == 0
-
 
 def test_create_follow_up_email():
     """Test creating a follow-up email action."""
@@ -72,7 +73,6 @@ def test_create_follow_up_email():
                 return action_id
     return None
 
-
 def test_create_recurring_invoice():
     """Test creating a recurring invoice action."""
     print_section("Create Recurring Invoice Action (Daily at 08:00)")
@@ -82,14 +82,12 @@ def test_create_recurring_invoice():
     print(output)
     return code == 0
 
-
 def test_get_action_details(action_id: str):
     """Test getting details of a specific action."""
     print_section(f"Get Action Details: {action_id}")
     code, output = run_cli(f"get-action {action_id}")
     print(output)
     return code == 0
-
 
 def test_pause_action(action_id: str):
     """Test pausing an action."""
@@ -98,14 +96,12 @@ def test_pause_action(action_id: str):
     print(output)
     return code == 0
 
-
 def test_resume_action(action_id: str):
     """Test resuming a paused action."""
     print_section(f"Resume Action: {action_id}")
     code, output = run_cli(f"resume-action {action_id}")
     print(output)
     return code == 0
-
 
 def test_execute_action_manually(action_id: str):
     """Test manually executing an action."""
@@ -114,7 +110,6 @@ def test_execute_action_manually(action_id: str):
     print(output)
     return code == 0
 
-
 def test_get_execution_logs(action_id: str):
     """Test getting execution logs for an action."""
     print_section(f"Get Execution Logs: {action_id}")
@@ -122,14 +117,12 @@ def test_get_execution_logs(action_id: str):
     print(output)
     return code == 0
 
-
 def test_delete_action(action_id: str):
     """Test deleting an action."""
     print_section(f"Delete Action: {action_id}")
     code, output = run_cli(f"delete-action {action_id}")
     print(output)
     return code == 0
-
 
 def main():
     """Run all tests."""

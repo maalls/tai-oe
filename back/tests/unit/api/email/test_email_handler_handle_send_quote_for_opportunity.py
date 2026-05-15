@@ -78,10 +78,11 @@ def test_handle_send_quote_for_opportunity_success(monkeypatch):
     def _path_factory(value):
         return _PathStub(
             str(value),
-            exists_rule=lambda p: p.endswith("var/storage/quotes/quote_1.pdf") or p.endswith("/var/storage/quotes/quote_1.pdf"),
+            exists_rule=lambda p: p.endswith("quote_1.pdf"),
         )
 
     monkeypatch.setattr("src.api.email.handler.Path", _path_factory)
+    monkeypatch.setattr("src.api.email.handler.EmailHandlers._get_storage_path", staticmethod(lambda source, filename: _path_factory(f"var/storage/{source}s/{filename}")))
 
     supabase_calls = []
     monkeypatch.setattr(

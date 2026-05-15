@@ -9,6 +9,8 @@ import os
 import sys
 import http.server
 import signal
+import traceback
+import urllib.parse
 from pathlib import Path
 
 from src.api.file.handler import FileHandler
@@ -20,25 +22,19 @@ from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.lib.readers.csv import CSVReader
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
-from src.api.routes.server_auth_helpers import (
-    require_auth,
-)
+from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_json
 from src.api.routes.server_get_misc_handlers import (
     handle_email_fetch_loop_status_get,
     handle_prompt_get,
 )
-from src.api.routes.server_http_method_handlers import (
-    handle_delete_method,
-    handle_get_method,
-    handle_head_method,
-    handle_options_method,
-    handle_patch_method,
-    handle_post_method,
-    handle_put_method,
-)
+from src.api.routes.server_delete_dispatch import dispatch_delete_request
+from src.api.routes.server_get_dispatch import dispatch_get_request
+from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
+from src.api.routes.server_post_dispatch import dispatch_post_request
+from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_path_helpers import resolve_fs_path
-from src.api.routes.server_response_helpers import send_json
+from src.api.routes.server_response_helpers import send_json, send_error
 
 # Load .env before reading config values.
 load_runtime_env(__file__)
@@ -89,22 +85,95 @@ def create_rag_handler(config):
             super().end_headers()
 
         def do_OPTIONS(self):
-            return handle_options_method(self)
+            """Handle OPTIONS method."""
+            self.send_response(200)
+            self.end_headers()
+            return None
 
         def do_DELETE(self):
-            return handle_delete_method(self)
+            """Handle DELETE method."""
+            try:
+                print(f"[RAG] do_DELETE called with path: {self.path}", file=sys.stderr)
+                parsed = urllib.parse.urlparse(self.path)
+
+                if dispatch_delete_request(self, parsed.path):
+                    return None
+
+                return send_error(self, 404, "Not found")
+            except Exception as e:
+                traceback.print_exc()
+                return send_error(self, 500, f"Server error: {str(e)}")
 
         def do_PATCH(self):
-            return handle_patch_method(self)
+            """Handle PATCH method."""
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+                print(f"[RAG] PATCH request to: {parsed.path}")
+                if dispatch_patch_request(self, parsed.path):
+                    return None
+
+                print(f"[RAG] PATCH path not matched: {parsed.path}")
+                return send_error(self, 404, "Not found")
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[RAG] PATCH error: {e}")
+                return send_error(self, 500, f"Server error: {str(e)}")
 
         def do_PUT(self):
-            return handle_put_method(self)
+            """Handle PUT method."""
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+
+                if dispatch_put_request(self, parsed.path):
+                    return None
+
+                return send_error(self, 404, "Not found")
+            except Exception as e:
+                traceback.print_exc()
+                return send_error(self, 500, f"Server error: {str(e)}")
 
         def do_POST(self):
-            return handle_post_method(self)
+            """Handle POST method."""
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+
+                if dispatch_post_request(self, parsed):
+                    return None
+
+                return send_error(self, 404, "Not found")
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[RAG] Error handling request: {e}")
+
+                return send_error(self, 500, f"Internal server error 1: {e}")
 
         def do_HEAD(self):
-            return handle_head_method(self)
+            """Handle HEAD method."""
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+
+                if dispatch_head_request(self, parsed.path):
+                    return None
+
+                return send_error(self, 404, "Not found")
+            except Exception as e:
+                return send_error(self, 500, f"Internal server error 2: {e}")
+
+        def do_GET(self):
+            """Handle GET method."""
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+
+                if dispatch_get_request(self, parsed, qs):
+                    return None
+
+                return http.server.SimpleHTTPRequestHandler.do_GET(self)
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[RAG] Error handling GET request: {e}")
+
+                return send_error(self, 500, f"Internal server error 3: {e}")
 
         def _handle_ddd_post_routes(self, parsed):
             """Handle incremental DDD POST routes through API adapters."""
@@ -144,7 +213,20 @@ def create_rag_handler(config):
             return True
 
         def do_GET(self):
-            return handle_get_method(self)
+            """Handle GET method."""
+            try:
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+
+                if dispatch_get_request(self, parsed, qs):
+                    return None
+
+                return http.server.SimpleHTTPRequestHandler.do_GET(self)
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[RAG] Error handling GET request: {e}")
+
+                return send_error(self, 500, f"Internal server error 3: {e}")
 
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""

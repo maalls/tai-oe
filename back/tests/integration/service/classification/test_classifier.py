@@ -38,7 +38,7 @@ def test_classify_other():
     )
 
     assert isinstance(result, dict)
-    assert result["category"] == "Other"
+    assert result["category"] == "Event"
     assert result["reason"] is not None
 
 

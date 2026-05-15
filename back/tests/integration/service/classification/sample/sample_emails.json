@@ -1,0 +1,23 @@
+[
+    {
+        "subject": "Meeting rescheduled",
+        "body": "The team meeting has been moved to 3pm tomorrow.",
+        "classification": {
+            "category": "Event"
+        }
+    },
+    {
+        "subject": "Invoice for March",
+        "body": "Please find attached the invoice for March.",
+        "classification": {
+            "category": "Invoice"
+        }
+    },
+    {
+        "subject": "Newsletter: Updates from our team",
+        "body": "Here are the latest updates from our team.",
+        "classification": {
+            "category": "Newsletter"
+        }
+    }
+]

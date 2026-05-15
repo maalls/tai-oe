@@ -99,11 +99,6 @@ class QuoteSendService:
             body = payload.get("body", "")
             pdf_filename = payload.get("storage_key", "")
 
-            print(
-                "[QuoteSendService] send_quote_for_opportunity "
-                f"- to_emails: {to_emails}, subject: {subject}, body length: {len(body)}, pdf: {pdf_filename}"
-            )
-
             if not to_emails or not isinstance(to_emails, list):
                 return {"status": "error", "message": "At least one 'to' email is required"}
             if not subject:
