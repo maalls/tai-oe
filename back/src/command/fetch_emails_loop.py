@@ -7,20 +7,24 @@ When a user has IMAP configured and enabled, the collection uses IMAP.
 Otherwise it falls back to Gmail.
 
 Usage:
-	python -m src.command.fetch_emails_loop [--interval 120] [--max-results 50] [--classify-limit 200]
+	python -m src.command.fetch_emails_loop [--interval 120] [--max-results 50] [--classify-limit 30]
 	python -m src.command.fetch_emails_loop --user-id <USER_ID>  # Single user mode (optional)
 """
 
 import argparse
-from src.config import EMAIL_FETCH_MAX_RESULTS
-from src.command.email_cli import run_loop as unified_run_loop
+from src.command.email_cli import (
+	DEFAULT_INTERVAL_SECONDS,
+	DEFAULT_LOOP_CLASSIFY_LIMIT,
+	DEFAULT_MAX_RESULTS,
+	run_loop as unified_run_loop,
+)
 
 
 def run_loop(
 	user_id: str = None,
-	interval_seconds: int = 30,
-	max_results: int = EMAIL_FETCH_MAX_RESULTS,
-	classify_limit: int = 200,
+	interval_seconds: int = DEFAULT_INTERVAL_SECONDS,
+	max_results: int = DEFAULT_MAX_RESULTS,
+	classify_limit: int = DEFAULT_LOOP_CLASSIFY_LIMIT,
 ):
 	"""Legacy loop entrypoint delegated to unified email CLI."""
 	return unified_run_loop(
@@ -43,20 +47,20 @@ def main(argv=None):
 	parser.add_argument(
 		"--interval",
 		type=int,
-		default=30,
-		help="Minimum seconds between fetch cycles (default: 30)"
+		default=DEFAULT_INTERVAL_SECONDS,
+		help=f"Minimum seconds between fetch cycles (default: {DEFAULT_INTERVAL_SECONDS})"
 	)
 	parser.add_argument(
 		"--max-results",
 		type=int,
-		default=EMAIL_FETCH_MAX_RESULTS,
+		default=DEFAULT_MAX_RESULTS,
 		help="Max messages to fetch from the active provider per cycle per user"
 	)
 	parser.add_argument(
 		"--classify-limit",
 		type=int,
-		default=30,
-		help="Max unclassified emails to classify per cycle per user"
+		default=DEFAULT_LOOP_CLASSIFY_LIMIT,
+		help=f"Max unclassified emails to classify per cycle per user (default: {DEFAULT_LOOP_CLASSIFY_LIMIT})"
 	)
 	args = parser.parse_args(argv)
 
