@@ -1,6 +1,6 @@
 # Refactoring Plan : Migration vers Architecture par Domaine
 
-**Statut** : À faire
+**Statut** : En cours
 **Approche** : Test-Driven, micro-étapes, pas de breaking changes
 **Version** : 2.0 (Revisited & Improved)
 
@@ -1285,7 +1285,7 @@ def classify_email(email_id: str, service: EmailService = Depends(get_email_serv
 
 ### Refactor existant
 
-- [ ] `command/fetch_emails.py` utilise `EmailService`
+- [x] Wrappers legacy email supprimés (`fetch_emails.py`, `fetch_emails_loop.py`, `fetch_all_users_emails.py`) au profit de `email_cli.py`
 - [ ] Tous tests passent (regression)
 - [ ] Supprimer code dupliqué/old
 
