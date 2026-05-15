@@ -19,12 +19,18 @@
 
 ---
 
-## 📌 Current Progress (2026-05-13)
+## 📌 Current Progress (2026-05-15)
 
 - [x] Phase 1 foundations in place (Domain + Repository contracts + fixtures + domain tests)
 - [x] Phase 2 foundations in place (Infrastructure Supabase + DTO + Factory + exceptions)
 - [x] Phase 3 foundations in place (Service layer for email/rfp/vendor/opportunity)
-- [ ] Phase 4 complete (in progress: incremental migration of `controller/rag.py` to handlers/services)
+- [ ] Phase 4 complete (in progress: command/legacy migration after major `controller/rag.py` cleanup)
+
+Phase 4 detail snapshot:
+
+- [x] `controller/rag.py` route dispatch decomposition (POST/PUT/PATCH/DELETE split into helpers)
+- [x] Unified HTTP status mapping helpers in `controller/rag.py` (`_status_from_result`, `_pop_status`, `_status_from_error`)
+- [ ] Next migration target: legacy command flows (starting with `command/fetch_emails.py` and related entry points)
 
 Recent validated baseline:
 
