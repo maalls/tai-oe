@@ -138,32 +138,9 @@ class EmailHandlers:
         limit: int = 200,
     ) -> Dict:
         """Classify unclassified emails using the new workflow (fail-fast)."""
-        if not user_id:
-            return {
-                "status": "error",
-                "message": "user_id is required",
-            }
-
         try:
             workflow = self.service_factory.create_email_workflow_service()
-            emails = workflow.email_service.get_all_unclassified(limit=limit, user_id=user_id)
-
-            classified = 0
-            errors = []
-            for email in emails:
-                try:
-                    workflow.process_new_email(email.id)
-                    classified += 1
-                except Exception as exc:
-                    errors.append({"email_id": email.id, "error": str(exc)})
-
-            return {
-                "status": "ok",
-                "workflow": "new",
-                "classified": classified,
-                "skipped": len(errors),
-                "errors": errors,
-            }
+            return workflow.classify_unclassified(user_id=user_id, limit=limit)
         except Exception as exc:
             print(f"[EmailHandlers] New workflow failed (fail-fast mode): {exc}")
             return {

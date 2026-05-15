@@ -7,12 +7,22 @@ from src.api.email.handler import EmailHandlers
 
 class _WorkflowOK:
     def __init__(self):
-        self.email_service = SimpleNamespace(
-            get_all_unclassified=lambda limit, user_id: [SimpleNamespace(id="e-1"), SimpleNamespace(id="e-2")]
-        )
+        self.calls = []
 
-    def process_new_email(self, email_id: str):
-        return {"email_id": email_id, "status": "classified"}
+    def classify_unclassified(self, user_id: str, limit: int = 200):
+        if not user_id:
+            return {
+                "status": "error",
+                "message": "user_id is required",
+            }
+        self.calls.append((user_id, limit))
+        return {
+            "status": "ok",
+            "workflow": "new",
+            "classified": 2,
+            "skipped": 0,
+            "errors": [],
+        }
 
 
 class _FactoryOK:
@@ -26,7 +36,8 @@ class _FactoryBoom:
 
 
 def test_handle_classify_unclassified_new_workflow_success():
-    handler = EmailHandlers(service_factory=_FactoryOK())
+    workflow = _WorkflowOK()
+    handler = EmailHandlers(service_factory=SimpleNamespace(create_email_workflow_service=lambda: workflow))
 
     result = handler.handle_classify_unclassified(
         user_id="u-1",
@@ -37,6 +48,7 @@ def test_handle_classify_unclassified_new_workflow_success():
     assert result["workflow"] == "new"
     assert result["classified"] == 2
     assert result["skipped"] == 0
+    assert workflow.calls == [("u-1", 10)]
 
 
 def test_handle_classify_unclassified_new_workflow_fail_fast():

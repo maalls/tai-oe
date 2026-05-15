@@ -20,3 +20,37 @@ class EmailWorkflowService:
             "category": category,
             "status": updated.status.value,
         }
+
+    def classify_unclassified(self, user_id: str, limit: int = 200) -> dict:
+        """Classify pending emails for a user and report per-item errors."""
+        if not user_id:
+            return {
+                "status": "error",
+                "message": "user_id is required",
+            }
+
+        try:
+            emails = self.email_service.get_all_unclassified(limit=limit, user_id=user_id)
+
+            classified = 0
+            errors = []
+            for email in emails:
+                try:
+                    self.process_new_email(email.id)
+                    classified += 1
+                except Exception as exc:
+                    errors.append({"email_id": email.id, "error": str(exc)})
+
+            return {
+                "status": "ok",
+                "workflow": "new",
+                "classified": classified,
+                "skipped": len(errors),
+                "errors": errors,
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "workflow": "new",
+                "message": f"New workflow failed: {exc}",
+            }
