@@ -396,13 +396,7 @@ def create_rag_handler(config):
                 
                 # Existing endpoints
                 if parsed.path == '/api/csv/source':
-                    content_type = self.headers.get('Content-Type', '')
-                    body = self._read_body()
-                    content_length = len(body)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_csv_source_upload(content_type, content_length, body)
-                    return self.json(result)
+                    return self._handle_csv_source_post()
                 elif parsed.path == '/api/rfp':
                     content_type = self.headers.get('Content-Type', '')
                     body = self._read_body()
@@ -1229,6 +1223,16 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_quote_send(body, content_type)
+            return self.json(result)
+
+        def _handle_csv_source_post(self):
+            """Handle /api/csv/source POST endpoint."""
+            content_type = self.headers.get('Content-Type', '')
+            body = self._read_body()
+            content_length = len(body)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_csv_source_upload(content_type, content_length, body)
             return self.json(result)
 
         def _handle_actions_create_post(self):
