@@ -107,7 +107,7 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
   - `quote/quote.py` → `api/quote/`
   - Clients/utils : `gmail_client.py`, `llm_factory.py`, `mime.py`, `multipart.py`, `rag.py` → `infrastructure/`
 
-#### 8. **adapters/** → À ANALYSER
+#### 8. **adapters/** → SUPPRIMER (après fusion) ✓
 
 - **Rôle** : Adaptation de formats (HTML email -> texte)
 - **Décision** : SUPPRIMER (après fusion)
