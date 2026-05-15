@@ -1081,10 +1081,7 @@ def create_rag_handler(config):
                     result = handlers.handle_gmail_authorize(redirect_url)
                     return self.json(result)
                 elif parsed.path == '/api/gmail/status':
-                    handlers = self.get_request_handlers()
-                    user_id = qs.get('user_id', [None])[0]
-                    result = handlers.handle_gmail_status(user_id=user_id)
-                    return self.json(result)
+                    return self._handle_gmail_status_get(qs)
                 elif parsed.path == '/api/gmail/revoke':
                     handlers = self.get_request_handlers()
                     user_id = qs.get('user_id', [None])[0]
@@ -1390,6 +1387,13 @@ def create_rag_handler(config):
                 return self.json(result)
             except Exception as e:
                 return self._send_error(500, f'Fetch failed: {e}')
+
+        def _handle_gmail_status_get(self, qs):
+            """Handle /api/gmail/status GET endpoint."""
+            handlers = self.get_request_handlers()
+            user_id = qs.get('user_id', [None])[0]
+            result = handlers.handle_gmail_status(user_id=user_id)
+            return self.json(result)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
