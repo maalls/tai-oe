@@ -981,7 +981,7 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
             print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_email_extract_contact_post(self):
