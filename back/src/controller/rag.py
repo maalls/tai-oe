@@ -1125,9 +1125,7 @@ def create_rag_handler(config):
                 elif parsed.path.startswith('/api/quotes/download/'):
                     return self._handle_quotes_download_get(parsed.path, qs, handlers)
                 elif parsed.path.startswith('/api/documents/download/'):
-                    filename = parsed.path.split('/api/documents/download/')[-1]
-                    filename = urllib.parse.unquote(filename)
-                    return self._handle_document_download(filename, handlers, qs)
+                    return self._handle_documents_download_get(parsed.path, qs, handlers)
                 else:
                     # Fallback to static file serving
                     return super().do_GET()
@@ -1414,6 +1412,12 @@ def create_rag_handler(config):
             """Handle /api/quotes/download/<filename> GET endpoint."""
             filename = parsed_path.split('/api/quotes/download/')[-1]
             return self._handle_quote_download(filename, handlers, qs)
+
+        def _handle_documents_download_get(self, parsed_path: str, qs, handlers):
+            """Handle /api/documents/download/<filename> GET endpoint."""
+            filename = parsed_path.split('/api/documents/download/')[-1]
+            filename = urllib.parse.unquote(filename)
+            return self._handle_document_download(filename, handlers, qs)
 
         def _handle_csv_get(self, parsed_path: str, qs):
             """Handle /api/csv* GET endpoints."""
