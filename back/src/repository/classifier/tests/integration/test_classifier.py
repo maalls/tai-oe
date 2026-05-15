@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.repository.classifier.classifier import EmailClassifier
+from src.service.classification.service import EmailClassifier
 
 
 def test_classify_returns_normalized_category():

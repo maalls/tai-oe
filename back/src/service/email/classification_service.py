@@ -3,7 +3,7 @@
 from typing import Any, Protocol
 
 from src.domain.email import Email
-from src.repository.classifier.classifier import EmailClassifier
+from src.service.classification.service import EmailClassifier
 
 
 class ClassifierClient(Protocol):

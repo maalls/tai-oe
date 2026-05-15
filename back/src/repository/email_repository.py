@@ -16,7 +16,7 @@ from email.utils import parsedate_to_datetime
 from email.header import decode_header
 from cryptography.fernet import Fernet, InvalidToken
 
-from src.repository.classifier.classifier import EmailClassifier
+from src.service.classification.service import EmailClassifier
 from src.text.reader import extract_rfp_from_text
 from src.controller.gmail_client import GmailClient
 from src.lib.email.mime import parse_from_header
