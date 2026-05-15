@@ -214,17 +214,7 @@ def create_rag_handler(config):
                 # Action delete
                 action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
                 if action_delete_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    action_id = action_delete_match.group(1)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_delete_action(action_id=action_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_action_delete(action_delete_match)
 
                 if parsed.path == '/api/imap/config':
                     return self._handle_imap_config_delete()
@@ -293,6 +283,20 @@ def create_rag_handler(config):
             user_id = user_data.get('id') if user_data else None
             handlers = self.get_request_handlers()
             result = handlers.handle_imap_config_delete(user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_action_delete(self, action_delete_match):
+            """Handle DELETE /api/actions/{id}."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            action_id = action_delete_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_delete_action(action_id=action_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
