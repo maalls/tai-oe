@@ -101,6 +101,7 @@ from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_utility_handlers import (
+    handle_auth_login_post,
     handle_auth_signup_post,
     handle_curl_post,
     handle_fs_create_post,
@@ -342,11 +343,7 @@ def create_rag_handler(config):
 
         def _handle_auth_login_post(self):
             """Handle /api/auth/login POST endpoint."""
-            body = self._read_body()
-            handlers = self.get_request_handlers()
-            result = handlers.handle_auth_login(body)
-            status = self._pop_status(result)
-            return self.json(result, status)
+            return handle_auth_login_post(self)
 
         def _handle_auth_logout_post(self):
             """Handle /api/auth/logout POST endpoint."""
