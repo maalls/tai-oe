@@ -105,10 +105,15 @@ from src.api.routes.server_post_utility_handlers import (
     handle_auth_logout_post,
     handle_auth_signup_post,
     handle_curl_post,
+    handle_email_auth_status_post,
+    handle_email_extract_contact_post,
     handle_entity_update_post,
     handle_emails_classify_post,
     handle_fs_create_post,
     handle_fs_read_post,
+    handle_opportunities_create_from_email_post,
+    handle_opportunities_create_manual_post,
+    handle_opportunities_create_from_rfp_post,
     handle_products_post,
     handle_rfq_generate_post,
 )
@@ -367,97 +372,23 @@ def create_rag_handler(config):
 
         def _handle_opportunities_create_from_email_post(self):
             """Handle /api/opportunities/create-from-email POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            payload = self._read_json(default={})
-
-            message_id = payload.get('message_id')
-            if not message_id:
-                return self.json({"error": "Missing message_id parameter"}, 400)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
-            print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunities_create_from_email_post(self)
 
         def _handle_opportunities_create_manual_post(self):
             """Handle /api/opportunities/create-manual POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            payload = self._read_json(default={})
-
-            name = payload.get('name')
-            if not name:
-                return self.json({"status": "error", "message": "Missing name parameter"}, 400)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunities_create_manual_post(self)
 
         def _handle_opportunities_create_from_rfp_post(self):
             """Handle /api/opportunities/create-from-rfp POST endpoint."""
-            body = self._read_body()
-            content_type = self.headers.get('Content-Type', '')
-
-            auth_header = self.headers.get('Authorization', '')
-            print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
-            user_data = self._require_auth(auth_header=auth_header)
-            print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
-            if user_data is None:
-                print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            handlers = self.get_request_handlers()
-            result = handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
-            print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunities_create_from_rfp_post(self)
 
         def _handle_email_extract_contact_post(self):
             """Handle /api/email/extract-contact POST endpoint."""
-            payload = self._read_json(default={})
-
-            email_id = payload.get('email_id')
-            email_body = payload.get('email_body')
-
-            if not email_body:
-                return self.json({"error": "Missing email_body parameter"}, 400)
-
-            auth_header = self.headers.get('Authorization', '')
-            user_data = self._require_auth(auth_header=auth_header, required=False)
-            user_id = user_data.get('id') if user_data else None
-            print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_email_extract_contact_post(self)
 
         def _handle_email_auth_status_post(self, parsed_path):
             """Handle /api/email/auth/{email_id} POST endpoint."""
-            email_id = parsed_path.split('/api/email/auth/')[-1]
-
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            if not user_id:
-                return self.json({"error": "Unauthorized"}, 401)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_email_auth_status_post(self, parsed_path)
 
         def _handle_email_resync_post(self, parsed_path):
             """Handle /api/email/{email_id}/resync POST endpoint."""

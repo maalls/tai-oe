@@ -179,3 +179,102 @@ def handle_rfq_generate_post(handler):
     result = request_handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
     status = handler._status_from_result(result)
     return handler.json(result, status)
+
+
+def handle_opportunities_create_from_email_post(handler):
+    """Handle /api/opportunities/create-from-email POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    payload = handler._read_json(default={})
+
+    message_id = payload.get('message_id')
+    if not message_id:
+        return handler.json({"error": "Missing message_id parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
+    print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunities_create_manual_post(handler):
+    """Handle /api/opportunities/create-manual POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    payload = handler._read_json(default={})
+
+    name = payload.get('name')
+    if not name:
+        return handler.json({"status": "error", "message": "Missing name parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunities_create_from_rfp_post(handler):
+    """Handle /api/opportunities/create-from-rfp POST endpoint."""
+    body = handler._read_body()
+    content_type = handler.headers.get('Content-Type', '')
+
+    auth_header = handler.headers.get('Authorization', '')
+    print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
+    user_data = handler._require_auth(auth_header=auth_header)
+    print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
+    if user_data is None:
+        print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
+    print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_extract_contact_post(handler):
+    """Handle /api/email/extract-contact POST endpoint."""
+    payload = handler._read_json(default={})
+
+    email_id = payload.get('email_id')
+    email_body = payload.get('email_body')
+
+    if not email_body:
+        return handler.json({"error": "Missing email_body parameter"}, 400)
+
+    auth_header = handler.headers.get('Authorization', '')
+    user_data = handler._require_auth(auth_header=auth_header, required=False)
+    user_id = user_data.get('id') if user_data else None
+    print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_extract_contact_from_email(email_id=email_id, email_body=email_body, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_email_auth_status_post(handler, parsed_path):
+    """Handle /api/email/auth/{email_id} POST endpoint."""
+    email_id = parsed_path.split('/api/email/auth/')[-1]
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    if not user_id:
+        return handler.json({"error": "Unauthorized"}, 401)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_get_email_auth_status(email_id=email_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
