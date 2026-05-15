@@ -857,7 +857,7 @@ def create_rag_handler(config):
             body = self._read_body()
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_login(body)
-            status = result.pop('status', 200)
+            status = self._pop_status(result)
             return self.json(result, status)
 
         def _handle_auth_logout_post(self):
