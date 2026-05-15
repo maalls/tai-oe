@@ -1193,7 +1193,7 @@ def create_rag_handler(config):
                 user_id=user_id,
                 opportunity_id=opportunity_id,
             )
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_opportunity_rfq_generate_post(self, opp_match):
