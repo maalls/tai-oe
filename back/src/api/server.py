@@ -39,6 +39,7 @@ from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
 from src.api.routes.server_post_auth_dispatch import dispatch_post_auth_routes
+from src.api.routes.server_post_domain_dispatch import dispatch_post_domain_routes
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
 
@@ -422,69 +423,7 @@ def create_rag_handler(config):
 
         def _handle_post_domain_routes(self, parsed) -> bool:
             """Handle entity/email/opportunity/imap/document POST routes."""
-            parsed_path = parsed.path
-            entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed_path)
-            if entity_update_match:
-                self._handle_entity_update_post(entity_update_match)
-                return True
-
-            if parsed_path.startswith('/api/emails/classify/'):
-                self._handle_emails_classify_post(parsed_path)
-                return True
-
-            if parsed_path == '/api/rfq/generate':
-                self._handle_rfq_generate_post()
-                return True
-
-            if parsed_path == '/api/opportunities/create-from-email':
-                self._handle_opportunities_create_from_email_post()
-                return True
-
-            if parsed_path == '/api/opportunities/create-manual':
-                self._handle_opportunities_create_manual_post()
-                return True
-
-            if parsed_path == '/api/opportunities/create-from-rfp':
-                self._handle_opportunities_create_from_rfp_post()
-                return True
-
-            if parsed_path == '/api/email/extract-contact':
-                self._handle_email_extract_contact_post()
-                return True
-
-            if parsed_path.startswith('/api/email/auth/'):
-                self._handle_email_auth_status_post(parsed_path)
-                return True
-
-            if parsed_path.startswith('/api/email/') and parsed_path.endswith('/resync'):
-                self._handle_email_resync_post(parsed_path)
-                return True
-
-            if parsed_path == '/api/email/senders/high-risk':
-                self._handle_email_senders_high_risk_post()
-                return True
-
-            if parsed_path == '/api/email/senders/verified':
-                self._handle_email_senders_verified_post()
-                return True
-
-            if parsed_path == '/api/imap/config':
-                self._handle_imap_config_post()
-                return True
-
-            if parsed_path == '/api/imap/test':
-                self._handle_imap_test_post()
-                return True
-
-            if parsed_path == '/api/document/extract-rfp':
-                self._handle_document_extract_rfp_post()
-                return True
-
-            if parsed_path == '/api/document/update-content':
-                self._handle_document_update_content_post()
-                return True
-
-            return False
+            return dispatch_post_domain_routes(self, parsed)
 
         def _handle_action_post_routes(self, parsed_path: str) -> bool:
             """Handle action-specific POST regex routes."""
