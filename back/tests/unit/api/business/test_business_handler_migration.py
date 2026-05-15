@@ -44,6 +44,10 @@ class _OpportunityRepositoryStub:
     def __init__(self):
         self.calls = []
 
+    def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None):
+        self.calls.append(("generate_with_content", opportunity_id, content, user_id))
+        return {"status": "ok", "opportunity_id": opportunity_id, "content": content}
+
     def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None):
         self.calls.append(("generate", opportunity_id, user_id))
         return {"status": "ok", "opportunity_id": opportunity_id}
@@ -59,6 +63,34 @@ class _OpportunityRepositoryStub:
     def delete_opportunities(self, opportunity_ids: list[str], user_id: str = None):
         self.calls.append(("delete", opportunity_ids, user_id))
         return {"status": "ok", "deleted": opportunity_ids}
+
+
+class _OpportunityHandlersStub:
+    def __init__(self, repository: _OpportunityRepositoryStub):
+        self.repository = repository
+
+    def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None):
+        return self.repository.handle_generate_quote_with_content(
+            opportunity_id=opportunity_id,
+            content=content,
+            user_id=user_id,
+        )
+
+    def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None):
+        return self.repository.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
+
+    def handle_create_opportunity_manual(self, user_id: str, name: str):
+        return self.repository.create_opportunity_manual(user_id=user_id, name=name)
+
+    def handle_search_opportunities(self, user_id: str, source_reference_id: str = None, name: str = None):
+        return self.repository.search_opportunities(
+            user_id=user_id,
+            source_reference_id=source_reference_id,
+            name=name,
+        )
+
+    def handle_delete_opportunities(self, opportunity_ids: list[str], user_id: str = None):
+        return self.repository.delete_opportunities(opportunity_ids=opportunity_ids, user_id=user_id)
 
 
 class _DocumentContentServiceStub:
@@ -84,6 +116,7 @@ def _make_handler(rfq_result=None):
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
     handler.email_handlers = _EmailHandlersStub()
     handler.opportunity_repository = _OpportunityRepositoryStub()
+    handler.opportunity_handlers = _OpportunityHandlersStub(handler.opportunity_repository)
     handler._document_content_service = _DocumentContentServiceStub()
     handler._document_rfp_extraction_service = _DocumentRfpExtractionServiceStub()
     return handler

@@ -15,6 +15,7 @@ from weasyprint import HTML
 from html.parser import HTMLParser
 
 from src.api.email.handler import EmailHandlers
+from src.api.opportunity.handler import OpportunityHandlers
 from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
@@ -37,12 +38,18 @@ class BusinessHandlers:
         self.email_repository = EmailRepository()
         self.service_factory = service_factory or ServiceFactory()
         self.opportunity_repository = OpportunityRepository()
+        self.supabase = get_supabase_service()
         self.rfq_handlers = RfqHandlers(
             service_factory=self.service_factory,
             email_repository=self.email_repository,
             opportunity_repository=self.opportunity_repository,
         )
-        self.supabase = get_supabase_service()
+        self.opportunity_handlers = OpportunityHandlers(
+            service_factory=self.service_factory,
+            email_repository=self.email_repository,
+            opportunity_repository=self.opportunity_repository,
+            supabase=self.supabase,
+        )
         self.opportunity_controller = OpportunityController()
         self._document_content_service = None
         self._document_rfp_extraction_service = None
@@ -207,7 +214,7 @@ class BusinessHandlers:
         )
 
     def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None) -> Dict:
-        return self.opportunity_repository.handle_generate_quote_with_content(
+        return self.opportunity_handlers.handle_generate_quote_with_content(
             opportunity_id=opportunity_id,
             content=content,
             user_id=user_id,
@@ -215,14 +222,14 @@ class BusinessHandlers:
 
     def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None) -> Dict:
         """Delegate quote generation for an opportunity to the current opportunity backend."""
-        return self.opportunity_repository.handle_generate_quote_for_opportunity(
+        return self.opportunity_handlers.handle_generate_quote_for_opportunity(
             opportunity_id=opportunity_id,
             user_id=user_id,
         )
 
     def handle_create_opportunity_manual(self, user_id: str, name: str) -> Dict:
         """Create an opportunity manually via the current opportunity backend."""
-        return self.opportunity_repository.create_opportunity_manual(
+        return self.opportunity_handlers.handle_create_opportunity_manual(
             user_id=user_id,
             name=name,
         )
@@ -234,7 +241,7 @@ class BusinessHandlers:
         name: str = None,
     ) -> Dict:
         """Search opportunities via the current opportunity backend."""
-        return self.opportunity_repository.search_opportunities(
+        return self.opportunity_handlers.handle_search_opportunities(
             user_id=user_id,
             source_reference_id=source_reference_id,
             name=name,
@@ -242,7 +249,7 @@ class BusinessHandlers:
 
     def handle_delete_opportunities(self, opportunity_ids: list[str], user_id: str = None) -> Dict:
         """Delete one or more opportunities via the current opportunity backend."""
-        return self.opportunity_repository.delete_opportunities(
+        return self.opportunity_handlers.handle_delete_opportunities(
             opportunity_ids=opportunity_ids,
             user_id=user_id,
         )
