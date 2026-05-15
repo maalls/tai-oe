@@ -1232,7 +1232,7 @@ def create_rag_handler(config):
         def _handle_gmail_status_get(self, qs):
             """Handle /api/gmail/status GET endpoint."""
             handlers = self.get_request_handlers()
-            user_id = qs.get('user_id', [None])[0]
+            user_id = self._get_qs_value(qs, 'user_id')
             result = handlers.handle_gmail_status(user_id=user_id)
             return self.json(result)
 
@@ -1468,6 +1468,10 @@ def create_rag_handler(config):
                 return int(qs.get(key, [default])[0])
             except Exception:
                 return default
+
+        def _get_qs_value(self, qs, key: str, default=None):
+            """Read first query-string value with fallback."""
+            return qs.get(key, [default])[0]
 
         def _get_optional_user_id_from_auth(self, auth_header: str):
             """Extract user id from auth header without enforcing auth."""
