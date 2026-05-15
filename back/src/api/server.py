@@ -7,7 +7,6 @@ Config via env:
 """
 import os
 import sys
-import json
 import re
 import urllib.parse
 import urllib.request
@@ -34,6 +33,7 @@ from src.api.routes.server_auth_helpers import (
     require_auth,
     require_auth_user_id,
 )
+from src.api.routes.server_body_helpers import read_body
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_get_auth_handlers import (
     handle_auth_user_get,
@@ -1264,8 +1264,7 @@ def create_rag_handler(config):
             return require_auth(self, auth_header=auth_header, required=required)
 
         def _read_body(self) -> bytes:
-            content_length = int(self.headers.get('Content-Length', 0))
-            return self.rfile.read(content_length)
+            return read_body(self)
 
         def _read_json(self, default=None):
             body = self._read_body()
