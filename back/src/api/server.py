@@ -35,6 +35,7 @@ from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
+from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
@@ -412,23 +413,7 @@ def create_rag_handler(config):
 
         def _handle_post_core_routes(self, parsed_path: str) -> bool:
             """Handle core POST routes that map directly to controller helpers."""
-            if parsed_path == '/api/products':
-                self._handle_products_post()
-                return True
-
-            if parsed_path == '/api/fs/create':
-                self._handle_fs_create_post()
-                return True
-
-            if parsed_path == '/api/fs/read':
-                self._handle_fs_read_post()
-                return True
-
-            if parsed_path == '/api/curl':
-                self._handle_curl_post()
-                return True
-
-            return False
+            return dispatch_post_core_routes(self, parsed_path)
 
         def _handle_post_auth_routes(self, parsed_path: str) -> bool:
             """Handle auth POST routes."""
