@@ -713,78 +713,13 @@ class BusinessHandlers:
         )
 
     def handle_chat_attachment_upload(self, body: bytes, content_type: str, user_id: str, opportunity_id: str) -> Dict:
-        """Handle chat attachment upload: store file and create document record."""
-        if not user_id:
-            return {"status": "error", "message": "Missing user_id"}
-        if not opportunity_id:
-            return {"status": "error", "message": "Missing opportunity_id"}
-
-        form_data, error = self.getForm(body, content_type)
-        if error:
-            return error
-        uploaded_file = form_data.get('file')
-        if not uploaded_file or not isinstance(uploaded_file, dict):
-            return {"status": "error", "message": "No file provided"}
-
-        filename = uploaded_file.get('filename')
-        file_content = uploaded_file.get('content')
-        mime_type = uploaded_file.get('content_type')
-        file_size = uploaded_file.get('size')
-
-        if not filename or not file_content:
-            return {"status": "error", "message": "Invalid file payload"}
-
-        supabase = get_supabase_service()
-
-        try:
-            base_dir = Path(__file__).resolve().parents[2] / "var" / "attachments" / user_id / "chat" / str(uuid.uuid4())
-            base_dir.mkdir(parents=True, exist_ok=True)
-
-            unique_name = f"{int(time.time())}_{uuid.uuid4().hex}_{filename}"
-            file_path = base_dir / unique_name
-            file_path.write_bytes(file_content)
-
-            storage_key = unique_name
-
-            storage_dir = self._get_storage_dir("attachment")
-            storage_dir.mkdir(parents=True, exist_ok=True)
-            (storage_dir / storage_key).write_bytes(file_content)
-
-            doc_data = {
-                "opportunity_id": opportunity_id,
-                "type": "ATTACHMENT",
-                "status": "RECEIVED",
-                "title": f"Chat Attachment: {filename}",
-                "currency": "EUR",
-                "channel": "OTHER",
-                "storage_key": storage_key,
-                "created_by": user_id,
-            }
-
-            doc_result = supabase.table("document").insert(doc_data).execute()
-            if not doc_result.data:
-                return {"status": "error", "message": "Failed to create document"}
-
-            document_id = doc_result.data[0]["id"]
-
-            try:
-                supabase.table("opportunity").update({"updated_at": datetime.now().isoformat()}).eq(
-                    "id", opportunity_id
-                ).execute()
-            except Exception as e:
-                print(f"[BusinessHandlers] Warning: failed to touch opportunity {opportunity_id}: {e}")
-
-            return {
-                "status": "ok",
-                "document_id": document_id,
-                "filename": filename,
-                "mime_type": mime_type,
-                "size": file_size,
-                "storage_key": storage_key,
-            }
-        except Exception as e:
-            print(f"[BusinessHandlers] Error uploading chat attachment: {e}")
-            return {"status": "error", "message": f"Upload failed: {str(e)}"}
+        """Handle chat attachment upload via DocumentHandlers."""
+        return self.document_handlers.handle_chat_attachment_upload(
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
+            opportunity_id=opportunity_id,
+        )
         
 
     def handle_update_line_verification(self, document_id: str, line_index: int, verification_fields: dict = None, is_ref_verified: bool = None, user_id: str = None) -> Dict:

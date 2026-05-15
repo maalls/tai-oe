@@ -149,6 +149,19 @@ class _DocumentHandlersStub:
         _ = user_id
         return {"status": "ok", "message": "Document deleted successfully", "document_id": document_id}
 
+    def handle_chat_attachment_upload(self, body: bytes, content_type: str, user_id: str, opportunity_id: str):
+        return {
+            "status": "ok",
+            "document_id": "doc-attach-1",
+            "filename": "a.txt",
+            "mime_type": "text/plain",
+            "size": len(body),
+            "storage_key": "key-a",
+            "opportunity_id": opportunity_id,
+            "user_id": user_id,
+            "content_type": content_type,
+        }
+
 
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
@@ -313,3 +326,19 @@ def test_handle_delete_document_delegates_to_document_handler():
     result = handler.handle_delete_document("doc-1", user_id="u-1")
 
     assert result == {"status": "ok", "message": "Document deleted successfully", "document_id": "doc-1"}
+
+
+def test_handle_chat_attachment_upload_delegates_to_document_handler():
+    handler = _make_handler()
+
+    result = handler.handle_chat_attachment_upload(
+        body=b"payload",
+        content_type="multipart/form-data; boundary=x",
+        user_id="u-1",
+        opportunity_id="opp-1",
+    )
+
+    assert result["status"] == "ok"
+    assert result["document_id"] == "doc-attach-1"
+    assert result["opportunity_id"] == "opp-1"
+    assert result["user_id"] == "u-1"
