@@ -161,3 +161,21 @@ def handle_emails_classify_post(handler, parsed_path):
     result = request_handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
     status = handler._status_from_result(result)
     return handler.json(result, status)
+
+
+def handle_rfq_generate_post(handler):
+    """Handle /api/rfq/generate POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    payload = handler._read_json(default={})
+
+    text = payload.get('text') or payload.get('content')
+    message_id = payload.get('message_id')
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)

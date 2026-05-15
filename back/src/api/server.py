@@ -110,6 +110,7 @@ from src.api.routes.server_post_utility_handlers import (
     handle_fs_create_post,
     handle_fs_read_post,
     handle_products_post,
+    handle_rfq_generate_post,
 )
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
@@ -362,20 +363,7 @@ def create_rag_handler(config):
 
         def _handle_rfq_generate_post(self):
             """Handle /api/rfq/generate POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            payload = self._read_json(default={})
-
-            text = payload.get('text') or payload.get('content')
-            message_id = payload.get('message_id')
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_rfq_generate_post(self)
 
         def _handle_opportunities_create_from_email_post(self):
             """Handle /api/opportunities/create-from-email POST endpoint."""
