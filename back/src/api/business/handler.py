@@ -289,16 +289,7 @@ class BusinessHandlers:
         3. Create or find account based on email sender
         4. Create opportunity record with prefilled data
         """
-        try:
-            return self.email_handlers.handle_create_opportunity_from_email(message_id, user_id)
-        except Exception as e:
-            print(f"[BusinessHandlers] Error creating opportunity from email: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error creating opportunity: {str(e)}"
-            }
+        return self.email_handlers.handle_create_opportunity_from_email(message_id, user_id)
     
     def handle_create_opportunity_from_rfp(self, body: bytes, content_type: str, user_id: str = None) -> Dict:
         return self.rfq_handlers.handle_create_opportunity_from_rfp(
