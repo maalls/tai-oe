@@ -33,5 +33,5 @@ def test_handle_email_fetch_loop_status_get_uses_expected_paths():
 
     assert result == ({"status": "ok"}, 200)
     status_path, legacy_path = handler.request_handlers.calls[0]
-    assert str(status_path).endswith("/back/var/email_fetch_loop.json")
-    assert str(legacy_path).endswith("/back/src/var/email_fetch_loop.json")
+    assert str(status_path).endswith("/var/email_fetch_loop.json")
+    assert str(legacy_path).endswith("/back/var/email_fetch_loop.json")
