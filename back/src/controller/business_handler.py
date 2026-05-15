@@ -22,7 +22,7 @@ from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.supabase.supabase_client import get_supabase_service
 from src.controller.opportunity.opportunity import Opportunity as OpportunityController
-from src.adapters.email.html.parser import Parser
+from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
 
 
