@@ -33,6 +33,7 @@ from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_post_dispatch import dispatch_post_request
+from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
 from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
 
@@ -1544,21 +1545,15 @@ def create_rag_handler(config):
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
-            try:
-                return int(qs.get(key, [default])[0])
-            except Exception:
-                return default
+            return get_qs_int(qs, key=key, default=default)
 
         def _get_qs_value(self, qs, key: str, default=None):
             """Read first query-string value with fallback."""
-            return qs.get(key, [default])[0]
+            return get_qs_value(qs, key=key, default=default)
 
         def _get_payload_int(self, payload: Dict, key: str, default: int) -> int:
             """Read integer payload value with fallback."""
-            try:
-                return int(payload.get(key) or default)
-            except Exception:
-                return default
+            return get_payload_int(payload, key=key, default=default)
 
         def _get_optional_user_id_from_auth(self, auth_header: str):
             """Extract user id from auth header without enforcing auth."""
@@ -1576,10 +1571,7 @@ def create_rag_handler(config):
 
         def _get_qs_bool(self, qs, key: str, default: bool = False) -> bool:
             """Read boolean query-string parameter with fallback."""
-            raw_value = qs.get(key, [None])[0]
-            if raw_value is None:
-                return default
-            return str(raw_value).strip().lower() in ('1', 'true', 'yes', 'on')
+            return get_qs_bool(qs, key=key, default=default)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
