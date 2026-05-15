@@ -306,11 +306,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/auth/login':
                     return self._handle_auth_login_post()
                 elif parsed.path == '/api/auth/logout':
-                    auth_header = self.headers.get('Authorization', '')
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_auth_logout(auth_header)
-                    status = result.pop('status', 200)
-                    return self.json(result, status)
+                    return self._handle_auth_logout_post()
                 
                 entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed.path)
                 if entity_update_match:
@@ -1185,6 +1181,14 @@ def create_rag_handler(config):
             body = self._read_body()
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_login(body)
+            status = result.pop('status', 200)
+            return self.json(result, status)
+
+        def _handle_auth_logout_post(self):
+            """Handle /api/auth/logout POST endpoint."""
+            auth_header = self.headers.get('Authorization', '')
+            handlers = self.get_request_handlers()
+            result = handlers.handle_auth_logout(auth_header)
             status = result.pop('status', 200)
             return self.json(result, status)
 
