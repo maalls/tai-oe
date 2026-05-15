@@ -6,6 +6,7 @@ from src.repository.opportunity import OpportunityRepository
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_company_from_text
 from src.lib.extractors.text_reader import extract_rfp_from_text
+from src.lib.storage_paths import get_storage_dir
 from pathlib import Path
 import uuid
 import time
@@ -13,6 +14,10 @@ import time
 
 
 class OpportunityHandlers:
+
+    @staticmethod
+    def _get_storage_dir(source: str) -> Path:
+        return get_storage_dir(source)
 
     def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None) -> dict:
         return self.opportunity_repository.handle_generate_quote_with_content(opportunity_id=opportunity_id, content=content, user_id=user_id)

@@ -9,6 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.storage_paths import get_storage_dir
 
 
 class InvoiceHandlers:
@@ -141,16 +142,7 @@ class InvoiceHandlers:
 
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
-        base_storage = Path("var/storage")
-        source_map = {
-            "rfp_upload": "rfp_uploads",
-            "email": "emails",
-            "quote": "quotes",
-            "invoice": "invoices",
-            "attachment": "attachments",
-        }
-        subdir = source_map.get(source, source)
-        return base_storage / subdir
+        return get_storage_dir(source)
 
     @staticmethod
     def _normalize_account_address(account: Dict) -> Dict[str, str]:

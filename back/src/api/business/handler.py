@@ -17,6 +17,7 @@ from src.api.quote.handler import Quote
 from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.storage_paths import get_storage_dir, get_storage_path
 from src.repository.email_repository import EmailRepository
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
@@ -48,12 +49,12 @@ class BusinessHandlers:
         self.invoice_handlers = InvoiceHandlers(
             supabase=self.supabase,
             send_email_with_attachments=self.email_handlers.handle_send_email_with_attachments,
-            storage_path_resolver=self._get_storage_path,
+            storage_path_resolver=get_storage_path,
         )
         self.document_handlers = DocumentHandlers(
             supabase=self.supabase,
-            storage_dir_resolver=self._get_storage_dir,
-            storage_path_resolver=self._get_storage_path,
+            storage_dir_resolver=get_storage_dir,
+            storage_path_resolver=get_storage_path,
             clean_email_body=self._clean_email_body,
             enrich_rfp=lambda message_clean, pre_extracted_data: self.opportunity_repository._extract_and_enrich_rfp_data(
                 message_clean,
@@ -214,55 +215,6 @@ class BusinessHandlers:
             payload=payload,
             user_id=user_id,
         )
-
-    @staticmethod
-    def _get_storage_dir(source: str) -> Path:
-        """Get storage directory path based on source type.
-        
-        Parameters
-        ----------
-        source : str
-            Source type (e.g., 'rfp_upload', 'email', 'quote', etc.)
-        
-        Returns
-        -------
-        Path
-            Storage directory for the source type
-        """
-        base_storage = Path("var/storage")
-        
-        # Map source types to storage subdirectories
-        source_map = {
-            "rfp_upload": "rfp_uploads",
-            "email": "emails",
-            "quote": "quotes",
-            "invoice": "invoices",
-            "attachment": "attachments"
-        }
-        
-        subdir = source_map.get(source, source)
-        storage_dir = base_storage / subdir
-        
-        return storage_dir
-    
-    @staticmethod
-    def _get_storage_path(source: str, filename: str) -> Path:
-        """Get full file path in storage based on source type and filename.
-        
-        Parameters
-        ----------
-        source : str
-            Source type (e.g., 'rfp_upload', 'email', etc.)
-        filename : str
-            Filename within the storage directory
-        
-        Returns
-        -------
-        Path
-            Full file path
-        """
-        storage_dir = BusinessHandlers._get_storage_dir(source)
-        return storage_dir / filename
 
     def handle_extract_rfp_from_document(self, document_id: str, user_id: str = None) -> Dict:
         """Extract RFP data from a document (PDF or text file).

@@ -12,6 +12,7 @@ from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 from src.lib.extractors.text_reader import extract_company_from_text
 from src.lib.extractors.text_reader import extract_rfp_from_text
+from src.lib.storage_paths import get_storage_dir
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
 
@@ -586,13 +587,4 @@ class RfqHandlers:
 
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
-        base_storage = Path("var/storage")
-        source_map = {
-            "rfp_upload": "rfp_uploads",
-            "email": "emails",
-            "quote": "quotes",
-            "invoice": "invoices",
-            "attachment": "attachments",
-        }
-        subdir = source_map.get(source, source)
-        return base_storage / subdir
+        return get_storage_dir(source)

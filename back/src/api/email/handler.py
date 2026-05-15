@@ -9,6 +9,7 @@ from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.service.email.auth_status_service import AuthStatusService
 from src.service.email.quote_send_service import QuoteSendService
+from src.lib.storage_paths import get_storage_dir, get_storage_path
 
 
 def _get_legacy_repo():
@@ -237,19 +238,11 @@ class EmailHandlers:
 
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
-        base_storage = Path("var/storage")
-        source_map = {
-            "rfp_upload": "rfp_uploads",
-            "email": "emails",
-            "quote": "quotes",
-            "invoice": "invoices",
-            "attachment": "attachments",
-        }
-        return base_storage / source_map.get(source, source)
+        return get_storage_dir(source)
 
     @staticmethod
     def _get_storage_path(source: str, filename: str) -> Path:
-        return EmailHandlers._get_storage_dir(source) / filename
+        return get_storage_path(source, filename)
 
     def handle_send_quote_for_opportunity(self, opportunity_id: str, payload: Dict, user_id: str = None) -> Dict:
         return self.quote_send_service.handle_send_quote_for_opportunity(
