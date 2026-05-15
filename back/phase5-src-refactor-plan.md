@@ -109,9 +109,12 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
 
 #### 8. **adapters/** → À ANALYSER
 
-- **Rôle** : ? (probablement vide ou pour adaptateurs de format)
-- **Décision** : À ANALYSER
-- **Action** : Vérifier le contenu et décider
+- **Rôle** : Adaptation de formats (HTML email -> texte)
+- **Décision** : SUPPRIMER (après fusion)
+- **Action** :
+  - Fusionner `adapters/email/html/parser.py` et `utils/Email/HTMLParser/EmailHTMLParser.py`
+  - Créer `lib/email/html_parser.py`
+  - Supprimer `adapters/`
 
 #### 9. **command/** → À GARDER MAIS RÉORGANISER
 
@@ -177,8 +180,10 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
 #### 18. **prompt/** → INFRASTRUCTURE/CONFIG ✓
 
 - **Rôle** : Prompts management
-- **Décision** : À ÉVALUER (probablement vide ?)
-- **Action** : Si vide → supprimer; sinon → `infrastructure/prompts/`
+- **Décision** : CENTRALISER vers `infrastructure/prompts/`
+- **Action** :
+  - Déplacer `prompt/opportunity/source/prompt.md` vers `infrastructure/prompts/opportunity/source/prompt.md`
+  - Supprimer `prompt/` une fois les imports migrés
 
 #### 19. **reader/** → LIB/READERS ✓
 
@@ -197,9 +202,11 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
 
 #### 22. **utils/** → LIB ✓
 
-- **Rôle** : Utilities (probablement vide ?)
-- **Décision** : À ÉVALUER
-- **Action** : Si contenu → fusionner dans lib/; sinon → supprimer
+- **Rôle** : Utilities legacy (doublons et naming incohérent)
+- **Décision** : SUPPRIMER (après fusion)
+- **Action** :
+  - Migrer le contenu utile vers `lib/`
+  - Supprimer `utils/`
 
 #### 23. **discount/** → LIB/IMPORTERS ✓
 
@@ -594,7 +601,7 @@ domain/ & lib/
 #### api/
 
 - **DÉCISION** : Restructurer par domaine (9 domaines) + créer `api/prompt/`
-  - Auth, Action, Business, Email, CSV, File, Product, Quote, Classification, Prompt
+  - Auth, Action, Business, CSV, Database, Email, File, Product, Quote, Classification, Prompt
 - **Action** : Éclater controller/ et réorganiser handlers
 
 #### Dossiers à SUPPRIMER (après migration)
@@ -615,3 +622,43 @@ domain/ & lib/
 4. **Mettre à jour imports** : Phase 5.3 (5-10 commits)
 5. **Tests en miroir** : Phase 5.4 (5-10 commits)
 6. **Validation & cleanup** : Phase 5.5 (5-10 commits)
+
+---
+
+## Analyse de découplage (complète, 1 -> 24)
+
+| Point | Problème actuel | Découplage recommandé (fichiers) |
+| --- | --- | --- |
+| 1. `api/` | Handlers regroupés et partiellement mélangés | `api/<domaine>/handler.py` + `api/router.py` |
+| 2. `domain/` | Modèles incomplets, parfois logique hors domaine | `domain/<entity>.py` (dataclasses + invariants simples uniquement) |
+| 3. `repository/` | Couche plate et responsabilités hétérogènes | `repository/action/repository.py`, `repository/email/repository.py`, `repository/opportunity/repository.py`, `repository/oauth/{token_repository.py,state_repository.py}` |
+| 4. `service/` | Trop peu de services, logique métier dans controllers | `service/{action,email,business,classification,quote,auth}/service.py` |
+| 5. `infrastructure/` | Clients externes dispersés | `infrastructure/clients/{database.py,supabase.py,llm.py,google_drive.py,email.py}` + `infrastructure/config/settings.py` |
+| 6. `lib/` | Utilitaires dispersés entre dossiers legacy | `lib/{readers,extractors,encoders,calculations,importers,denormalizers,email}/...` |
+| 7. `controller/` | Mélange API, infra et utilitaires | Split vers `api/*`, `infrastructure/*`, `lib/*` puis suppression de `controller/` |
+| 8. `adapters/` | Doublon parser HTML email | Fusion vers `lib/email/html_parser.py` |
+| 9. `command/` | Couplage direct possible avec controller | CLIs -> services seulement: `command/*.py` appelle `service/*` |
+| 10. `embeddings/` | Module utilitaire isolé | `lib/encoders/embeddings.py` |
+| 11. `etim/` | Importer isolé | `lib/importers/etim.py` |
+| 12. `fabdis/` | Importer isolé + tests locaux | `lib/importers/fabdis.py` + tests miroir sous `tests/unit/lib/importers/` |
+| 13. `google_auth/` | Auth provider mélangée à l'orchestration | `infrastructure/clients/oauth/google_client.py` |
+| 13.b `azure_oauth.py` | URL auth + callback + token + état dans un fichier | `infrastructure/clients/oauth/azure_client.py`, `service/auth/oauth_service.py`, `repository/oauth/{token_repository.py,state_repository.py}`, `api/auth/oauth_handler.py` |
+| 14. `google_drive/` | Client + logique de flux token parfois couplés | `infrastructure/clients/google_drive.py` (+ délégation OAuth aux clients oauth) |
+| 15. `llm/` | Client parfois instancié depuis controller | `infrastructure/clients/llm.py` + création via `infrastructure/factory.py` |
+| 16. `net_price/` | Calcul métier non mutualisé | `lib/calculations/net_price.py`; orchestration via `service/*` |
+| 17. `pdf/` | Extraction I/O couplée au parsing | `lib/extractors/pdf.py` + appels depuis service/api |
+| 18. `prompt/` | Prompts éparpillés | `infrastructure/prompts/<domaine>/prompt.md` + loader unique |
+| 19. `reader/` | Lecteurs CSV/XLS hors couche utilitaire | `lib/readers/{csv.py,xls.py}` |
+| 20. `supabase/` | Client DB séparé de l'infra commune | `infrastructure/clients/supabase.py` |
+| 21. `text/` | Logique de parsing et sélection mélangée | `lib/extractors/{text.py,rfp_source_picker.py}` |
+| 22. `utils/` | Legacy et doublons de naming | Migration utile vers `lib/*`, puis suppression |
+| 23. `discount/` | Importer isolé | `lib/importers/discount.py` |
+| 24. `denormalizer/` | Traitement data isolé | `lib/denormalizers/denormalizer.py` |
+
+### Règle de découplage à appliquer à chaque migration
+
+1. Transport HTTP -> `api/`
+2. Orchestration métier -> `service/`
+3. Accès données persistant -> `repository/`
+4. Appels externes (APIs, DB clients, OAuth providers) -> `infrastructure/clients/`
+5. Fonctions utilitaires pures -> `lib/`
