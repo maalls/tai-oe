@@ -82,6 +82,7 @@ from src.api.routes.server_get_misc_handlers import (
     handle_products_get,
 )
 from src.api.routes.server_head_dispatch import dispatch_head_request
+from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_dispatch import dispatch_post_request
@@ -210,20 +211,7 @@ def create_rag_handler(config):
 
         def _handle_action_update_put(self, update_action_match):
             """Handle PUT /api/actions/{id}."""
-            data = self._read_json_or_error()
-            if data is None:
-                return
-
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-
-            action_id = update_action_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_update_action(action_id, data, user_id)
-            status = self._status_from_result(result)
-            self.json(result, status)
+            return handle_action_update_put(self, update_action_match)
 
         def _status_from_result(self, result: Dict, ok: int = 200, error: int = 400) -> int:
             """Map handler result payload status to HTTP status code."""
