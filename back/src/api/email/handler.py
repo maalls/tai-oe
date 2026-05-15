@@ -564,7 +564,7 @@ class EmailHandlers:
             Response with list of high-risk senders
         """
         try:
-            from src.controller.email.auth_handler import EmailAuthHandler
+            from src.api.email.auth_handler import EmailAuthHandler
             
             auth_handler = EmailAuthHandler()
             senders = auth_handler.get_high_risk_senders(user_id, trust_score_threshold=30)
@@ -594,7 +594,7 @@ class EmailHandlers:
             Response with list of verified senders
         """
         try:
-            from src.controller.email.auth_handler import EmailAuthHandler
+            from src.api.email.auth_handler import EmailAuthHandler
             
             auth_handler = EmailAuthHandler()
             senders = auth_handler.get_verified_senders(user_id, limit=50)

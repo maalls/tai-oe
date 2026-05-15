@@ -7,7 +7,7 @@ from typing import Dict, Optional, List
 from datetime import datetime
 import json
 from src.supabase import get_supabase_service
-from src.controller.email.auth_parser import parse_email_auth, EmailAuthParser
+from src.api.email.auth_parser import parse_email_auth, EmailAuthParser
 
 
 class EmailAuthHandler:

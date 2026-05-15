@@ -2278,8 +2278,8 @@ class EmailRepository:
         
         
         """Save a single email message to the database with authentication verification."""
-        from src.controller.email.auth_parser import parse_email_auth
-        from src.controller.email.auth_handler import EmailAuthHandler
+        from src.api.email.auth_parser import parse_email_auth
+        from src.api.email.auth_handler import EmailAuthHandler
         
         # Check if email already exists to avoid duplicate attachments
         provider_message_id = message.get('id')
