@@ -231,8 +231,12 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_update_action(action_id, data, user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             self.json(result, status)
+
+        def _status_from_result(self, result: Dict, ok: int = 200, error: int = 400) -> int:
+            """Map handler result payload status to HTTP status code."""
+            return ok if result.get('status') == 'ok' else error
 
         def _handle_imap_config_delete(self):
             """Handle DELETE /api/imap/config."""
