@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers auth delegation during migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _AuthHandlerStub:
@@ -26,7 +26,7 @@ class _AuthHandlerStub:
 
 def test_handle_auth_signup_uses_auth_handler(monkeypatch):
     stub = _AuthHandlerStub()
-    monkeypatch.setattr("src.controller.handlers.AuthHandler", lambda: stub)
+    monkeypatch.setattr("src.api.router.AuthHandler", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_auth_signup(b"{}")
@@ -37,7 +37,7 @@ def test_handle_auth_signup_uses_auth_handler(monkeypatch):
 
 def test_handle_auth_login_uses_auth_handler(monkeypatch):
     stub = _AuthHandlerStub()
-    monkeypatch.setattr("src.controller.handlers.AuthHandler", lambda: stub)
+    monkeypatch.setattr("src.api.router.AuthHandler", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_auth_login(b"{}")
@@ -48,7 +48,7 @@ def test_handle_auth_login_uses_auth_handler(monkeypatch):
 
 def test_handle_auth_logout_uses_auth_handler(monkeypatch):
     stub = _AuthHandlerStub()
-    monkeypatch.setattr("src.controller.handlers.AuthHandler", lambda: stub)
+    monkeypatch.setattr("src.api.router.AuthHandler", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_auth_logout("Bearer abc")
@@ -59,7 +59,7 @@ def test_handle_auth_logout_uses_auth_handler(monkeypatch):
 
 def test_handle_auth_user_uses_auth_handler(monkeypatch):
     stub = _AuthHandlerStub()
-    monkeypatch.setattr("src.controller.handlers.AuthHandler", lambda: stub)
+    monkeypatch.setattr("src.api.router.AuthHandler", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_auth_user("Bearer abc")

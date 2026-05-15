@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers prompt helper migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 def test_handle_get_prompt_content_reads_prompt_file(tmp_path):

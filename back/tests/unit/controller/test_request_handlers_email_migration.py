@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers email delegation during migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _ClassifyHandlerStub:
@@ -14,7 +14,7 @@ class _ClassifyHandlerStub:
 
 def test_handle_classify_email_uses_classify_handler(monkeypatch):
     stub = _ClassifyHandlerStub()
-    monkeypatch.setattr("src.controller.handlers.ClassifyHandler", lambda: stub)
+    monkeypatch.setattr("src.api.router.ClassifyHandler", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_classify_email("email-1", "u-1", force=True)

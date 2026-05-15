@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _ResponseStub:
@@ -28,7 +28,7 @@ def test_handle_curl_request_uses_urlopen_and_formats_response(monkeypatch):
         calls.append((req, timeout))
         return _ResponseStub(b'{"ok":true}', content_type="application/json", status=200)
 
-    monkeypatch.setattr("src.controller.handlers.urllib.request.urlopen", _urlopen)
+    monkeypatch.setattr("src.api.router.urllib.request.urlopen", _urlopen)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_curl_request(

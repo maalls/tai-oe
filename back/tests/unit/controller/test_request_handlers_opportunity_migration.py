@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers opportunity delegation during migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _BusinessHandlersStub:
@@ -170,7 +170,7 @@ class _QuoteControllerStub:
 
 def test_handle_update_quote_uses_quote_controller(monkeypatch):
     controller_stub = _QuoteControllerStub()
-    monkeypatch.setattr("src.controller.handlers.QuoteController", lambda: controller_stub)
+    monkeypatch.setattr("src.api.router.QuoteController", lambda: controller_stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_update_quote("doc-9", {"content": "v2"}, user_id="u-10")

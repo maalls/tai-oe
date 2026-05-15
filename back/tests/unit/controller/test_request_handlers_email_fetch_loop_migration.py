@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers email fetch loop status migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 def test_handle_email_fetch_loop_status_returns_default_when_no_file(tmp_path):
@@ -33,7 +33,7 @@ def test_handle_email_fetch_loop_status_reads_file_and_detects_running(monkeypat
         calls.append((pid, sig))
         return None
 
-    monkeypatch.setattr("src.controller.handlers.os.kill", _kill)
+    monkeypatch.setattr("src.api.router.os.kill", _kill)
 
     result = handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=tmp_path / "legacy.json")
 

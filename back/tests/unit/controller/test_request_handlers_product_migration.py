@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers product delegation during migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _ProductControllerStub:
@@ -18,7 +18,7 @@ class _ProductControllerStub:
 
 def test_handle_list_products_uses_product_controller(monkeypatch):
     stub = _ProductControllerStub()
-    monkeypatch.setattr("src.controller.handlers.ProductController", lambda: stub)
+    monkeypatch.setattr("src.api.router.ProductController", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_list_products({"q": ["x"]})
@@ -29,7 +29,7 @@ def test_handle_list_products_uses_product_controller(monkeypatch):
 
 def test_handle_create_product_uses_product_controller(monkeypatch):
     stub = _ProductControllerStub()
-    monkeypatch.setattr("src.controller.handlers.ProductController", lambda: stub)
+    monkeypatch.setattr("src.api.router.ProductController", lambda: stub)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_create_product({"name": "Widget"})

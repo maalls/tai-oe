@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers utility delegation during migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _ResponseStub:
@@ -26,7 +26,7 @@ def test_handle_fetch_url_uses_urlopen_and_formats_response(monkeypatch):
         calls.append((url, timeout))
         return _ResponseStub(b"hello world", content_type="text/plain", status=200)
 
-    monkeypatch.setattr("src.controller.handlers.urllib.request.urlopen", _urlopen)
+    monkeypatch.setattr("src.api.router.urllib.request.urlopen", _urlopen)
 
     handlers = RequestHandlers.__new__(RequestHandlers)
     result = handlers.handle_fetch_url("https://example.com", max_chars=5, timeout_ms=8000)

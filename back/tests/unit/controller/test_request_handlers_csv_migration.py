@@ -1,6 +1,6 @@
 """Unit tests for RequestHandlers CSV upload delegation during migration."""
 
-from src.controller.handlers import RequestHandlers
+from src.api.router import RequestHandlers
 
 
 class _FileHandlerStub:
