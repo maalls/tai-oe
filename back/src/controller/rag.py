@@ -1044,8 +1044,7 @@ def create_rag_handler(config):
                     return
 
                 if parsed.path == '/api/products':
-                    handlers = self.get_request_handlers()
-                    return self.json(handlers.handle_list_products(qs))
+                    return self._handle_products_get(qs)
 
                 if parsed.path.startswith('/api/google/oauth/callback'):
                     handlers = self.get_request_handlers()
@@ -1391,6 +1390,11 @@ def create_rag_handler(config):
                 error_payload = handlers.handle_storage_read_error_payload(e)
                 self._send_text_response(500, error_payload['content_type'], error_payload['body'])
                 return
+
+        def _handle_products_get(self, qs):
+            """Handle /api/products GET endpoint."""
+            handlers = self.get_request_handlers()
+            return self.json(handlers.handle_list_products(qs))
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
