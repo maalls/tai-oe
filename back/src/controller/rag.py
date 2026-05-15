@@ -288,17 +288,8 @@ def create_rag_handler(config):
                 if self._handle_ddd_post_routes(parsed):
                     return
 
-                if parsed.path == '/api/products':
-                    return self._handle_products_post()
-
-                if parsed.path == '/api/fs/create':
-                    return self._handle_fs_create_post()
-
-                if parsed.path == '/api/fs/read':
-                    return self._handle_fs_read_post()
-
-                if parsed.path == '/api/curl':
-                    return self._handle_curl_post()
+                if self._handle_post_core_routes(parsed.path):
+                    return
                 
                 # Auth endpoints
                 if parsed.path == '/api/auth/signup':
@@ -624,6 +615,26 @@ def create_rag_handler(config):
             quote_update_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
             if quote_update_match:
                 self._handle_quote_update_post(quote_update_match)
+                return True
+
+            return False
+
+        def _handle_post_core_routes(self, parsed_path: str) -> bool:
+            """Handle core POST routes that map directly to controller helpers."""
+            if parsed_path == '/api/products':
+                self._handle_products_post()
+                return True
+
+            if parsed_path == '/api/fs/create':
+                self._handle_fs_create_post()
+                return True
+
+            if parsed_path == '/api/fs/read':
+                self._handle_fs_read_post()
+                return True
+
+            if parsed_path == '/api/curl':
+                self._handle_curl_post()
                 return True
 
             return False
