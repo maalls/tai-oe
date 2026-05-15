@@ -1,8 +1,8 @@
 """Miscellaneous GET route dispatch for legacy API server."""
 
-from src.api.email.handler import handle_google_oauth_callback_get, handle_products_get
-from src.api.file.handler import handle_fetch_get
-from src.api.routes.server_storage_handlers import handle_storage_get
+from src.api.email.handler import handle_google_oauth_callback_get
+from src.api.file.handler import handle_fetch_get, handle_storage_get
+from src.api.product.handler import handle_products_get
 
 
 def dispatch_get_misc_routes(handler, parsed, qs) -> bool:

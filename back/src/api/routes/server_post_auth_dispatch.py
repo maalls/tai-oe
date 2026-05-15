@@ -1,6 +1,6 @@
 """Auth POST route dispatch for legacy API server."""
 
-from src.api.routes.server_post_utility_handlers import (
+from src.api.auth.handler import (
     handle_auth_login_post,
     handle_auth_logout_post,
     handle_auth_signup_post,

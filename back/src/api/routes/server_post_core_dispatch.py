@@ -1,11 +1,11 @@
 """Core POST route dispatch for legacy API server."""
 
-from src.api.routes.server_post_utility_handlers import (
+from src.api.file.handler import (
     handle_curl_post,
     handle_fs_create_post,
     handle_fs_read_post,
-    handle_products_post,
 )
+from src.api.product.handler import handle_products_post
 
 
 def dispatch_post_core_routes(handler, parsed_path: str) -> bool:

@@ -2,16 +2,22 @@
 
 import re
 
-from src.api.routes.server_post_utility_handlers import (
+from src.api.document.handler import (
     handle_chat_attachments_post,
+)
+from src.api.invoice.handler import (
     handle_invoice_pdf_post,
     handle_invoice_send_post,
+    handle_quote_invoice_post,
+)
+from src.api.opportunity.handler import (
     handle_opportunity_rfq_create_from_text_post,
     handle_opportunity_rfq_generate_post,
-    handle_quote_invoice_post,
+    handle_send_quote_for_opportunity_post,
+)
+from src.api.quote.handler import (
     handle_quote_pdf_post,
     handle_quote_update_post,
-    handle_send_quote_for_opportunity_post,
 )
 
 

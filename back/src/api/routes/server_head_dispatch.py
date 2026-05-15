@@ -1,6 +1,6 @@
 """HEAD route dispatch for legacy API server."""
 
-from src.api.routes.server_storage_handlers import handle_storage_head
+from src.api.file.handler import handle_storage_head
 
 
 def dispatch_head_request(handler, parsed_path: str) -> bool:

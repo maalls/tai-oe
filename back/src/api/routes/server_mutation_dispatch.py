@@ -2,7 +2,7 @@
 
 import re
 
-from src.api.routes.server_mutation_handlers import handle_action_update_put
+from src.api.action.handler import handle_action_update_put
 
 
 def dispatch_patch_request(_handler, _parsed_path: str) -> bool:

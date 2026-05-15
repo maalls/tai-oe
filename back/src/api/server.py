@@ -24,10 +24,6 @@ from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_auth_helpers import require_auth
 from src.api.routes.server_body_helpers import read_json
-from src.api.routes.server_get_misc_handlers import (
-    handle_email_fetch_loop_status_get,
-    handle_prompt_get,
-)
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
@@ -38,6 +34,15 @@ from src.api.routes.server_response_helpers import send_json, send_error
 
 # Load .env before reading config values.
 load_runtime_env(__file__)
+
+
+def _handle_email_fetch_loop_status_get(handler, current_file: str):
+    """Handle /api/email-fetch-loop/status GET endpoint."""
+    status_path = Path(current_file).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
+    legacy_path = Path(current_file).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
+    request_handlers = handler.request_handlers
+    result = request_handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
+    return handler.json(result)
 
 
 config = {
@@ -230,7 +235,7 @@ def create_rag_handler(config):
 
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
-            return handle_email_fetch_loop_status_get(self, __file__)
+            return _handle_email_fetch_loop_status_get(self, __file__)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""

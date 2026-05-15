@@ -2,23 +2,27 @@
 
 import re
 
-from src.api.routes.server_post_utility_handlers import (
+from src.api.document.handler import (
     handle_document_extract_rfp_post,
     handle_document_update_content_post,
+)
+from src.api.email.handler import (
     handle_email_auth_status_post,
     handle_email_extract_contact_post,
     handle_email_resync_post,
     handle_email_senders_high_risk_post,
     handle_email_senders_verified_post,
     handle_emails_classify_post,
-    handle_entity_update_post,
     handle_imap_config_post,
     handle_imap_test_post,
+)
+from src.api.entity.handler import handle_entity_update_post
+from src.api.opportunity.handler import (
     handle_opportunities_create_from_email_post,
     handle_opportunities_create_from_rfp_post,
     handle_opportunities_create_manual_post,
-    handle_rfq_generate_post,
 )
+from src.api.rfq.handler import handle_rfq_generate_post
 
 
 def dispatch_post_domain_routes(handler, parsed) -> bool:
