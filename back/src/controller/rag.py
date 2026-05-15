@@ -1118,7 +1118,7 @@ def create_rag_handler(config):
                     # Get max_results and user_id from query params
                     max_results = self._get_qs_int(qs, 'max_results', EMAIL_FETCH_MAX_RESULTS)
                     user_id = qs.get('user_id', [None])[0]
-                    force = qs.get('force', ['false'])[0].lower() == 'true'
+                    force = self._get_qs_bool(qs, 'force', False)
                     
                     print(f"[RAG] /api/gmail/messages - user_id from query: {user_id}, force: {force}")
                     
@@ -1404,6 +1404,13 @@ def create_rag_handler(config):
                 return None
             user_data = self._require_auth(auth_header=auth_header, required=False)
             return user_data.get('id') if user_data else None
+
+        def _get_qs_bool(self, qs, key: str, default: bool = False) -> bool:
+            """Read boolean query-string parameter with fallback."""
+            raw_value = qs.get(key, [None])[0]
+            if raw_value is None:
+                return default
+            return str(raw_value).strip().lower() in ('1', 'true', 'yes', 'on')
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
