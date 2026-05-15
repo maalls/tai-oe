@@ -144,3 +144,20 @@ def handle_entity_update_post(handler, entity_update_match):
     )
     status = handler._status_from_result(result)
     return handler.json(result, status)
+
+
+def handle_emails_classify_post(handler, parsed_path):
+    """Handle /api/emails/classify/{email_uuid} POST endpoint."""
+    email_uuid = parsed_path.split('/')[-1]
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id')
+    print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)

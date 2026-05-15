@@ -106,6 +106,7 @@ from src.api.routes.server_post_utility_handlers import (
     handle_auth_signup_post,
     handle_curl_post,
     handle_entity_update_post,
+    handle_emails_classify_post,
     handle_fs_create_post,
     handle_fs_read_post,
     handle_products_post,
@@ -357,19 +358,7 @@ def create_rag_handler(config):
 
         def _handle_emails_classify_post(self, parsed_path):
             """Handle /api/emails/classify/{email_uuid} POST endpoint."""
-            email_uuid = parsed_path.split('/')[-1]
-
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id')
-            print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_emails_classify_post(self, parsed_path)
 
         def _handle_rfq_generate_post(self):
             """Handle /api/rfq/generate POST endpoint."""
