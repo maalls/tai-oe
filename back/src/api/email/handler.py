@@ -7,6 +7,7 @@ from typing import Dict
 
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
+from src.service.email.quote_send_service import QuoteSendService
 
 
 def _get_legacy_repo():
@@ -26,6 +27,7 @@ class EmailHandlers:
     def __init__(self, service_factory: ServiceFactory = None):
         """Initialize email handlers."""
         self._repository = None
+        self._quote_send_service = None
         self.service_factory = service_factory or ServiceFactory()
 
     @property
@@ -33,6 +35,18 @@ class EmailHandlers:
         if self._repository is None:
             self._repository = _get_legacy_repo()
         return self._repository
+
+    @property
+    def quote_send_service(self) -> QuoteSendService:
+        if getattr(self, "_quote_send_service", None) is None:
+            self._quote_send_service = QuoteSendService(
+                send_email=self.repository.send_email,
+                storage_path_resolver=self._get_storage_path,
+                path_cls=Path,
+                supabase_factory=get_supabase_service,
+                now_provider=datetime.now,
+            )
+        return self._quote_send_service
     
     def handle_gmail_authorize(self, redirect_url: str = None) -> Dict:
         """Trigger Gmail OAuth2 authorization flow.
@@ -234,69 +248,7 @@ class EmailHandlers:
         )
 
     def handle_quote_send(self, body: bytes, content_type: str) -> Dict:
-        """Send a quote PDF by email using the legacy quote-send contract."""
-        _ = content_type
-        try:
-            payload = json.loads(body.decode('utf-8'))
-
-            pdf_filename = payload.get('pdf_filename')
-            email = payload.get('email')
-            email_body = payload.get('body', 'Hi, here is the quote')
-
-            if not pdf_filename:
-                return {
-                    "status": "error",
-                    "message": "Missing pdf_filename"
-                }
-
-            if not email:
-                return {
-                    "status": "error",
-                    "message": "Missing email address"
-                }
-
-            if not pdf_filename.startswith('quote_') or not pdf_filename.endswith('.pdf'):
-                return {
-                    "status": "error",
-                    "message": "Invalid PDF filename format"
-                }
-
-            assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-            pdf_path = assets_dir / pdf_filename
-            if not pdf_path.exists():
-                return {
-                    "status": "error",
-                    "message": f"Quote PDF not found: {pdf_filename}"
-                }
-
-            result = self.handle_send_email(
-                to=email,
-                subject="Your Quote",
-                body=email_body,
-                attachment_path=str(pdf_path)
-            )
-
-            if result.get('status') == 'ok':
-                print(f"[EmailHandlers] Quote email sent successfully to {email}")
-                return {
-                    "status": "ok",
-                    "message": "Quote emailed successfully",
-                    "email": email,
-                    "message_id": result.get('message_id')
-                }
-
-            return result
-        except json.JSONDecodeError:
-            return {
-                "status": "error",
-                "message": "Invalid JSON in request body"
-            }
-        except Exception as exc:
-            print(f"[EmailHandlers] Error sending quote email: {exc}")
-            return {
-                "status": "error",
-                "message": f"Error sending email: {str(exc)}"
-            }
+        return self.quote_send_service.handle_quote_send(body=body, content_type=content_type)
 
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
@@ -315,112 +267,11 @@ class EmailHandlers:
         return EmailHandlers._get_storage_dir(source) / filename
 
     def handle_send_quote_for_opportunity(self, opportunity_id: str, payload: Dict, user_id: str = None) -> Dict:
-        """Send quote email with optional PDF and persist send side effects."""
-        try:
-            to_emails = payload.get('to', [])
-            cc_emails = payload.get('cc', [])
-            subject = payload.get('subject', '')
-            body = payload.get('body', '')
-            pdf_filename = payload.get('storage_key', '')
-
-            print(f"[EmailHandlers] send_quote_for_opportunity - to_emails: {to_emails}, subject: {subject}, body length: {len(body)}, pdf: {pdf_filename}")
-
-            if not to_emails or not isinstance(to_emails, list):
-                return {"status": "error", "message": "At least one 'to' email is required"}
-            if not subject:
-                return {"status": "error", "message": "Email subject is required"}
-            if not body:
-                return {"status": "error", "message": "Email body is required"}
-
-            pdf_path = None
-            if pdf_filename:
-                pdf_path = self._get_storage_path("quote", pdf_filename)
-                if not pdf_path.exists():
-                    legacy_assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                    legacy_pdf_path = legacy_assets_dir / pdf_filename
-                    if legacy_pdf_path.exists():
-                        pdf_path = legacy_pdf_path
-                    else:
-                        return {"status": "error", "message": f"PDF file not found: {pdf_filename}"}
-
-            to_recipients = ', '.join(to_emails)
-            cc_recipients = ', '.join(cc_emails) if cc_emails else None
-
-            result = self.repository.send_email(
-                to=to_recipients,
-                cc=cc_recipients,
-                subject=subject,
-                body=body,
-                attachment_path=str(pdf_path) if pdf_path else None,
-                user_id=user_id,
-            )
-
-            if result.get('status') not in ('success', 'ok'):
-                if isinstance(result, dict) and result.get('status') == 'error':
-                    return result
-                return {
-                    "status": "error",
-                    "message": result.get('message', 'Failed to send email') if isinstance(result, dict) else str(result),
-                }
-
-            supabase = get_supabase_service()
-            quote_id = payload.get('quote_id')
-            if not quote_id:
-                raise ValueError("quote_id not provided in payload")
-
-            update_payload = {
-                "status": "SENT",
-                "channel": "EMAIL",
-                "source_message_id": result.get('message_id'),
-                "issued_at": datetime.now().isoformat(),
-            }
-            sent_doc_resp = supabase.table("document").update(update_payload).eq("id", quote_id).execute()
-            if getattr(sent_doc_resp, "error", None):
-                raise RuntimeError(f"Failed to update quote document: {sent_doc_resp.error}")
-            if not sent_doc_resp.data:
-                raise RuntimeError(f"Update executed but no rows affected for quote {quote_id}")
-
-            sent_email_data = {
-                "document_id": quote_id,
-                "opportunity_id": opportunity_id,
-                "from_email": "maalls@gmail.com",
-                "to_emails": to_emails,
-                "cc_emails": cc_emails if cc_emails else [],
-                "subject": subject,
-                "body": body,
-                "provider": result.get('provider') or "gmail",
-                "provider_message_id": result.get('message_id'),
-                "status": "sent",
-                "sent_at": datetime.now().isoformat(),
-                "attachment_names": [pdf_filename] if pdf_filename else [],
-            }
-            insert_result = supabase.table("sent_email").insert(sent_email_data).execute()
-            if getattr(insert_result, "error", None):
-                raise RuntimeError(f"Failed to save sent_email record: {insert_result.error}")
-            if not insert_result.data:
-                raise RuntimeError("Sent email insert returned no data")
-
-            update_resp = supabase.table("opportunity").update({
-                "stage": "OFFER_SENT",
-                "updated_at": datetime.now().isoformat(),
-            }).eq("id", opportunity_id).execute()
-            if getattr(update_resp, "error", None):
-                raise RuntimeError(f"Failed to update opportunity stage: {update_resp.error}")
-            if not update_resp.data:
-                raise RuntimeError(f"Opportunity stage update returned no data for {opportunity_id}")
-
-            return {
-                "status": "ok",
-                "message": "Quote email sent successfully",
-                "message_id": result.get('message_id'),
-                "recipients": to_recipients,
-            }
-        except Exception as exc:
-            print(f"[EmailHandlers] Error sending quote email: {exc}")
-            return {
-                "status": "error",
-                "message": f"Failed to send email: {str(exc)}",
-            }
+        return self.quote_send_service.handle_send_quote_for_opportunity(
+            opportunity_id=opportunity_id,
+            payload=payload,
+            user_id=user_id,
+        )
     
     def handle_get_message_body(self, uuid: str, user_id: str = None) -> Dict:
         """Get the full content of a message.
