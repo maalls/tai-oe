@@ -1391,14 +1391,8 @@ def create_rag_handler(config):
             if not target_url.startswith('http://') and not target_url.startswith('https://'):
                 return self._send_error(400, 'Invalid url scheme')
 
-            try:
-                max_chars = int(qs.get('max_chars', [10000])[0])
-            except Exception:
-                max_chars = 10000
-            try:
-                timeout_ms = int(qs.get('timeout_ms', [8000])[0])
-            except Exception:
-                timeout_ms = 8000
+            max_chars = self._get_qs_int(qs, 'max_chars', 10000)
+            timeout_ms = self._get_qs_int(qs, 'timeout_ms', 8000)
 
             max_chars = max(100, min(max_chars, 50000))
             timeout_ms = max(1000, min(timeout_ms, 20000))
@@ -1413,6 +1407,13 @@ def create_rag_handler(config):
                 return self.json(result)
             except Exception as e:
                 return self._send_error(500, f'Fetch failed: {e}')
+
+        def _get_qs_int(self, qs, key: str, default: int) -> int:
+            """Read integer query-string parameter with fallback."""
+            try:
+                return int(qs.get(key, [default])[0])
+            except Exception:
+                return default
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
