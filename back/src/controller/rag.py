@@ -411,11 +411,7 @@ def create_rag_handler(config):
                     result = handlers.handle_rfp_upload(body, content_type)
                     return self.json(result)
                 elif parsed.path == '/api/quote':
-                    content_type = self.headers.get('Content-Type', '')
-                    body = self._read_body()
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_quote_submit(body, content_type)
-                    return self.json(result)
+                    return self._handle_quote_submit_post()
                 elif parsed.path == '/api/quote/send':
                     print(f"[RAG] Received request to send quote email, path: {parsed.path}, method: {self.command}")
                     content_type = self.headers.get('Content-Type', '')
@@ -1266,6 +1262,14 @@ def create_rag_handler(config):
             result = handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
             status = 400 if result.get('error') else 200
             return self.json(result, status)
+
+        def _handle_quote_submit_post(self):
+            """Handle /api/quote POST endpoint."""
+            content_type = self.headers.get('Content-Type', '')
+            body = self._read_body()
+            handlers = self.get_request_handlers()
+            result = handlers.handle_quote_submit(body, content_type)
+            return self.json(result)
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
