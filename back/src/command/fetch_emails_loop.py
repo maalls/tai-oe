@@ -12,59 +12,8 @@ Usage:
 """
 
 import argparse
-import os
-import sys
-import time
-import json
-import atexit
-from pathlib import Path
-from typing import List
 from src.config import EMAIL_FETCH_MAX_RESULTS
-from src.command.fetch_emails import run as fetch_emails_run
 from src.command.email_cli import run_loop as unified_run_loop
-
-# Load .env if available
-try:
-	from dotenv import load_dotenv, find_dotenv
-	env_file = find_dotenv(usecwd=True)
-	if env_file:
-		load_dotenv(env_file, override=False)
-except Exception:
-	pass
-
-STATUS_PATH = Path(__file__).resolve().parents[3] / "var" / "email_fetch_loop.json"
-
-
-def _write_status(payload: dict):
-	try:
-		STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
-		STATUS_PATH.write_text(json.dumps(payload), encoding="utf-8")
-	except Exception:
-		pass
-
-
-def _clear_status():
-	try:
-		if STATUS_PATH.exists():
-			STATUS_PATH.unlink()
-	except Exception:
-		pass
-
-
-def get_all_users() -> List[dict]:
-	"""Get all users from the profile table."""
-	from src.supabase import get_supabase_service
-	
-	try:
-		supabase = get_supabase_service()
-		response = supabase.table("profile").select("id, email").execute()
-		
-		if response.data:
-			return response.data
-		return []
-	except Exception as e:
-		print(f"[fetch-emails-loop] Error getting users: {e}")
-		return []
 
 
 def run_loop(
@@ -95,7 +44,7 @@ def main(argv=None):
 		"--interval",
 		type=int,
 		default=30,
-		help="Minimum seconds between fetch cycles (default: 120 = 2 minutes)"
+		help="Minimum seconds between fetch cycles (default: 30)"
 	)
 	parser.add_argument(
 		"--max-results",
