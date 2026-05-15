@@ -16,6 +16,7 @@ from html.parser import HTMLParser
 
 from src.api.email.handler import EmailHandlers
 from src.api.document.handler import DocumentHandlers
+from src.api.invoice.handler import InvoiceHandlers
 from src.api.opportunity.handler import OpportunityHandlers
 from src.api.quote.handler import Quote
 from src.api.rfq.handler import RfqHandlers
@@ -50,6 +51,10 @@ class BusinessHandlers:
             supabase=self.supabase,
         )
         self.quote_handlers = Quote()
+        self.invoice_handlers = InvoiceHandlers(
+            supabase=self.supabase,
+            generate_invoice_pdf=self.handle_generate_invoice_pdf,
+        )
         self.document_handlers = DocumentHandlers(
             supabase=self.supabase,
             storage_dir_resolver=self._get_storage_dir,
@@ -572,124 +577,11 @@ class BusinessHandlers:
         return self.document_handlers.handle_get_document_file(filename)
 
     def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str = None) -> Dict:
-        """Generate an INVOICE document from an accepted QUOTE.
-        
-        The invoice is created as a separate document with the quote as parent_document_id.
-        quote_id can be either a document ID or an opportunity ID. If it's an opportunity ID,
-        we'll fetch the latest QUOTE document for that opportunity.
-        """
-        supabase = get_supabase_service()
-
-        try:
-            # First, try to fetch as document ID
-            quote_resp = supabase.table("document").select("*").eq("id", quote_id).execute()
-            
-            # If no document found, try as opportunity ID to find the quote
-            if not quote_resp.data or len(quote_resp.data) == 0:
-                quote_resp = supabase.table("document").select("*").eq("opportunity_id", quote_id).eq("type", "QUOTE").order("created_at", desc=True).limit(1).execute()
-            
-            if getattr(quote_resp, "error", None) or not quote_resp.data:
-                return {"status": "error", "message": f"Quote not found for {quote_id}"}
-            
-            quote = quote_resp.data[0]
-
-            if quote.get("type") != "QUOTE":
-                return {"status": "error", "message": "Document must be a QUOTE"}
-
-            quote_id = quote.get("id")  # Use the actual quote document ID
-            
-            # Check if invoice already exists for this quote
-            existing_resp = supabase.table("document").select("id").eq("parent_document_id", quote_id).eq("type", "INVOICE").execute()
-            if existing_resp.data and len(existing_resp.data) > 0:
-                return {"status": "error", "message": "Invoice already exists for this quote"}
-
-            # Load quote lines
-            line_resp = supabase.table("document_line").select("*").eq("document_id", quote_id).order("position").execute()
-            if getattr(line_resp, "error", None):
-                return {"status": "error", "message": f"Failed to load quote lines: {line_resp.error}"}
-            lines = line_resp.data or []
-
-            # Create invoice document
-            invoice_data = {
-                "type": "INVOICE",
-                "status": "DRAFT",
-                "opportunity_id": quote.get("opportunity_id"),
-                "parent_document_id": quote_id,
-                "title": f"Invoice - {quote.get('title', 'Quote')}",
-                "external_ref": f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "currency": quote.get("currency", "EUR"),
-                "total_excl_tax": quote.get("total_excl_tax", 0),
-                "total_tax": quote.get("total_tax", 0),
-                "total_incl_tax": quote.get("total_incl_tax", 0),
-                "issued_at": datetime.now().isoformat(),
-            }
-
-            inv_resp = supabase.table("document").insert([invoice_data]).execute()
-            if getattr(inv_resp, "error", None) or not inv_resp.data:
-                return {"status": "error", "message": f"Failed to create invoice: {inv_resp.error}"}
-            
-            invoice_id = inv_resp.data[0]["id"]
-
-            # Copy lines from quote to invoice
-            invoice_lines = []
-            for line in lines:
-                invoice_lines.append({
-                    "document_id": invoice_id,
-                    "position": line.get("position"),
-                    "sku": line.get("sku"),
-                    "brand": line.get("brand"),
-                    "description": line.get("description"),
-                    "quantity": line.get("quantity"),
-                    "unit": line.get("unit"),
-                    "unit_price_excl_tax": line.get("unit_price_excl_tax"),
-                    "tax_rate": line.get("tax_rate"),
-                    "line_total_excl_tax": line.get("line_total_excl_tax"),
-                })
-
-            if invoice_lines:
-                line_insert_resp = supabase.table("document_line").insert(invoice_lines).execute()
-                if getattr(line_insert_resp, "error", None):
-                    return {"status": "error", "message": f"Failed to copy lines to invoice: {line_insert_resp.error}"}
-
-            print(f"[BusinessHandlers] Invoice {invoice_id} created from quote {quote_id}")
-
-            # Automatically generate PDF for the invoice
-            storage_key = None
-            try:
-                pdf_result = self.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
-                if pdf_result.get("status") == "ok":
-                    storage_key = pdf_result.get("storage_key")
-                    print(f"[BusinessHandlers] Invoice PDF generated automatically: {storage_key}")
-                else:
-                    print(f"[BusinessHandlers] Warning: Could not auto-generate invoice PDF: {pdf_result.get('message')}")
-            except Exception as pdf_error:
-                print(f"[BusinessHandlers] Warning: Error auto-generating invoice PDF: {pdf_error}")
-
-            return {
-                "status": "ok",
-                "invoice_id": invoice_id,
-                "invoice": {
-                    "id": invoice_id,
-                    "title": invoice_data["title"],
-                    "external_ref": invoice_data["external_ref"],
-                    "currency": invoice_data["currency"],
-                    "storage_key": storage_key,
-                    "totals": {
-                        "subtotal": invoice_data["total_excl_tax"],
-                        "tax": invoice_data["total_tax"],
-                        "total": invoice_data["total_incl_tax"],
-                    },
-                },
-            }
-
-        except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error generating invoice from quote {quote_id}: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error generating invoice: {str(e)}",
-            }
+        """Generate an invoice document via InvoiceHandlers."""
+        return self.invoice_handlers.handle_generate_invoice_from_quote(
+            quote_id=quote_id,
+            user_id=user_id,
+        )
 
     def handle_send_invoice(self, invoice_id: str, payload: Dict, user_id: str = None) -> Dict:
         """Send invoice email with PDF attachment.

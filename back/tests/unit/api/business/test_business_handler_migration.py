@@ -57,6 +57,26 @@ class _QuoteHandlersStub:
         return {"status": "ok", "pdf_filename": "quote_generated.pdf"}
 
 
+class _InvoiceHandlersStub:
+    def __init__(self):
+        self.calls = []
+
+    def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str = None):
+        self.calls.append((quote_id, user_id))
+        return {
+            "status": "ok",
+            "invoice_id": "inv-1",
+            "invoice": {
+                "id": "inv-1",
+                "title": "Invoice - Quote",
+                "external_ref": "INV-REF",
+                "currency": "EUR",
+                "storage_key": "invoice_1.pdf",
+                "totals": {"subtotal": 10, "tax": 2, "total": 12},
+            },
+        }
+
+
 class _OpportunityRepositoryStub:
     def __init__(self):
         self.calls = []
@@ -188,6 +208,7 @@ def _make_handler(rfq_result=None):
     handler.rfq_handlers = _RfqHandlersStub(result=rfq_result)
     handler.email_handlers = _EmailHandlersStub()
     handler.quote_handlers = _QuoteHandlersStub()
+    handler.invoice_handlers = _InvoiceHandlersStub()
     handler.opportunity_repository = _OpportunityRepositoryStub()
     handler.opportunity_handlers = _OpportunityHandlersStub(handler.opportunity_repository)
     handler._document_content_service = _DocumentContentServiceStub()
@@ -298,6 +319,16 @@ def test_handle_generate_quote_pdf_delegates_to_quote_handler():
 
     assert result == {"status": "ok", "pdf_filename": "quote_generated.pdf"}
     assert handler.quote_handlers.calls == [("generate_pdf", "doc-q-1", "u-1")]
+
+
+def test_handle_generate_invoice_from_quote_delegates_to_invoice_handler():
+    handler = _make_handler()
+
+    result = handler.handle_generate_invoice_from_quote("quote-1", user_id="u-1")
+
+    assert result["status"] == "ok"
+    assert result["invoice_id"] == "inv-1"
+    assert handler.invoice_handlers.calls == [("quote-1", "u-1")]
 
 
 def test_business_handler_opportunity_wrappers_are_class_methods():
