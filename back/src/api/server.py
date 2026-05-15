@@ -26,7 +26,6 @@ from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
-from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_delete_handlers import (
     handle_action_delete,
     handle_document_delete,
@@ -90,7 +89,7 @@ from src.api.routes.server_get_misc_handlers import (
     handle_prompt_get,
     handle_products_get,
 )
-from src.api.routes.server_http_method_handlers import handle_head_method, handle_options_method
+from src.api.routes.server_http_method_handlers import handle_delete_method, handle_head_method, handle_options_method
 from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -179,17 +178,7 @@ def create_rag_handler(config):
             return handle_options_method(self)
 
         def do_DELETE(self):
-            try:
-                print(f"[RAG] do_DELETE called with path: {self.path}", file=sys.stderr)
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_delete_request(self, parsed.path):
-                    return
-                
-                return self._send_error(404, "Not found")
-            except Exception as e:
-                traceback.print_exc()
-                return self._send_error(500, f"Server error: {str(e)}")
+            return handle_delete_method(self)
 
         def do_PATCH(self):
             try:

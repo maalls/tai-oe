@@ -1,7 +1,10 @@
 """HTTP method handlers for legacy API server."""
 
+import sys
+import traceback
 import urllib.parse
 
+from src.api.routes.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
 
 
@@ -23,3 +26,18 @@ def handle_head_method(handler):
         return handler._send_error(404, "Not found")
     except Exception as e:
         return handler._send_error(500, f"Internal server error 2: {e}")
+
+
+def handle_delete_method(handler):
+    """Handle DELETE method."""
+    try:
+        print(f"[RAG] do_DELETE called with path: {handler.path}", file=sys.stderr)
+        parsed = urllib.parse.urlparse(handler.path)
+
+        if dispatch_delete_request(handler, parsed.path):
+            return None
+
+        return handler._send_error(404, "Not found")
+    except Exception as e:
+        traceback.print_exc()
+        return handler._send_error(500, f"Server error: {str(e)}")
