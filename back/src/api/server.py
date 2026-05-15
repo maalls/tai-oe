@@ -81,24 +81,16 @@ from src.api.routes.server_post_utility_handlers import (
     handle_curl_post,
     handle_document_extract_rfp_post,
     handle_document_update_content_post,
-    handle_email_auth_status_post,
-    handle_email_extract_contact_post,
-    handle_email_resync_post,
-    handle_email_senders_high_risk_post,
     handle_email_senders_verified_post,
     handle_invoice_pdf_post,
     handle_invoice_send_post,
     handle_imap_config_post,
     handle_imap_test_post,
-    handle_entity_update_post,
     handle_emails_classify_post,
     handle_fs_create_post,
     handle_fs_read_post,
     handle_opportunity_rfq_create_from_text_post,
     handle_opportunity_rfq_generate_post,
-    handle_opportunities_create_from_email_post,
-    handle_opportunities_create_manual_post,
-    handle_opportunities_create_from_rfp_post,
     handle_products_post,
     handle_quote_invoice_post,
     handle_quote_pdf_post,
@@ -106,7 +98,6 @@ from src.api.routes.server_post_utility_handlers import (
     handle_quote_submit_post,
     handle_quote_update_post,
     handle_rfp_post,
-    handle_rfq_generate_post,
     handle_send_quote_for_opportunity_post,
 )
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
@@ -349,46 +340,6 @@ def create_rag_handler(config):
         def _handle_auth_logout_post(self):
             """Handle /api/auth/logout POST endpoint."""
             return handle_auth_logout_post(self)
-
-        def _handle_entity_update_post(self, entity_update_match):
-            """Handle /api/entity/{table}/{field} POST endpoint."""
-            return handle_entity_update_post(self, entity_update_match)
-
-        def _handle_emails_classify_post(self, parsed_path):
-            """Handle /api/emails/classify/{email_uuid} POST endpoint."""
-            return handle_emails_classify_post(self, parsed_path)
-
-        def _handle_rfq_generate_post(self):
-            """Handle /api/rfq/generate POST endpoint."""
-            return handle_rfq_generate_post(self)
-
-        def _handle_opportunities_create_from_email_post(self):
-            """Handle /api/opportunities/create-from-email POST endpoint."""
-            return handle_opportunities_create_from_email_post(self)
-
-        def _handle_opportunities_create_manual_post(self):
-            """Handle /api/opportunities/create-manual POST endpoint."""
-            return handle_opportunities_create_manual_post(self)
-
-        def _handle_opportunities_create_from_rfp_post(self):
-            """Handle /api/opportunities/create-from-rfp POST endpoint."""
-            return handle_opportunities_create_from_rfp_post(self)
-
-        def _handle_email_extract_contact_post(self):
-            """Handle /api/email/extract-contact POST endpoint."""
-            return handle_email_extract_contact_post(self)
-
-        def _handle_email_auth_status_post(self, parsed_path):
-            """Handle /api/email/auth/{email_id} POST endpoint."""
-            return handle_email_auth_status_post(self, parsed_path)
-
-        def _handle_email_resync_post(self, parsed_path):
-            """Handle /api/email/{email_id}/resync POST endpoint."""
-            return handle_email_resync_post(self, parsed_path)
-
-        def _handle_email_senders_high_risk_post(self):
-            """Handle /api/email/senders/high-risk POST endpoint."""
-            return handle_email_senders_high_risk_post(self)
 
         def _handle_email_senders_verified_post(self):
             """Handle /api/email/senders/verified POST endpoint."""

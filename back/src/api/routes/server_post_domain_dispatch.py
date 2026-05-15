@@ -2,49 +2,62 @@
 
 import re
 
+from src.api.routes.server_post_utility_handlers import (
+    handle_email_auth_status_post,
+    handle_email_extract_contact_post,
+    handle_email_resync_post,
+    handle_email_senders_high_risk_post,
+    handle_emails_classify_post,
+    handle_entity_update_post,
+    handle_opportunities_create_from_email_post,
+    handle_opportunities_create_from_rfp_post,
+    handle_opportunities_create_manual_post,
+    handle_rfq_generate_post,
+)
+
 
 def dispatch_post_domain_routes(handler, parsed) -> bool:
     """Dispatch domain POST routes and return True when handled."""
     parsed_path = parsed.path
     entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed_path)
     if entity_update_match:
-        handler._handle_entity_update_post(entity_update_match)
+        handle_entity_update_post(handler, entity_update_match)
         return True
 
     if parsed_path.startswith('/api/emails/classify/'):
-        handler._handle_emails_classify_post(parsed_path)
+        handle_emails_classify_post(handler, parsed_path)
         return True
 
     if parsed_path == '/api/rfq/generate':
-        handler._handle_rfq_generate_post()
+        handle_rfq_generate_post(handler)
         return True
 
     if parsed_path == '/api/opportunities/create-from-email':
-        handler._handle_opportunities_create_from_email_post()
+        handle_opportunities_create_from_email_post(handler)
         return True
 
     if parsed_path == '/api/opportunities/create-manual':
-        handler._handle_opportunities_create_manual_post()
+        handle_opportunities_create_manual_post(handler)
         return True
 
     if parsed_path == '/api/opportunities/create-from-rfp':
-        handler._handle_opportunities_create_from_rfp_post()
+        handle_opportunities_create_from_rfp_post(handler)
         return True
 
     if parsed_path == '/api/email/extract-contact':
-        handler._handle_email_extract_contact_post()
+        handle_email_extract_contact_post(handler)
         return True
 
     if parsed_path.startswith('/api/email/auth/'):
-        handler._handle_email_auth_status_post(parsed_path)
+        handle_email_auth_status_post(handler, parsed_path)
         return True
 
     if parsed_path.startswith('/api/email/') and parsed_path.endswith('/resync'):
-        handler._handle_email_resync_post(parsed_path)
+        handle_email_resync_post(handler, parsed_path)
         return True
 
     if parsed_path == '/api/email/senders/high-risk':
-        handler._handle_email_senders_high_risk_post()
+        handle_email_senders_high_risk_post(handler)
         return True
 
     if parsed_path == '/api/email/senders/verified':
