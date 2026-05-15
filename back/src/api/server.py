@@ -58,6 +58,15 @@ from src.api.routes.server_get_csv_handlers import (
     handle_csv_search_get,
     handle_csv_sources_get,
 )
+from src.api.routes.server_get_business_handlers import (
+    handle_action_get,
+    handle_action_logs_get,
+    handle_documents_download_get,
+    handle_opportunities_search_get,
+    handle_opportunity_actions_list_get,
+    handle_quotes_download_get,
+    handle_quotes_list_get,
+)
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1194,62 +1203,27 @@ def create_rag_handler(config):
 
         def _handle_opportunities_search_get(self, qs, handlers):
             """Handle /api/opportunities/search GET endpoint."""
-            source_reference_id = qs.get('source_reference_id', [None])[0]
-            name = qs.get('name', [None])[0]
-
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-
-            result = handlers.handle_search_opportunities(
-                user_id=user_id,
-                source_reference_id=source_reference_id,
-                name=name,
-            )
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunities_search_get(self, qs, handlers)
 
         def _handle_opportunity_actions_list_get(self, list_actions_match, handlers):
             """Handle /api/opportunities/<id>/actions GET endpoint."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-            opportunity_id = list_actions_match.group(1)
-            result = handlers.handle_list_actions(opportunity_id, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunity_actions_list_get(self, list_actions_match, handlers)
 
         def _handle_action_get(self, get_action_match, handlers):
             """Handle /api/actions/<id> GET endpoint."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-            action_id = get_action_match.group(1)
-            result = handlers.handle_get_action(action_id, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_action_get(self, get_action_match, handlers)
 
         def _handle_action_logs_get(self, get_action_logs_match, qs, handlers):
             """Handle /api/actions/<id>/logs GET endpoint."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-            action_id = get_action_logs_match.group(1)
-            limit = self._get_qs_int(qs, 'limit', 50)
-            result = handlers.handle_get_action_logs(action_id, limit, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_action_logs_get(self, get_action_logs_match, qs, handlers)
 
         def _handle_quotes_download_get(self, parsed_path: str, qs, handlers):
             """Handle /api/quotes/download/<filename> GET endpoint."""
-            filename = parsed_path.split('/api/quotes/download/')[-1]
-            return self._handle_quote_download(filename, handlers, qs)
+            return handle_quotes_download_get(self, parsed_path, qs, handlers)
 
         def _handle_documents_download_get(self, parsed_path: str, qs, handlers):
             """Handle /api/documents/download/<filename> GET endpoint."""
-            filename = parsed_path.split('/api/documents/download/')[-1]
-            filename = urllib.parse.unquote(filename)
-            return self._handle_document_download(filename, handlers, qs)
+            return handle_documents_download_get(self, parsed_path, qs, handlers)
 
         def _handle_csv_get(self, parsed_path: str, qs):
             """Handle /api/csv* GET endpoints."""
@@ -1277,7 +1251,7 @@ def create_rag_handler(config):
 
         def _handle_quotes_list_get(self, handlers):
             """Handle /api/quotes/list GET endpoint."""
-            return self.json(handlers.handle_list_quotes())
+            return handle_quotes_list_get(self, handlers)
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
