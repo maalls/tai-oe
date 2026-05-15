@@ -1,5 +1,7 @@
 """Utility POST handlers for legacy API server."""
 
+import urllib.parse
+
 
 def handle_products_post(handler):
     """Handle /api/products POST endpoint."""
@@ -363,5 +365,342 @@ def handle_imap_test_post(handler):
     user_id = user_data.get('id') if user_data else None
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_imap_test(user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_document_extract_rfp_post(handler):
+    """Handle /api/document/extract-rfp POST endpoint."""
+    payload = handler._read_json(default={})
+
+    auth_header = handler.headers.get('Authorization', '')
+    print(f"[RAG] Document extract-rfp - Auth header: {auth_header[:50] if auth_header else 'None'}")
+
+    user_data = handler._require_auth(auth_header=auth_header)
+    print(f"[RAG] Document extract-rfp - Token valid: {bool(user_data)}")
+    if user_data is None:
+        print("[RAG] Document extract-rfp - Auth failed")
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    document_id = payload.get('document_id')
+
+    if not document_id:
+        return handler.json({"error": "Missing document_id parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_document_update_content_post(handler):
+    """Handle /api/document/update-content POST endpoint."""
+    payload = handler._read_json(default={})
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    document_id = payload.get('document_id')
+    content = payload.get('content', '')
+
+    if not document_id:
+        return handler.json({"error": "Missing document_id parameter"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_update_document_content(
+        document_id=document_id,
+        content=content,
+        user_id=user_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_send_quote_for_opportunity_post(handler, send_quote_match):
+    """Handle /api/opportunity/{id}/send-quote POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    opportunity_id = send_quote_match.group(1)
+
+    payload = handler._read_json_or_error()
+    if payload is None:
+        return None
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_send_quote_for_opportunity(
+        opportunity_id=opportunity_id,
+        payload=payload,
+        user_id=user_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_chat_attachments_post(handler, parsed):
+    """Handle /api/chat/attachments POST endpoint."""
+    body = handler._read_body()
+    content_type = handler.headers.get('Content-Type', '')
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    qs = urllib.parse.parse_qs(parsed.query)
+    opportunity_id = qs.get('opportunity_id', [None])[0]
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_chat_attachment_upload(
+        body=body,
+        content_type=content_type,
+        user_id=user_id,
+        opportunity_id=opportunity_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunity_rfq_generate_post(handler, opp_match):
+    """Handle /api/opportunity/{id}/rfq/generate POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    opportunity_id = opp_match.group(1)
+    request_handlers = handler.get_request_handlers()
+    print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
+    result = request_handlers.handle_generate_quote_for_opportunity(
+        opportunity_id=opportunity_id,
+        user_id=user_id,
+    )
+    print('result:', result)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
+    """Handle /api/opportunity/{id}/rfq/create-from-text POST endpoint."""
+    body = handler._read_body()
+    content_type = handler.headers.get('Content-Type', '')
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    request_handlers = handler.get_request_handlers()
+    opportunity_id = opp_rfq_create_match.group(1)
+
+    if opportunity_id == 'new':
+        result = request_handlers.handle_create_opportunity_from_rfp(
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
+        )
+        if result.get('status') == 'ok':
+            opportunity = result.get('opportunity', {})
+            opportunity_id = opportunity.get('id')
+            print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
+            request_handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
+    else:
+        result = request_handlers.handle_create_rfq_source_from_html_body(
+            opportunity_id=opportunity_id,
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
+        )
+
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_quote_pdf_post(handler, quote_pdf_match):
+    """Handle /api/quote/{id}/pdf POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    document_id = quote_pdf_match.group(1)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_quote_invoice_post(handler, quote_invoice_match):
+    """Handle /api/quote/{id}/invoice POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    quote_id = quote_invoice_match.group(1)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_invoice_pdf_post(handler, invoice_pdf_match):
+    """Handle /api/invoice/{id}/pdf POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    invoice_id = invoice_pdf_match.group(1)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_invoice_send_post(handler, invoice_send_match):
+    """Handle /api/invoice/{id}/send POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    invoice_id = invoice_send_match.group(1)
+
+    payload = handler._read_json_or_error()
+    if payload is None:
+        return None
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_quote_update_post(handler, quote_update_match):
+    """Handle /api/quote/{id} POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    document_id = quote_update_match.group(1)
+    payload = handler._read_json(default={})
+
+    print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
+    status = handler._status_from_error(result)
+    return handler.json(result, status)
+
+
+def handle_quote_submit_post(handler):
+    """Handle /api/quote POST endpoint."""
+    content_type = handler.headers.get('Content-Type', '')
+    body = handler._read_body()
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_quote_submit(body, content_type)
+    return handler.json(result)
+
+
+def handle_quote_send_post(handler):
+    """Handle /api/quote/send POST endpoint."""
+    print(f"[RAG] Received request to send quote email, path: /api/quote/send, method: {handler.command}")
+    content_type = handler.headers.get('Content-Type', '')
+    body = handler._read_body()
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_quote_send(body, content_type)
+    return handler.json(result)
+
+
+def handle_csv_source_post(handler):
+    """Handle /api/csv/source POST endpoint."""
+    content_type = handler.headers.get('Content-Type', '')
+    body = handler._read_body()
+    content_length = len(body)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_csv_source_upload(content_type, content_length, body)
+    return handler.json(result)
+
+
+def handle_rfp_post(handler):
+    """Handle /api/rfp POST endpoint."""
+    content_type = handler.headers.get('Content-Type', '')
+    body = handler._read_body()
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_rfp_upload(body, content_type)
+    return handler.json(result)
+
+
+def handle_actions_create_post(handler):
+    """Handle /api/actions POST endpoint."""
+    data = handler._read_json_or_error()
+    if data is None:
+        return None
+
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_create_action(data, user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_action_pause_post(handler, pause_action_match):
+    """Handle /api/actions/{id}/pause POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    action_id = pause_action_match.group(1)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_pause_action(action_id, user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_action_resume_post(handler, resume_action_match):
+    """Handle /api/actions/{id}/resume POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    action_id = resume_action_match.group(1)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_resume_action(action_id, user_id)
+    status = handler._status_from_result(result)
+    return handler.json(result, status)
+
+
+def handle_action_execute_post(handler, execute_action_match):
+    """Handle /api/actions/{id}/execute POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    action_id = execute_action_match.group(1)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_execute_action(action_id, user_id)
     status = handler._status_from_result(result)
     return handler.json(result, status)

@@ -101,26 +101,45 @@ from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_utility_handlers import (
+    handle_action_execute_post,
+    handle_action_pause_post,
+    handle_action_resume_post,
+    handle_actions_create_post,
     handle_auth_login_post,
     handle_auth_logout_post,
     handle_auth_signup_post,
+    handle_chat_attachments_post,
+    handle_csv_source_post,
     handle_curl_post,
+    handle_document_extract_rfp_post,
+    handle_document_update_content_post,
     handle_email_auth_status_post,
     handle_email_extract_contact_post,
     handle_email_resync_post,
     handle_email_senders_high_risk_post,
     handle_email_senders_verified_post,
+    handle_invoice_pdf_post,
+    handle_invoice_send_post,
     handle_imap_config_post,
     handle_imap_test_post,
     handle_entity_update_post,
     handle_emails_classify_post,
     handle_fs_create_post,
     handle_fs_read_post,
+    handle_opportunity_rfq_create_from_text_post,
+    handle_opportunity_rfq_generate_post,
     handle_opportunities_create_from_email_post,
     handle_opportunities_create_manual_post,
     handle_opportunities_create_from_rfp_post,
     handle_products_post,
+    handle_quote_invoice_post,
+    handle_quote_pdf_post,
+    handle_quote_send_post,
+    handle_quote_submit_post,
+    handle_quote_update_post,
+    handle_rfp_post,
     handle_rfq_generate_post,
+    handle_send_quote_for_opportunity_post,
 )
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
@@ -417,321 +436,79 @@ def create_rag_handler(config):
 
         def _handle_document_extract_rfp_post(self):
             """Handle /api/document/extract-rfp POST endpoint."""
-            payload = self._read_json(default={})
-
-            auth_header = self.headers.get('Authorization', '')
-            print(f"[RAG] Document extract-rfp - Auth header: {auth_header[:50] if auth_header else 'None'}")
-
-            user_data = self._require_auth(auth_header=auth_header)
-            print(f"[RAG] Document extract-rfp - Token valid: {bool(user_data)}")
-            if user_data is None:
-                print(f"[RAG] Document extract-rfp - Auth failed")
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            document_id = payload.get('document_id')
-
-            if not document_id:
-                return self.json({"error": "Missing document_id parameter"}, 400)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_document_extract_rfp_post(self)
 
         def _handle_document_update_content_post(self):
             """Handle /api/document/update-content POST endpoint."""
-            payload = self._read_json(default={})
-
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            document_id = payload.get('document_id')
-            content = payload.get('content', '')
-
-            if not document_id:
-                return self.json({"error": "Missing document_id parameter"}, 400)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_update_document_content(
-                document_id=document_id,
-                content=content,
-                user_id=user_id
-            )
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_document_update_content_post(self)
 
         def _handle_send_quote_for_opportunity_post(self, send_quote_match):
             """Handle /api/opportunity/{id}/send-quote POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            opportunity_id = send_quote_match.group(1)
-
-            payload = self._read_json_or_error()
-            if payload is None:
-                return
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_send_quote_for_opportunity(
-                opportunity_id=opportunity_id,
-                payload=payload,
-                user_id=user_id,
-            )
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_send_quote_for_opportunity_post(self, send_quote_match)
 
         def _handle_chat_attachments_post(self, parsed):
             """Handle /api/chat/attachments POST endpoint."""
-            body = self._read_body()
-            content_type = self.headers.get('Content-Type', '')
-
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            qs = urllib.parse.parse_qs(parsed.query)
-            opportunity_id = qs.get('opportunity_id', [None])[0]
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_chat_attachment_upload(
-                body=body,
-                content_type=content_type,
-                user_id=user_id,
-                opportunity_id=opportunity_id,
-            )
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_chat_attachments_post(self, parsed)
 
         def _handle_opportunity_rfq_generate_post(self, opp_match):
             """Handle /api/opportunity/{id}/rfq/generate POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            opportunity_id = opp_match.group(1)
-            handlers = self.get_request_handlers()
-            print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
-            result = handlers.handle_generate_quote_for_opportunity(
-                opportunity_id=opportunity_id,
-                user_id=user_id,
-            )
-            print('result:', result)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunity_rfq_generate_post(self, opp_match)
 
         def _handle_opportunity_rfq_create_from_text_post(self, opp_rfq_create_match):
             """Handle /api/opportunity/{id}/rfq/create-from-text POST endpoint."""
-            body = self._read_body()
-            content_type = self.headers.get('Content-Type', '')
-
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            handlers = self.get_request_handlers()
-            opportunity_id = opp_rfq_create_match.group(1)
-
-            if opportunity_id == "new":
-                result = handlers.handle_create_opportunity_from_rfp(
-                    body=body,
-                    content_type=content_type,
-                    user_id=user_id
-                )
-                if result.get('status') == 'ok':
-                    opportunity = result.get('opportunity', {})
-                    opportunity_id = opportunity.get('id')
-                    print(f"[BusinessHandlers] Generating quote for opportunity {opportunity_id} by user")
-                    handlers.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
-            else:
-                result = handlers.handle_create_rfq_source_from_html_body(
-                    opportunity_id=opportunity_id,
-                    body=body,
-                    content_type=content_type,
-                    user_id=user_id
-                )
-
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_opportunity_rfq_create_from_text_post(self, opp_rfq_create_match)
 
         def _handle_quote_pdf_post(self, quote_pdf_match):
             """Handle /api/quote/{id}/pdf POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            document_id = quote_pdf_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_quote_pdf_post(self, quote_pdf_match)
 
         def _handle_quote_invoice_post(self, quote_invoice_match):
             """Handle /api/quote/{id}/invoice POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            quote_id = quote_invoice_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_quote_invoice_post(self, quote_invoice_match)
 
         def _handle_invoice_pdf_post(self, invoice_pdf_match):
             """Handle /api/invoice/{id}/pdf POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            invoice_id = invoice_pdf_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_invoice_pdf_post(self, invoice_pdf_match)
 
         def _handle_invoice_send_post(self, invoice_send_match):
             """Handle /api/invoice/{id}/send POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            invoice_id = invoice_send_match.group(1)
-
-            payload = self._read_json_or_error()
-            if payload is None:
-                return
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_invoice_send_post(self, invoice_send_match)
 
         def _handle_quote_update_post(self, quote_update_match):
             """Handle /api/quote/{id} POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            document_id = quote_update_match.group(1)
-            payload = self._read_json(default={})
-
-            print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
-            handlers = self.get_request_handlers()
-            result = handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
-            status = self._status_from_error(result)
-            return self.json(result, status)
+            return handle_quote_update_post(self, quote_update_match)
 
         def _handle_quote_submit_post(self):
             """Handle /api/quote POST endpoint."""
-            content_type = self.headers.get('Content-Type', '')
-            body = self._read_body()
-            handlers = self.get_request_handlers()
-            result = handlers.handle_quote_submit(body, content_type)
-            return self.json(result)
+            return handle_quote_submit_post(self)
 
         def _handle_quote_send_post(self):
             """Handle /api/quote/send POST endpoint."""
-            print(f"[RAG] Received request to send quote email, path: /api/quote/send, method: {self.command}")
-            content_type = self.headers.get('Content-Type', '')
-            body = self._read_body()
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_quote_send(body, content_type)
-            return self.json(result)
+            return handle_quote_send_post(self)
 
         def _handle_csv_source_post(self):
             """Handle /api/csv/source POST endpoint."""
-            content_type = self.headers.get('Content-Type', '')
-            body = self._read_body()
-            content_length = len(body)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_csv_source_upload(content_type, content_length, body)
-            return self.json(result)
+            return handle_csv_source_post(self)
 
         def _handle_rfp_post(self):
             """Handle /api/rfp POST endpoint."""
-            content_type = self.headers.get('Content-Type', '')
-            body = self._read_body()
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_rfp_upload(body, content_type)
-            return self.json(result)
+            return handle_rfp_post(self)
 
         def _handle_actions_create_post(self):
             """Handle /api/actions POST endpoint."""
-            data = self._read_json_or_error()
-            if data is None:
-                return
-
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_create_action(data, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_actions_create_post(self)
 
         def _handle_action_pause_post(self, pause_action_match):
             """Handle /api/actions/{id}/pause POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            action_id = pause_action_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_pause_action(action_id, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_action_pause_post(self, pause_action_match)
 
         def _handle_action_resume_post(self, resume_action_match):
             """Handle /api/actions/{id}/resume POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            action_id = resume_action_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_resume_action(action_id, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_action_resume_post(self, resume_action_match)
 
         def _handle_action_execute_post(self, execute_action_match):
             """Handle /api/actions/{id}/execute POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            action_id = execute_action_match.group(1)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_execute_action(action_id, user_id)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_action_execute_post(self, execute_action_match)
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
