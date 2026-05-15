@@ -427,17 +427,7 @@ def create_rag_handler(config):
                 # Resume action
                 resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed.path)
                 if resume_action_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    action_id = resume_action_match.group(1)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_resume_action(action_id, user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_action_resume_post(resume_action_match)
                 
                 # Execute action manually
                 execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed.path)
@@ -1279,6 +1269,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_pause_action(action_id, user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_action_resume_post(self, resume_action_match):
+            """Handle /api/actions/{id}/resume POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            action_id = resume_action_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_resume_action(action_id, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
