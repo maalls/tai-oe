@@ -132,44 +132,52 @@ def create_rag_handler(config):
             try:
                 print(f"[RAG] do_DELETE called with path: {self.path}", file=sys.stderr)
                 parsed = urllib.parse.urlparse(self.path)
-                
-                # Opportunity delete
-                opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed.path)
-                if opportunity_delete_match:
-                    return self._handle_opportunity_delete(opportunity_delete_match)
-                
-                # Quote delete
-                quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
-                if quote_delete_match:
-                    return self._handle_quote_delete(quote_delete_match)
 
-                # Generic document delete (for all document types)
-                document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed.path)
-                if document_delete_match:
-                    return self._handle_document_delete(document_delete_match)
-
-                # Email attachment delete
-                attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed.path)
-                if attachment_delete_match:
-                    return self._handle_email_attachment_delete(attachment_delete_match)
-                
-                # Email delete
-                email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed.path)
-                if email_delete_match:
-                    return self._handle_email_delete(email_delete_match)
-                
-                # Action delete
-                action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
-                if action_delete_match:
-                    return self._handle_action_delete(action_delete_match)
-
-                if parsed.path == '/api/imap/config':
-                    return self._handle_imap_config_delete()
+                if self._handle_delete_routes(parsed.path):
+                    return
                 
                 return self._send_error(404, "Not found")
             except Exception as e:
                 traceback.print_exc()
                 return self._send_error(500, f"Server error: {str(e)}")
+
+        def _handle_delete_routes(self, parsed_path: str) -> bool:
+            """Handle DELETE routes."""
+            opportunity_delete_match = re.match(r"^/api/opportunities/([^/]+)$", parsed_path)
+            if opportunity_delete_match:
+                self._handle_opportunity_delete(opportunity_delete_match)
+                return True
+
+            quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed_path)
+            if quote_delete_match:
+                self._handle_quote_delete(quote_delete_match)
+                return True
+
+            document_delete_match = re.match(r"^/api/document/([^/]+)$", parsed_path)
+            if document_delete_match:
+                self._handle_document_delete(document_delete_match)
+                return True
+
+            attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed_path)
+            if attachment_delete_match:
+                self._handle_email_attachment_delete(attachment_delete_match)
+                return True
+
+            email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed_path)
+            if email_delete_match:
+                self._handle_email_delete(email_delete_match)
+                return True
+
+            action_delete_match = re.match(r"^/api/actions/([^/]+)$", parsed_path)
+            if action_delete_match:
+                self._handle_action_delete(action_delete_match)
+                return True
+
+            if parsed_path == '/api/imap/config':
+                self._handle_imap_config_delete()
+                return True
+
+            return False
 
         def do_PATCH(self):
             try:
