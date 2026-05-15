@@ -13,7 +13,6 @@ import urllib.parse
 import urllib.request
 import http.server
 import signal
-import socket
 import traceback
 from pathlib import Path
 
@@ -26,6 +25,7 @@ from src.api.router import RequestHandlers
 from src.api.auth.handler import AuthHandler
 from src.infrastructure.llm_factory import LLMClientFactory
 from src.infrastructure.runtime.env_loader import load_runtime_env
+from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 
@@ -2039,18 +2039,6 @@ def create_rag_handler(config):
 
 # Backward-compatible alias used by integration tests and legacy callers.
 make_handler = create_rag_handler
-
-class ReusableThreadingHTTPServer(http.server.ThreadingHTTPServer):
-    allow_reuse_address = True
-    
-    def server_bind(self):
-        """Override to ensure SO_REUSEADDR is set before binding.
-        
-        SO_REUSEADDR allows rapid server restarts without waiting for TIME_WAIT.
-        We do NOT use SO_REUSEPORT to prevent multiple servers on the same port.
-        """
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        super().server_bind()
 
 
 def test_llm_connection():
