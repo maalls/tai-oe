@@ -18,7 +18,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from src.service.classification.service import EmailClassifier
 from src.text.reader import extract_rfp_from_text
-from src.controller.gmail_client import GmailClient
+from src.infrastructure.clients.gmail_client import GmailClient
 from src.lib.email.mime import parse_from_header
 from src.supabase import get_supabase_service
 from google_auth_oauthlib.flow import Flow
