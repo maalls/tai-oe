@@ -64,9 +64,6 @@ class BusinessHandlers:
     @staticmethod
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
         return EmailRepository._clean_email_body(email_body, max_length=max_length)
-    
-    def _extract_and_enrich_rfp_data(self, text: str) -> Dict:
-        return self.opportunity_repository._extract_and_enrich_rfp_data(text)
 
     @staticmethod
     def _normalize_account_address(account: Dict) -> Dict[str, str]:
