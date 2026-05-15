@@ -1140,24 +1140,10 @@ def create_rag_handler(config):
                     return self._handle_gmail_message_get(parsed.path)
                 elif parsed.path.startswith('/api/email-attachment/'):
                     return self._handle_email_attachment_get(parsed.path)
+                if parsed.path.startswith('/api/csv'):
+                    return self._handle_csv_get(parsed.path, qs)
+
                 handlers = self.get_request_handlers()
-                
-                if parsed.path == '/api/csv/files':
-                    return self.json(handlers.handle_list_files(qs))
-                elif parsed.path == '/api/csv/preview':
-                    return self.json(handlers.handle_preview(qs))
-                elif parsed.path == '/api/csv/raw':
-                    return self._handle_raw_stream(qs, handlers)
-                elif parsed.path == '/api/csv/source':
-                    return self._handle_source_stream(qs, handlers)
-                elif parsed.path == '/api/csv/download':
-                    return self._handle_csv_download(qs, handlers)
-                elif parsed.path == '/api/csv/sources':
-                    return self.json(handlers.handle_sources())
-                elif parsed.path == '/api/csv/query':
-                    return self.json(handlers.handle_query(qs))
-                elif parsed.path.startswith('/api/csv/search'):
-                    return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
                 elif parsed.path == '/api/quotes/list':
                     return self.json(handlers.handle_list_quotes())
                 elif parsed.path == '/api/opportunities/search':
@@ -1412,6 +1398,29 @@ def create_rag_handler(config):
             self.end_headers()
             self.wfile.write(file_content)
             return
+
+        def _handle_csv_get(self, parsed_path: str, qs):
+            """Handle /api/csv* GET endpoints."""
+            handlers = self.get_request_handlers()
+
+            if parsed_path == '/api/csv/files':
+                return self.json(handlers.handle_list_files(qs))
+            if parsed_path == '/api/csv/preview':
+                return self.json(handlers.handle_preview(qs))
+            if parsed_path == '/api/csv/raw':
+                return self._handle_raw_stream(qs, handlers)
+            if parsed_path == '/api/csv/source':
+                return self._handle_source_stream(qs, handlers)
+            if parsed_path == '/api/csv/download':
+                return self._handle_csv_download(qs, handlers)
+            if parsed_path == '/api/csv/sources':
+                return self.json(handlers.handle_sources())
+            if parsed_path == '/api/csv/query':
+                return self.json(handlers.handle_query(qs))
+            if parsed_path.startswith('/api/csv/search'):
+                return self.json(handlers.handle_search(qs, self.get_embedding_generator()))
+
+            return None
 
         def _get_qs_int(self, qs, key: str, default: int) -> int:
             """Read integer query-string parameter with fallback."""
