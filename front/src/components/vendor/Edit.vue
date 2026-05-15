@@ -157,6 +157,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
+import { useDddApi } from '../../composables/useDddApi';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
 
@@ -173,6 +174,7 @@ interface Brand {
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
+const { fetchDddJson } = useDddApi();
 
 const isNewVendor = computed(() => route.params.id === 'new');
 const vendorId = computed(() => (isNewVendor.value ? null : (route.params.id as string)));
@@ -213,26 +215,22 @@ const loadVendor = async () => {
          errorMessage.value = t('vendors.errors.unknown');
          return;
       }
-      const { data, error } = await supabase
-         .from('vendor')
-         .select('*')
-         .eq('id', vendorId.value)
-         .single();
 
-      if (error) {
-         errorMessage.value = t('vendors.errors.loadFailed', { message: error.message });
-         return;
+      const result = await fetchDddJson<{ status: string; vendor?: any }>('ddd/vendor', {
+         vendor_id: vendorId.value,
+      });
+
+      if (result?.status !== 'ok' || !result?.vendor) {
+         throw new Error('Failed loading vendor');
       }
 
-      if (data) {
-         const vendor = data as any;
-         formData.value = {
-            name: vendor.name || '',
-            email: vendor.email || '',
-            phone: vendor.phone || '',
-            website: vendor.website || '',
-         };
-      }
+      const vendor = result.vendor as any;
+      formData.value = {
+         name: vendor.name || '',
+         email: vendor.email || '',
+         phone: vendor.phone || '',
+         website: vendor.website || '',
+      };
    } catch (error) {
       errorMessage.value = t('vendors.errors.generic', {
          message: error instanceof Error ? error.message : t('vendors.errors.unknown'),

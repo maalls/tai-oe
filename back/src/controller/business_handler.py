@@ -17,21 +17,32 @@ from html.parser import HTMLParser
 from src.text.reader import extract_company_from_text, extract_rfp_from_text
 from src.text.rfp_source_picker import pick_best_rfp_source
 from src.controller.email_handler import EmailHandlers
+from src.controller.rfq_handler import RfqHandlers
+from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.supabase.supabase_client import get_supabase_service
 from src.controller.opportunity.opportunity import Opportunity as OpportunityController
 from src.adapters.email.html.parser import Parser
 from src.repository.opportunity import OpportunityRepository
+
+
 class BusinessHandlers:
     """Handle business-related API requests."""
     
-    def __init__(self):
+    def __init__(self, service_factory: ServiceFactory = None):
         """Initialize business handlers."""
         self.email_handlers = EmailHandlers()
         self.email_repository = EmailRepository()
+        self.service_factory = service_factory or ServiceFactory()
+        self.opportunity_repository = OpportunityRepository()
+        self.rfq_handlers = RfqHandlers(
+            service_factory=self.service_factory,
+            email_repository=self.email_repository,
+            opportunity_repository=self.opportunity_repository,
+        )
         self.supabase = get_supabase_service()
         self.opportunity_controller = OpportunityController()
-        self.opportunity_repository = OpportunityRepository()
+
     @staticmethod
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
         return EmailRepository._clean_email_body(email_body, max_length=max_length)
@@ -159,51 +170,51 @@ class BusinessHandlers:
             }
 
     def handle_rfq_generate(self, text: str = None, message_id: str = None, user_id: str = None) -> Dict:
-        """Generate an RFQ draft using the existing LLM pipeline.
-
-        Accepts either raw text or an email message_id (pulls body from DB if available).
-        """
-        try:
-            content = text or ""
-
-            # If no text provided, try to fetch email body by message_id
-            if not content and message_id:
-                try:
-                    repo = EmailRepository()
-                    email = repo.db_handler.get_email(message_id, user_id) if user_id else repo.db_handler.get_email(message_id, user_id)
-                    if email:
-                        content = email.get("body_full") or email.get("body_preview") or ""
-                except Exception as e:
-                    print(f"[BusinessHandlers] Warning: could not load email body for RFQ generation: {e}")
-
-            if not content:
-                return {
-                    "status": "error",
-                    "message": "No text provided and unable to load email body",
-                }
-
-            # RFQ extraction can run long on local models; allow up to 5 minutes.
-            draft = extract_rfp_from_text(content, timeout_seconds=300)
-            rfq_id = str(uuid.uuid4())
-
-            return {
-                "status": "ok",
-                "rfq_id": rfq_id,
-                "type": "RFQ",
-                "draft": draft,
-            }
-
-        except Exception as e:
-            print(f"[BusinessHandlers] Error generating RFQ: {e}")
-            return {
-                "status": "error",
-                "message": f"Error generating RFQ: {str(e)}"
-            }
+        """Delegate RFQ draft generation to the dedicated RFQ handler."""
+        return self.rfq_handlers.handle_rfq_generate(
+            text=text,
+            message_id=message_id,
+            user_id=user_id,
+        )
 
     
 
     def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None) -> Dict:
         return self.opportunity_repository.handle_generate_quote_with_content(opportunity_id=opportunity_id, content=content, user_id=user_id)
+
+    def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None) -> Dict:
+        """Delegate quote generation for an opportunity to the current opportunity backend."""
+        return self.opportunity_repository.handle_generate_quote_for_opportunity(
+            opportunity_id=opportunity_id,
+            user_id=user_id,
+        )
+
+    def handle_create_opportunity_manual(self, user_id: str, name: str) -> Dict:
+        """Create an opportunity manually via the current opportunity backend."""
+        return self.opportunity_repository.create_opportunity_manual(
+            user_id=user_id,
+            name=name,
+        )
+
+    def handle_search_opportunities(
+        self,
+        user_id: str,
+        source_reference_id: str = None,
+        name: str = None,
+    ) -> Dict:
+        """Search opportunities via the current opportunity backend."""
+        return self.opportunity_repository.search_opportunities(
+            user_id=user_id,
+            source_reference_id=source_reference_id,
+            name=name,
+        )
+
+    def handle_delete_opportunities(self, opportunity_ids: list[str], user_id: str = None) -> Dict:
+        """Delete one or more opportunities via the current opportunity backend."""
+        return self.opportunity_repository.delete_opportunities(
+            opportunity_ids=opportunity_ids,
+            user_id=user_id,
+        )
 
     def handle_update_document_content(self, document_id: str, content: str, user_id: str = None) -> Dict:
         """Update the content of a document stored as a text file.
@@ -281,13 +292,7 @@ class BusinessHandlers:
         4. Create opportunity record with prefilled data
         """
         try:
-            from src.repository.email_repository import EmailRepository
-            from src.repository.classifier.classifier import EmailClassifier
-            
-            # Fetch email from database
-            repo = EmailRepository()
-            return repo.create_opportunity_from_email(message_id, user_id)
-        
+            return self.email_handlers.handle_create_opportunity_from_email(message_id, user_id)
         except Exception as e:
             print(f"[BusinessHandlers] Error creating opportunity from email: {e}")
             import traceback
@@ -298,247 +303,11 @@ class BusinessHandlers:
             }
     
     def handle_create_opportunity_from_rfp(self, body: bytes, content_type: str, user_id: str = None) -> Dict:
-        try:
-            # 1. Parse form data
-            form_data, error = self.getForm(body, content_type)
-            if error:
-                return error
-            
-            # Extract text and file
-            message_text = str(form_data.get('message', '') or form_data.get('text', '') or '')
-            uploaded_file = form_data.get('file')
-            
-            print(f"[BusinessHandlers] Form data keys: {list(form_data.keys())}")
-            print(f"[BusinessHandlers] Message text length: {len(message_text)}")
-            print(f"[BusinessHandlers] Uploaded file: {uploaded_file is not None}")
-            if uploaded_file:
-                print(f"[BusinessHandlers] File type: {type(uploaded_file)}")
-                if isinstance(uploaded_file, dict):
-                    print(f"[BusinessHandlers] File keys: {list(uploaded_file.keys())}")
-                    print(f"[BusinessHandlers] Filename: {uploaded_file.get('filename')}")
-                    print(f"[BusinessHandlers] Content length: {len(uploaded_file.get('content', b''))} bytes")
-            
-            if not message_text.strip() and not uploaded_file:
-                return {"status": "error", "message": "Message text or attachment is required"}
-            
-            # 2. Extract and enrich RFP data (using helper to avoid code duplication)
-            rfp_data = self._extract_and_enrich_rfp_data(message_text)
-            
-            # Extract contact/company information
-            try:
-                company_data = extract_company_from_text(self._clean_email_body(message_text))
-                if isinstance(company_data, dict) and company_data:
-                    # Merge company data into rfp_data as contact info
-                    rfp_data["contact"] = company_data
-                    print(f"[BusinessHandlers] Extracted company/contact data: {company_data}")
-            except Exception as e:
-                print(f"[BusinessHandlers] Warning: Failed to extract company data: {e}")
-                # Continue without company data if extraction fails
-            
-            # 3. Extract opportunity details
-            opportunity_name = rfp_data.get("title") or "Message from User Form "
-            account_name = rfp_data.get("contact", {}).get("company_name") if isinstance(rfp_data.get("contact"), dict) else None
-            
-            # Use Supabase service client
-            supabase = get_supabase_service()
-            
-            # 4. Find or create account
-            account_id = None
-            if not account_name:
-                contact_data = rfp_data.get("contact", {})
-                account_name = contact_data.get("company_name") if isinstance(contact_data, dict) else None
-                if not account_name:
-                    account_name = contact_data.get("name") if isinstance(contact_data, dict) else None
-                if not account_name:
-                    account_name = "Unknown Company"
-            
-            account = False
-            try:
-                # Strategy 1: Find account by company name
-                print(f"[BusinessHandlers] Looking for account with name: {account_name}")
-                account_response = supabase.table("account").select("id").eq("name", account_name).limit(1).execute()
-                if account_response.data and len(account_response.data) > 0:
-                    account = account_response.data[0]
-                    account_id = account["id"]
-                    print(f"[BusinessHandlers] Found account named {account_name} ID  {account_id}")
-                
-                # Strategy 2: If not found, try to find account through existing contact with same email
-                if not account_id:
-                    contact_email = rfp_data.get("contact", {}).get("email") if isinstance(rfp_data.get("contact"), dict) else None
-                    if contact_email:
-                        print(f"[BusinessHandlers] Strategy 2: Looking for contact with email: {contact_email}")
-                        contact_response = supabase.table("contact").select("id,account_id").eq("email", contact_email).limit(1).execute()
-                        if contact_response.data and len(contact_response.data) > 0:
-                            account_id = contact_response.data[0]["account_id"]
-
-                            ar = supabase.table("account").select("id, name").eq("id", account_id).limit(1).execute()
-                            if ar.data and len(ar.data) > 0:
-                                account = ar.data[0]
-                            else:
-                                raise Exception("Account not found by ID from contact ID " + str(contact_response.data[0].get("id")))
-
-                            print(f"[BusinessHandlers] Found account through existing contact email: {account_id}")
-                
-                # Strategy 3: Create new account if still not found
-                if not account_id:
-                    print(f"[BusinessHandlers] Strategy 3: Creating new account with name: {account_name}")
-                    new_account = supabase.table("account").insert({"name": account_name}).execute()
-                    if new_account.data:
-                        account_id = new_account.data[0]["id"]
-                        print(f"[BusinessHandlers] Created new account: {account_id} with name: {account_name}")
-
-                
-            except Exception as e:
-                print(f"[BusinessHandlers] Error with account: {e}")
-                # If account creation fails, raise error since account_id is required
-                raise
-            
-            if not account_id:
-                return {"status": "error", "message": "Failed to create or find account"}
-            
-            # 5. Create opportunity
-            opportunity_data = {
-                "owner_user_id": user_id,
-                "name": opportunity_name,
-                "stage": "RFP_IN_PROGRESS",
-                "status": "OPEN",
-                "source": "rfp_upload",
-                "account_id": account_id
-            }
-            
-            opp_result = supabase.table("opportunity").insert(opportunity_data).execute()
-            if not opp_result.data:
-                return {"status": "error", "message": "Failed to create opportunity"}
-            
-            opportunity_id = opp_result.data[0]["id"]
-            
-            # 6. Store message text and attachment to file system
-            storage_dir = self._get_storage_dir("rfp_upload")
-            storage_dir.mkdir(parents=True, exist_ok=True)
-            
-            import time
-            timestamp = int(time.time())
-            
-            # Save message text as .txt file
-            text_filename = f"{timestamp}_message.txt"
-            text_file_path = storage_dir / text_filename
-            text_file_path.write_text(message_text, encoding='utf-8')
-            print(f"[BusinessHandlers] Message text saved: {text_filename}")
-            
-            # 7. Store text as document
-            doc_data = {
-                "opportunity_id": opportunity_id,
-                "type": "RFP",
-                "status": "RECEIVED",
-                "title": opportunity_name,
-                "currency": "EUR",
-                "channel": "OTHER",
-                "storage_key": text_filename,
-                "created_by": user_id
-            }
-            
-            doc_result = supabase.table("document").insert(doc_data).execute()
-            if not doc_result.data:
-                return {"status": "error", "message": "Failed to create document"}
-            
-            document_id = doc_result.data[0]["id"]
-            
-            # 8. Store file attachment as separate document if provided
-            attachment_doc_id = None
-            attachment_file_path = None
-            attachment_content_type = None
-            if uploaded_file and isinstance(uploaded_file, dict):
-                filename = uploaded_file.get('filename')
-                file_content = uploaded_file.get('content')
-                attachment_content_type = uploaded_file.get('content_type')
-                
-                if filename and file_content:
-                    try:
-                        # Generate unique filename for attachment
-                        safe_filename = f"{timestamp}_attachment_{filename}"
-                        file_path = storage_dir / safe_filename
-                        
-                        file_path.write_bytes(file_content)
-                        attachment_file_path = file_path
-                        
-                        # Create separate document for attachment
-                        attachment_doc_data = {
-                            "opportunity_id": opportunity_id,
-                            "type": "ATTACHMENT",
-                            "status": "RECEIVED",
-                            "title": f"Attachment: {filename}",
-                            "currency": "EUR",
-                            "channel": "OTHER",
-                            "storage_key": safe_filename,
-                            "created_by": user_id
-                        }
-                        
-                        attachment_result = supabase.table("document").insert(attachment_doc_data).execute()
-                        if attachment_result.data:
-                            attachment_doc_id = attachment_result.data[0]["id"]
-                            print(f"[BusinessHandlers] Attachment saved: {safe_filename}")
-                    except Exception as e:
-                        print(f"[BusinessHandlers] Failed to save attachment: {e}")
-            
-            # 9. Update opportunity with source document reference
-            supabase.table("opportunity").update({"source_reference_id": document_id}).eq("id", opportunity_id).execute()
-            
-            # 10. Create contact and buyer participant from RFP contact data
-            contact_data = rfp_data.get("contact", {})
-            if isinstance(contact_data, dict) and contact_data.get("email"):
-                try:
-                    # Check if contact already exists
-                    existing_contact = supabase.table("contact").select("id").eq("email", contact_data["email"]).eq("account_id", account_id).limit(1).execute()
-                    
-                    contact_id = None
-                    if existing_contact.data and len(existing_contact.data) > 0:
-                        contact_id = existing_contact.data[0]["id"]
-                        print(f"[BusinessHandlers] Found existing contact: {contact_id}")
-                    else:
-                        # Create new contact
-                        new_contact_data = {
-                            "account_id": account_id,
-                            "name": contact_data.get("name") or contact_data.get("email"),
-                            "email": contact_data["email"],
-                            "phone": contact_data.get("phone"),
-                        }
-                        
-                        contact_result = supabase.table("contact").insert(new_contact_data).execute()
-                        if contact_result.data:
-                            contact_id = contact_result.data[0]["id"]
-                            print(f"[BusinessHandlers] Created new contact: {contact_id}")
-                    
-                    # Create buyer participant
-                    if contact_id:
-                        participant_data = {
-                            "opportunity_id": opportunity_id,
-                            "contact_id": contact_id,
-                            "role": "BUYER"
-                        }
-                        
-                        participant_result = supabase.table("opportunity_participant").insert(participant_data).execute()
-                        if participant_result.data:
-                            print(f"[BusinessHandlers] Created BUYER participant for contact: {contact_id}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Warning: Failed to create contact/participant: {e}")
-                    # Don't fail the whole operation if contact creation fails
-            
-            return {
-                "status": "ok",
-                "opportunity": {
-                    "id": opportunity_id,
-                    "name": opportunity_name,
-                    "stage": "RFP_IN_PROGRESS",
-                    "document_id": document_id
-                },
-                "extracted_rfp": rfp_data
-            }
-            
-        except Exception as e:
-            print(f"[BusinessHandlers] Error creating opportunity from RFP: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": f"Error: {str(e)}"}
+        return self.rfq_handlers.handle_create_opportunity_from_rfp(
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
+        )
     
     @staticmethod
     def _extract_boundary(content_type: str) -> Optional[str]:
@@ -1317,290 +1086,16 @@ class BusinessHandlers:
             raise FileNotFoundError(f"Error retrieving quote: {str(e)}")
     
     def handle_quote_send(self, body: bytes, content_type: str) -> Dict:
-        """Send a quote via email with PDF attachment.
-        
-        Parameters
-        ----------
-        body : bytes
-            Raw JSON body with {pdf_filename, email, body}
-        content_type : str
-            Content-Type header value
-        
-        Returns
-        -------
-        Dict
-            Response with status and message
-        """
-        try:
-            # Parse JSON body
-            payload = json.loads(body.decode('utf-8'))
-            
-            # Validate required fields
-            pdf_filename = payload.get('pdf_filename')
-            email = payload.get('email')
-            email_body = payload.get('body', 'Hi, here is the quote')
-            
-            if not pdf_filename:
-                return {
-                    "status": "error",
-                    "message": "Missing pdf_filename"
-                }
-            
-            if not email:
-                return {
-                    "status": "error",
-                    "message": "Missing email address"
-                }
-            
-            # Validate filename format
-            if not pdf_filename.startswith('quote_') or not pdf_filename.endswith('.pdf'):
-                return {
-                    "status": "error",
-                    "message": "Invalid PDF filename format"
-                }
-            
-            # Check if PDF exists
-            assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-            pdf_path = assets_dir / pdf_filename
-            
-            if not pdf_path.exists():
-                return {
-                    "status": "error",
-                    "message": f"Quote PDF not found: {pdf_filename}"
-                }
-            
-            # Use EmailHandlers to send email
-            result = self.email_handlers.handle_send_email(
-                to=email,
-                subject="Your Quote",
-                body=email_body,
-                attachment_path=str(pdf_path)
-            )
-            
-            if result.get('status') == 'ok':
-                print(f"[BusinessHandlers] Email sent successfully to {email}")
-                print(f"  Message ID: {result.get('message_id')}")
-                return {
-                    "status": "ok",
-                    "message": "Quote emailed successfully",
-                    "email": email,
-                    "message_id": result.get('message_id')
-                }
-            else:
-                return result
-        
-        except json.JSONDecodeError:
-            return {
-                "status": "error",
-                "message": "Invalid JSON in request body"
-            }
-        except Exception as e:
-            print(f"[BusinessHandlers] Error sending quote email: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Error sending email: {str(e)}"
-            }
+        """Delegate quote send flow to EmailHandlers."""
+        return self.email_handlers.handle_quote_send(body, content_type)
 
     def handle_send_quote_for_opportunity(self, opportunity_id: str, payload: Dict, user_id: str = None) -> Dict:
-        """Send quote email with PDF attachment for an opportunity.
-        
-        Parameters
-        ----------
-        opportunity_id : str
-            The opportunity UUID
-        payload : Dict
-            Email data: {to: [emails], cc: [emails], subject, body, pdf_filename, quote_id}
-        user_id : str, optional
-            User ID for authorization
-        
-        Returns
-        -------
-        Dict
-            Response with status and message
-        """
-        try:
-            # Validate required fields
-            to_emails = payload.get('to', [])
-            cc_emails = payload.get('cc', [])
-            subject = payload.get('subject', '')
-            body = payload.get('body', '')
-            pdf_filename = payload.get('storage_key', '')
-            
-            print(f"[BusinessHandlers] send_quote_for_opportunity - to_emails: {to_emails}, subject: {subject}, body length: {len(body)}, pdf: {pdf_filename}")
-            
-            if not to_emails or not isinstance(to_emails, list) or len(to_emails) == 0:
-                print(f"[BusinessHandlers] Validation failed: to_emails missing or empty: {to_emails}")
-                return {"status": "error", "message": "At least one 'to' email is required"}
-            
-            if not subject:
-                print(f"[BusinessHandlers] Validation failed: subject is empty")
-                return {"status": "error", "message": "Email subject is required"}
-            
-            if not body:
-                print(f"[BusinessHandlers] Validation failed: body is empty")
-                return {"status": "error", "message": "Email body is required"}
-            
-            # PDF is optional - only required for initial quote sends
-            pdf_path = None
-            if pdf_filename:
-                # Check if PDF exists using correct storage path (new location)
-                pdf_path = self._get_storage_path("quote", pdf_filename)
-                
-                if not pdf_path.exists():
-                    # Fallback to old location for backwards compatibility with existing PDFs
-                    legacy_assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                    legacy_pdf_path = legacy_assets_dir / pdf_filename
-                    
-                    if legacy_pdf_path.exists():
-                        print(f"[BusinessHandlers] Found PDF in legacy location: {legacy_pdf_path}")
-                        pdf_path = legacy_pdf_path
-                    else:
-                        print(f"[BusinessHandlers] PDF not found at: {pdf_path} or {legacy_pdf_path}")
-                        return {"status": "error", "message": f"PDF file not found: {pdf_filename}"}
-                else:
-                    print(f"[BusinessHandlers] Found PDF at: {pdf_path}")
-            
-            # Combine to and cc recipients for Gmail (Gmail API handles to separately)
-            # For now, we'll send to the first recipient with CC as additional
-            primary_recipient = to_emails[0]
-            
-            # Build email with proper formatting
-            email_text = body
-            
-            # Send email using email handlers
-            from src.repository.email_repository import EmailRepository
-            email_repo = EmailRepository()
-            
-            # Build recipient strings for Gmail API
-            to_recipients = ', '.join(to_emails)
-            cc_recipients = ', '.join(cc_emails) if cc_emails else None
-
-            print(f"[BusinessHandlers] Sending email via Gmail API...")
-            print(f"  Recipients (To): {to_recipients}")
-            if cc_recipients:
-                print(f"  Recipients (CC): {cc_recipients}")
-            print(f"  Subject: {subject}")
-            print(f"  Body length: {len(email_text)}")
-            print(f"  Attachment: {pdf_path}")
-            
-            result = email_repo.send_email(
-                to=to_recipients,
-                cc=cc_recipients,
-                subject=subject,
-                body=email_text,
-                attachment_path=str(pdf_path) if pdf_path else None,
-                user_id=user_id,
-            )
-            
-            if result.get('status') == 'success' or result.get('status') == 'ok':
-                print(f"[BusinessHandlers] Quote email sent for opportunity {opportunity_id}")
-                print(f"  To: {to_recipients}")
-                if cc_recipients:
-                    print(f"  CC: {cc_recipients}")
-                print(f"  Subject: {subject}")
-                print(f"  Message ID: {result.get('message_id')}")
-                
-                supabase = get_supabase_service()
-                
-                # Update quote document status to SENT
-                try:
-                    quote_id = payload.get('quote_id')
-                    if not quote_id:
-                        raise ValueError("quote_id not provided in payload")
-
-                    update_payload = {
-                        "status": "SENT",
-                        "channel": "EMAIL",
-                        "source_message_id": result.get('message_id'),
-                        "issued_at": datetime.now().isoformat(),
-                    }
-                    sent_doc_resp = supabase.table("document").update(update_payload).eq("id", quote_id).execute()
-                    if getattr(sent_doc_resp, "error", None):
-                        raise RuntimeError(f"Failed to update quote document: {sent_doc_resp.error}")
-                    if not sent_doc_resp.data:
-                        raise RuntimeError(f"Update executed but no rows affected for quote {quote_id}")
-
-                    print(f"[BusinessHandlers] Updated quote document {quote_id} to SENT: {sent_doc_resp.data}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] ERROR: Failed to update quote document status: {e}")
-                    raise
-
-                # Store sent email data in sent_email table
-                try:
-                    quote_id = payload.get('quote_id')
-                    sent_email_data = {
-                        "document_id": quote_id,
-                        "opportunity_id": opportunity_id,
-                        "from_email": "maalls@gmail.com",  # TODO: Get from authenticated user
-                        "to_emails": to_emails,
-                        "cc_emails": cc_emails if cc_emails else [],
-                        "subject": subject,
-                        "body": body,
-                        "provider": result.get('provider') or "gmail",
-                        "provider_message_id": result.get('message_id'),
-                        "status": "sent",
-                        "sent_at": datetime.now().isoformat(),
-                        "attachment_names": [pdf_filename] if pdf_filename else [],
-                        # "sent_by_user_id": user_id,  # TODO: Add when user auth is implemented
-                    }
-
-                    print(f"[BusinessHandlers] Preparing to insert sent_email data: {sent_email_data}")
-
-                    insert_result = supabase.table("sent_email").insert(sent_email_data).execute()
-                    if getattr(insert_result, "error", None):
-                        raise RuntimeError(f"Failed to save sent_email record: {insert_result.error}")
-                    if not insert_result.data:
-                        raise RuntimeError("Sent email insert returned no data")
-
-                    print(f"[BusinessHandlers] Sent email record created for quote {quote_id}: {insert_result.data}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] ERROR: Failed to save sent_email record: {e}")
-                    raise
-                
-                # Update opportunity stage to OFFER_SENT
-                try:
-                    update_resp = supabase.table("opportunity").update({
-                        "stage": "OFFER_SENT",
-                        "updated_at": datetime.now().isoformat()
-                    }).eq("id", opportunity_id).execute()
-
-                    if getattr(update_resp, "error", None):
-                        raise RuntimeError(f"Failed to update opportunity stage: {update_resp.error}")
-                    if not update_resp.data:
-                        raise RuntimeError(f"Opportunity stage update returned no data for {opportunity_id}")
-
-                    print(f"[BusinessHandlers] Updated opportunity {opportunity_id} stage to OFFER_SENT")
-                except Exception as e:
-                    print(f"[BusinessHandlers] ERROR: Failed to update opportunity stage: {e}")
-                    raise
-                
-                return {
-                    "status": "ok",
-                    "message": "Quote email sent successfully",
-                    "message_id": result.get('message_id'),
-                    "recipients": to_recipients
-                }
-            else:
-                print(f"[BusinessHandlers] Email send failed with result: {result}")
-                # Return the error from email repository if it has proper format
-                if isinstance(result, dict) and result.get('status') == 'error':
-                    return result
-                else:
-                    return {
-                        "status": "error",
-                        "message": result.get('message', 'Failed to send email') if isinstance(result, dict) else str(result)
-                    }
-        
-        except Exception as e:
-            print(f"[BusinessHandlers] Error sending quote email: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Failed to send email: {str(e)}"
-            }
+        """Delegate quote send for an opportunity to EmailHandlers."""
+        return self.email_handlers.handle_send_quote_for_opportunity(
+            opportunity_id=opportunity_id,
+            payload=payload,
+            user_id=user_id,
+        )
 
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
@@ -1761,283 +1256,12 @@ class BusinessHandlers:
             return {"status": "error", "message": str(e)}
 
     def handle_create_rfq_source_from_html_body(self, opportunity_id: str, body: bytes, content_type: str, user_id: str = None) -> Dict:
-        
-    
-        # 1. Parse form data (same as business page)
-        form_data, error = self.getForm(body, content_type)
-        if error:
-            return error
-        
-        # Extract text, file, and opportunity name
-        message_text = str(form_data.get('message', '') or form_data.get('text', '') or '')
-        uploaded_file = form_data.get('file')
-        provided_opportunity_name = str(form_data.get('opportunity_name', '') or '')
-        
-        print(f"[BusinessHandlers] Form data keys: {list(form_data.keys())}")
-        print(f"[BusinessHandlers] Message text length: {len(message_text)}")
-        print(f"[BusinessHandlers] Uploaded file: {uploaded_file is not None}")
-        print(f"[BusinessHandlers] Provided opportunity name: {provided_opportunity_name}")
-        
-        if not message_text.strip() and not uploaded_file:
-            return {"status": "error", "message": "Message text or attachment is required"}
-        if not message_text.strip() and uploaded_file:
-            message_text = ""
-        
-        # 2. Extract and enrich RFP data (using helper to avoid code duplication)
-        rfp_data = {"products": [], "contact": {}}
-        message_is_placeholder = message_text.strip() == ""
-        if message_text.strip() and not message_is_placeholder:
-            rfp_data = self._extract_and_enrich_rfp_data(message_text)
-            print("Extracted RFQ data: from text", rfp_data)
-            
-            print("Extracting company/contact data from text")
-            company_data = extract_company_from_text(self._clean_email_body(message_text))
-            print(f"[BusinessHandlers] Company data extracted: {company_data}")
-            if isinstance(company_data, dict) and company_data:
-                rfp_data["contact"] = company_data
-                print(f"[BusinessHandlers] Extracted company/contact data: {company_data}")
-        
-        # 3. Extract opportunity details
-        # Use provided name from form, fallback to extracted title, then default
-        opportunity_name = provided_opportunity_name or rfp_data.get("title") or "RFP from Source Page"
-        account_name = rfp_data.get("contact", {}).get("company_name") if isinstance(rfp_data.get("contact"), dict) else None
-        
-        # Use Supabase service client
-        supabase = get_supabase_service()
-        
-        # 4. If opportunity_id is "new", create account and opportunity (same strategy as business page)
-        if opportunity_id == "new":
-            print(f"[BusinessHandlers] Creating new opportunity for RFQ source")
-            
-            
-            # Find or create account (same as business page)
-            account_id = None
-            if not account_name:
-                contact_data = rfp_data.get("contact", {})
-                account_name = contact_data.get("company_name") if isinstance(contact_data, dict) else None
-                if not account_name:
-                    account_name = contact_data.get("name") if isinstance(contact_data, dict) else None
-                if not account_name:
-                    account_name = "Unknown Company"
-            
-            try:
-                # Strategy 1: Find account by company name
-                print(f"[BusinessHandlers] Looking for account with name: {account_name}")
-                account_response = supabase.table("account").select("id").eq("name", account_name).limit(1).execute()
-                if account_response.data and len(account_response.data) > 0:
-                    account_id = account_response.data[0]["id"]
-                    print(f"[BusinessHandlers] Found account by company name: {account_id}")
-                
-                # Strategy 2: If not found, try to find account through existing contact with same email
-                if not account_id:
-                    contact_email = rfp_data.get("contact", {}).get("email") if isinstance(rfp_data.get("contact"), dict) else None
-                    if contact_email:
-                        print(f"[BusinessHandlers] Strategy 2: Looking for contact with email: {contact_email}")
-                        contact_response = supabase.table("contact").select("account_id").eq("email", contact_email).limit(1).execute()
-                        if contact_response.data and len(contact_response.data) > 0:
-                            account_id = contact_response.data[0]["account_id"]
-                            print(f"[BusinessHandlers] Found account through existing contact email: {account_id}")
-                
-                # Strategy 3: Create new account if still not found
-                if not account_id:
-                    print(f"[BusinessHandlers] Strategy 3: Creating new account with name: {account_name}")
-                    new_account = supabase.table("account").insert({"name": account_name}).execute()
-                    if new_account.data:
-                        account_id = new_account.data[0]["id"]
-                        print(f"[BusinessHandlers] Created new account: {account_id} with name: {account_name}")
-            except Exception as e:
-                print(f"[BusinessHandlers] Error with account: {e}")
-                raise
-            
-            if not account_id:
-                return {"status": "error", "message": "Failed to create or find account"}
-            
-            # Create opportunity
-            opportunity_data = {
-                "owner_user_id": user_id,
-                "name": opportunity_name,
-                "stage": "RFP_IN_PROGRESS",
-                "status": "OPEN",
-                "source": "user_form",
-                "account_id": account_id
-            }
-            
-            opp_result = supabase.table("opportunity").insert(opportunity_data).execute()
-            if not opp_result.data:
-                return {"status": "error", "message": "Failed to create opportunity"}
-            
-            opportunity_id = opp_result.data[0]["id"]
-            print(f"[BusinessHandlers] Created new opportunity: {opportunity_id}")
-        
-        # 5. Store message text and attachment to file system (same as business page)
-        storage_dir = self._get_storage_dir("rfp_upload")
-        storage_dir.mkdir(parents=True, exist_ok=True)
-        
-        timestamp = int(time.time())
-        
-        # Save message text as .txt file
-        text_filename = f"{timestamp}_message.txt"
-        text_file_path = storage_dir / text_filename
-        text_file_path.write_text(message_text, encoding='utf-8')
-        print(f"[BusinessHandlers] Message text saved: {text_filename}")
-        
-        # 6. Store text as document (same as business page)
-        doc_data = {
-            "opportunity_id": opportunity_id,
-            "type": "RFP",
-            "status": "RECEIVED",
-            "title": opportunity_name,
-            "currency": "EUR",
-            "channel": "OTHER",
-            "storage_key": text_filename,
-            "created_by": user_id
-        }
-        
-        doc_result = supabase.table("document").insert(doc_data).execute()
-        if not doc_result.data:
-            return {"status": "error", "message": "Failed to create document"}
-        
-        document_id = doc_result.data[0]["id"]
-        
-        # 7. Store file attachment as separate document if provided (same as business page)
-        attachment_doc_id = None
-        attachment_file_path = None
-        attachment_content_type = None
-        if uploaded_file and isinstance(uploaded_file, dict):
-            filename = uploaded_file.get('filename')
-            file_content = uploaded_file.get('content')
-            attachment_content_type = uploaded_file.get('content_type')
-            
-            if filename and file_content:
-                try:
-                    # Generate unique filename for attachment
-                    safe_filename = f"{timestamp}_attachment_{filename}"
-                    file_path = storage_dir / safe_filename
-                    
-                    file_path.write_bytes(file_content)
-                    attachment_file_path = file_path
-                    
-                    # Create separate document for attachment
-                    attachment_doc_data = {
-                        "opportunity_id": opportunity_id,
-                        "type": "ATTACHMENT",
-                        "status": "RECEIVED",
-                        "title": f"Attachment: {filename}",
-                        "currency": "EUR",
-                        "channel": "OTHER",
-                        "storage_key": safe_filename,
-                        "created_by": user_id
-                    }
-                    
-                    attachment_result = supabase.table("document").insert(attachment_doc_data).execute()
-                    if attachment_result.data:
-                        attachment_doc_id = attachment_result.data[0]["id"]
-                        print(f"[BusinessHandlers] Attachment saved: {safe_filename}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Failed to save attachment: {e}")
-        
-        # 8. Update opportunity with source document reference AND source type (same as business page)
-        supabase.table("opportunity").update({
-            "source_reference_id": document_id,
-            "source": "rfp_upload"
-        }).eq("id", opportunity_id).execute()
-        
-        # 9. Create contact and buyer participant from RFP contact data (same as business page)
-        contact_data = rfp_data.get("contact", {})
-        if isinstance(contact_data, dict) and contact_data.get("email"):
-            try:
-                # Get account_id from opportunity
-                opp_response = supabase.table("opportunity").select("account_id").eq("id", opportunity_id).single().execute()
-                if opp_response.data:
-                    account_id = opp_response.data["account_id"]
-                    
-                    # Check if contact already exists
-                    existing_contact = supabase.table("contact").select("id").eq("email", contact_data["email"]).eq("account_id", account_id).limit(1).execute()
-                    
-                    contact_id = None
-                    if existing_contact.data and len(existing_contact.data) > 0:
-                        contact_id = existing_contact.data[0]["id"]
-                        print(f"[BusinessHandlers] Found existing contact: {contact_id}")
-                    else:
-                        # Create new contact
-                        new_contact_data = {
-                            "account_id": account_id,
-                            "name": contact_data.get("name") or contact_data.get("email"),
-                            "email": contact_data["email"],
-                            "phone": contact_data.get("phone"),
-                        }
-                        
-                        contact_result = supabase.table("contact").insert(new_contact_data).execute()
-                        if contact_result.data:
-                            contact_id = contact_result.data[0]["id"]
-                            print(f"[BusinessHandlers] Created new contact: {contact_id}")
-                    
-                    # Create buyer participant
-                    if contact_id:
-                        participant_data = {
-                            "opportunity_id": opportunity_id,
-                            "contact_id": contact_id,
-                            "role": "BUYER"
-                        }
-                        
-                        participant_result = supabase.table("opportunity_participant").insert(participant_data).execute()
-                        if participant_result.data:
-                            print(f"[BusinessHandlers] Created BUYER participant for contact: {contact_id}")
-            except Exception as e:
-                print(f"[BusinessHandlers] Warning: Failed to create contact/participant: {e}")
-        
-        # 10. Auto-generate quote draft from best source (prefer PDF if it has more products)
-        pdf_candidates = []
-        if attachment_file_path and (attachment_content_type or "").lower().startswith("application/pdf"):
-            pdf_candidates.append({
-                "id": attachment_doc_id,
-                "filename": uploaded_file.get("filename") if isinstance(uploaded_file, dict) else None,
-                "path": attachment_file_path,
-            })
-
-        picker_text = "" if message_is_placeholder else message_text
-        selection = pick_best_rfp_source(picker_text, pdf_candidates)
-        selected_content = selection.get("content") or ("" if message_is_placeholder else message_text)
-        
-        # Use cached extraction from picker to avoid re-extraction
-        pre_extracted = selection.get("extracted_data")
-        if pre_extracted is None and (rfp_data.get("products") or rfp_data.get("contact") or rfp_data.get("title")):
-            # Fallback to text-based extraction if picker didn't extract anything
-            pre_extracted = rfp_data
-
-        pre_count = 0
-        if isinstance(pre_extracted, dict):
-            pre_count = len(pre_extracted.get("products", []) or [])
-        print(
-            f"[BusinessHandlers] RFQ quote generation source={selection.get('source')} "
-            f"picker_products={selection.get('product_count', 0)} "
-            f"reuse_pre_extracted={bool(pre_extracted)} pre_extracted_products={pre_count}"
+        return self.rfq_handlers.handle_create_rfq_source_from_html_body(
+            opportunity_id=opportunity_id,
+            body=body,
+            content_type=content_type,
+            user_id=user_id,
         )
-
-        if selected_content:
-            quote_result = self.opportunity_repository.handle_generate_quote_with_content(
-                opportunity_id=opportunity_id,
-                content=selected_content,
-                user_id=user_id,
-                pre_extracted_data=pre_extracted,
-            )
-        else:
-            quote_result = self.opportunity_repository.handle_generate_quote_for_opportunity(
-                opportunity_id=opportunity_id,
-                user_id=user_id,
-            )
-        
-        return {
-            "status": "ok",
-            "message": "RFQ source created successfully",
-            "opportunity_id": opportunity_id,
-            "document_id": document_id,
-            "attachment_doc_id": attachment_doc_id,
-            "quote": quote_result,
-            "opportunity": {
-                "id": opportunity_id
-            }
-        }
 
     def handle_chat_attachment_upload(self, body: bytes, content_type: str, user_id: str, opportunity_id: str) -> Dict:
         """Handle chat attachment upload: store file and create document record."""

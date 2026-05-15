@@ -84,11 +84,13 @@ import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../stores/auth';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
+import { useDddApi } from '../../../../composables/useDddApi';
 
 const route = useRoute();
 const router = useRouter();
 const { session } = useAuth();
 const { t } = useI18n();
+const { fetchDddJson } = useDddApi();
 
 const opportunityId = ref(route.params.id as string);
 const opportunity = ref<any>(null);
@@ -108,14 +110,15 @@ const loadOpportunity = async () => {
    errorMessage.value = '';
 
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('*')
-         .eq('id', opportunityId.value)
-         .single();
+      const result = await fetchDddJson<{ status: string; opportunity?: any }>('ddd/opportunity', {
+         opportunity_id: opportunityId.value,
+      });
 
-      if (error) throw error;
-      opportunity.value = data;
+      if (result?.status !== 'ok' || !result?.opportunity) {
+         throw new Error('Failed loading opportunity');
+      }
+
+      opportunity.value = result.opportunity;
    } catch (error: any) {
       errorMessage.value = t('opportunities.errorLoadingOpportunity', {
          message: error.message,

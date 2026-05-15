@@ -24,10 +24,6 @@ from src.embeddings import EmbeddingGenerator
 from src.controller.file_handler import FileHandler
 from src.controller.handlers import RequestHandlers
 from src.controller.auth.auth_handler import AuthHandler
-from src.controller.classify_handler import ClassifyHandler
-from src.controller.product.product import ProductController
-from src.controller.quote.quote import Quote as QuoteController
-from src.controller.opportunity.opportunity import Opportunity as OpportunityController
 from src.controller.llm_factory import LLMClientFactory
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
@@ -294,10 +290,9 @@ def create_rag_handler(config):
 
                 if parsed.path == '/api/products':
                     payload = self._read_json(default={})
-                    entity_name = "product"
-                    controller = ProductController()
-                    entity = controller.post(payload)
-                    return self.json({'status': 'ok', entity_name: entity}, 201)
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_create_product(payload)
+                    return self.json(result, 201)
 
                 if parsed.path == '/api/fs/create':
                     payload = self._read_json(default={})
@@ -310,26 +305,11 @@ def create_rag_handler(config):
                         return
 
                     try:
-                        if kind == 'file':
-                            target_path.parent.mkdir(parents=True, exist_ok=True)
-                            target_path.touch(exist_ok=True)
-                        else:
-                            target_path.mkdir(parents=True, exist_ok=True)
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_fs_create(target_path=target_path, kind=kind)
                     except Exception as e:
                         return self._send_error(500, f'Create failed: {e}')
-
-                    if kind == 'file':
-                        if not target_path.exists() or not target_path.is_file():
-                            return self._send_error(500, 'Create failed: file not created')
-                    else:
-                        if not target_path.exists() or not target_path.is_dir():
-                            return self._send_error(500, 'Create failed: directory not created')
-
-                    return self.json({
-                        'status': 'ok',
-                        'path': str(target_path),
-                        'type': 'file' if kind == 'file' else 'dir',
-                    })
+                    return self.json(result)
 
                 if parsed.path == '/api/fs/read':
                     payload = self._read_json(default={})
@@ -350,18 +330,11 @@ def create_rag_handler(config):
                         return self._send_error(404, 'File not found')
 
                     try:
-                        content = target_path.read_text(encoding='utf-8', errors='replace')
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_fs_read(target_path=target_path, max_chars=max_chars)
                     except Exception as e:
                         return self._send_error(500, f'Read failed: {e}')
-
-                    truncated = content[:max_chars]
-
-                    return self.json({
-                        'status': 'ok',
-                        'path': str(target_path),
-                        'truncated': len(content) > max_chars,
-                        'text': truncated,
-                    })
+                    return self.json(result)
 
                 if parsed.path == '/api/curl':
                     payload = self._read_json(default={})
@@ -392,50 +365,37 @@ def create_rag_handler(config):
                     max_chars = max(100, min(max_chars, 50000))
                     timeout_ms = max(1000, min(timeout_ms, 20000))
 
-                    data_bytes = body_text.encode('utf-8') if body_text is not None else None
-
                     try:
-                        req = urllib.request.Request(target_url, data=data_bytes, method=method)
-                        for key, value in headers.items():
-                            if isinstance(key, str) and isinstance(value, str):
-                                req.add_header(key, value)
-
-                        with urllib.request.urlopen(req, timeout=timeout_ms / 1000) as resp:
-                            content_type = resp.headers.get('Content-Type', '')
-                            status = getattr(resp, 'status', 200)
-                            raw = resp.read()
-
-                        text = raw.decode('utf-8', errors='replace')
-                        truncated = text[:max_chars]
-
-                        return self.json({
-                            'status': status,
-                            'ok': status >= 200 and status < 300,
-                            'url': target_url,
-                            'content_type': content_type,
-                            'truncated': len(text) > max_chars,
-                            'text': truncated,
-                        })
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_curl_request(
+                            target_url=target_url,
+                            method=method,
+                            headers=headers,
+                            body_text=body_text,
+                            max_chars=max_chars,
+                            timeout_ms=timeout_ms,
+                        )
+                        return self.json(result)
                     except Exception as e:
                         return self._send_error(500, f'Curl failed: {e}')
                 
                 # Auth endpoints
                 if parsed.path == '/api/auth/signup':
                     body = self._read_body()
-                    auth_handler = self.get_auth_handler()
-                    result = auth_handler.handle_signup(body)
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_auth_signup(body)
                     status = result.pop('status', 200)
                     return self.json(result, status)
                 elif parsed.path == '/api/auth/login':
                     body = self._read_body()
-                    auth_handler = self.get_auth_handler()
-                    result = auth_handler.handle_login(body)
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_auth_login(body)
                     status = result.pop('status', 200)
                     return self.json(result, status)
                 elif parsed.path == '/api/auth/logout':
                     auth_header = self.headers.get('Authorization', '')
-                    auth_handler = self.get_auth_handler()
-                    result = auth_handler.handle_logout(auth_header)
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_auth_logout(auth_header)
                     status = result.pop('status', 200)
                     return self.json(result, status)
                 
@@ -480,9 +440,8 @@ def create_rag_handler(config):
                     user_id = user_data.get('id')
                     print(f"[RAG] Classify request for email {email_uuid} by user {user_id}")
                     
-                    # Classify email
-                    classify_handler = ClassifyHandler()
-                    result = classify_handler.handle_classify(email_uuid, user_id, True)
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_classify_email(email_uuid=email_uuid, user_id=user_id, force=True)
                     status = 200 if result.get('status') == 'ok' else 400
                     return self.json(result, status)
                 elif parsed.path == '/api/rfq/generate':
@@ -710,7 +669,7 @@ def create_rag_handler(config):
                         return self.json({"error": "Missing document_id parameter"}, 400)
                     
                     handlers = self.get_request_handlers()
-                    result = handlers.business_handlers.handle_update_document_content(
+                    result = handlers.handle_update_document_content(
                         document_id=document_id,
                         content=content,
                         user_id=user_id
@@ -734,7 +693,7 @@ def create_rag_handler(config):
                             return
 
                         handlers = self.get_request_handlers()
-                        result = handlers.business_handlers.handle_send_quote_for_opportunity(
+                        result = handlers.handle_send_quote_for_opportunity(
                             opportunity_id=opportunity_id,
                             payload=payload,
                             user_id=user_id,
@@ -768,8 +727,6 @@ def create_rag_handler(config):
                     # Opportunity-scoped RFQ/quote generation
                     opp_match = re.match(r"^/api/opportunity/([^/]+)/rfq/generate$", parsed.path)
                     if opp_match:
-
-                        opportunity_controller = OpportunityController()
                         user_data = self._require_auth()
                         if user_data is None:
                             return
@@ -777,7 +734,7 @@ def create_rag_handler(config):
                         opportunity_id = opp_match.group(1)
                         handlers = self.get_request_handlers()
                         print(f"[RAG] Generating quote for opportunity {opportunity_id} by user {user_id}")
-                        result = opportunity_controller.opportunity_repository.handle_generate_quote_for_opportunity(
+                        result = handlers.handle_generate_quote_for_opportunity(
                             opportunity_id=opportunity_id,
                             user_id=user_id,
                         )
@@ -899,9 +856,9 @@ def create_rag_handler(config):
 
                         payload = self._read_json(default={})
 
-                        controller = QuoteController()
                         print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
-                        result = controller.update(document_id=document_id, payload=payload, user_id=user_id)
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_update_quote(document_id=document_id, payload=payload, user_id=user_id)
                         status = 400 if result.get('error') else 200
                         return self.json(result, status)
                 
@@ -910,9 +867,9 @@ def create_rag_handler(config):
                     content_type = self.headers.get('Content-Type', '')
                     body = self._read_body()
                     content_length = len(body)
-                    
-                    handler = self.get_file_handler()
-                    result = handler.handle_file_upload(content_type, content_length, body)
+
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_csv_source_upload(content_type, content_length, body)
                     return self.json(result)
                 elif parsed.path == '/api/rfp':
                     content_type = self.headers.get('Content-Type', '')
@@ -925,7 +882,7 @@ def create_rag_handler(config):
                     content_type = self.headers.get('Content-Type', '')
                     body = self._read_body()
                     handlers = self.get_request_handlers()
-                    result = self.quote.handle_quote_submit(body, content_type)
+                    result = handlers.handle_quote_submit(body, content_type)
                     return self.json(result)
                 elif parsed.path == '/api/quote/send':
                     print(f"[RAG] Received request to send quote email, path: {parsed.path}, method: {self.command}")
@@ -1012,69 +969,34 @@ def create_rag_handler(config):
                 parsed = urllib.parse.urlparse(self.path)
 
                 if parsed.path.startswith('/api/storage/'):
-                    filename = parsed.path[len('/api/storage/'):]
-                    filename = urllib.parse.unquote(filename)
-                    filename = filename.replace('..', '').replace('/', '')
-
-                    print(f"[RAG] Storage HEAD request for file: {filename}")
-
-                    storage_subdirs = ['rfp_uploads', 'attachment', 'attachments', 'email', 'quotes']
-                    storage_path = None
-
-                    for subdir in storage_subdirs:
-                        candidate = config['STORAGE_DIR'] / subdir / filename
-                        if candidate.exists():
-                            storage_path = candidate
-                            break
-
-                    if not storage_path:
-                        storage_path = config['STORAGE_DIR'] / filename
-
-                    if not storage_path.exists():
-                        print(f"[RAG] File not found in any storage location: {filename}")
-                        self.send_response(404)
-                        self.send_header('Content-Type', 'text/plain')
-                        self.end_headers()
-                        return
-
-                    file_ext = storage_path.suffix.lower()
-                    content_type_map = {
-                        '.pdf': 'application/pdf',
-                        '.txt': 'text/plain; charset=utf-8',
-                        '.doc': 'application/msword',
-                        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        '.xls': 'application/vnd.ms-excel',
-                        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        '.png': 'image/png',
-                        '.jpg': 'image/jpeg',
-                        '.jpeg': 'image/jpeg',
-                        '.gif': 'image/gif',
-                        '.zip': 'application/zip',
-                    }
-                    content_type = content_type_map.get(file_ext, 'application/octet-stream')
-                    file_size = storage_path.stat().st_size
-                    encoded_filename = urllib.parse.quote(filename)
-
-                    self.send_response(200)
-                    self.send_header('Content-Type', content_type)
-                    self.send_header('Content-Length', str(file_size))
-                    self.send_header('Accept-Ranges', 'bytes')
-                    if content_type == 'application/pdf':
-                        self.send_header(
-                            'Content-Disposition',
-                            f"inline; filename*=UTF-8''{encoded_filename}"
-                        )
-                    else:
-                        self.send_header(
-                            'Content-Disposition',
-                            f"attachment; filename*=UTF-8''{encoded_filename}"
-                        )
-                    self.end_headers()
-                    return
+                    return self._handle_storage_head(parsed.path)
 
                 return self._send_error(404, "Not found")
             except Exception as e:
                 return self._send_error(500, f"Internal server error 2: {e}")
+
+        def _handle_storage_head(self, parsed_path: str):
+            """Handle HEAD requests for storage files."""
+            raw_filename = parsed_path[len('/api/storage/'):]
+            handlers = self.get_request_handlers()
+            try:
+                storage_info = handlers.handle_storage_resolve_file(config['STORAGE_DIR'], raw_filename)
+            except FileNotFoundError:
+                not_found = handlers.handle_storage_not_found_payload(raw_filename, include_body=False)
+                print(f"[RAG] File not found in any storage location: {not_found['filename']}")
+                self._send_text_response(404, not_found['content_type'])
+                return
+
+            filename = storage_info['filename']
+            metadata = storage_info['metadata']
+
+            print(f"[RAG] Storage HEAD request for file: {filename}")
+            response_headers = handlers.handle_storage_response_headers(metadata)
+
+            self.send_response(200)
+            for header_name, header_value in response_headers.items():
+                self.send_header(header_name, header_value)
+            self.end_headers()
 
         def _handle_ddd_post_routes(self, parsed):
             """Handle incremental DDD POST routes through API adapters."""
@@ -1122,9 +1044,8 @@ def create_rag_handler(config):
                     return
 
                 if parsed.path == '/api/products':
-                    controller = ProductController()
-                    products = controller.list(qs)
-                    return self.json({'products': products})
+                    handlers = self.get_request_handlers()
+                    return self.json(handlers.handle_list_products(qs))
 
                 if parsed.path.startswith('/api/google/oauth/callback'):
                     handlers = self.get_request_handlers()
@@ -1143,29 +1064,7 @@ def create_rag_handler(config):
 
                 # Prompt endpoint: /api/prompt/<relative_path> -> back/src/prompt/<relative_path>/prompt.md
                 if parsed.path.startswith('/api/prompt/'):
-                    relative_path = parsed.path[len('/api/prompt/'):].strip('/')
-                    if not relative_path:
-                        return self._send_error(400, "Missing prompt path")
-
-                    base_dir = Path(__file__).resolve().parents[1] / 'prompt'
-                    prompt_path = (base_dir / relative_path / 'prompt.md').resolve()
-
-                    if base_dir not in prompt_path.parents:
-                        return self._send_error(400, "Invalid prompt path")
-
-                    if not prompt_path.exists():
-                        return self._send_error(404, "Prompt not found")
-
-                    try:
-                        content = prompt_path.read_text(encoding='utf-8')
-                    except Exception as e:
-                        return self._send_error(500, f"Error reading prompt: {e}")
-
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'text/plain; charset=utf-8')
-                    self.end_headers()
-                    self.wfile.write(content.encode('utf-8'))
-                    return
+                    return self._handle_prompt_get(parsed.path)
 
                 if parsed.path == '/api/fetch':
                     target_url = qs.get('url', [None])[0]
@@ -1188,157 +1087,32 @@ def create_rag_handler(config):
                     timeout_ms = max(1000, min(timeout_ms, 20000))
 
                     try:
-                        with urllib.request.urlopen(target_url, timeout=timeout_ms / 1000) as resp:
-                            content_type = resp.headers.get('Content-Type', '')
-                            status = getattr(resp, 'status', 200)
-                            raw = resp.read()
-
-                        text = raw.decode('utf-8', errors='replace')
-                        truncated = text[:max_chars]
-
-                        return self.json({
-                            'status': status,
-                            'ok': status >= 200 and status < 300,
-                            'url': target_url,
-                            'content_type': content_type,
-                            'truncated': len(text) > max_chars,
-                            'text': truncated,
-                        })
+                        handlers = self.get_request_handlers()
+                        result = handlers.handle_fetch_url(
+                            target_url=target_url,
+                            max_chars=max_chars,
+                            timeout_ms=timeout_ms,
+                        )
+                        return self.json(result)
                     except Exception as e:
                         return self._send_error(500, f'Fetch failed: {e}')
 
                 if parsed.path == '/api/email-fetch-loop/status':
                     status_path = Path(__file__).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
                     legacy_path = Path(__file__).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
-                    if not status_path.exists() and legacy_path.exists():
-                        status_path = legacy_path
-
-                    if not status_path.exists():
-                        return self.json({
-                            'running': False,
-                            'pid': None,
-                            'started_at': None,
-                            'last_heartbeat': None,
-                            'mode': None,
-                        })
-
-                    try:
-                        payload = json.loads(status_path.read_text(encoding='utf-8') or '{}')
-                    except Exception:
-                        payload = {}
-
-                    pid = payload.get('pid')
-                    running = False
-                    if pid:
-                        try:
-                            os.kill(int(pid), 0)
-                            running = True
-                        except Exception:
-                            running = False
-
-                    return self.json({
-                        'running': running,
-                        'pid': pid,
-                        'started_at': payload.get('started_at'),
-                        'last_heartbeat': payload.get('last_heartbeat'),
-                        'mode': payload.get('mode'),
-                    })
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
+                    return self.json(result)
                 
                 # Storage endpoint for serving uploaded files
                 if parsed.path.startswith('/api/storage/'):
-                    filename = parsed.path[len('/api/storage/'):]
-                    # URL decode the filename (convert %20 to space, etc.)
-                    filename = urllib.parse.unquote(filename)
-                    # Sanitize filename to prevent path traversal
-                    filename = filename.replace('..', '').replace('/', '')
-                    
-                    print(f"[RAG] Storage request for file: {filename}")
-                    
-                    # Determine which storage subdirectory to look in based on filename pattern
-                    storage_subdirs = ['rfp_uploads', 'attachment', 'attachments', 'email', 'quotes']
-                    storage_path = None
-                    
-                    for subdir in storage_subdirs:
-                        candidate = config['STORAGE_DIR'] / subdir / filename
-                        if candidate.exists():
-                            storage_path = candidate
-                            break
-                    
-                    # If not found in subdirs, try root storage directory
-                    if not storage_path:
-                        storage_path = config['STORAGE_DIR'] / filename
-                    
-                    if not storage_path.exists():
-                        print(f"[RAG] File not found in any storage location: {filename}")
-                        self.send_response(404)
-                        self.send_header('Content-Type', 'text/plain')
-                        self.end_headers()
-                        self.wfile.write(b'File not found')
-                        return
-                    
-                    try:
-                        print(f"[RAG] Reading file: {storage_path}")
-                        
-                        # Determine content type based on file extension
-                        file_ext = storage_path.suffix.lower()
-                        content_type_map = {
-                            '.pdf': 'application/pdf',
-                            '.txt': 'text/plain; charset=utf-8',
-                            '.doc': 'application/msword',
-                            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                            '.xls': 'application/vnd.ms-excel',
-                            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                            '.png': 'image/png',
-                            '.jpg': 'image/jpeg',
-                            '.jpeg': 'image/jpeg',
-                            '.gif': 'image/gif',
-                            '.zip': 'application/zip',
-                        }
-                        content_type = content_type_map.get(file_ext, 'application/octet-stream')
-                        
-                        file_size = storage_path.stat().st_size
-                        encoded_filename = urllib.parse.quote(filename)
-
-                        self.send_response(200)
-                        self.send_header('Content-Type', content_type)
-                        self.send_header('Content-Length', str(file_size))
-                        self.send_header('Accept-Ranges', 'bytes')
-                        # Use inline for PDFs to support preview
-                        if content_type == 'application/pdf':
-                            self.send_header(
-                                'Content-Disposition',
-                                f"inline; filename*=UTF-8''{encoded_filename}"
-                            )
-                        else:
-                            self.send_header(
-                                'Content-Disposition',
-                                f"attachment; filename*=UTF-8''{encoded_filename}"
-                            )
-                        self.end_headers()
-
-                        # Stream file to avoid truncation issues
-                        with open(storage_path, 'rb') as f:
-                            while True:
-                                chunk = f.read(8192)
-                                if not chunk:
-                                    break
-                                self.wfile.write(chunk)
-                        print(f"[RAG] File sent successfully: {filename} ({file_size} bytes)")
-                        return
-                    except Exception as e:
-                        print(f"[RAG] Error reading file {filename}: {e}")
-                        traceback.print_exc()
-                        self.send_response(500)
-                        self.send_header('Content-Type', 'text/plain')
-                        self.end_headers()
-                        self.wfile.write(f'Error reading file: {str(e)}'.encode('utf-8'))
-                        return
+                    return self._handle_storage_get(parsed.path)
                 
                 # Auth endpoint
                 if parsed.path == '/api/auth/user':
                     auth_header = self.headers.get('Authorization', '')
-                    auth_handler = self.get_auth_handler()
-                    result = auth_handler.handle_get_user(auth_header)
+                    handlers = self.get_request_handlers()
+                    result = handlers.handle_auth_user(auth_header)
                     status = result.pop('status', 200)
                     return self.json(result, status)
                 
@@ -1578,6 +1352,65 @@ def create_rag_handler(config):
 
                 return self._send_error(500, f"Internal server error 3: {e}")
 
+        def _handle_storage_get(self, parsed_path: str):
+            """Handle GET requests for storage files."""
+            raw_filename = parsed_path[len('/api/storage/'):]
+            handlers = self.get_request_handlers()
+            try:
+                storage_info = handlers.handle_storage_resolve_file(config['STORAGE_DIR'], raw_filename)
+            except FileNotFoundError:
+                not_found = handlers.handle_storage_not_found_payload(raw_filename, include_body=True)
+                print(f"[RAG] Storage request for file: {not_found['filename']}")
+                print(f"[RAG] File not found in any storage location: {not_found['filename']}")
+                self._send_text_response(404, not_found['content_type'], not_found['body'])
+                return
+
+            filename = storage_info['filename']
+            storage_path = storage_info['storage_path']
+            metadata = storage_info['metadata']
+
+            print(f"[RAG] Storage request for file: {filename}")
+
+            try:
+                print(f"[RAG] Reading file: {storage_path}")
+                response_headers = handlers.handle_storage_response_headers(metadata)
+
+                self.send_response(200)
+                for header_name, header_value in response_headers.items():
+                    self.send_header(header_name, header_value)
+                self.end_headers()
+
+                # Stream file to avoid truncation issues
+                for chunk in handlers.handle_storage_read_chunks(storage_path):
+                    self.wfile.write(chunk)
+                print(f"[RAG] File sent successfully: {filename} ({metadata['file_size']} bytes)")
+                return
+            except Exception as e:
+                print(f"[RAG] Error reading file {filename}: {e}")
+                traceback.print_exc()
+                error_payload = handlers.handle_storage_read_error_payload(e)
+                self._send_text_response(500, error_payload['content_type'], error_payload['body'])
+                return
+
+        def _handle_prompt_get(self, parsed_path: str):
+            """Handle GET requests for prompt markdown content."""
+            relative_path = parsed_path[len('/api/prompt/'):].strip('/')
+            handlers = self.get_request_handlers()
+            base_dir = Path(__file__).resolve().parents[1] / 'prompt'
+            try:
+                content = handlers.handle_get_prompt_content(
+                    relative_path=relative_path,
+                    prompt_base_dir=base_dir,
+                )
+            except ValueError as e:
+                return self._send_error(400, str(e))
+            except FileNotFoundError as e:
+                return self._send_error(404, str(e))
+            except Exception as e:
+                return self._send_error(500, f"Error reading prompt: {e}")
+
+            return self._send_text_response(200, 'text/plain; charset=utf-8', content.encode('utf-8'))
+
         def authorize(self) -> Dict:
             user_data = self._require_auth()
             if user_data is None:
@@ -1793,6 +1626,19 @@ def create_rag_handler(config):
                 self.send_header('Content-Length', str(len(payload)))
                 self.end_headers()
                 self.wfile.write(payload)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                return
+
+        def _send_text_response(self, code: int, content_type: str, body: bytes = None):
+            """Send plain text/binary response payload."""
+            try:
+                self.send_response(code)
+                self.send_header('Content-Type', content_type)
+                if body is not None:
+                    self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                if body is not None:
+                    self.wfile.write(body)
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 return
     

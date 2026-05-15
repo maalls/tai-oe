@@ -21,6 +21,22 @@ class _FactoryOK:
         return _WorkflowOK()
 
 
+def test_run_uses_injected_workflow_without_factory(monkeypatch):
+    class _WorkflowInjected(_WorkflowOK):
+        pass
+
+    workflow = _WorkflowInjected()
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("factory should not be used when workflow is injected")
+
+    monkeypatch.setattr("src.infrastructure.factory.ServiceFactory", _boom)
+
+    code = fetch_emails.run(user_id="u-1", classify_limit=10, workflow=workflow)
+
+    assert code == 0
+
+
 def test_run_new_workflow_success(monkeypatch):
     monkeypatch.setattr("src.infrastructure.factory.ServiceFactory", _FactoryOK)
 

@@ -20,6 +20,22 @@ def test_classify_email_uses_category_key():
     assert result == "quote"
 
 
+@pytest.mark.parametrize(
+    "payload, expected",
+    [
+        ({"classification": " RFP "}, "rfp"),
+        ({"label": "Invoice"}, "invoice"),
+        ({"type": "Quote"}, "quote"),
+    ],
+)
+def test_classify_email_accepts_other_dict_keys(payload, expected):
+    service = ClassificationService(classifier=_FakeClassifier(payload))
+
+    result = service.classify_email(sample_email())
+
+    assert result == expected
+
+
 def test_classify_email_accepts_raw_string_response():
     service = ClassificationService(classifier=_FakeClassifier("RFP"))
     result = service.classify_email(sample_email())

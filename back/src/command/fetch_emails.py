@@ -34,10 +34,24 @@ def _get_legacy_repo():
 
 def _run_new_workflow(user_id: str, classify_limit: int = 200) -> int:
 	"""Run the new DDD workflow (classification only)."""
+	return _run_new_workflow_with_service(
+		user_id=user_id,
+		classify_limit=classify_limit,
+	)
+
+
+def _run_new_workflow_with_service(
+	user_id: str,
+	classify_limit: int = 200,
+	workflow=None,
+) -> int:
+	"""Run the new DDD workflow (classification only)."""
 	from src.infrastructure.factory import ServiceFactory
 
-	factory = ServiceFactory()
-	workflow = factory.create_email_workflow_service()
+	if workflow is None:
+		factory = ServiceFactory()
+		workflow = factory.create_email_workflow_service()
+
 	emails = workflow.email_service.get_all_unclassified(limit=classify_limit, user_id=user_id)
 
 	classified = 0
@@ -65,9 +79,16 @@ def run(
 	max_results: int = EMAIL_FETCH_MAX_RESULTS,
 	classify_limit: int = 200,
 	after_date: str = None,
+	workflow=None,
 ) -> int:
 	"""Run the new workflow for email classification."""
-	return _run_new_workflow(user_id=user_id, classify_limit=classify_limit)
+	if workflow is None:
+		return _run_new_workflow(user_id=user_id, classify_limit=classify_limit)
+	return _run_new_workflow_with_service(
+		user_id=user_id,
+		classify_limit=classify_limit,
+		workflow=workflow,
+	)
 
 
 def main(argv=None):

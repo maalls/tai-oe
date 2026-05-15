@@ -228,8 +228,10 @@
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
+import { useDddApi } from '../../composables/useDddApi';
 
 const { t, te } = useI18n();
+const { fetchDddJson } = useDddApi();
 
 import { useRouter, useRoute } from 'vue-router';
 
@@ -379,16 +381,22 @@ const loadOpportunity = async () => {
          selectedOpportunityId.value = '';
          return;
       }
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('name, stage, source')
-         .eq('id', props.opportunityId)
-         .single();
 
-      if (!error && data) {
-         opportunityData.value = data;
-         selectedOpportunityId.value = props.opportunityId;
+      const result = await fetchDddJson<{ status: string; opportunity?: any }>('ddd/opportunity', {
+         opportunity_id: props.opportunityId,
+      });
+
+      if (result?.status !== 'ok' || !result?.opportunity) {
+         throw new Error('Failed loading opportunity');
       }
+
+      const opp = result.opportunity;
+      opportunityData.value = {
+         name: opp.name,
+         stage: opp.stage,
+         source: opp.source,
+      };
+      selectedOpportunityId.value = props.opportunityId;
 
       // Check for PDF
       const { data: docData } = await supabase

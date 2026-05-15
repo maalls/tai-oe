@@ -2,7 +2,7 @@
 
 > 📌 **This is the actionable summary.** See `src.refactoring.plan.md` for full details, code examples, and Phase 2-5 specifications.
 
-**Status** : Ready to start  
+**Status** : Phase 4 in progress (Strangler migration active)  
 **Duration** : 2-3 weeks  
 **Version** : 2.1 (Compact)
 
@@ -15,7 +15,21 @@
 
 **Pattern** : Domain → Repository → Infrastructure → Service → API/Command
 
-**Start** : Phase 1 (Domain + Repository)
+**Current focus** : Phase 4 (progressive migration of legacy controllers/routes)
+
+---
+
+## 📌 Current Progress (2026-05-13)
+
+- [x] Phase 1 foundations in place (Domain + Repository contracts + fixtures + domain tests)
+- [x] Phase 2 foundations in place (Infrastructure Supabase + DTO + Factory + exceptions)
+- [x] Phase 3 foundations in place (Service layer for email/rfp/vendor/opportunity)
+- [ ] Phase 4 complete (in progress: incremental migration of `controller/rag.py` to handlers/services)
+
+Recent validated baseline:
+
+- Domain tests: `32 passed`
+- Controller tests: `66 passed`
 
 ---
 
@@ -69,6 +83,8 @@ tests/
 
 ## 🚀 PHASE 1: Domain + Repository (2-3 days)
 
+Status: Mostly completed in current codebase.
+
 ### Step 1.1: Enums
 
 ```python
@@ -86,8 +102,8 @@ class DocumentStatus(Enum):
 
 **Checklist** :
 
-- [ ] All PostgreSQL enums → Python equivalents
-- [ ] Tests for enum values
+- [x] All PostgreSQL enums → Python equivalents (core set implemented, keep syncing on schema changes)
+- [x] Tests for enum values
 
 ---
 
@@ -131,11 +147,11 @@ def test_cannot_classify_twice():
 
 **Checklist** :
 
-- [ ] `src/domain/email.py` + tests
-- [ ] `src/domain/rfp.py` + tests
-- [ ] `src/domain/opportunity.py` + tests
-- [ ] `src/domain/vendor.py` + tests
-- [ ] All domain entities 100% tested
+- [x] `src/domain/email.py` + tests
+- [x] `src/domain/rfp.py` + tests
+- [x] `src/domain/opportunity.py` + tests
+- [x] `src/domain/vendor.py` + tests
+- [x] All domain entities covered by unit tests baseline
 
 ---
 
@@ -162,10 +178,7 @@ class EmailRepository(ABC):
 
 **Checklist** :
 
-- [ ] `src/repository/email_repository.py`
-- [ ] `src/repository/rfp_repository.py`
-- [ ] `src/repository/opportunity_repository.py`
-- [ ] `src/repository/vendor_repository.py`
+- [x] Repository contracts implemented (current location: `src/repository/contracts/*`)
 
 ---
 
@@ -204,20 +217,20 @@ def sample_email(id="test-1", status=EmailStatus.UNREAD):
 
 **Checklist** :
 
-- [ ] `tests/conftest.py` with global fixtures
-- [ ] `tests/fixtures/fake_repositories.py`
-- [ ] `tests/fixtures/sample_data.py`
+- [x] `tests/conftest.py` with global fixtures
+- [x] `tests/fixtures/fake_repositories.py`
+- [x] `tests/fixtures/sample_data.py`
 
 ---
 
 ## ✅ Phase 1 Completion Checklist
 
-- [ ] **Domain** : `email.py`, `rfp.py`, `opportunity.py`, `vendor.py` + tests
-- [ ] **Enums** : `src/domain/enums.py` with all PostgreSQL types
-- [ ] **Repository** : `email_repository.py`, `rfp_repository.py`, etc. (abstract)
-- [ ] **Fixtures** : `conftest.py`, `fake_repositories.py`, `sample_data.py`
-- [ ] **Tests** : `pytest tests/unit/domain/ -v` passes 100%
-- [ ] **Commit** : `git commit -m "Phase 1: Domain + Repository interfaces"`
+- [x] **Domain** : `email.py`, `rfp.py`, `opportunity.py`, `vendor.py` + tests
+- [x] **Enums** : `src/domain/enums.py` with current PostgreSQL-aligned set
+- [x] **Repository** : abstract contracts implemented (under `src/repository/contracts/`)
+- [x] **Fixtures** : `conftest.py`, `fake_repositories.py`, `sample_data.py`
+- [x] **Tests** : domain suite green (`32 passed`)
+- [ ] **Commit** : align commit naming with current phase workflow
 
 ---
 
