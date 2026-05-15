@@ -1361,10 +1361,9 @@ def create_rag_handler(config):
             source_reference_id = qs.get('source_reference_id', [None])[0]
             name = qs.get('name', [None])[0]
 
-            user_data = self._require_auth()
-            if user_data is None:
+            user_id = self._require_auth_user_id()
+            if user_id is None:
                 return
-            user_id = user_data.get('id') if user_data else None
 
             result = handlers.handle_search_opportunities(
                 user_id=user_id,
