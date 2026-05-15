@@ -311,7 +311,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_opportunity_delete(self, opportunity_delete_match):
