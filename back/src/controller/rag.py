@@ -304,11 +304,7 @@ def create_rag_handler(config):
                 if parsed.path == '/api/auth/signup':
                     return self._handle_auth_signup_post()
                 elif parsed.path == '/api/auth/login':
-                    body = self._read_body()
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_auth_login(body)
-                    status = result.pop('status', 200)
-                    return self.json(result, status)
+                    return self._handle_auth_login_post()
                 elif parsed.path == '/api/auth/logout':
                     auth_header = self.headers.get('Authorization', '')
                     handlers = self.get_request_handlers()
@@ -1181,6 +1177,14 @@ def create_rag_handler(config):
             body = self._read_body()
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_signup(body)
+            status = result.pop('status', 200)
+            return self.json(result, status)
+
+        def _handle_auth_login_post(self):
+            """Handle /api/auth/login POST endpoint."""
+            body = self._read_body()
+            handlers = self.get_request_handlers()
+            result = handlers.handle_auth_login(body)
             status = result.pop('status', 200)
             return self.json(result, status)
 
