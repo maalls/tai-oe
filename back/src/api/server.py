@@ -69,7 +69,7 @@ from src.api.routes.server_get_business_handlers import (
     handle_quotes_download_get,
     handle_quotes_list_get,
 )
-from src.api.routes.server_get_misc_handlers import handle_products_get
+from src.api.routes.server_get_misc_handlers import handle_google_oauth_callback_get, handle_products_get
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1100,18 +1100,7 @@ def create_rag_handler(config):
 
         def _handle_google_oauth_callback_get(self, qs):
             """Handle Google OAuth callback route."""
-            handlers = self.get_request_handlers()
-            code = qs.get('code', [None])[0]
-            state = qs.get('state', [None])[0]
-            if not code:
-                return self._send_error(400, 'Missing code parameter')
-
-            result = handlers.handle_gmail_oauth_callback(code, state)
-            if result.get('status') == 'ok':
-                redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
-                return self._send_redirect(redirect_url)
-
-            return self.json(result, 500)
+            return handle_google_oauth_callback_get(self, qs)
 
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
