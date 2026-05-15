@@ -29,6 +29,7 @@ from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_delete_dispatch import dispatch_delete_request
+from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth_user_id
 from src.api.routes.server_get_dispatch import dispatch_get_request
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
@@ -1557,17 +1558,11 @@ def create_rag_handler(config):
 
         def _get_optional_user_id_from_auth(self, auth_header: str):
             """Extract user id from auth header without enforcing auth."""
-            if not auth_header:
-                return None
-            user_data = self._require_auth(auth_header=auth_header, required=False)
-            return user_data.get('id') if user_data else None
+            return get_optional_user_id_from_auth(self, auth_header)
 
         def _require_auth_user_id(self):
             """Require authenticated user and return its id."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return None
-            return user_data.get('id') if user_data else None
+            return require_auth_user_id(self)
 
         def _get_qs_bool(self, qs, key: str, default: bool = False) -> bool:
             """Read boolean query-string parameter with fallback."""
