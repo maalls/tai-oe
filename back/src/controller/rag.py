@@ -292,21 +292,7 @@ def create_rag_handler(config):
                     return self._handle_products_post()
 
                 if parsed.path == '/api/fs/create':
-                    payload = self._read_json(default={})
-
-                    raw_path = str(payload.get('path') or '').strip()
-                    kind = payload.get('type') or 'dir'
-
-                    target_path = self._resolve_fs_path(raw_path)
-                    if target_path is None:
-                        return
-
-                    try:
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_fs_create(target_path=target_path, kind=kind)
-                    except Exception as e:
-                        return self._send_error(500, f'Create failed: {e}')
-                    return self.json(result)
+                    return self._handle_fs_create_post()
 
                 if parsed.path == '/api/fs/read':
                     payload = self._read_json(default={})
@@ -1170,6 +1156,23 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_create_product(payload)
             return self.json(result, 201)
+
+        def _handle_fs_create_post(self):
+            """Handle /api/fs/create POST endpoint."""
+            payload = self._read_json(default={})
+            raw_path = str(payload.get('path') or '').strip()
+            kind = payload.get('type') or 'dir'
+
+            target_path = self._resolve_fs_path(raw_path)
+            if target_path is None:
+                return
+
+            try:
+                handlers = self.get_request_handlers()
+                result = handlers.handle_fs_create(target_path=target_path, kind=kind)
+            except Exception as e:
+                return self._send_error(500, f'Create failed: {e}')
+            return self.json(result)
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
