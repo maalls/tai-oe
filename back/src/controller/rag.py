@@ -346,27 +346,7 @@ def create_rag_handler(config):
                     return self._handle_document_extract_rfp_post()
                 
                 elif parsed.path == '/api/document/update-content':
-                    payload = self._read_json(default={})
-
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    document_id = payload.get('document_id')
-                    content = payload.get('content', '')
-                    
-                    if not document_id:
-                        return self.json({"error": "Missing document_id parameter"}, 400)
-                    
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_update_document_content(
-                        document_id=document_id,
-                        content=content,
-                        user_id=user_id
-                    )
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_document_update_content_post()
                 
                 else:
                     # Send quote email for opportunity
@@ -1225,6 +1205,30 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_extract_rfp_from_document(document_id=document_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_document_update_content_post(self):
+            """Handle /api/document/update-content POST endpoint."""
+            payload = self._read_json(default={})
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            document_id = payload.get('document_id')
+            content = payload.get('content', '')
+
+            if not document_id:
+                return self.json({"error": "Missing document_id parameter"}, 400)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_update_document_content(
+                document_id=document_id,
+                content=content,
+                user_id=user_id
+            )
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
