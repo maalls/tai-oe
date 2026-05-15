@@ -744,7 +744,7 @@ def create_rag_handler(config):
                 return True
 
             if parsed_path == '/api/quote/send':
-                self._handle_quote_send_post(parsed_path)
+                self._handle_quote_send_post()
                 return True
 
             if parsed_path == '/api/actions':
@@ -1329,9 +1329,9 @@ def create_rag_handler(config):
             result = handlers.handle_quote_submit(body, content_type)
             return self.json(result)
 
-        def _handle_quote_send_post(self, parsed_path: str):
+        def _handle_quote_send_post(self):
             """Handle /api/quote/send POST endpoint."""
-            print(f"[RAG] Received request to send quote email, path: {parsed_path}, method: {self.command}")
+            print(f"[RAG] Received request to send quote email, path: /api/quote/send, method: {self.command}")
             content_type = self.headers.get('Content-Type', '')
             body = self._read_body()
 
