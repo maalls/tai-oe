@@ -1,6 +1,8 @@
 """RFQ-related request handlers."""
 
 import uuid
+import json
+import hashlib
 from typing import Dict
 from pathlib import Path
 import time
@@ -74,6 +76,81 @@ class RfqHandlers:
             return {
                 "status": "error",
                 "message": f"Error generating RFQ: {str(exc)}",
+            }
+
+    def handle_rfp_upload(self, body: bytes, content_type: str) -> Dict:
+        """Parse multipart RFP upload and extract draft RFQ data."""
+        try:
+            form_data, error = self.get_form(body, content_type)
+            if error:
+                return error
+
+            text_fields = {
+                key: value for key, value in form_data.items() if not isinstance(value, dict) or "filename" not in value
+            }
+            files = {
+                key: value for key, value in form_data.items() if isinstance(value, dict) and "filename" in value
+            }
+
+            print("[RfqHandlers] Received RFP upload:")
+            print(f"  Text fields: {list(text_fields.keys())}", text_fields.keys())
+            print(f"  Files: {[f.get('filename') for f in files.values()]}")
+
+            message_text = text_fields.get("message", "") or ""
+            cache_flag = str(text_fields.get("cache", "false")).lower() in ("1", "true", "yes", "on")
+
+            cache_hit = False
+            rfp_data = None
+            cache_dir = Path("var/storage/rfp_cache")
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                pass
+
+            key = hashlib.sha256(message_text.encode("utf-8")).hexdigest()
+            cache_file = cache_dir / f"{key}.json"
+
+            if cache_flag and cache_file.exists():
+                try:
+                    rfp_data = json.loads(cache_file.read_text(encoding="utf-8"))
+                    cache_hit = True
+                    print(f"[RfqHandlers] Cache hit for key {key}")
+                except Exception as exc:
+                    print(f"[RfqHandlers] Cache read error: {exc}")
+
+            if rfp_data is None:
+                rfp_data = extract_rfp_from_text(message_text)
+
+                for product in rfp_data.get("products", []) or []:
+                    if "part_number" in product and "sku" not in product:
+                        product["sku"] = product.pop("part_number")
+
+                for product in rfp_data.get("products", []) or []:
+                    product["price_found"] = bool(product.get("price"))
+                    product["price"] = product.get("price")
+
+                if cache_flag:
+                    try:
+                        cache_file.write_text(json.dumps(rfp_data, ensure_ascii=False, indent=2), encoding="utf-8")
+                        print(f"[RfqHandlers] Cached result under key {key}")
+                    except Exception as exc:
+                        print(f"[RfqHandlers] Cache write error: {exc}")
+
+            return {
+                "status": "ok",
+                "message": "RFP received successfully",
+                "text_fields": list(text_fields.keys()),
+                "files": [f.get("filename") for f in files.values() if isinstance(f, dict)],
+                "total_files": len(files),
+                "extracted_rfp": rfp_data,
+                "cache": "hit" if cache_hit else ("miss" if cache_flag else "off"),
+            }
+
+        except Exception as exc:
+            print(f"[RfqHandlers] Error processing RFP: {exc}")
+            return {
+                "status": "error",
+                "message": f"Error processing RFP: {str(exc)}",
             }
 
     def handle_create_opportunity_from_rfp(self, body: bytes, content_type: str, user_id: str = None) -> Dict:

@@ -89,7 +89,7 @@ class TestRFPUploadFunctional:
                 }
             ]
         }
-        with patch("src.api.business.handler.extract_rfp_from_text", return_value=fake_rfp_data):
+        with patch("src.api.rfq.handler.extract_rfp_from_text", return_value=fake_rfp_data):
             result = self.business_handlers.handle_rfp_upload(body=body, content_type=content_type)
 
         print(f"\n✓ Response status: {result.get('status')}")

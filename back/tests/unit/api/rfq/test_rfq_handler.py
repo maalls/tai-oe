@@ -282,3 +282,45 @@ def test_handle_create_rfq_source_from_html_body_creates_document_and_quote(tmp_
     assert result["opportunity_id"] == "opp-1"
     assert result["document_id"] == "doc-1"
     assert result["quote"]["status"] == "ok"
+
+
+def test_handle_rfp_upload_returns_error_for_invalid_content_type():
+    handler = RfqHandlers(
+        service_factory=_ServiceFactoryStub(_EmailServiceStub(type("Email", (), {"body": None})())),
+        email_repository=_EmailRepositoryStub(None),
+    )
+
+    result = handler.handle_rfp_upload(body=b"payload", content_type="application/json")
+
+    assert result == {"status": "error", "message": "Invalid content type"}
+
+
+def test_handle_rfp_upload_extracts_rfp_and_file_list(monkeypatch):
+    handler = RfqHandlers(
+        service_factory=_ServiceFactoryStub(_EmailServiceStub(type("Email", (), {"body": None})())),
+        email_repository=_EmailRepositoryStub(None),
+    )
+    monkeypatch.setattr(
+        "src.api.rfq.handler.extract_rfp_from_text",
+        lambda text: {"products": [{"part_number": "P-1", "price": 10}], "title": text},
+    )
+
+    body = (
+        b"--x\r\n"
+        b"Content-Disposition: form-data; name=\"message\"\r\n\r\n"
+        b"Need quote\r\n"
+        b"--x\r\n"
+        b"Content-Disposition: form-data; name=\"rfp\"; filename=\"rfp.pdf\"\r\n"
+        b"Content-Type: application/pdf\r\n\r\n"
+        b"%PDF-1.4\r\n"
+        b"--x--\r\n"
+    )
+
+    result = handler.handle_rfp_upload(body=body, content_type="multipart/form-data; boundary=x")
+
+    assert result["status"] == "ok"
+    assert result["files"] == ["rfp.pdf"]
+    assert result["total_files"] == 1
+    assert result["cache"] == "off"
+    assert result["extracted_rfp"]["products"][0]["sku"] == "P-1"
+    assert result["extracted_rfp"]["products"][0]["price_found"] is True

@@ -12,6 +12,16 @@ class _RfqHandlersStub:
         self.calls.append(("generate", text, message_id, user_id))
         return self.result
 
+    def handle_rfp_upload(self, body: bytes, content_type: str):
+        self.calls.append(("rfp_upload", body, content_type))
+        return {
+            "status": "ok",
+            "message": "RFP received successfully",
+            "files": ["rfp.pdf"],
+            "total_files": 1,
+            "cache": "off",
+        }
+
     def handle_create_opportunity_from_rfp(self, body: bytes, content_type: str, user_id: str = None):
         self.calls.append(("create_from_rfp", body, content_type, user_id))
         return self.result
@@ -88,6 +98,15 @@ class _InvoiceHandlersStub:
             "recipients": payload.get("to", []),
             "message_id": "msg-1",
         }
+
+
+class _EntityHandlersStub:
+    def __init__(self):
+        self.calls = []
+
+    def handle_update_entity_field(self, table: str, field: str, record_id: str, value, user_id: str = None):
+        self.calls.append((table, field, record_id, value, user_id))
+        return {"status": "ok", "data": {"id": record_id, field: value}}
 
 
 class _OpportunityRepositoryStub:
@@ -222,6 +241,7 @@ def _make_handler(rfq_result=None):
     handler.email_handlers = _EmailHandlersStub()
     handler.quote_handlers = _QuoteHandlersStub()
     handler.invoice_handlers = _InvoiceHandlersStub()
+    handler.entity_handlers = _EntityHandlersStub()
     handler.opportunity_repository = _OpportunityRepositoryStub()
     handler.opportunity_handlers = _OpportunityHandlersStub(handler.opportunity_repository)
     handler._document_content_service = _DocumentContentServiceStub()
@@ -241,6 +261,19 @@ def test_handle_rfq_generate_delegates_to_rfq_handler():
     assert result["status"] == "ok"
     assert result["draft"] == {"content": "rfq content"}
     assert handler.rfq_handlers.calls == [("generate", None, "e-1", "u-1")]
+
+
+def test_handle_rfp_upload_delegates_to_rfq_handler():
+    handler = _make_handler()
+
+    result = handler.handle_rfp_upload(
+        body=b"payload",
+        content_type="multipart/form-data; boundary=x",
+    )
+
+    assert result["status"] == "ok"
+    assert result["total_files"] == 1
+    assert handler.rfq_handlers.calls == [("rfp_upload", b"payload", "multipart/form-data; boundary=x")]
 
 
 def test_handle_create_opportunity_from_rfp_delegates_to_rfq_handler():
@@ -362,6 +395,21 @@ def test_handle_send_invoice_delegates_to_invoice_handler():
     assert result["status"] == "ok"
     assert result["message"] == "Invoice sent successfully"
     assert handler.invoice_handlers.calls == [("send_invoice", "inv-1", payload, "u-1")]
+
+
+def test_handle_update_entity_field_delegates_to_entity_handler():
+    handler = _make_handler()
+
+    result = handler.handle_update_entity_field(
+        table="document",
+        field="title",
+        record_id="doc-1",
+        value="Updated",
+        user_id="u-1",
+    )
+
+    assert result == {"status": "ok", "data": {"id": "doc-1", "title": "Updated"}}
+    assert handler.entity_handlers.calls == [("document", "title", "doc-1", "Updated", "u-1")]
 
 
 def test_business_handler_opportunity_wrappers_are_class_methods():

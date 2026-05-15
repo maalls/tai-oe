@@ -1,11 +1,8 @@
 """Business-related request handlers for RFP and other business operations."""
 
-from typing import Dict, Optional
-import json
-import hashlib
+from typing import Dict
 import os
 import time
-import re
 from datetime import datetime
 from pathlib import Path
 from io import BytesIO
@@ -13,14 +10,13 @@ from html.parser import HTMLParser
 
 from src.api.email.handler import EmailHandlers
 from src.api.document.handler import DocumentHandlers
+from src.api.entity.handler import EntityHandlers
 from src.api.invoice.handler import InvoiceHandlers
 from src.api.opportunity.handler import OpportunityHandlers
 from src.api.quote.handler import Quote
 from src.api.rfq.handler import RfqHandlers
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
-from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
-from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.repository.email_repository import EmailRepository
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
@@ -48,6 +44,7 @@ class BusinessHandlers:
             supabase=self.supabase,
         )
         self.quote_handlers = Quote()
+        self.entity_handlers = EntityHandlers(supabase=self.supabase)
         self.invoice_handlers = InvoiceHandlers(
             supabase=self.supabase,
             send_email_with_attachments=self.email_handlers.handle_send_email_with_attachments,
@@ -68,95 +65,9 @@ class BusinessHandlers:
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
         return EmailRepository._clean_email_body(email_body, max_length=max_length)
 
-    def getForm(self, body: bytes, content_type: str):
-        boundary = self._extract_boundary(content_type)
-        if not boundary:
-            return None, {"status": "error", "message": "Invalid content type"}
-        return self._parse_multipart(body, boundary), None
-    
     def handle_rfp_upload(self, body: bytes, content_type: str) -> Dict:
-        try:
-            # Parse multipart form data
-            form_data, error = self.getForm(body, content_type)
-            if error:
-                return error
-            
-            # Extract text fields (title, description, etc.)
-            text_fields = {
-                key: value for key, value in form_data.items()
-                if not isinstance(value, dict) or 'filename' not in value
-            }
-            
-            # Extract file attachments
-            files = {
-                key: value for key, value in form_data.items()
-                if isinstance(value, dict) and 'filename' in value
-            }
-            
-            print(f"[BusinessHandlers] Received RFP upload:")
-            print(f"  Text fields: {list(text_fields.keys())}", text_fields.keys())
-            print(f"  Files: {[f.get('filename') for f in files.values()]}")
-            # Cache behavior
-            message_text = text_fields.get('message', '') or ''
-            cache_flag = str(text_fields.get('cache', 'false')).lower() in ("1", "true", "yes", "on")
-
-            cache_hit = False
-            rfp_data = None
-            cache_dir = Path("var/storage/rfp_cache")
-            try:
-                cache_dir.mkdir(parents=True, exist_ok=True)
-            except Exception:
-                pass
-
-            # Create cache key from message content
-            key = hashlib.sha256(message_text.encode('utf-8')).hexdigest()
-            cache_file = cache_dir / f"{key}.json"
-
-            if cache_flag and cache_file.exists():
-                try:
-                    rfp_data = json.loads(cache_file.read_text(encoding='utf-8'))
-                    cache_hit = True
-                    print(f"[BusinessHandlers] Cache hit for key {key}")
-                except Exception as e:
-                    print(f"[BusinessHandlers] Cache read error: {e}")
-
-            if rfp_data is None:
-
-                rfp_data = extract_rfp_from_text(message_text)
-
-                # Normalize field names: part_number → sku
-                for product in rfp_data.get('products', []) or []:
-                    if 'part_number' in product and 'sku' not in product:
-                        product['sku'] = product.pop('part_number')
-
-                # Preserve pricing fields without vector enrichment.
-                for product in rfp_data.get('products', []) or []:
-                    product['price_found'] = bool(product.get('price'))
-                    product['price'] = product.get('price')
-
-
-                if cache_flag:
-                    try:
-                        cache_file.write_text(json.dumps(rfp_data, ensure_ascii=False, indent=2), encoding='utf-8')
-                        print(f"[BusinessHandlers] Cached result under key {key}")
-                    except Exception as e:
-                        print(f"[BusinessHandlers] Cache write error: {e}")
-            return {
-                "status": "ok",
-                "message": "RFP received successfully",
-                "text_fields": list(text_fields.keys()),
-                "files": [f.get('filename') for f in files.values() if isinstance(f, dict)],
-                "total_files": len(files),
-                "extracted_rfp": rfp_data,
-                "cache": "hit" if cache_hit else ("miss" if cache_flag else "off")
-            }
-        
-        except Exception as e:
-            print(f"[BusinessHandlers] Error processing RFP: {e}")
-            return {
-                "status": "error",
-                "message": f"Error processing RFP: {str(e)}"
-            }
+        """Delegate RFP upload parsing/extraction to RFQ handler."""
+        return self.rfq_handlers.handle_rfp_upload(body=body, content_type=content_type)
 
     def handle_rfq_generate(self, text: str = None, message_id: str = None, user_id: str = None) -> Dict:
         """Delegate RFQ draft generation to the dedicated RFQ handler."""
@@ -251,110 +162,6 @@ class BusinessHandlers:
             user_id=user_id,
         )
     
-    @staticmethod
-    def _extract_boundary(content_type: str) -> Optional[str]:
-        """Extract boundary from Content-Type header.
-        
-        Parameters
-        ----------
-        content_type : str
-            Content-Type header value
-        
-        Returns
-        -------
-        Optional[str]
-            Boundary string or None
-        """
-        if 'boundary=' not in content_type:
-            return None
-        
-        boundary = content_type.split('boundary=')[1]
-        # Remove quotes if present
-        return boundary.strip('"\'')
-    
-    @staticmethod
-    def _parse_multipart(body: bytes, boundary: str) -> Dict:
-        """Parse multipart form data.
-        
-        Parameters
-        ----------
-        body : bytes
-            Raw multipart body
-        boundary : str
-            Boundary string
-        
-        Returns
-        -------
-        Dict
-            Parsed form fields and files
-        """
-        form_data = {}
-        
-        # Split by boundary
-        parts = body.split(f'--{boundary}'.encode())
-        
-        for part in parts[1:-1]:  # Skip first empty part and last closing boundary
-            if not part.strip():
-                continue
-            
-            # Split headers and content
-            try:
-                header_end = part.find(b'\r\n\r\n')
-                if header_end == -1:
-                    header_end = part.find(b'\n\n')
-                    if header_end == -1:
-                        continue
-                    content_start = header_end + 2
-                else:
-                    content_start = header_end + 4
-                
-                headers = part[:header_end].decode('utf-8', errors='ignore')
-                content = part[content_start:]
-                
-                # Remove trailing CRLF
-                if content.endswith(b'\r\n'):
-                    content = content[:-2]
-                elif content.endswith(b'\n'):
-                    content = content[:-1]
-                
-                # Parse Content-Disposition header
-                if 'Content-Disposition' in headers:
-                    disp_line = [h for h in headers.split('\n') if 'Content-Disposition' in h][0]
-                    
-                    # Extract name
-                    name_match = 'name="' in disp_line
-                    if name_match:
-                        name_start = disp_line.find('name="') + 6
-                        name_end = disp_line.find('"', name_start)
-                        name = disp_line[name_start:name_end]
-                        
-                        # Check if it's a file (has filename parameter)
-                        if 'filename=' in disp_line:
-                            filename_start = disp_line.find('filename="') + 10
-                            filename_end = disp_line.find('"', filename_start)
-                            filename = disp_line[filename_start:filename_end]
-                            
-                            # Get content type if present
-                            content_type = 'application/octet-stream'
-                            for header_line in headers.split('\n'):
-                                if 'Content-Type:' in header_line:
-                                    content_type = header_line.split('Content-Type:')[1].strip()
-                            
-                            form_data[name] = {
-                                'filename': filename,
-                                'content': content,
-                                'content_type': content_type,
-                                'size': len(content)
-                            }
-                        else:
-                            # Text field
-                            form_data[name] = content.decode('utf-8', errors='ignore')
-            except Exception as e:
-                print(f"[BusinessHandlers] Error parsing part: {e}")
-                continue
-        
-        return form_data
-    
     def handle_generate_quote_pdf(self, document_id: str, user_id: str = None) -> Dict:
         """Generate quote PDF via dedicated quote handler."""
         return self.quote_handlers.handle_generate_quote_pdf(
@@ -365,43 +172,14 @@ class BusinessHandlers:
         
 
     def handle_update_entity_field(self, table: str, field: str, record_id: str, value, user_id: str = None) -> Dict:
-        """Update a single field on a table by record id.
-
-        Expects a valid table and field name, and updates by primary key "id".
-        """
-        
-
-        try:
-            if not table or not field:
-                return {"status": "error", "message": "Missing table or field"}
-
-            name_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-            if not name_re.match(table) or not name_re.match(field):
-                return {"status": "error", "message": "Invalid table or field"}
-
-            if not record_id:
-                return {"status": "error", "message": "Missing id"}
-
-            update_resp = (
-                self.supabase.table(table)
-                .update({field: value})
-                .eq("id", record_id)
-                .execute()
-            )
-
-            if getattr(update_resp, "error", None):
-                return {"status": "error", "message": f"Failed to update: {update_resp.error}"}
-
-            if not update_resp.data:
-                return {"status": "error", "message": "No rows updated"}
-
-            return {"status": "ok", "data": update_resp.data[0]}
-
-        except Exception as e:  # noqa: BLE001
-            print(f"[BusinessHandlers] Error in handle_update_entity_field: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
+        """Update a single field via EntityHandlers."""
+        return self.entity_handlers.handle_update_entity_field(
+            table=table,
+            field=field,
+            record_id=record_id,
+            value=value,
+            user_id=user_id,
+        )
     
     def handle_delete_quote_document(self, document_id: str, user_id: str = None) -> Dict:
         """Delete a quote document and its related data via DocumentHandlers."""
