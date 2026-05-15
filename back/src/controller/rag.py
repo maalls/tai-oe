@@ -1115,16 +1115,7 @@ def create_rag_handler(config):
                 # Get action details
                 get_action_match = re.match(r"^/api/actions/([^/]+)$", parsed.path)
                 if get_action_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    action_id = get_action_match.group(1)
-
-                    result = handlers.handle_get_action(action_id, user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_action_get(get_action_match, handlers)
                 
                 # Get action logs
                 get_action_logs_match = re.match(r"^/api/actions/([^/]+)/logs$", parsed.path)
@@ -1402,6 +1393,18 @@ def create_rag_handler(config):
             user_id = user_data.get('id') if user_data else None
             opportunity_id = list_actions_match.group(1)
             result = handlers.handle_list_actions(opportunity_id, user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_action_get(self, get_action_match, handlers):
+            """Handle /api/actions/<id> GET endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            action_id = get_action_match.group(1)
+            result = handlers.handle_get_action(action_id, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
