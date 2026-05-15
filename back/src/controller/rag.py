@@ -1093,11 +1093,7 @@ def create_rag_handler(config):
                 
                 # Auth endpoint
                 if parsed.path == '/api/auth/user':
-                    auth_header = self.headers.get('Authorization', '')
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_auth_user(auth_header)
-                    status = result.pop('status', 200)
-                    return self.json(result, status)
+                    return self._handle_auth_user_get()
                 
                 # Existing endpoints
                 if parsed.path == '/api/gmail/oauth/start':
@@ -1405,6 +1401,14 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
             return self.json(result)
+
+        def _handle_auth_user_get(self):
+            """Handle /api/auth/user GET endpoint."""
+            auth_header = self.headers.get('Authorization', '')
+            handlers = self.get_request_handlers()
+            result = handlers.handle_auth_user(auth_header)
+            status = result.pop('status', 200)
+            return self.json(result, status)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
