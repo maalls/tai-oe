@@ -17,7 +17,6 @@ import traceback
 from pathlib import Path
 
 from typing import Dict
-from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.reader.csv import CSVReader
 from src.embeddings import EmbeddingGenerator
 from src.api.file.handler import FileHandler
@@ -44,6 +43,12 @@ from src.api.routes.server_get_mail_basic_handlers import (
     handle_gmail_status_get,
     handle_imap_config_get,
     handle_imap_status_get,
+)
+from src.api.routes.server_get_mail_message_handlers import (
+    handle_email_attachment_get,
+    handle_gmail_classify_unclassified_get,
+    handle_gmail_message_get,
+    handle_gmail_messages_get,
 )
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
@@ -1165,76 +1170,19 @@ def create_rag_handler(config):
 
         def _handle_gmail_messages_get(self, qs):
             """Handle /api/gmail/messages GET endpoint."""
-            handlers = self.get_request_handlers()
-            max_results = self._get_qs_int(qs, 'max_results', EMAIL_FETCH_MAX_RESULTS)
-            user_id = qs.get('user_id', [None])[0]
-            force = self._get_qs_bool(qs, 'force', False)
-
-            print(f"[RAG] /api/gmail/messages - user_id from query: {user_id}, force: {force}")
-
-            if not user_id:
-                auth_header = self.headers.get('Authorization', '')
-                print(f"[RAG] Auth header: {auth_header[:50] if auth_header else 'None'}...")
-                user_id = self._get_optional_user_id_from_auth(auth_header)
-                print(f"[RAG] Extracted user_id from token: {user_id}")
-
-            print(f"[RAG] Final user_id: {user_id}")
-            if not user_id:
-                return self._send_error(400, 'Missing user_id')
-
-            result = handlers.handle_gmail_list_messages(
-                max_results=max_results,
-                user_id=user_id,
-                save_to_db=True,
-                force=force,
-            )
-            return self.json(result)
+            return handle_gmail_messages_get(self, qs)
 
         def _handle_gmail_classify_unclassified_get(self, qs):
             """Handle /api/gmail/classify-unclassified GET endpoint."""
-            handlers = self.get_request_handlers()
-            user_id = qs.get('user_id', [None])[0]
-            limit = self._get_qs_int(qs, 'limit', 200)
-
-            if not user_id:
-                auth_header = self.headers.get('Authorization', '')
-                user_id = self._get_optional_user_id_from_auth(auth_header)
-
-            if not user_id:
-                return self._send_error(400, 'Missing user_id')
-
-            result = handlers.handle_classify_unclassified(user_id=user_id, limit=limit)
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_gmail_classify_unclassified_get(self, qs)
 
         def _handle_gmail_message_get(self, parsed_path: str):
             """Handle /api/gmail/message/<id> GET endpoint."""
-            message_id = parsed_path.split('/api/gmail/message/')[-1]
-            auth_header = self.headers.get('Authorization', '')
-            print(f"[RAG] /api/gmail/message/{message_id} - Auth header: {auth_header[:50] if auth_header else 'None'}...")
-            user_id = self._get_optional_user_id_from_auth(auth_header)
-            print(f"[RAG] Extracted user_id from token: {user_id}")
-            print(f"[RAG] Final user_id for message body: {user_id}")
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_get_message_body(message_id, user_id)
-            return self.json(result)
+            return handle_gmail_message_get(self, parsed_path)
 
         def _handle_email_attachment_get(self, parsed_path: str):
             """Handle /api/email-attachment/<id> GET endpoint."""
-            attachment_id = parsed_path.split('/api/email-attachment/')[-1].split('/')[0]
-            auth_header = self.headers.get('Authorization', '')
-            user_id = self._get_optional_user_id_from_auth(auth_header)
-
-            handlers = self.get_request_handlers()
-            status_code, headers, file_content = handlers.handle_email_attachment_download(attachment_id, user_id)
-
-            self.send_response(status_code)
-            for header_name, header_value in headers.items():
-                self.send_header(header_name, header_value)
-            self.end_headers()
-            self.wfile.write(file_content)
-            return
+            return handle_email_attachment_get(self, parsed_path)
 
         def _handle_opportunities_search_get(self, qs, handlers):
             """Handle /api/opportunities/search GET endpoint."""
