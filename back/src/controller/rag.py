@@ -310,33 +310,7 @@ def create_rag_handler(config):
                 
                 entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed.path)
                 if entity_update_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    table = entity_update_match.group(1)
-                    field = entity_update_match.group(2)
-
-                    payload = self._read_json(default={})
-
-                    record_id = payload.get('id') or payload.get('record_id')
-                    if record_id is None:
-                        return self.json({"status": "error", "message": "Missing id"}, 400)
-
-                    if 'value' not in payload:
-                        return self.json({"status": "error", "message": "Missing value"}, 400)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_update_entity_field(
-                        table=table,
-                        field=field,
-                        record_id=record_id,
-                        value=payload.get('value'),
-                        user_id=user_id,
-                    )
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_entity_update_post(entity_update_match)
                 elif parsed.path.startswith('/api/emails/classify/'):
                     # Extract email_uuid from path
                     email_uuid = parsed.path.split('/')[-1]
@@ -1181,6 +1155,36 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_logout(auth_header)
             status = result.pop('status', 200)
+            return self.json(result, status)
+
+        def _handle_entity_update_post(self, entity_update_match):
+            """Handle /api/entity/{table}/{field} POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            table = entity_update_match.group(1)
+            field = entity_update_match.group(2)
+
+            payload = self._read_json(default={})
+
+            record_id = payload.get('id') or payload.get('record_id')
+            if record_id is None:
+                return self.json({"status": "error", "message": "Missing id"}, 400)
+
+            if 'value' not in payload:
+                return self.json({"status": "error", "message": "Missing value"}, 400)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_update_entity_field(
+                table=table,
+                field=field,
+                record_id=record_id,
+                value=payload.get('value'),
+                user_id=user_id,
+            )
+            status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
         def _handle_products_get(self, qs):
