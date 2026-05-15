@@ -294,49 +294,11 @@ def create_rag_handler(config):
                 if self._handle_post_auth_routes(parsed.path):
                     return
                 
-                entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed.path)
-                if entity_update_match:
-                    return self._handle_entity_update_post(entity_update_match)
-                elif parsed.path.startswith('/api/emails/classify/'):
-                    return self._handle_emails_classify_post(parsed.path)
-                elif parsed.path == '/api/rfq/generate':
-                    return self._handle_rfq_generate_post()
-                elif parsed.path == '/api/opportunities/create-from-email':
-                    return self._handle_opportunities_create_from_email_post()
-                elif parsed.path == '/api/opportunities/create-manual':
-                    return self._handle_opportunities_create_manual_post()
-                elif parsed.path == '/api/opportunities/create-from-rfp':
-                    return self._handle_opportunities_create_from_rfp_post()
-                elif parsed.path == '/api/email/extract-contact':
-                    return self._handle_email_extract_contact_post()
-                
-                elif parsed.path.startswith('/api/email/auth/'):
-                    return self._handle_email_auth_status_post(parsed.path)
-                
-                elif parsed.path.startswith('/api/email/') and parsed.path.endswith('/resync'):
-                    return self._handle_email_resync_post(parsed.path)
-                
-                elif parsed.path == '/api/email/senders/high-risk':
-                    return self._handle_email_senders_high_risk_post()
-                
-                elif parsed.path == '/api/email/senders/verified':
-                    return self._handle_email_senders_verified_post()
+                if self._handle_post_domain_routes(parsed):
+                    return
 
-                elif parsed.path == '/api/imap/config':
-                    return self._handle_imap_config_post()
-
-                elif parsed.path == '/api/imap/test':
-                    return self._handle_imap_test_post()
-                
-                elif parsed.path == '/api/document/extract-rfp':
-                    return self._handle_document_extract_rfp_post()
-                
-                elif parsed.path == '/api/document/update-content':
-                    return self._handle_document_update_content_post()
-                
-                else:
-                    if self._handle_post_opportunity_quote_invoice_routes(parsed):
-                        return
+                if self._handle_post_opportunity_quote_invoice_routes(parsed):
+                    return
                 
                 # Existing endpoints
                 if parsed.path == '/api/csv/source':
@@ -646,6 +608,72 @@ def create_rag_handler(config):
 
             if parsed_path == '/api/auth/logout':
                 self._handle_auth_logout_post()
+                return True
+
+            return False
+
+        def _handle_post_domain_routes(self, parsed) -> bool:
+            """Handle entity/email/opportunity/imap/document POST routes."""
+            parsed_path = parsed.path
+            entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed_path)
+            if entity_update_match:
+                self._handle_entity_update_post(entity_update_match)
+                return True
+
+            if parsed_path.startswith('/api/emails/classify/'):
+                self._handle_emails_classify_post(parsed_path)
+                return True
+
+            if parsed_path == '/api/rfq/generate':
+                self._handle_rfq_generate_post()
+                return True
+
+            if parsed_path == '/api/opportunities/create-from-email':
+                self._handle_opportunities_create_from_email_post()
+                return True
+
+            if parsed_path == '/api/opportunities/create-manual':
+                self._handle_opportunities_create_manual_post()
+                return True
+
+            if parsed_path == '/api/opportunities/create-from-rfp':
+                self._handle_opportunities_create_from_rfp_post()
+                return True
+
+            if parsed_path == '/api/email/extract-contact':
+                self._handle_email_extract_contact_post()
+                return True
+
+            if parsed_path.startswith('/api/email/auth/'):
+                self._handle_email_auth_status_post(parsed_path)
+                return True
+
+            if parsed_path.startswith('/api/email/') and parsed_path.endswith('/resync'):
+                self._handle_email_resync_post(parsed_path)
+                return True
+
+            if parsed_path == '/api/email/senders/high-risk':
+                self._handle_email_senders_high_risk_post()
+                return True
+
+            if parsed_path == '/api/email/senders/verified':
+                self._handle_email_senders_verified_post()
+                return True
+
+            if parsed_path == '/api/imap/config':
+                self._handle_imap_config_post()
+                return True
+
+            if parsed_path == '/api/imap/test':
+                self._handle_imap_test_post()
+                return True
+
+            if parsed_path == '/api/document/extract-rfp':
+                self._handle_document_extract_rfp_post()
+                return True
+
+            if parsed_path == '/api/document/update-content':
+                self._handle_document_update_content_post()
                 return True
 
             return False
