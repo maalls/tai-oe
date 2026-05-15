@@ -36,6 +36,15 @@ from src.api.routes.server_get_auth_handlers import (
     handle_oauth_callback_get,
     handle_oauth_login_get,
 )
+from src.api.routes.server_get_mail_basic_handlers import (
+    handle_gmail_authorize_get,
+    handle_gmail_oauth_start_get,
+    handle_gmail_profile_get,
+    handle_gmail_revoke_get,
+    handle_gmail_status_get,
+    handle_imap_config_get,
+    handle_imap_status_get,
+)
 from src.api.routes.server_head_dispatch import dispatch_head_request
 from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
 from src.api.routes.server_path_helpers import resolve_fs_path
@@ -1128,57 +1137,31 @@ def create_rag_handler(config):
 
         def _handle_gmail_status_get(self, qs):
             """Handle /api/gmail/status GET endpoint."""
-            handlers = self.get_request_handlers()
-            user_id = self._get_qs_value(qs, 'user_id')
-            result = handlers.handle_gmail_status(user_id=user_id)
-            return self.json(result)
+            return handle_gmail_status_get(self, qs)
 
         def _handle_gmail_authorize_get(self, qs):
             """Handle /api/gmail/authorize GET endpoint."""
-            handlers = self.get_request_handlers()
-            redirect_url = self._get_qs_value(qs, 'redirect_url')
-            result = handlers.handle_gmail_authorize(redirect_url)
-            return self.json(result)
+            return handle_gmail_authorize_get(self, qs)
 
         def _handle_gmail_oauth_start_get(self, qs):
             """Handle /api/gmail/oauth/start GET endpoint."""
-            handlers = self.get_request_handlers()
-            redirect_url = self._get_qs_value(qs, 'redirect_url')
-            user_id = self._get_qs_value(qs, 'user_id')
-            result = handlers.handle_gmail_oauth_start(redirect_url, user_id=user_id)
-            return self.json(result)
+            return handle_gmail_oauth_start_get(self, qs)
 
         def _handle_gmail_revoke_get(self, qs):
             """Handle /api/gmail/revoke GET endpoint."""
-            handlers = self.get_request_handlers()
-            user_id = self._get_qs_value(qs, 'user_id')
-            result = handlers.handle_gmail_revoke(user_id=user_id)
-            return self.json(result)
+            return handle_gmail_revoke_get(self, qs)
 
         def _handle_gmail_profile_get(self, qs):
             """Handle /api/gmail/profile GET endpoint."""
-            handlers = self.get_request_handlers()
-            user_id = self._get_qs_value(qs, 'user_id')
-            result = handlers.handle_gmail_profile(user_id=user_id)
-            return self.json(result)
+            return handle_gmail_profile_get(self, qs)
 
         def _handle_imap_status_get(self):
             """Handle /api/imap/status GET endpoint."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-            handlers = self.get_request_handlers()
-            result = handlers.handle_imap_status(user_id=user_id)
-            return self.json(result)
+            return handle_imap_status_get(self)
 
         def _handle_imap_config_get(self):
             """Handle /api/imap/config GET endpoint."""
-            user_id = self._require_auth_user_id()
-            if user_id is None:
-                return
-            handlers = self.get_request_handlers()
-            result = handlers.handle_imap_config(user_id=user_id)
-            return self.json(result)
+            return handle_imap_config_get(self)
 
         def _handle_gmail_messages_get(self, qs):
             """Handle /api/gmail/messages GET endpoint."""
