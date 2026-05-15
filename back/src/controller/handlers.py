@@ -14,7 +14,7 @@ from src.api.csv.handler import CsvHandlers
 from src.api.database.handler import DatabaseHandlers
 from src.api.product.handler import ProductController
 from src.api.business.handler import BusinessHandlers
-from src.controller.email_handler import EmailHandlers
+from src.api.email.handler import EmailHandlers
 from src.controller.classify_handler import ClassifyHandler
 from src.api.action.handler import ActionHandlers
 from src.infrastructure.clients.database import DatabaseHandler
