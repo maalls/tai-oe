@@ -413,13 +413,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/quote':
                     return self._handle_quote_submit_post()
                 elif parsed.path == '/api/quote/send':
-                    print(f"[RAG] Received request to send quote email, path: {parsed.path}, method: {self.command}")
-                    content_type = self.headers.get('Content-Type', '')
-                    body = self._read_body()
-                    
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_quote_send(body, content_type)
-                    return self.json(result)
+                    return self._handle_quote_send_post(parsed.path)
                 
                 # Action endpoints
                 elif parsed.path == '/api/actions':
@@ -1269,6 +1263,16 @@ def create_rag_handler(config):
             body = self._read_body()
             handlers = self.get_request_handlers()
             result = handlers.handle_quote_submit(body, content_type)
+            return self.json(result)
+
+        def _handle_quote_send_post(self, parsed_path: str):
+            """Handle /api/quote/send POST endpoint."""
+            print(f"[RAG] Received request to send quote email, path: {parsed_path}, method: {self.command}")
+            content_type = self.headers.get('Content-Type', '')
+            body = self._read_body()
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_quote_send(body, content_type)
             return self.json(result)
 
         def _handle_products_get(self, qs):
