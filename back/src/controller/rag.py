@@ -1126,11 +1126,8 @@ def create_rag_handler(config):
                     if not user_id:
                         auth_header = self.headers.get('Authorization', '')
                         print(f"[RAG] Auth header: {auth_header[:50] if auth_header else 'None'}...")
-                        user_data = self._require_auth(auth_header=auth_header, required=False)
-                        print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
-                        if user_data:
-                            user_id = user_data.get('id')
-                            print(f"[RAG] Extracted user_id from token: {user_id}")
+                        user_id = self._get_optional_user_id_from_auth(auth_header)
+                        print(f"[RAG] Extracted user_id from token: {user_id}")
                     
                     print(f"[RAG] Final user_id: {user_id}")
 
@@ -1151,9 +1148,7 @@ def create_rag_handler(config):
 
                     if not user_id:
                         auth_header = self.headers.get('Authorization', '')
-                        user_data = self._require_auth(auth_header=auth_header, required=False)
-                        if user_data:
-                            user_id = user_data.get('id')
+                        user_id = self._get_optional_user_id_from_auth(auth_header)
 
                     if not user_id:
                         return self._send_error(400, 'Missing user_id')
@@ -1171,13 +1166,8 @@ def create_rag_handler(config):
                     # Get user_id from auth header
                     auth_header = self.headers.get('Authorization', '')
                     print(f"[RAG] /api/gmail/message/{message_id} - Auth header: {auth_header[:50] if auth_header else 'None'}...")
-                    user_id = None
-                    if auth_header:
-                        user_data = self._require_auth(auth_header=auth_header, required=False)
-                        print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
-                        if user_data:
-                            user_id = user_data.get('id')
-                            print(f"[RAG] Extracted user_id from token: {user_id}")
+                    user_id = self._get_optional_user_id_from_auth(auth_header)
+                    print(f"[RAG] Extracted user_id from token: {user_id}")
                     
                     print(f"[RAG] Final user_id for message body: {user_id}")
                     handlers = self.get_request_handlers()
@@ -1189,11 +1179,7 @@ def create_rag_handler(config):
                     
                     # Get user_id from auth header
                     auth_header = self.headers.get('Authorization', '')
-                    user_id = None
-                    if auth_header:
-                        user_data = self._require_auth(auth_header=auth_header, required=False)
-                        if user_data:
-                            user_id = user_data.get('id')
+                    user_id = self._get_optional_user_id_from_auth(auth_header)
                     
                     handlers = self.get_request_handlers()
                     status_code, headers, file_content = handlers.handle_email_attachment_download(attachment_id, user_id)
@@ -1411,6 +1397,13 @@ def create_rag_handler(config):
                 return int(qs.get(key, [default])[0])
             except Exception:
                 return default
+
+        def _get_optional_user_id_from_auth(self, auth_header: str):
+            """Extract user id from auth header without enforcing auth."""
+            if not auth_header:
+                return None
+            user_data = self._require_auth(auth_header=auth_header, required=False)
+            return user_data.get('id') if user_data else None
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
