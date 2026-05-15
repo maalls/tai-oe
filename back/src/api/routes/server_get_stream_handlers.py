@@ -36,3 +36,33 @@ def handle_source_stream(handler, qs, request_handlers):
     except Exception as e:
         return handler._send_error(500, f"Error streaming source: {e}")
 
+
+def handle_csv_download(handler, qs, request_handlers):
+    """Download CSV file with proper filename."""
+    try:
+        source = (qs.get('source') or [None])[0]
+        sheet = (qs.get('file') or [None])[0]
+
+        if not source or not sheet:
+            return handler._send_error(400, "Missing 'source' or 'file' parameter")
+
+        file_handler = request_handlers.file_handler
+        csv_path = file_handler.safe_file_from_query(source, sheet)
+        filename = sheet
+        file_size = csv_path.stat().st_size
+
+        handler.send_response(200)
+        handler.send_header('Content-Type', 'text/csv; charset=utf-8')
+        handler.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+        handler.send_header('Content-Length', str(file_size))
+        handler.end_headers()
+
+        with open(csv_path, 'rb') as f:
+            while True:
+                chunk = f.read(8192)
+                if not chunk:
+                    break
+                handler.wfile.write(chunk)
+    except Exception as e:
+        return handler._send_error(500, f"Error downloading CSV: {e}")
+

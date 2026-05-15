@@ -58,7 +58,7 @@ from src.api.routes.server_get_csv_handlers import (
     handle_csv_search_get,
     handle_csv_sources_get,
 )
-from src.api.routes.server_get_stream_handlers import handle_raw_stream, handle_source_stream
+from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_business_handlers import (
     handle_action_get,
     handle_action_logs_get,
@@ -1341,36 +1341,7 @@ def create_rag_handler(config):
 
         def _handle_csv_download(self, qs, handlers):
             """Download CSV file with proper filename."""
-            try:
-                source = (qs.get('source') or [None])[0]
-                sheet = (qs.get('file') or [None])[0]
-                
-                if not source or not sheet:
-                    return self._send_error(400, "Missing 'source' or 'file' parameter")
-                
-                # Get file path from file handler
-                file_handler = handlers.file_handler
-                csv_path = file_handler.safe_file_from_query(source, sheet)
-                filename = sheet  # Use sheet name as filename
-                file_size = csv_path.stat().st_size
-                
-                # Send response headers
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/csv; charset=utf-8')
-                self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
-                self.send_header('Content-Length', str(file_size))
-                self.end_headers()
-                
-                # Stream file in chunks to avoid memory issues
-                with open(csv_path, 'rb') as f:
-                    while True:
-                        chunk = f.read(8192)
-                        if not chunk:
-                            break
-                        self.wfile.write(chunk)
-                        
-            except Exception as e:
-                return self._send_error(500, f"Error downloading CSV: {e}")
+            return handle_csv_download(self, qs, handlers)
 
         def _handle_source_stream(self, qs, handlers):
             """Stream original Excel source file."""
