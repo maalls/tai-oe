@@ -179,6 +179,9 @@ class _DocumentHandlersStub:
             "user_id": user_id,
         }
 
+    def handle_get_document_file(self, filename: str):
+        return f"doc-bytes::{filename}".encode("utf-8")
+
 
 def _make_handler(rfq_result=None):
     handler = BusinessHandlers.__new__(BusinessHandlers)
@@ -376,3 +379,11 @@ def test_handle_update_line_verification_delegates_to_document_handler():
     assert result["line_index"] == 2
     assert result["verification_fields"] == {"is_ref_verified": True}
     assert result["user_id"] == "u-1"
+
+
+def test_handle_get_document_file_delegates_to_document_handler():
+    handler = _make_handler()
+
+    result = handler.handle_get_document_file("doc.pdf")
+
+    assert result == b"doc-bytes::doc.pdf"

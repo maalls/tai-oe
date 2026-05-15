@@ -337,6 +337,36 @@ class DocumentHandlers:
             print(f"[DocumentHandlers] Error in handle_update_line_verification: {e}")
             return {"status": "error", "message": str(e)}
 
+    def handle_get_document_file(self, filename: str) -> bytes:
+        """Retrieve a document file from storage or legacy assets."""
+        try:
+            if ".." in filename or filename.startswith("/"):
+                raise ValueError(f"Invalid filename format: {filename}")
+
+            file_path = None
+            storage_subdirs = ["rfp_uploads", "attachment", "attachments", "email", "quotes", "invoices"]
+            for subdir in storage_subdirs:
+                candidate = Path(__file__).parent.parent.parent / "var" / "storage" / subdir / filename
+                if candidate.exists():
+                    file_path = candidate
+                    break
+
+            if not file_path or not file_path.exists():
+                assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
+                assets_file = assets_dir / filename
+                if str(assets_file.resolve()).startswith(str(assets_dir.resolve())) and assets_file.exists():
+                    file_path = assets_file
+
+            if not file_path or not file_path.exists():
+                raise FileNotFoundError(f"Document file not found: {filename}")
+
+            return file_path.read_bytes()
+        except FileNotFoundError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            print(f"[DocumentHandlers] Error retrieving document: {e}")
+            raise
+
     def get_form(self, body: bytes, content_type: str):
         boundary = self._extract_boundary(content_type)
         if not boundary:

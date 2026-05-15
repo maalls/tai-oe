@@ -571,59 +571,8 @@ class BusinessHandlers:
         )
 
     def handle_get_document_file(self, filename: str) -> bytes:
-        """Retrieve a document file (PDF, DOCX, etc.) from storage or assets directory.
-        
-        Parameters
-        ----------
-        filename : str
-            Document filename (can include subdirectories)
-        
-        Returns
-        -------
-        bytes
-            Document file content
-        
-        Raises
-        ------
-        FileNotFoundError
-            If file doesn't exist
-        ValueError
-            If filename is invalid (path traversal attempt)
-        """
-        try:
-            # Prevent path traversal attacks
-            if '..' in filename or filename.startswith('/'):
-                raise ValueError(f"Invalid filename format: {filename}")
-            
-            file_path = None
-            
-            # Check storage directories first (quotes, invoices, attachments, etc.)
-            storage_subdirs = ['rfp_uploads', 'attachment', 'attachments', 'email', 'quotes', 'invoices']
-            for subdir in storage_subdirs:
-                candidate = Path(__file__).parent.parent.parent / "var" / "storage" / subdir / filename
-                if candidate.exists():
-                    file_path = candidate
-                    break
-            
-            # Fallback to assets directory for other files or legacy PDFs
-            if not file_path or not file_path.exists():
-                assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
-                assets_file = assets_dir / filename
-                
-                # Additional safety check - ensure file is within assets_dir
-                if str(assets_file.resolve()).startswith(str(assets_dir.resolve())):
-                    if assets_file.exists():
-                        file_path = assets_file
-            
-            if not file_path or not file_path.exists():
-                raise FileNotFoundError(f"Document file not found: {filename}")
-            
-            return file_path.read_bytes()
-        except FileNotFoundError:
-            raise
-        except Exception as e:
-            print(f"[BusinessHandlers] Error retrieving document: {e}")
-            raise
+        """Retrieve a document file via DocumentHandlers."""
+        return self.document_handlers.handle_get_document_file(filename)
 
     def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str = None) -> Dict:
         """Generate an INVOICE document from an accepted QUOTE.
