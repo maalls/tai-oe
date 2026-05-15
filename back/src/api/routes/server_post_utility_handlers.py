@@ -113,3 +113,34 @@ def handle_auth_logout_post(handler):
     result = request_handlers.handle_auth_logout(auth_header)
     status = handler._pop_status(result)
     return handler.json(result, status)
+
+
+def handle_entity_update_post(handler, entity_update_match):
+    """Handle /api/entity/{table}/{field} POST endpoint."""
+    user_data = handler._require_auth()
+    if user_data is None:
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    table = entity_update_match.group(1)
+    field = entity_update_match.group(2)
+
+    payload = handler._read_json(default={})
+
+    record_id = payload.get('id') or payload.get('record_id')
+    if record_id is None:
+        return handler.json({"status": "error", "message": "Missing id"}, 400)
+
+    if 'value' not in payload:
+        return handler.json({"status": "error", "message": "Missing value"}, 400)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_update_entity_field(
+        table=table,
+        field=field,
+        record_id=record_id,
+        value=payload.get('value'),
+        user_id=user_id,
+    )
+    status = handler._status_from_result(result)
+    return handler.json(result, status)

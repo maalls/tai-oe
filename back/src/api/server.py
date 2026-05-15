@@ -105,6 +105,7 @@ from src.api.routes.server_post_utility_handlers import (
     handle_auth_logout_post,
     handle_auth_signup_post,
     handle_curl_post,
+    handle_entity_update_post,
     handle_fs_create_post,
     handle_fs_read_post,
     handle_products_post,
@@ -352,33 +353,7 @@ def create_rag_handler(config):
 
         def _handle_entity_update_post(self, entity_update_match):
             """Handle /api/entity/{table}/{field} POST endpoint."""
-            user_data = self._require_auth()
-            if user_data is None:
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            table = entity_update_match.group(1)
-            field = entity_update_match.group(2)
-
-            payload = self._read_json(default={})
-
-            record_id = payload.get('id') or payload.get('record_id')
-            if record_id is None:
-                return self.json({"status": "error", "message": "Missing id"}, 400)
-
-            if 'value' not in payload:
-                return self.json({"status": "error", "message": "Missing value"}, 400)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_update_entity_field(
-                table=table,
-                field=field,
-                record_id=record_id,
-                value=payload.get('value'),
-                user_id=user_id,
-            )
-            status = self._status_from_result(result)
-            return self.json(result, status)
+            return handle_entity_update_post(self, entity_update_match)
 
         def _handle_emails_classify_post(self, parsed_path):
             """Handle /api/emails/classify/{email_uuid} POST endpoint."""
