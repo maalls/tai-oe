@@ -26,8 +26,6 @@ from src.lib.extractors.text_reader import extract_company_from_text, extract_rf
 from src.repository.email_repository import EmailRepository
 from src.lib.email.html_parser import Parser
 from src.repository.opportunity import OpportunityRepository
-from src.service.opportunity.document_content_service import DocumentContentService
-from src.service.opportunity.document_rfp_extraction_service import DocumentRfpExtractionService
 
 
 class BusinessHandlers:
@@ -62,33 +60,6 @@ class BusinessHandlers:
                 pre_extracted_data=pre_extracted_data,
             ),
         )
-        self._document_content_service = None
-        self._document_rfp_extraction_service = None
-
-    @property
-    def document_content_service(self) -> DocumentContentService:
-        if getattr(self, "_document_content_service", None) is None:
-            self._document_content_service = DocumentContentService(
-                supabase=self.supabase,
-                storage_dir_resolver=self._get_storage_dir,
-            )
-        return self._document_content_service
-
-    @property
-    def document_rfp_extraction_service(self) -> DocumentRfpExtractionService:
-        if getattr(self, "_document_rfp_extraction_service", None) is None:
-            self._document_rfp_extraction_service = DocumentRfpExtractionService(
-                supabase=self.supabase,
-                storage_path_resolver=self._get_storage_path,
-                clean_email_body=self._clean_email_body,
-                extract_rfp=extract_rfp_from_text,
-                extract_company=extract_company_from_text,
-                enrich_rfp=lambda message_clean, pre_extracted_data: self.opportunity_repository._extract_and_enrich_rfp_data(
-                    message_clean,
-                    pre_extracted_data=pre_extracted_data,
-                ),
-            )
-        return self._document_rfp_extraction_service
 
     @staticmethod
     def _clean_email_body(email_body: str, max_length: int = 3000) -> str:
