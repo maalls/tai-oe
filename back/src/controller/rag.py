@@ -1644,7 +1644,7 @@ def create_rag_handler(config):
                 return
             action_id = get_action_match.group(1)
             result = handlers.handle_get_action(action_id, user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_action_logs_get(self, get_action_logs_match, qs, handlers):
