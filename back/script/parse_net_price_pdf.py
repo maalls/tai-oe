@@ -8,8 +8,8 @@ from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
 
-from src.llm import get_llm_service
-from src.net_price.importer import NetPriceImporter
+from src.infrastructure.clients.llm import get_llm_service
+from src.lib.importers.net_price import NetPriceImporter
 
 
 def parse_args() -> argparse.Namespace:

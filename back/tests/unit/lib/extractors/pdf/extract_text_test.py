@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.pdf.extract_text import extract_text
+from src.lib.extractors.pdf import extract_text
 
 
 def test_extract_text_hello_world():

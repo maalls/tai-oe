@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 
 import pytest
 
-from src.reader.csv import CSVReader
+from src.lib.readers.csv import CSVReader
 
 
 @pytest.fixture

@@ -13,7 +13,7 @@ from typing import Dict, List, Any, Optional
 import sys
 import chardet
 
-from src.reader.csv import CSVReader
+from src.lib.readers.csv import CSVReader
 
 
 def _detect_encoding(path: Path) -> str:

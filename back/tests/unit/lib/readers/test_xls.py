@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from src.reader.xls import XlsReader
+from src.lib.readers.xls import XlsReader
 
 
 def test_convert_to_csv_creates_expected_files(tmp_path: Path):

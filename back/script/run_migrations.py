@@ -13,7 +13,7 @@ import sys
 import hashlib
 from pathlib import Path
 from typing import List, Dict
-from src.supabase.supabase_client import get_supabase_service
+from src.infrastructure.clients.supabase import get_supabase_service
 import psycopg2
 from dotenv import load_dotenv
 

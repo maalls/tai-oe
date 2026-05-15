@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from src.net_price.importer import NetPriceImporter
+from src.lib.importers.net_price import NetPriceImporter
 
 class FakeResponse:
 	def __init__(self, data=None, error=None):

@@ -13,7 +13,7 @@ import json
 import sys
 from pathlib import Path
 
-from src.text.reader import extract_company_from_text
+from src.lib.extractors.text_reader import extract_company_from_text
 
 
 def extract_contact_from_file(file_path: str) -> dict:

@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-from src.llm import get_llm_service
-from src.net_price.importer import NetPriceImporter
-from src.supabase import get_supabase_service
+from src.infrastructure.clients.llm import get_llm_service
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.importers.net_price import NetPriceImporter
 
 
 @pytest.mark.slow

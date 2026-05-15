@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from src.denormalizer.denormalizer import Denormalizer
+from src.lib.denormalizers.denormalizer import Denormalizer
 
 def test_get_groups_mapping():
     """Test get_groups_mapping returns correct mappings"""
     denormalizer = Denormalizer()
     
     # Build the full path to the test file
-    test_file = Path(__file__).resolve().parents[3] / 'var' / 'storage' / 'ETIM-9.0-ALL-SECTORS-CSV-METRIC-EI-2022-12-05' / 'ETIMARTGROUP.csv'
+    test_file = Path(__file__).resolve().parents[4] / 'var' / 'storage' / 'ETIM-9.0-ALL-SECTORS-CSV-METRIC-EI-2022-12-05' / 'ETIMARTGROUP.csv'
     
     groups_map = denormalizer.get_groups_mapping(test_file, key='ARTGROUPID', target_field='GROUPDESC')
     

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.discount.importer import DiscountImporter
+from src.lib.importers.discount import DiscountImporter
 
 
 class FakeResponse:

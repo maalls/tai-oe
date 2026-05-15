@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.etim.etim import Denormalizer
+from src.lib.importers.etim import Denormalizer
 
 
 def test_denormalize():

@@ -16,8 +16,8 @@ class Denormalizer:
             storage_dir: Path to storage directory containing ETIM CSV files
         """
         if storage_dir is None:
-            # Default to var/storage relative to this module
-            storage_dir = Path(__file__).parent.parent.parent / 'var' / 'storage' / 'ETIM-9.0-ALL-SECTORS-CSV-METRIC-EI-2022-12-05'
+            back_root = Path(__file__).resolve().parents[3]
+            storage_dir = back_root / 'var' / 'storage' / 'ETIM-9.0-ALL-SECTORS-CSV-METRIC-EI-2022-12-05'
         self.storage_dir = Path(storage_dir)
         self.target_dir = self.storage_dir.parent / 'ETIM-denormalized'
         self.target_dir.mkdir(parents=True, exist_ok=True)

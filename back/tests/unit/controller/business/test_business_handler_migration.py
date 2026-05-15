@@ -1,6 +1,6 @@
 """Unit tests for BusinessHandlers migration slices."""
 
-from src.controller.business_handler import BusinessHandlers
+from src.api.business.handler import BusinessHandlers
 
 
 class _RfqHandlersStub:

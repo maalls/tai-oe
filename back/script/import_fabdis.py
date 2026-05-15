@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.fabdis.importer import FabdisImporter
-from src.supabase import get_supabase_service
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.importers.fabdis import FabdisImporter
 
 
 def parse_args() -> argparse.Namespace:

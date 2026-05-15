@@ -1,6 +1,6 @@
 import unittest
 from src.api.product.handler import ProductController
-from src.supabase.supabase_client import get_supabase_service
+from src.infrastructure.clients.supabase import get_supabase_service
 
 class TestProductController(unittest.TestCase):
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-from src.llm import get_llm_service
+from src.infrastructure.clients.llm import get_llm_service
 
 
 @pytest.mark.slow

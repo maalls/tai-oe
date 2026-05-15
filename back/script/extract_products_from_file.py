@@ -14,8 +14,8 @@ import json
 import sys
 from pathlib import Path
 
-from src.text.reader import extract_rfp_from_text
-from src.pdf.extract_text import extract_text
+from src.lib.extractors.pdf import extract_text
+from src.lib.extractors.text_reader import extract_rfp_from_text
 
 
 def extract_products_from_file(file_path: str) -> dict:

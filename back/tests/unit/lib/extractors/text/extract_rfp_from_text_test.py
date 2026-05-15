@@ -4,8 +4,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from src.llm import extract_json_from_text
-from src.text.reader import extract_rfp_from_text
+from src.infrastructure.clients.llm import extract_json_from_text
+from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.infrastructure.llm_factory import DEFAULT_LLM_URL
 
 

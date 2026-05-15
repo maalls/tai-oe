@@ -7,9 +7,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from src.net_price.importer import NetPriceImporter
-from src.supabase import get_supabase_service
-from src.llm import get_llm_service
+from src.infrastructure.clients.llm import get_llm_service
+from src.infrastructure.clients.supabase import get_supabase_service
+from src.lib.importers.net_price import NetPriceImporter
 
 
 def parse_args() -> argparse.Namespace:

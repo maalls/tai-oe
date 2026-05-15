@@ -10,10 +10,25 @@ from src.infrastructure.clients.llm import LLMClient, extract_json_from_text
 from src.infrastructure.llm_factory import LLMClientFactory
 
 
+def _get_back_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _resolve_prompt_file(filename: str) -> Path:
+    candidates = [
+        Path(__file__).resolve().parent / filename,
+        _get_back_root() / "src" / "text" / filename,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"Prompt file not found: {candidates[0]}")
+
+
 def _cache_llm_extraction(content: str, payload: Dict[str, Any], elapsed: float) -> None:
     """Persist LLM extraction payload for debugging and traceability."""
     try:
-        project_root = Path(__file__).resolve().parents[2]
+        project_root = _get_back_root()
         cache_dir = project_root / "var" / "llm" / "cache"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -47,12 +62,7 @@ def extract_rfp_from_email(
     return extract_rfp_from_text(content)
 
 def extract_company_from_text(content: str) -> Dict[str, Any]:
-    # Resolve the prompt file path robustly relative to project root
-    here = Path(__file__).resolve()
-    # Load system prompt from external file
-    prompt_file = here.parent / "company_prompt.md"
-    if not prompt_file.exists():
-        raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
+    prompt_file = _resolve_prompt_file("company_prompt.md")
     system_prompt = prompt_file.read_text(encoding="utf-8").strip()
 
     client = LLMClientFactory().create_client()
@@ -69,12 +79,7 @@ def extract_rfp_from_text(content: str, timeout_seconds: Optional[int] = None) -
         content = content[:MAX_CONTENT_LENGTH] + "..."
         print(f"[TextReader] Content truncated to {MAX_CONTENT_LENGTH} chars for LLM processing")
 
-    # Resolve the prompt file path robustly relative to project root
-    here = Path(__file__).resolve()
-    # Load system prompt from external file
-    prompt_file = here.parent / "prompt.md"
-    if not prompt_file.exists():
-        raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
+    prompt_file = _resolve_prompt_file("prompt.md")
     system_prompt = prompt_file.read_text(encoding="utf-8").strip()
 
 	

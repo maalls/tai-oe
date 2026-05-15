@@ -13,8 +13,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-from src.pdf.extract_text import extract_text
-from src.text.reader import extract_rfp_from_text
+from src.lib.extractors.pdf import extract_text
+from src.lib.extractors.text_reader import extract_rfp_from_text
 
 
 def _flatten_products(payload):

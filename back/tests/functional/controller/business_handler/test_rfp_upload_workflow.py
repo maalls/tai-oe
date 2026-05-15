@@ -22,8 +22,8 @@ sys.path.insert(0, str(test_root))
 from dotenv import load_dotenv
 load_dotenv(test_root / ".env")
 
-from src.controller.business_handler import BusinessHandlers
-from src.controller.db_client import get_db_handler
+from src.api.business.handler import BusinessHandlers
+from src.infrastructure.clients.database import get_db_handler
 
 
 class TestRFPUploadFunctional:
@@ -89,7 +89,7 @@ class TestRFPUploadFunctional:
                 }
             ]
         }
-        with patch("src.controller.business_handler.extract_rfp_from_text", return_value=fake_rfp_data):
+        with patch("src.api.business.handler.extract_rfp_from_text", return_value=fake_rfp_data):
             result = self.business_handlers.handle_rfp_upload(body=body, content_type=content_type)
 
         print(f"\n✓ Response status: {result.get('status')}")
@@ -112,7 +112,7 @@ class TestRFPUploadFunctional:
         print("TEST: Create Opportunity from RFP text data")
         print("=" * 60)
 
-        from src.supabase.supabase_client import get_supabase_service
+        from src.infrastructure.clients.supabase import get_supabase_service
         supabase = get_supabase_service()
 
         opportunity = self._create_test_opportunity(supabase, "Test RFP Opportunity")
@@ -131,7 +131,7 @@ class TestRFPUploadFunctional:
         print("TEST: ATTACHMENT enum exists in database")
         print("=" * 60)
 
-        from src.supabase.supabase_client import get_supabase_service
+        from src.infrastructure.clients.supabase import get_supabase_service
         supabase = get_supabase_service()
 
         opportunity = self._create_test_opportunity(supabase, "Test enum ATTACHMENT")
@@ -160,7 +160,7 @@ class TestRFPUploadFunctional:
         print("TEST: Insert document with ATTACHMENT type")
         print("=" * 60)
 
-        from src.supabase.supabase_client import get_supabase_service
+        from src.infrastructure.clients.supabase import get_supabase_service
         supabase = get_supabase_service()
 
         opportunity = self._create_test_opportunity(supabase, "Test Opportunity for Attachment")

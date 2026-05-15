@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.fabdis.importer import FabdisImporter
+from src.lib.importers.fabdis import FabdisImporter
 
 
 class FakePandas:

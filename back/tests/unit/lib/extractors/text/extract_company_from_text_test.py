@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 
-from src.text.reader import extract_company_from_text
+from src.lib.extractors.text_reader import extract_company_from_text
 
 @pytest.mark.slow
 @pytest.mark.timeout(180)

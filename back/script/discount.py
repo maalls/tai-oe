@@ -8,8 +8,8 @@ from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
 
-from src.discount.importer import DiscountImporter
-from src.llm import get_llm_service
+from src.infrastructure.clients.llm import get_llm_service
+from src.lib.importers.discount import DiscountImporter
 
 
 def parse_args() -> argparse.Namespace:

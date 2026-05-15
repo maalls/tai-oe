@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.supabase.supabase_client import get_supabase_service
+from src.infrastructure.clients.supabase import get_supabase_service
 
 def verify_attachment_type():
     print("\n" + "="*80)
