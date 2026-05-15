@@ -99,7 +99,8 @@ Restructurer back/src selon l'architecture propre avec couches bien définies :
   - `database_handlers.py` → `api/database/handler.py`
   - SQL métier actuellement dans `database_handlers.py` → extraction progressive vers `repository/database/repository.py`
   - `email_handler.py` → `api/email/`
-  - `file_handler.py` → `api/file/` ou `infrastructure/file/`
+  - `file_handler.py` → `api/file/handler.py`
+  - Opérations disque/conversion actuellement dans `file_handler.py` → extraction progressive vers `infrastructure/storage/file_store.py`
   - `handlers.py` → `api/router.py` ou `api/orchestrator.py` (point d'entrée)
   - `db_client.py` → `infrastructure/clients/database.py`
   - `auth/auth_handler.py` → `api/auth/`
