@@ -184,17 +184,7 @@ def create_rag_handler(config):
                 # Email attachment delete
                 attachment_delete_match = re.match(r"^/api/email-attachment/([^/]+)$", parsed.path)
                 if attachment_delete_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    attachment_id = attachment_delete_match.group(1)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_email_attachment_delete(attachment_delete_match)
                 
                 # Email delete
                 email_delete_match = re.match(r"^/api/email/([^/]+)$", parsed.path)
@@ -301,6 +291,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_email_delete(email_id=email_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_email_attachment_delete(self, attachment_delete_match):
+            """Handle DELETE /api/email-attachment/{id}."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            attachment_id = attachment_delete_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
