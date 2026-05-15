@@ -1,10 +1,12 @@
 """HEAD route dispatch for legacy API server."""
 
+from src.api.routes.server_storage_handlers import handle_storage_head
+
 
 def dispatch_head_request(handler, parsed_path: str) -> bool:
     """Dispatch HEAD routes and return True when handled."""
     if parsed_path.startswith('/api/storage/'):
-        handler._handle_storage_head(parsed_path)
+        handle_storage_head(handler, handler.config['STORAGE_DIR'], parsed_path)
         return True
 
     return False

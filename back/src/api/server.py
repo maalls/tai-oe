@@ -34,7 +34,6 @@ from src.api.routes.server_auth_helpers import (
     require_auth_user_id,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_get_download_handlers import handle_document_download, handle_quote_download
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_misc_handlers import (
     handle_email_fetch_loop_status_get,
@@ -50,7 +49,6 @@ from src.api.routes.server_http_method_handlers import (
     handle_put_method,
 )
 from src.api.routes.server_path_helpers import resolve_fs_path
-from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_utility_handlers import (
     handle_csv_source_post,
     handle_document_extract_rfp_post,
@@ -66,11 +64,7 @@ from src.api.routes.server_post_utility_handlers import (
 from src.api.routes.server_post_legacy_dispatch import dispatch_action_post_routes, dispatch_post_legacy_and_action_routes
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.server_response_helpers import send_error, send_json, send_redirect, send_text_response
-from src.api.routes.server_post_auth_dispatch import dispatch_post_auth_routes
-from src.api.routes.server_post_business_dispatch import dispatch_post_business_routes
-from src.api.routes.server_post_domain_dispatch import dispatch_post_domain_routes
 from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
-from src.api.routes.server_storage_handlers import handle_storage_get, handle_storage_head
 
 # Load .env before reading config values.
 load_runtime_env(__file__)
@@ -172,10 +166,6 @@ def create_rag_handler(config):
         def do_HEAD(self):
             return handle_head_method(self)
 
-        def _handle_storage_head(self, parsed_path: str):
-            """Handle HEAD requests for storage files."""
-            return handle_storage_head(self, config['STORAGE_DIR'], parsed_path)
-
         def _handle_ddd_post_routes(self, parsed):
             """Handle incremental DDD POST routes through API adapters."""
             if not is_ddd_post_route(parsed.path):
@@ -215,34 +205,6 @@ def create_rag_handler(config):
 
         def do_GET(self):
             return handle_get_method(self)
-
-        def _handle_storage_get(self, parsed_path: str):
-            """Handle GET requests for storage files."""
-            return handle_storage_get(self, config['STORAGE_DIR'], parsed_path)
-
-        def _handle_post_opportunity_quote_invoice_routes(self, parsed):
-            """Handle secondary POST routes for opportunity/quote/invoice flows."""
-            return dispatch_post_business_routes(self, parsed)
-
-        def _handle_post_core_routes(self, parsed_path: str) -> bool:
-            """Handle core POST routes that map directly to controller helpers."""
-            return dispatch_post_core_routes(self, parsed_path)
-
-        def _handle_post_auth_routes(self, parsed_path: str) -> bool:
-            """Handle auth POST routes."""
-            return dispatch_post_auth_routes(self, parsed_path)
-
-        def _handle_post_domain_routes(self, parsed) -> bool:
-            """Handle entity/email/opportunity/imap/document POST routes."""
-            return dispatch_post_domain_routes(self, parsed)
-
-        def _handle_action_post_routes(self, parsed_path: str) -> bool:
-            """Handle action-specific POST regex routes."""
-            return dispatch_action_post_routes(self, parsed_path)
-
-        def _handle_post_legacy_and_action_routes(self, parsed_path: str) -> bool:
-            """Handle remaining legacy and action POST routes."""
-            return dispatch_post_legacy_and_action_routes(self, parsed_path)
 
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
@@ -305,14 +267,6 @@ def create_rag_handler(config):
         def _handle_source_stream(self, qs, handlers):
             """Stream original Excel source file."""
             return handle_source_stream(self, qs, handlers)
-
-        def _handle_quote_download(self, filename, handlers, qs=None):
-            """Stream PDF quote file."""
-            return handle_quote_download(self, filename, handlers, qs)
-
-        def _handle_document_download(self, filename, handlers, qs=None):
-            """Stream document file (PDF, DOCX, etc.)."""
-            return handle_document_download(self, filename, handlers, qs)
 
         def json(self, payload, status_code=200):
             """Send JSON response."""

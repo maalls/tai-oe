@@ -320,7 +320,7 @@ def handle_quotes_list_get(handler, request_handlers):
 def handle_quotes_download_get(handler, parsed_path: str, qs, request_handlers):
     """Handle /api/quotes/download/<filename> GET endpoint."""
     filename = parsed_path.split('/api/quotes/download/')[-1]
-    return handler._handle_quote_download(filename, request_handlers, qs)
+    return handle_quote_download(handler, filename, request_handlers, qs)
 
 
 def handle_quote_download(handler, filename, request_handlers, qs=None):

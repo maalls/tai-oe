@@ -1,14 +1,18 @@
 """Miscellaneous GET route dispatch for legacy API server."""
 
+from src.api.email.handler import handle_google_oauth_callback_get, handle_products_get
+from src.api.file.handler import handle_fetch_get
+from src.api.routes.server_storage_handlers import handle_storage_get
+
 
 def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
     """Dispatch misc GET routes and return True when handled."""
     if parsed.path == '/api/products':
-        handler._handle_products_get(qs)
+        handle_products_get(handler, qs)
         return True
 
     if parsed.path.startswith('/api/google/oauth/callback'):
-        handler._handle_google_oauth_callback_get(qs)
+        handle_google_oauth_callback_get(handler, qs)
         return True
 
     if parsed.path.startswith('/api/prompt/'):
@@ -16,7 +20,7 @@ def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
         return True
 
     if parsed.path == '/api/fetch':
-        handler._handle_fetch_get(qs)
+        handle_fetch_get(handler, qs)
         return True
 
     if parsed.path == '/api/email-fetch-loop/status':
@@ -24,7 +28,7 @@ def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
         return True
 
     if parsed.path.startswith('/api/storage/'):
-        handler._handle_storage_get(parsed.path)
+        handle_storage_get(handler, handler.config['STORAGE_DIR'], parsed.path)
         return True
 
     return False

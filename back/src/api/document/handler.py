@@ -542,7 +542,7 @@ def handle_documents_download_get(handler, parsed_path: str, qs, request_handler
 
     filename = parsed_path.split('/api/documents/download/')[-1]
     filename = unquote(filename)
-    return handler._handle_document_download(filename, request_handlers, qs)
+    return handle_document_download(handler, filename, request_handlers, qs)
 
 
 def handle_document_download(handler, filename, request_handlers, qs=None):
