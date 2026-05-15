@@ -22,17 +22,17 @@ def dispatch_action_routes(handler, method: str, parsed, qs, request_handlers) -
     if method == "GET":
         list_actions_match = re.match(r"^/api/opportunities/([^/]+)/actions$", path)
         if list_actions_match:
-            handle_opportunity_actions_list_get(handler, list_actions_match, request_handlers)
+            handle_opportunity_actions_list_get(handler, list_actions_match.group(1))
             return True
 
         get_action_match = re.match(r"^/api/actions/([^/]+)$", path)
         if get_action_match:
-            handle_action_get(handler, get_action_match, request_handlers)
+            handle_action_get(handler, get_action_match.group(1))
             return True
 
         get_action_logs_match = re.match(r"^/api/actions/([^/]+)/logs$", path)
         if get_action_logs_match:
-            handle_action_logs_get(handler, get_action_logs_match, qs, request_handlers)
+            handle_action_logs_get(handler, get_action_logs_match.group(1), qs)
             return True
 
         return False

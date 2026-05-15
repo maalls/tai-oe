@@ -444,34 +444,34 @@ def handle_action_delete(handler, action_delete_match):
     return handler.json(result, status)
 
 
-def handle_opportunity_actions_list_get(handler, list_actions_match, request_handlers):
+def handle_opportunity_actions_list_get(handler, opportunity_id: str):
     """Handle /api/opportunities/<id>/actions GET endpoint."""
     user_id = require_auth_user_id(handler)
     if user_id is None:
         return None
-    opportunity_id = list_actions_match.group(1)
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_list_actions(opportunity_id, user_id)
     status = status_from_result(result)
     return handler.json(result, status)
 
 
-def handle_action_get(handler, get_action_match, request_handlers):
+def handle_action_get(handler, action_id: str):
     """Handle /api/actions/<id> GET endpoint."""
     user_id = require_auth_user_id(handler)
     if user_id is None:
         return None
-    action_id = get_action_match.group(1)
+    request_handlers = handler.request_handlers
     result = request_handlers.handle_get_action(action_id, user_id)
     status = status_from_result(result)
     return handler.json(result, status)
 
 
-def handle_action_logs_get(handler, get_action_logs_match, qs, request_handlers):
+def handle_action_logs_get(handler, action_id: str, qs):
     """Handle /api/actions/<id>/logs GET endpoint."""
     user_id = require_auth_user_id(handler)
     if user_id is None:
         return None
-    action_id = get_action_logs_match.group(1)
+    request_handlers = handler.request_handlers
     limit = get_qs_int(qs, 'limit', 50)
     result = request_handlers.handle_get_action_logs(action_id, limit, user_id)
     status = status_from_result(result)
