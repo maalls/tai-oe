@@ -1,6 +1,15 @@
 #!/bin/bash
 # Email Authentication System - Quick Setup Guide
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+if [ -x "${BACK_DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${BACK_DIR}/venv/bin/python"
+else
+    PYTHON_BIN="python"
+fi
+
 echo "📧 Email Authentication Implementation Setup"
 echo "============================================"
 echo ""
@@ -20,10 +29,10 @@ echo "2️⃣  Applying database migrations..."
 echo ""
 
 # Create migrations folder if needed
+cd "${BACK_DIR}" || exit 1
 mkdir -p migrations
 
 echo "Running migration 007 (email auth fields)..."
-cd /Users/malo/Documents/Projects/rkllm-server/external/rag/back
 
 # Run migrations (you'll need to set this up based on your DB)
 echo "⏳ Waiting for database to be ready..."
@@ -58,7 +67,7 @@ print(f"   Score: {result['auth_score']}")
 print(f"   Verified: {result['is_verified']}")
 EOF
 
-python test_email_auth.py
+"${PYTHON_BIN}" test_email_auth.py
 rm test_email_auth.py
 
 echo ""

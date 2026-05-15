@@ -178,6 +178,7 @@ Recommended validation command set per micro-step:
   - `extract_contact_from_file.py`
   - `extract_products_from_file.py`
     and removed root wrappers.
+- Done: moved `back/setup_email_auth.sh` to `back/script/setup_email_auth.sh` and removed root script.
 - Done: moved root test scripts under `back/tests/**` and removed root wrappers:
   - `test_action_cli.py` -> `tests/unit/command/test_action_cli.py`
   - `test_action_cli_comprehensive.py` -> `tests/integration/command/test_action_cli_comprehensive.py`
@@ -209,6 +210,7 @@ Cleanup rule:
 | `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (moved, root removed)   | operational command                  |
 | `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | done (moved, root removed)   | one-off utility script               |
 | `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | done (moved, root removed)   | one-off utility script               |
+| `back/setup_email_auth.sh`              | `back/script/setup_email_auth.sh`                                 | done (moved, root removed)   | operational setup helper script      |
 | `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | done (moved, root removed)   | tests must be under tests tree       |
 | `back/test_action_cli_comprehensive.py` | `back/tests/integration/command/test_action_cli_comprehensive.py` | done (moved, root removed)   | broad scenario test                  |
 | `back/test_llm_model.py`                | `back/tests/integration/llm/test_llm_model.py`                    | done (moved, root removed)   | integration-level behavior           |
