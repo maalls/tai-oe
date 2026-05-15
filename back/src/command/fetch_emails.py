@@ -1,18 +1,18 @@
-"""Fetch new Gmail emails and classify unclassified ones.
+"""Legacy wrapper for the unified single-user fetch workflow.
 
-This script reuses EmailRepository to:
-1) Pull latest messages from Gmail (forcing API fetch)
-2) Classify any emails that are still unclassified
-
-Usage:
-	python -m src.command.fetch_emails --user-id <USER_ID> [--max-results 50] [--classify-limit 200]
+Delegates to ``src.command.email_cli.run_fetch_emails`` while preserving the
+historical module entrypoint:
+	python -m src.command.fetch_emails --user-id <USER_ID> [--max-results 50] [--classify-limit 200] [--after-date YYYY/MM/DD]
 """
 
 import argparse
 import os
 import sys
-from src.config import EMAIL_FETCH_MAX_RESULTS
-from src.command.email_cli import run_fetch_emails as unified_run_fetch_emails
+from src.command.email_cli import (
+	DEFAULT_CLASSIFY_LIMIT,
+	DEFAULT_MAX_RESULTS,
+	run_fetch_emails as unified_run_fetch_emails,
+)
 
 # Load .env if available
 try:
@@ -28,8 +28,8 @@ default_user_id = os.environ.get("SUPABASE_USER_ID") or os.environ.get("DEFAULT_
 
 def run(
 	user_id: str,
-	max_results: int = EMAIL_FETCH_MAX_RESULTS,
-	classify_limit: int = 200,
+	max_results: int = DEFAULT_MAX_RESULTS,
+	classify_limit: int = DEFAULT_CLASSIFY_LIMIT,
 	after_date: str = None,
 	workflow=None,
 ) -> int:
@@ -45,10 +45,10 @@ def run(
 
 
 def main(argv=None):
-	parser = argparse.ArgumentParser(description="Fetch Gmail emails and classify unclassified ones.")
+	parser = argparse.ArgumentParser(description="Legacy wrapper for the unified single-user fetch workflow.")
 	parser.add_argument("--user-id", required=False, help="Supabase user ID")
-	parser.add_argument("--max-results", type=int, default=EMAIL_FETCH_MAX_RESULTS, help="Max messages to fetch from Gmail")
-	parser.add_argument("--classify-limit", type=int, default=200, help="Max unclassified emails to classify")
+	parser.add_argument("--max-results", type=int, default=DEFAULT_MAX_RESULTS, help="Max messages to fetch from Gmail")
+	parser.add_argument("--classify-limit", type=int, default=DEFAULT_CLASSIFY_LIMIT, help="Max unclassified emails to classify")
 	parser.add_argument(
 		"--after-date",
 		type=str,
@@ -56,8 +56,6 @@ def main(argv=None):
 		help="Fetch emails after this date (YYYY/MM/DD or Unix seconds). Defaults to latest email timestamp (or yesterday if none).",
 	)
 	args = parser.parse_args(argv)
-
-
 
 	user_id = args.user_id or default_user_id
 	if not user_id:
