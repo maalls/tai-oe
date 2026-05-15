@@ -171,6 +171,7 @@ Recommended validation command set per micro-step:
   - `fetch_emails_loop.py`
 - Done: removed wrapper-specific unit tests under `back/tests/unit/command/`.
 - Done: updated command usage docs to `python -m src.command.email_cli ...`.
+- Done: moved development server logic to `back/src/command/dev_server.py` and kept `back/dev.py` as compatibility wrapper.
 - Remaining: run full command regression suite in a Python environment with `pytest` available.
 
 ## 10. Back Root Cleanup (Top-level `back/` files)
@@ -192,7 +193,7 @@ Cleanup rule:
 
 | Current path                            | Proposed destination                                              | Action                          | Rationale                            |
 | --------------------------------------- | ----------------------------------------------------------------- | ------------------------------- | ------------------------------------ |
-| `back/dev.py`                           | `back/src/command/dev_server.py`                                  | move + wrapper                  | productized command entrypoint       |
+| `back/dev.py`                           | `back/src/command/dev_server.py`                                  | done (move + wrapper)           | productized command entrypoint       |
 | `back/run_migration.py`                 | `back/src/command/run_migration.py`                               | move + wrapper                  | command should live in command layer |
 | `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | move + wrapper                  | operational command                  |
 | `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | move                            | one-off utility script               |
