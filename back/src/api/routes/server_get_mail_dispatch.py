@@ -1,6 +1,7 @@
 """Mail/IMAP GET route dispatch for legacy API server."""
 
 from src.api.email.handler import (
+    handle_email_attachment_get,
     handle_gmail_authorize_get,
     handle_gmail_oauth_start_get,
     handle_gmail_profile_get,
@@ -47,7 +48,7 @@ def dispatch_get_mail_routes(handler, parsed, qs) -> bool:
         handle_gmail_message_get(handler, parsed.path)
         return True
     if parsed.path.startswith('/api/email-attachment/'):
-        handler._handle_email_attachment_get(parsed.path)
+        handle_email_attachment_get(handler, parsed.path)
         return True
 
     return False

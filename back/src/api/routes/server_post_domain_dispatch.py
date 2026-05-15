@@ -3,12 +3,17 @@
 import re
 
 from src.api.routes.server_post_utility_handlers import (
+    handle_document_extract_rfp_post,
+    handle_document_update_content_post,
     handle_email_auth_status_post,
     handle_email_extract_contact_post,
     handle_email_resync_post,
     handle_email_senders_high_risk_post,
+    handle_email_senders_verified_post,
     handle_emails_classify_post,
     handle_entity_update_post,
+    handle_imap_config_post,
+    handle_imap_test_post,
     handle_opportunities_create_from_email_post,
     handle_opportunities_create_from_rfp_post,
     handle_opportunities_create_manual_post,
@@ -61,23 +66,23 @@ def dispatch_post_domain_routes(handler, parsed) -> bool:
         return True
 
     if parsed_path == '/api/email/senders/verified':
-        handler._handle_email_senders_verified_post()
+        handle_email_senders_verified_post(handler)
         return True
 
     if parsed_path == '/api/imap/config':
-        handler._handle_imap_config_post()
+        handle_imap_config_post(handler)
         return True
 
     if parsed_path == '/api/imap/test':
-        handler._handle_imap_test_post()
+        handle_imap_test_post(handler)
         return True
 
     if parsed_path == '/api/document/extract-rfp':
-        handler._handle_document_extract_rfp_post()
+        handle_document_extract_rfp_post(handler)
         return True
 
     if parsed_path == '/api/document/update-content':
-        handler._handle_document_update_content_post()
+        handle_document_update_content_post(handler)
         return True
 
     return False

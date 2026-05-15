@@ -43,9 +43,6 @@ from src.api.routes.server_auth_helpers import (
     require_auth_user_id,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_get_mail_message_handlers import (
-    handle_email_attachment_get,
-)
 from src.api.routes.server_get_download_handlers import handle_document_download, handle_quote_download
 from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_utility_handlers import (
@@ -293,49 +290,9 @@ def create_rag_handler(config):
             """Handle remaining legacy and action POST routes."""
             return dispatch_post_legacy_and_action_routes(self, parsed_path)
 
-        def _handle_email_senders_verified_post(self):
-            """Handle /api/email/senders/verified POST endpoint."""
-            return handle_email_senders_verified_post(self)
-
-        def _handle_imap_config_post(self):
-            """Handle /api/imap/config POST endpoint."""
-            return handle_imap_config_post(self)
-
-        def _handle_imap_test_post(self):
-            """Handle /api/imap/test POST endpoint."""
-            return handle_imap_test_post(self)
-
-        def _handle_document_extract_rfp_post(self):
-            """Handle /api/document/extract-rfp POST endpoint."""
-            return handle_document_extract_rfp_post(self)
-
-        def _handle_document_update_content_post(self):
-            """Handle /api/document/update-content POST endpoint."""
-            return handle_document_update_content_post(self)
-
-        def _handle_quote_submit_post(self):
-            """Handle /api/quote POST endpoint."""
-            return handle_quote_submit_post(self)
-
-        def _handle_quote_send_post(self):
-            """Handle /api/quote/send POST endpoint."""
-            return handle_quote_send_post(self)
-
-        def _handle_csv_source_post(self):
-            """Handle /api/csv/source POST endpoint."""
-            return handle_csv_source_post(self)
-
-        def _handle_rfp_post(self):
-            """Handle /api/rfp POST endpoint."""
-            return handle_rfp_post(self)
-
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
             return handle_email_fetch_loop_status_get(self, __file__)
-
-        def _handle_email_attachment_get(self, parsed_path: str):
-            """Handle /api/email-attachment/<id> GET endpoint."""
-            return handle_email_attachment_get(self, parsed_path)
 
         def _handle_quotes_download_get(self, parsed_path: str, qs, handlers):
             """Handle /api/quotes/download/<filename> GET endpoint."""

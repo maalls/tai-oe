@@ -7,6 +7,10 @@ from src.api.routes.server_post_utility_handlers import (
     handle_action_pause_post,
     handle_action_resume_post,
     handle_actions_create_post,
+    handle_csv_source_post,
+    handle_quote_send_post,
+    handle_quote_submit_post,
+    handle_rfp_post,
 )
 
 
@@ -33,19 +37,19 @@ def dispatch_action_post_routes(handler, parsed_path: str) -> bool:
 def dispatch_post_legacy_and_action_routes(handler, parsed_path: str) -> bool:
     """Dispatch remaining legacy/action POST routes and return True when handled."""
     if parsed_path == '/api/csv/source':
-        handler._handle_csv_source_post()
+        handle_csv_source_post(handler)
         return True
 
     if parsed_path == '/api/rfp':
-        handler._handle_rfp_post()
+        handle_rfp_post(handler)
         return True
 
     if parsed_path == '/api/quote':
-        handler._handle_quote_submit_post()
+        handle_quote_submit_post(handler)
         return True
 
     if parsed_path == '/api/quote/send':
-        handler._handle_quote_send_post()
+        handle_quote_send_post(handler)
         return True
 
     if parsed_path == '/api/actions':
