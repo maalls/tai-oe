@@ -454,7 +454,7 @@ def create_rag_handler(config):
                 if parsed.path.startswith('/api/google/oauth/callback'):
                     return self._handle_google_oauth_callback_get(qs)
 
-                # Prompt endpoint: /api/prompt/<relative_path> -> back/src/prompt/<relative_path>/prompt.md
+                # Prompt endpoint: /api/prompt/<relative_path> -> back/src/infrastructure/prompts/<relative_path>/prompt.md
                 if parsed.path.startswith('/api/prompt/'):
                     return self._handle_prompt_get(parsed.path)
 
@@ -1767,7 +1767,7 @@ def create_rag_handler(config):
             """Handle GET requests for prompt markdown content."""
             relative_path = parsed_path[len('/api/prompt/'):].strip('/')
             handlers = self.get_request_handlers()
-            base_dir = Path(__file__).resolve().parents[1] / 'prompt'
+            base_dir = Path(__file__).resolve().parents[1] / 'infrastructure' / 'prompts'
             try:
                 content = handlers.handle_get_prompt_content(
                     relative_path=relative_path,
