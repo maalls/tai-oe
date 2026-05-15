@@ -376,17 +376,7 @@ def create_rag_handler(config):
                     # Invoice generation from quote
                     quote_invoice_match = re.match(r"^/api/quote/([^/]+)/invoice$", parsed.path)
                     if quote_invoice_match and self.command == 'POST':
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-
-                        user_id = user_data.get('id') if user_data else None
-                        quote_id = quote_invoice_match.group(1)
-
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_quote_invoice_post(quote_invoice_match)
 
                     # Invoice PDF generation
                     invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
@@ -1249,6 +1239,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_quote_invoice_post(self, quote_invoice_match):
+            """Handle /api/quote/{id}/invoice POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            quote_id = quote_invoice_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
