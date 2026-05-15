@@ -1047,19 +1047,7 @@ def create_rag_handler(config):
                     return self._handle_products_get(qs)
 
                 if parsed.path.startswith('/api/google/oauth/callback'):
-                    handlers = self.get_request_handlers()
-                    code = qs.get('code', [None])[0]
-                    state = qs.get('state', [None])[0]
-                    if not code:
-                        return self._send_error(400, 'Missing code parameter')
-                    result = handlers.handle_gmail_oauth_callback(code, state)
-                    if result.get('status') == 'ok':
-                        redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
-                        self.send_response(302)
-                        self.send_header('Location', redirect_url)
-                        self.end_headers()
-                        return
-                    return self.json(result, 500)
+                    return self._handle_google_oauth_callback_get(qs)
 
                 # Prompt endpoint: /api/prompt/<relative_path> -> back/src/prompt/<relative_path>/prompt.md
                 if parsed.path.startswith('/api/prompt/'):
@@ -1395,6 +1383,24 @@ def create_rag_handler(config):
             """Handle /api/products GET endpoint."""
             handlers = self.get_request_handlers()
             return self.json(handlers.handle_list_products(qs))
+
+        def _handle_google_oauth_callback_get(self, qs):
+            """Handle Google OAuth callback route."""
+            handlers = self.get_request_handlers()
+            code = qs.get('code', [None])[0]
+            state = qs.get('state', [None])[0]
+            if not code:
+                return self._send_error(400, 'Missing code parameter')
+
+            result = handlers.handle_gmail_oauth_callback(code, state)
+            if result.get('status') == 'ok':
+                redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
+                self.send_response(302)
+                self.send_header('Location', redirect_url)
+                self.end_headers()
+                return
+
+            return self.json(result, 500)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""
