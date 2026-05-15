@@ -3,7 +3,7 @@
 import json
 from typing import Dict
 
-from src.controller.file_handler import FileHandler
+from src.api.file.handler import FileHandler
 
 
 class CsvHandlers:

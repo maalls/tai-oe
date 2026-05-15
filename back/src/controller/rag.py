@@ -21,7 +21,7 @@ from typing import Dict
 from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.reader.csv import CSVReader
 from src.embeddings import EmbeddingGenerator
-from src.controller.file_handler import FileHandler
+from src.api.file.handler import FileHandler
 from src.controller.handlers import RequestHandlers
 from src.controller.auth.auth_handler import AuthHandler
 from src.infrastructure.llm_factory import LLMClientFactory
