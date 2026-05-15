@@ -318,21 +318,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/opportunities/create-from-email':
                     return self._handle_opportunities_create_from_email_post()
                 elif parsed.path == '/api/opportunities/create-manual':
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    payload = self._read_json(default={})
-
-                    name = payload.get('name')
-                    if not name:
-                        return self.json({"status": "error", "message": "Missing name parameter"}, 400)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_opportunities_create_manual_post()
                 elif parsed.path == '/api/opportunities/create-from-rfp':
                     body = self._read_body()
                     content_type = self.headers.get('Content-Type', '')
@@ -1192,6 +1178,24 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_create_opportunity_from_email(message_id=message_id, user_id=user_id)
             print(f"[RAG] Create opportunity result: {result.get('status')}, {result}")
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunities_create_manual_post(self):
+            """Handle /api/opportunities/create-manual POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            payload = self._read_json(default={})
+
+            name = payload.get('name')
+            if not name:
+                return self.json({"status": "error", "message": "Missing name parameter"}, 400)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
