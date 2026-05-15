@@ -417,21 +417,7 @@ def create_rag_handler(config):
                 
                 # Action endpoints
                 elif parsed.path == '/api/actions':
-                    # Create action
-                    data = self._read_json_or_error()
-                    if data is None:
-                        return
-
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_create_action(data, user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_actions_create_post()
                 
                 # Pause action
                 pause_action_match = re.match(r"^/api/actions/([^/]+)/pause$", parsed.path)
@@ -1274,6 +1260,23 @@ def create_rag_handler(config):
             handlers = self.get_request_handlers()
             result = handlers.handle_quote_send(body, content_type)
             return self.json(result)
+
+        def _handle_actions_create_post(self):
+            """Handle /api/actions POST endpoint."""
+            data = self._read_json_or_error()
+            if data is None:
+                return
+
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_create_action(data, user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
