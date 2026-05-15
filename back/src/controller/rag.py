@@ -320,24 +320,7 @@ def create_rag_handler(config):
                 elif parsed.path == '/api/opportunities/create-manual':
                     return self._handle_opportunities_create_manual_post()
                 elif parsed.path == '/api/opportunities/create-from-rfp':
-                    body = self._read_body()
-                    content_type = self.headers.get('Content-Type', '')
-
-                    auth_header = self.headers.get('Authorization', '')
-                    print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
-                    user_data = self._require_auth(auth_header=auth_header)
-                    print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
-                    if user_data is None:
-                        print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
-                    print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_opportunities_create_from_rfp_post()
                 elif parsed.path == '/api/email/extract-contact':
                     payload = self._read_json(default={})
                     
@@ -1196,6 +1179,26 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_create_opportunity_manual(user_id=user_id, name=name)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_opportunities_create_from_rfp_post(self):
+            """Handle /api/opportunities/create-from-rfp POST endpoint."""
+            body = self._read_body()
+            content_type = self.headers.get('Content-Type', '')
+
+            auth_header = self.headers.get('Authorization', '')
+            print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
+            user_data = self._require_auth(auth_header=auth_header)
+            print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
+            if user_data is None:
+                print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            handlers = self.get_request_handlers()
+            result = handlers.handle_create_opportunity_from_rfp(body=body, content_type=content_type, user_id=user_id)
+            print(f"[RAG] Create opportunity from RFP result: {result.get('status')}")
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
