@@ -2,7 +2,12 @@
 
 import re
 
-from src.api.routes.server_post_utility_handlers import handle_action_pause_post
+from src.api.routes.server_post_utility_handlers import (
+    handle_action_execute_post,
+    handle_action_pause_post,
+    handle_action_resume_post,
+    handle_actions_create_post,
+)
 
 
 def dispatch_action_post_routes(handler, parsed_path: str) -> bool:
@@ -14,12 +19,12 @@ def dispatch_action_post_routes(handler, parsed_path: str) -> bool:
 
     resume_action_match = re.match(r"^/api/actions/([^/]+)/resume$", parsed_path)
     if resume_action_match:
-        handler._handle_action_resume_post(resume_action_match)
+        handle_action_resume_post(handler, resume_action_match)
         return True
 
     execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed_path)
     if execute_action_match:
-        handler._handle_action_execute_post(execute_action_match)
+        handle_action_execute_post(handler, execute_action_match)
         return True
 
     return False
@@ -44,7 +49,7 @@ def dispatch_post_legacy_and_action_routes(handler, parsed_path: str) -> bool:
         return True
 
     if parsed_path == '/api/actions':
-        handler._handle_actions_create_post()
+        handle_actions_create_post(handler)
         return True
 
     return dispatch_action_post_routes(handler, parsed_path)

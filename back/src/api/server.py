@@ -69,23 +69,13 @@ from src.api.routes.server_mutation_handlers import handle_action_update_put
 from src.api.routes.server_path_helpers import resolve_fs_path
 from src.api.routes.server_post_core_dispatch import dispatch_post_core_routes
 from src.api.routes.server_post_utility_handlers import (
-    handle_action_execute_post,
-    handle_action_resume_post,
-    handle_actions_create_post,
-    handle_auth_login_post,
-    handle_auth_logout_post,
-    handle_auth_signup_post,
     handle_csv_source_post,
-    handle_curl_post,
     handle_document_extract_rfp_post,
     handle_document_update_content_post,
     handle_email_senders_verified_post,
     handle_imap_config_post,
     handle_imap_test_post,
     handle_emails_classify_post,
-    handle_fs_create_post,
-    handle_fs_read_post,
-    handle_products_post,
     handle_quote_send_post,
     handle_quote_submit_post,
     handle_rfp_post,
@@ -303,34 +293,6 @@ def create_rag_handler(config):
             """Handle remaining legacy and action POST routes."""
             return dispatch_post_legacy_and_action_routes(self, parsed_path)
 
-        def _handle_products_post(self):
-            """Handle /api/products POST endpoint."""
-            return handle_products_post(self)
-
-        def _handle_fs_create_post(self):
-            """Handle /api/fs/create POST endpoint."""
-            return handle_fs_create_post(self)
-
-        def _handle_fs_read_post(self):
-            """Handle /api/fs/read POST endpoint."""
-            return handle_fs_read_post(self)
-
-        def _handle_curl_post(self):
-            """Handle /api/curl POST endpoint."""
-            return handle_curl_post(self)
-
-        def _handle_auth_signup_post(self):
-            """Handle /api/auth/signup POST endpoint."""
-            return handle_auth_signup_post(self)
-
-        def _handle_auth_login_post(self):
-            """Handle /api/auth/login POST endpoint."""
-            return handle_auth_login_post(self)
-
-        def _handle_auth_logout_post(self):
-            """Handle /api/auth/logout POST endpoint."""
-            return handle_auth_logout_post(self)
-
         def _handle_email_senders_verified_post(self):
             """Handle /api/email/senders/verified POST endpoint."""
             return handle_email_senders_verified_post(self)
@@ -366,18 +328,6 @@ def create_rag_handler(config):
         def _handle_rfp_post(self):
             """Handle /api/rfp POST endpoint."""
             return handle_rfp_post(self)
-
-        def _handle_actions_create_post(self):
-            """Handle /api/actions POST endpoint."""
-            return handle_actions_create_post(self)
-
-        def _handle_action_resume_post(self, resume_action_match):
-            """Handle /api/actions/{id}/resume POST endpoint."""
-            return handle_action_resume_post(self, resume_action_match)
-
-        def _handle_action_execute_post(self, execute_action_match):
-            """Handle /api/actions/{id}/execute POST endpoint."""
-            return handle_action_execute_post(self, execute_action_match)
 
         def _handle_email_fetch_loop_status_get(self):
             """Handle /api/email-fetch-loop/status GET endpoint."""
