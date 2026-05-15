@@ -27,7 +27,6 @@ from src.controller.auth.auth_handler import AuthHandler
 from src.controller.llm_factory import LLMClientFactory
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
-from http.server import ThreadingHTTPServer
 
 # Load .env before reading config values
 try:
@@ -2013,7 +2012,7 @@ def create_rag_handler(config):
     
     return Rag
 
-class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+class ReusableThreadingHTTPServer(http.server.ThreadingHTTPServer):
     allow_reuse_address = True
     
     def server_bind(self):
