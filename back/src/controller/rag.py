@@ -381,17 +381,7 @@ def create_rag_handler(config):
                     # Invoice PDF generation
                     invoice_pdf_match = re.match(r"^/api/invoice/([^/]+)/pdf$", parsed.path)
                     if invoice_pdf_match and self.command == 'POST':
-                        user_data = self._require_auth()
-                        if user_data is None:
-                            return
-
-                        user_id = user_data.get('id') if user_data else None
-                        invoice_id = invoice_pdf_match.group(1)
-
-                        handlers = self.get_request_handlers()
-                        result = handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
-                        status = 200 if result.get('status') == 'ok' else 400
-                        return self.json(result, status)
+                        return self._handle_invoice_pdf_post(invoice_pdf_match)
 
                     # Invoice send
                     invoice_send_match = re.match(r"^/api/invoice/([^/]+)/send$", parsed.path)
@@ -1253,6 +1243,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_invoice_pdf_post(self, invoice_pdf_match):
+            """Handle /api/invoice/{id}/pdf POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            invoice_id = invoice_pdf_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
