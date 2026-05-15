@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import List
 from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.command.fetch_emails import run as fetch_emails_run
+from src.command.email_cli import run_loop as unified_run_loop
 
 # Load .env if available
 try:
@@ -72,116 +73,13 @@ def run_loop(
 	max_results: int = EMAIL_FETCH_MAX_RESULTS,
 	classify_limit: int = 200,
 ):
-	"""Run email fetching in a loop with minimum refresh interval.
-	
-	Args:
-		user_id: Optional specific user ID. If None, fetches for all users.
-		interval_seconds: Minimum time between fetch cycles (default: 120 seconds / 2 minutes)
-		max_results: Max messages to fetch from the active provider per cycle per user
-		classify_limit: Max unclassified emails to classify per cycle per user
-	"""
-	# Determine mode
-	if user_id:
-		user_ids = [user_id]
-		mode = "single user"
-	else:
-		mode = "all users"
-	
-	print(f"[fetch-emails-loop] Starting continuous email fetching ({mode})")
-	if user_id:
-		print(f"[fetch-emails-loop] User ID: {user_id}")
-	print(f"[fetch-emails-loop] Minimum interval: {interval_seconds} seconds ({interval_seconds / 60:.1f} minutes)")
-	print(f"[fetch-emails-loop] Max results per fetch per user: {max_results}")
-	print(f"[fetch-emails-loop] Classify limit per cycle per user: {classify_limit}")
-	print(f"[fetch-emails-loop] Workflow mode: new")
-	print(f"[fetch-emails-loop] Press Ctrl+C to stop\n")
-	
-	cycle_count = 0
-	
-	started_at = time.time()
-	_write_status({
-		"pid": os.getpid(),
-		"started_at": started_at,
-		"last_heartbeat": started_at,
-		"mode": "single" if user_id else "all",
-	})
-	atexit.register(_clear_status)
-
-	try:
-		while True:
-			cycle_count += 1
-			start_time = time.time()
-			_write_status({
-				"pid": os.getpid(),
-				"started_at": started_at,
-				"last_heartbeat": start_time,
-				"mode": "single" if user_id else "all",
-			})
-			
-			print(f"\n{'='*60}")
-			print(f"[fetch-emails-loop] Cycle #{cycle_count} - {time.strftime('%Y-%m-%d %H:%M:%S')}")
-			print(f"{'='*60}")
-			
-			# Get user list (refresh each cycle in case users are added/removed)
-			if not user_id:
-				users = get_all_users()
-				if not users:
-					print(f"[fetch-emails-loop] No users found, skipping cycle")
-					continue
-				else:
-					user_ids = [u["id"] for u in users if u.get("id")]
-					print(f"[fetch-emails-loop] Found {len(users)} users, {len(user_ids)} eligible (new workflow mode)")
-					if not user_ids:
-						print(f"[fetch-emails-loop] No eligible users for this cycle")
-						continue
-			
-			# Process each user
-			total_errors = 0
-			for i, uid in enumerate(user_ids, 1):
-				provider = "new-workflow"
-				if len(user_ids) > 1:
-					print(f"\n[{i}/{len(user_ids)}] Processing user {uid} via {provider.upper()}...")
-				else:
-					print(f"[fetch-emails-loop] Processing user {uid} via {provider.upper()}...")
-				
-				try:
-					exit_code = fetch_emails_run(
-						user_id=uid,
-						max_results=max_results,
-						classify_limit=classify_limit,
-						after_date=None,  # Auto-resolve to latest email date
-					)
-					
-					if exit_code != 0:
-						print(f"[fetch-emails-loop] Warning: fetch_emails returned exit code {exit_code} for user {uid}")
-						total_errors += 1
-						
-				except Exception as exc:
-					print(f"[fetch-emails-loop] Error fetching for user {uid}: {exc}")
-					import traceback
-					traceback.print_exc()
-					total_errors += 1
-			
-			# Calculate elapsed time and sleep if needed
-			elapsed_time = time.time() - start_time
-			sleep_time = max(0, interval_seconds - elapsed_time)
-			
-			print(f"\n[fetch-emails-loop] Cycle completed in {elapsed_time:.2f} seconds")
-			if total_errors > 0:
-				print(f"[fetch-emails-loop] Encountered {total_errors} error(s) during cycle")
-			
-			if sleep_time > 0:
-				print(f"[fetch-emails-loop] Sleeping for {sleep_time:.2f} seconds until next cycle...")
-				time.sleep(sleep_time)
-			else:
-				print(f"[fetch-emails-loop] Processing took longer than interval ({elapsed_time:.2f}s > {interval_seconds}s)")
-				print(f"[fetch-emails-loop] Starting next cycle immediately")
-	
-	except KeyboardInterrupt:
-		print(f"\n\n[fetch-emails-loop] Stopped by user (Ctrl+C)")
-		print(f"[fetch-emails-loop] Total cycles completed: {cycle_count}")
-		_clear_status()
-		sys.exit(0)
+	"""Legacy loop entrypoint delegated to unified email CLI."""
+	return unified_run_loop(
+		user_id=user_id,
+		interval_seconds=interval_seconds,
+		max_results=max_results,
+		classify_limit=classify_limit,
+	)
 
 
 def main(argv=None):
