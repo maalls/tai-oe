@@ -1105,10 +1105,7 @@ def create_rag_handler(config):
             payload = self._read_json(default={})
             raw_path = str(payload.get('path') or '').strip()
 
-            try:
-                max_chars = int(payload.get('max_chars') or 10000)
-            except Exception:
-                max_chars = 10000
+            max_chars = self._get_payload_int(payload, 'max_chars', 10000)
             max_chars = max(100, min(max_chars, 50000))
 
             target_path = self._resolve_fs_path(raw_path)
@@ -1497,6 +1494,13 @@ def create_rag_handler(config):
         def _get_qs_value(self, qs, key: str, default=None):
             """Read first query-string value with fallback."""
             return qs.get(key, [default])[0]
+
+        def _get_payload_int(self, payload: Dict, key: str, default: int) -> int:
+            """Read integer payload value with fallback."""
+            try:
+                return int(payload.get(key) or default)
+            except Exception:
+                return default
 
         def _get_optional_user_id_from_auth(self, auth_header: str):
             """Extract user id from auth header without enforcing auth."""
