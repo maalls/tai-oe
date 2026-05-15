@@ -19,7 +19,7 @@ from src.controller.classify_handler import ClassifyHandler
 from src.controller.action_handlers import ActionHandlers
 from src.infrastructure.clients.database import DatabaseHandler
 from src.api.auth.handler import AuthHandler
-from src.controller.quote.quote import Quote as QuoteController
+from src.api.quote.handler import Quote as QuoteController
 from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
 
