@@ -432,17 +432,7 @@ def create_rag_handler(config):
                 # Execute action manually
                 execute_action_match = re.match(r"^/api/actions/([^/]+)/execute$", parsed.path)
                 if execute_action_match:
-                    user_data = self._require_auth()
-                    if user_data is None:
-                        return
-
-                    user_id = user_data.get('id') if user_data else None
-                    action_id = execute_action_match.group(1)
-
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_execute_action(action_id, user_id)
-                    status = 200 if result.get('status') == 'ok' else 400
-                    return self.json(result, status)
+                    return self._handle_action_execute_post(execute_action_match)
                 
                 else:
                     return self._send_error(404, "Not found")
@@ -1283,6 +1273,20 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_resume_action(action_id, user_id)
+            status = 200 if result.get('status') == 'ok' else 400
+            return self.json(result, status)
+
+        def _handle_action_execute_post(self, execute_action_match):
+            """Handle /api/actions/{id}/execute POST endpoint."""
+            user_data = self._require_auth()
+            if user_data is None:
+                return
+
+            user_id = user_data.get('id') if user_data else None
+            action_id = execute_action_match.group(1)
+
+            handlers = self.get_request_handlers()
+            result = handlers.handle_execute_action(action_id, user_id)
             status = 200 if result.get('status') == 'ok' else 400
             return self.json(result, status)
 
