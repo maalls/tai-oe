@@ -300,25 +300,10 @@ def create_rag_handler(config):
                 if self._handle_post_opportunity_quote_invoice_routes(parsed):
                     return
                 
-                # Existing endpoints
-                if parsed.path == '/api/csv/source':
-                    return self._handle_csv_source_post()
-                elif parsed.path == '/api/rfp':
-                    return self._handle_rfp_post()
-                elif parsed.path == '/api/quote':
-                    return self._handle_quote_submit_post()
-                elif parsed.path == '/api/quote/send':
-                    return self._handle_quote_send_post(parsed.path)
-                
-                # Action endpoints
-                elif parsed.path == '/api/actions':
-                    return self._handle_actions_create_post()
-
-                if self._handle_action_post_routes(parsed.path):
+                if self._handle_post_legacy_and_action_routes(parsed.path):
                     return
-                
-                else:
-                    return self._send_error(404, "Not found")
+
+                return self._send_error(404, "Not found")
             except Exception as e:
                 traceback.print_exc()
                 print(f"[RAG] Error handling request: {e}")
@@ -696,6 +681,30 @@ def create_rag_handler(config):
                 return True
 
             return False
+
+        def _handle_post_legacy_and_action_routes(self, parsed_path: str) -> bool:
+            """Handle remaining legacy and action POST routes."""
+            if parsed_path == '/api/csv/source':
+                self._handle_csv_source_post()
+                return True
+
+            if parsed_path == '/api/rfp':
+                self._handle_rfp_post()
+                return True
+
+            if parsed_path == '/api/quote':
+                self._handle_quote_submit_post()
+                return True
+
+            if parsed_path == '/api/quote/send':
+                self._handle_quote_send_post(parsed_path)
+                return True
+
+            if parsed_path == '/api/actions':
+                self._handle_actions_create_post()
+                return True
+
+            return self._handle_action_post_routes(parsed_path)
 
         def _handle_products_post(self):
             """Handle /api/products POST endpoint."""
