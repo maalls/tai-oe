@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.controller.llm_factory import LLMClientFactory
+from src.infrastructure.llm_factory import LLMClientFactory
 
 def test_llm_model():
     """Test the LLM model by sending a simple completion request."""

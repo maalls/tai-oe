@@ -1,6 +1,6 @@
 """Tests for ClassifyHandler.handle_classify."""
 
-from src.controller.classify_handler import ClassifyHandler
+from src.api.classification.handler import ClassifyHandler
 
 
 class _DbHandlerStub:

@@ -12,11 +12,7 @@ from typing import Optional
 from urllib.parse import urlparse, parse_qs
 import io
 
-# Handle direct execution vs module import
-if __name__ == "__main__" and __package__ is None:
-    from src.google_auth import GoogleAPIClient
-else:
-    from src.google_auth import GoogleAPIClient
+from src.infrastructure.clients.oauth.google_client import GoogleAPIClient
 
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError

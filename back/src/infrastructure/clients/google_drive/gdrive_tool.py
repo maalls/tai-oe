@@ -11,13 +11,13 @@ Credentials:
 - First run "init" to create var/gdrive/token.json
 
 Usage examples:
-  python -m src.google_drive.gdrive_tool init
-  python -m src.google_drive.gdrive_tool drive list --folder-id <FOLDER_ID>
-  python -m src.google_drive.gdrive_tool drive upload --folder-id <FOLDER_ID> --path ./file.txt --mime text/plain
-  python -m src.google_drive.gdrive_tool sheets read --sheet-id <SPREADSHEET_ID> --range "Sheet1!A1:C10"
-  python -m src.google_drive.gdrive_tool sheets append --sheet-id <SPREADSHEET_ID> --range "Sheet1!A1" --values "a,b,c"
-  python -m src.google_drive.gdrive_tool docs read --doc-id <DOCUMENT_ID>
-  python -m src.google_drive.gdrive_tool docs append --doc-id <DOCUMENT_ID> --text "Hello world"
+    python -m src.infrastructure.clients.google_drive.gdrive_tool init
+    python -m src.infrastructure.clients.google_drive.gdrive_tool drive list --folder-id <FOLDER_ID>
+    python -m src.infrastructure.clients.google_drive.gdrive_tool drive upload --folder-id <FOLDER_ID> --path ./file.txt --mime text/plain
+    python -m src.infrastructure.clients.google_drive.gdrive_tool sheets read --sheet-id <SPREADSHEET_ID> --range "Sheet1!A1:C10"
+    python -m src.infrastructure.clients.google_drive.gdrive_tool sheets append --sheet-id <SPREADSHEET_ID> --range "Sheet1!A1" --values "a,b,c"
+    python -m src.infrastructure.clients.google_drive.gdrive_tool docs read --doc-id <DOCUMENT_ID>
+    python -m src.infrastructure.clients.google_drive.gdrive_tool docs append --doc-id <DOCUMENT_ID> --text "Hello world"
 """
 import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)

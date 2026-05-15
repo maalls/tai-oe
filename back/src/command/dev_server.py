@@ -102,8 +102,8 @@ def kill_port_process(port=8088):
                 )
                 cmd = cmd_result.stdout.strip()
                 
-                # Only kill if it's the RAG process module (new API path or legacy wrapper)
-                if "src.api.server" in cmd or "src.controller.rag" in cmd:
+                # Only kill if it's the current API server module.
+                if "src.api.server" in cmd:
                     os.kill(int(pid), signal.SIGTERM)  # SIGTERM (graceful) not SIGKILL
                     print(f"   Killed RAG process on port {port} (PID: {pid})")
                     time.sleep(0.2)

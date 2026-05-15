@@ -3,10 +3,10 @@
 Export all sheets from a Google Spreadsheet to CSV files.
 
 Usage:
-  python -m src.google_drive.export_sheets_to_csv <SPREADSHEET_ID> [OUTPUT_DIR]
+    python -m src.infrastructure.clients.google_drive.export_sheets_to_csv <SPREADSHEET_ID> [OUTPUT_DIR]
   
 Example:
-  python -m src.google_drive.export_sheets_to_csv 1YLJu91d9-yRMhHkqeCKCPOteqSrpQ7k0 ./csv_exports
+    python -m src.infrastructure.clients.google_drive.export_sheets_to_csv 1YLJu91d9-yRMhHkqeCKCPOteqSrpQ7k0 ./csv_exports
 """
 import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)

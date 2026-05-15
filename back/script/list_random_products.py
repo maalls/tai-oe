@@ -14,7 +14,7 @@ SRC_DIR = BACK_DIR / "src"
 
 sys.path.insert(0, str(SRC_DIR))
 
-from controller.db_client import DatabaseHandler  # noqa: E402
+from src.infrastructure.clients.database import DatabaseHandler  # noqa: E402
 
 try:
     from reportlab.lib import colors

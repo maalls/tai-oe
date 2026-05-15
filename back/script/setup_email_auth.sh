@@ -47,7 +47,7 @@ echo ""
 # Create a test email with auth headers
 cat > test_email_auth.py << 'EOF'
 #!/usr/bin/env python3
-from src.controller.email.auth_parser import parse_email_auth
+from src.api.email.auth_parser import parse_email_auth
 
 # Example Gmail message with auth headers
 test_message = {

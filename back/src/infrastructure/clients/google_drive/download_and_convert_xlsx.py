@@ -3,10 +3,10 @@
 Download XLS/XLSX file from Google Drive and convert to CSV.
 
 Usage:
-  python -m src.google_drive.download_and_convert_xlsx <FILE_ID> [OUTPUT_DIR]
+    python -m src.infrastructure.clients.google_drive.download_and_convert_xlsx <FILE_ID> [OUTPUT_DIR]
 
 Example:
-  python -m src.google_drive.download_and_convert_xlsx 1abc2def3ghi ./var/data/electric-parts-vendor
+    python -m src.infrastructure.clients.google_drive.download_and_convert_xlsx 1abc2def3ghi ./var/data/electric-parts-vendor
 """
 import sys
 from pathlib import Path

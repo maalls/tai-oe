@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from src.controller.email_handler import EmailHandlers
+from src.api.email.handler import EmailHandlers
 
 
 class _WorkflowOK:

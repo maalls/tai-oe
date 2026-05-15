@@ -1,6 +1,6 @@
 """Tests for EmailHandlers.handle_create_opportunity_from_email."""
 
-from src.controller.email_handler import EmailHandlers
+from src.api.email.handler import EmailHandlers
 
 
 class _RepositoryStub:

@@ -2,7 +2,7 @@
 
 import json
 
-from src.controller.email_handler import EmailHandlers
+from src.api.email.handler import EmailHandlers
 
 
 class _PathStub:
@@ -48,7 +48,7 @@ def test_handle_quote_send_success(monkeypatch):
     def _path_factory(value):
         return _PathStub(str(value), existing)
 
-    monkeypatch.setattr("src.controller.email_handler.Path", _path_factory)
+    monkeypatch.setattr("src.api.email.handler.Path", _path_factory)
 
     handler = _make_handler()
     payload = {"pdf_filename": "quote_a.pdf", "email": "client@example.com", "body": "Bonjour"}

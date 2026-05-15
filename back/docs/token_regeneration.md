@@ -31,7 +31,7 @@ cd back/
 rm -f var/token.pickle
 
 # 2. Regenerate (opens browser for auth)
-./venv/bin/python -c "from src.google_auth.google_auth import GoogleAPIClient; GoogleAPIClient().authenticate('gmail','v1')"
+./venv/bin/python -c "from src.infrastructure.clients.oauth.google_client import GoogleAPIClient; GoogleAPIClient().authenticate('gmail','v1')"
 ```
 
 ### Google Drive Token
@@ -45,7 +45,7 @@ cd back/
 rm -f var/gdrive/token.json
 
 # 2. Regenerate (opens browser for auth)
-./venv/bin/python -m src.google_drive.gdrive_tool init
+./venv/bin/python -m src.infrastructure.clients.google_drive.gdrive_tool init
 ```
 
 ---
@@ -129,7 +129,7 @@ cd back/
 
 ```bash
 cd back/
-./venv/bin/python -m src.google_drive.gdrive_tool drive list --folder-id <FOLDER_ID>
+./venv/bin/python -m src.infrastructure.clients.google_drive.gdrive_tool drive list --folder-id <FOLDER_ID>
 ```
 
 If successful, you should see emails or file listings.

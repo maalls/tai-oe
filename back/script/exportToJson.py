@@ -26,7 +26,7 @@ from pathlib import Path
 from datetime import date, datetime
 from decimal import Decimal
 
-from src.controller.db_handler import DatabaseHandler
+from src.infrastructure.clients.database import DatabaseHandler
 
 
 def serialize_value(value):

@@ -17,12 +17,19 @@ def _get_back_root() -> Path:
 def _resolve_prompt_file(filename: str) -> Path:
     candidates = [
         Path(__file__).resolve().parent / filename,
-        _get_back_root() / "src" / "text" / filename,
     ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
     raise FileNotFoundError(f"Prompt file not found: {candidates[0]}")
+
+
+def _resolve_request_file(path: str) -> Path:
+    candidate = Path(path)
+    if candidate.exists():
+        return candidate
+
+    return Path(__file__).resolve().parent / path
 
 
 def _cache_llm_extraction(content: str, payload: Dict[str, Any], elapsed: float) -> None:
@@ -52,7 +59,7 @@ def extract_rfp_from_email(
     if not email_path:
         raise FileNotFoundError("Email path required")
 
-    candidate = Path(email_path)
+    candidate = _resolve_request_file(email_path)
 
     if not candidate.exists():
         raise FileNotFoundError(f"Email file not found: {candidate}")

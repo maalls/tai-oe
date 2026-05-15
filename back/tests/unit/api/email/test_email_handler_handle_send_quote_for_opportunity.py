@@ -1,6 +1,6 @@
 """Tests for EmailHandlers.handle_send_quote_for_opportunity."""
 
-from src.controller.email_handler import EmailHandlers
+from src.api.email.handler import EmailHandlers
 
 
 class _PathStub:
@@ -81,11 +81,11 @@ def test_handle_send_quote_for_opportunity_success(monkeypatch):
             exists_rule=lambda p: p.endswith("var/storage/quotes/quote_1.pdf") or p.endswith("/var/storage/quotes/quote_1.pdf"),
         )
 
-    monkeypatch.setattr("src.controller.email_handler.Path", _path_factory)
+    monkeypatch.setattr("src.api.email.handler.Path", _path_factory)
 
     supabase_calls = []
     monkeypatch.setattr(
-        "src.controller.email_handler.get_supabase_service",
+        "src.api.email.handler.get_supabase_service",
         lambda: _SupabaseStub(supabase_calls),
     )
 

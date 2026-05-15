@@ -1,6 +1,6 @@
 """Unit tests for Opportunity controller quote generation delegation."""
 
-from src.controller.opportunity.opportunity import Opportunity
+from src.api.business.opportunity_controller import Opportunity
 
 
 class _OpportunityRepositoryStub:

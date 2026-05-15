@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.controller.rfq_handler import RfqHandlers
+from src.api.business.rfq_handler import RfqHandlers
 
 
 class _EmailServiceStub:
@@ -79,7 +79,7 @@ def test_handle_rfq_generate_uses_loaded_email_content(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "src.controller.rfq_handler.extract_rfp_from_text",
+        "src.api.business.rfq_handler.extract_rfp_from_text",
         lambda content, timeout_seconds=300: {"content": content, "timeout_seconds": timeout_seconds},
     )
 
@@ -213,7 +213,7 @@ def test_handle_create_opportunity_from_rfp_creates_opportunity_and_document(tmp
         supabase=_SupabaseStub(),
     )
     monkeypatch.setattr(handler, "_get_storage_dir", lambda _source: Path(tmp_path))
-    monkeypatch.setattr("src.controller.rfq_handler.extract_company_from_text", lambda _text: {"company_name": "ACME"})
+    monkeypatch.setattr("src.api.business.rfq_handler.extract_company_from_text", lambda _text: {"company_name": "ACME"})
 
     body = (
         b"--x\r\n"
@@ -247,11 +247,11 @@ def test_handle_create_rfq_source_from_html_body_creates_document_and_quote(tmp_
     )
     monkeypatch.setattr(handler, "_get_storage_dir", lambda _source: Path(tmp_path))
     monkeypatch.setattr(
-        "src.controller.rfq_handler.extract_company_from_text",
+        "src.api.business.rfq_handler.extract_company_from_text",
         lambda _text: {"company_name": "ACME", "email": "buyer@example.com"},
     )
     monkeypatch.setattr(
-        "src.controller.rfq_handler.pick_best_rfp_source",
+        "src.api.business.rfq_handler.pick_best_rfp_source",
         lambda picker_text, pdf_candidates: {
             "source": "text",
             "product_count": 1,
