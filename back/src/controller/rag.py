@@ -238,6 +238,10 @@ def create_rag_handler(config):
             """Map handler result payload status to HTTP status code."""
             return ok if result.get('status') == 'ok' else error
 
+        def _pop_status(self, result: Dict, default: int = 200) -> int:
+            """Extract and remove status code from handler payload."""
+            return result.pop('status', default)
+
         def _handle_imap_config_delete(self):
             """Handle DELETE /api/imap/config."""
             user_id = self._require_auth_user_id()
@@ -845,7 +849,7 @@ def create_rag_handler(config):
             body = self._read_body()
             handlers = self.get_request_handlers()
             result = handlers.handle_auth_signup(body)
-            status = result.pop('status', 200)
+            status = self._pop_status(result)
             return self.json(result, status)
 
         def _handle_auth_login_post(self):
