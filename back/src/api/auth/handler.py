@@ -4,6 +4,7 @@ Integrates with the RAG HTTP server.
 """
 import json
 
+from src.api.routes.server_body_helpers import read_body
 from src.api.routes.server_query_helpers import get_qs_value
 from src.infrastructure.clients.supabase import get_supabase_anon
 from supabase import AuthApiError
@@ -161,7 +162,7 @@ class AuthHandler:
 
 def handle_auth_signup_post(handler):
     """Handle /api/auth/signup POST endpoint."""
-    body = handler._read_body()
+    body = read_body(handler)
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_auth_signup(body)
     status = handler._pop_status(result)
@@ -170,7 +171,7 @@ def handle_auth_signup_post(handler):
 
 def handle_auth_login_post(handler):
     """Handle /api/auth/login POST endpoint."""
-    body = handler._read_body()
+    body = read_body(handler)
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_auth_login(body)
     status = handler._pop_status(result)

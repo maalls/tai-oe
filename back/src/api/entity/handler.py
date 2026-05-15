@@ -3,6 +3,8 @@
 from typing import Dict
 import re
 
+from src.api.routes.server_auth_helpers import require_auth
+from src.api.routes.server_body_helpers import read_json
 from src.infrastructure.clients.supabase import get_supabase_service
 
 
@@ -43,7 +45,7 @@ class EntityHandlers:
 
 def handle_entity_update_post(handler, entity_update_match):
     """Handle /api/entity/{table}/{field} POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -51,7 +53,7 @@ def handle_entity_update_post(handler, entity_update_match):
     table = entity_update_match.group(1)
     field = entity_update_match.group(2)
 
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     record_id = payload.get('id') or payload.get('record_id')
     if record_id is None:

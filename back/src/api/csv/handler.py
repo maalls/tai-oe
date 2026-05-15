@@ -3,6 +3,7 @@
 import json
 from typing import Dict
 
+from src.api.routes.server_body_helpers import read_body
 from src.api.file.handler import FileHandler
 
 
@@ -79,7 +80,7 @@ class CsvHandlers:
 def handle_csv_source_post(handler):
     """Handle /api/csv/source POST endpoint."""
     content_type = handler.headers.get('Content-Type', '')
-    body = handler._read_body()
+    body = read_body(handler)
     content_length = len(body)
 
     request_handlers = handler.get_request_handlers()

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Any
 import traceback
 
+from src.api.routes.server_body_helpers import read_json
 from src.api.routes.server_query_helpers import get_payload_int, get_qs_int
 from src.lib.email.multipart import parse_multipart, extract_boundary_from_header
 from src.lib.readers.xls import XlsReader
@@ -128,7 +129,7 @@ class FileHandler:
 
 def handle_fs_create_post(handler):
     """Handle /api/fs/create POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
     raw_path = str(payload.get('path') or '').strip()
     kind = payload.get('type') or 'dir'
 
@@ -146,7 +147,7 @@ def handle_fs_create_post(handler):
 
 def handle_fs_read_post(handler):
     """Handle /api/fs/read POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
     raw_path = str(payload.get('path') or '').strip()
 
     max_chars = get_payload_int(payload, 'max_chars', 10000)
@@ -169,7 +170,7 @@ def handle_fs_read_post(handler):
 
 def handle_curl_post(handler):
     """Handle /api/curl POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     target_url = str(payload.get('url') or '').strip()
     if not target_url:

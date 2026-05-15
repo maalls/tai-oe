@@ -6,7 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Callable, Dict
 
-from src.api.routes.server_auth_helpers import require_auth_user_id
+from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
+from src.api.routes.server_body_helpers import read_body, read_json
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.service.opportunity.document_content_service import DocumentContentService
@@ -435,12 +436,12 @@ class DocumentHandlers:
 
 def handle_document_extract_rfp_post(handler):
     """Handle /api/document/extract-rfp POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     auth_header = handler.headers.get('Authorization', '')
     print(f"[RAG] Document extract-rfp - Auth header: {auth_header[:50] if auth_header else 'None'}")
 
-    user_data = handler._require_auth(auth_header=auth_header)
+    user_data = require_auth(handler, auth_header=auth_header)
     print(f"[RAG] Document extract-rfp - Token valid: {bool(user_data)}")
     if user_data is None:
         print("[RAG] Document extract-rfp - Auth failed")
@@ -460,9 +461,9 @@ def handle_document_extract_rfp_post(handler):
 
 def handle_document_update_content_post(handler):
     """Handle /api/document/update-content POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -485,10 +486,10 @@ def handle_document_update_content_post(handler):
 
 def handle_chat_attachments_post(handler, parsed):
     """Handle /api/chat/attachments POST endpoint."""
-    body = handler._read_body()
+    body = read_body(handler)
     content_type = handler.headers.get('Content-Type', '')
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 

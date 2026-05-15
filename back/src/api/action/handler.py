@@ -2,7 +2,8 @@
 
 from typing import Dict, Any, Optional
 
-from src.api.routes.server_auth_helpers import require_auth_user_id
+from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
+from src.api.routes.server_body_helpers import read_json_or_error
 from src.api.routes.server_query_helpers import get_qs_int
 from src.service.action.service import ActionService
 
@@ -367,11 +368,11 @@ class ActionHandlers:
 
 def handle_actions_create_post(handler):
     """Handle /api/actions POST endpoint."""
-    data = handler._read_json_or_error()
+    data = read_json_or_error(handler)
     if data is None:
         return None
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -385,7 +386,7 @@ def handle_actions_create_post(handler):
 
 def handle_action_pause_post(handler, pause_action_match):
     """Handle /api/actions/{id}/pause POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -400,7 +401,7 @@ def handle_action_pause_post(handler, pause_action_match):
 
 def handle_action_resume_post(handler, resume_action_match):
     """Handle /api/actions/{id}/resume POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -415,7 +416,7 @@ def handle_action_resume_post(handler, resume_action_match):
 
 def handle_action_execute_post(handler, execute_action_match):
     """Handle /api/actions/{id}/execute POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -478,7 +479,7 @@ def handle_action_logs_get(handler, get_action_logs_match, qs, request_handlers)
 
 def handle_action_update_put(handler, update_action_match):
     """Handle PUT /api/actions/{id}."""
-    data = handler._read_json_or_error()
+    data = read_json_or_error(handler)
     if data is None:
         return None
 

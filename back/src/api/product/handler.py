@@ -3,6 +3,7 @@
 
 from typing import Dict
 
+from src.api.routes.server_body_helpers import read_json
 from src.service.product.service import ProductService
 
 
@@ -63,7 +64,7 @@ class ProductController:
 
 def handle_products_post(handler):
     """Handle /api/products POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_create_product(payload)
     return handler.json(result, 201)

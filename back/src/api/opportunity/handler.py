@@ -1,6 +1,7 @@
 """Opportunity-related request handlers (migrated from rfq/business split)."""
 
-from src.api.routes.server_auth_helpers import require_auth_user_id
+from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
+from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
@@ -260,12 +261,12 @@ class OpportunityHandlers:
 
 def handle_opportunities_create_from_email_post(handler):
     """Handle /api/opportunities/create-from-email POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
     user_id = user_data.get('id') if user_data else None
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     message_id = payload.get('message_id')
     if not message_id:
@@ -280,12 +281,12 @@ def handle_opportunities_create_from_email_post(handler):
 
 def handle_opportunities_create_manual_post(handler):
     """Handle /api/opportunities/create-manual POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
     user_id = user_data.get('id') if user_data else None
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     name = payload.get('name')
     if not name:
@@ -299,12 +300,12 @@ def handle_opportunities_create_manual_post(handler):
 
 def handle_opportunities_create_from_rfp_post(handler):
     """Handle /api/opportunities/create-from-rfp POST endpoint."""
-    body = handler._read_body()
+    body = read_body(handler)
     content_type = handler.headers.get('Content-Type', '')
 
     auth_header = handler.headers.get('Authorization', '')
     print(f"[RAG] Auth header present: {bool(auth_header)}, header: {auth_header[:50] if auth_header else 'None'}")
-    user_data = handler._require_auth(auth_header=auth_header)
+    user_data = require_auth(handler, auth_header=auth_header)
     print(f"[RAG] Token valid: {bool(user_data)}, user_data: {user_data}")
     if user_data is None:
         print(f"[RAG] Authorization failed for token: {auth_header[:50] if auth_header else 'None'}")
@@ -320,7 +321,7 @@ def handle_opportunities_create_from_rfp_post(handler):
 
 def handle_opportunity_rfq_generate_post(handler, opp_match):
     """Handle /api/opportunity/{id}/rfq/generate POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -339,10 +340,10 @@ def handle_opportunity_rfq_generate_post(handler, opp_match):
 
 def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
     """Handle /api/opportunity/{id}/rfq/create-from-text POST endpoint."""
-    body = handler._read_body()
+    body = read_body(handler)
     content_type = handler.headers.get('Content-Type', '')
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -375,14 +376,14 @@ def handle_opportunity_rfq_create_from_text_post(handler, opp_rfq_create_match):
 
 def handle_send_quote_for_opportunity_post(handler, send_quote_match):
     """Handle /api/opportunity/{id}/send-quote POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
     user_id = user_data.get('id') if user_data else None
     opportunity_id = send_quote_match.group(1)
 
-    payload = handler._read_json_or_error()
+    payload = read_json_or_error(handler)
     if payload is None:
         return None
 
@@ -401,7 +402,7 @@ def handle_opportunity_delete(handler, opportunity_delete_match):
     import sys
 
     print("[RAG] DELETE /api/opportunities matched, processing deletion", file=sys.stderr)
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         print("[RAG] DELETE - Auth failed", file=sys.stderr)
         return None

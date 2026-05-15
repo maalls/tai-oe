@@ -28,11 +28,9 @@ from src.lib.readers.csv import CSVReader
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
 from src.api.routes.server_auth_helpers import (
-    authorize_request,
     require_auth,
 )
 from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_get_stream_handlers import handle_csv_download, handle_raw_stream, handle_source_stream
 from src.api.routes.server_get_misc_handlers import (
     handle_email_fetch_loop_status_get,
     handle_prompt_get,
@@ -169,10 +167,10 @@ def create_rag_handler(config):
                 return False
 
             # Mutating DDD routes require authentication.
-            if self._require_auth() is None:
+            if require_auth(self) is None:
                 return True
 
-            payload = self._read_json(default={})
+            payload = read_json(self, default={})
             if not isinstance(payload, dict):
                 payload = {}
 
@@ -189,7 +187,7 @@ def create_rag_handler(config):
             if not is_ddd_get_route(parsed.path):
                 return False
 
-            if self._require_auth() is None:
+            if require_auth(self) is None:
                 return True
 
             query = {key: values[0] for key, values in qs.items() if values}
@@ -211,35 +209,8 @@ def create_rag_handler(config):
             """Handle GET requests for prompt markdown content."""
             return handle_prompt_get(self, parsed_path, __file__)
 
-        def authorize(self) -> Dict:
-            return authorize_request(self)
-
-        def _require_auth(self, auth_header: str = None, required: bool = True) -> Dict:
-            return require_auth(self, auth_header=auth_header, required=required)
-
-        def _read_body(self) -> bytes:
-            return read_body(self)
-
-        def _read_json(self, default=None):
-            return read_json(self, default=default)
-
-        def _read_json_or_error(self, error_payload=None, status_code=400):
-            return read_json_or_error(self, error_payload=error_payload, status_code=status_code)
-
         def _resolve_fs_path(self, raw_path: str):
             return resolve_fs_path(self, current_file=__file__, raw_path=raw_path)
-        
-        def _handle_raw_stream(self, qs, handlers):
-            """Stream raw CSV file."""
-            return handle_raw_stream(self, qs, handlers)
-
-        def _handle_csv_download(self, qs, handlers):
-            """Download CSV file with proper filename."""
-            return handle_csv_download(self, qs, handlers)
-
-        def _handle_source_stream(self, qs, handlers):
-            """Stream original Excel source file."""
-            return handle_source_stream(self, qs, handlers)
 
         def json(self, payload, status_code=200):
             """Send JSON response."""

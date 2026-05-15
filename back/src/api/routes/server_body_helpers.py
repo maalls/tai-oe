@@ -11,7 +11,7 @@ def read_body(handler) -> bytes:
 
 def read_json(handler, default=None):
     """Read and decode JSON payload with default fallback."""
-    body = handler._read_body()
+    body = read_body(handler)
     try:
         return json.loads(body.decode('utf-8') or '{}')
     except Exception:
@@ -20,7 +20,7 @@ def read_json(handler, default=None):
 
 def read_json_or_error(handler, error_payload=None, status_code=400):
     """Read JSON payload and emit formatted error response on invalid JSON."""
-    body = handler._read_body()
+    body = read_body(handler)
     try:
         return json.loads(body.decode('utf-8') or '{}')
     except Exception:

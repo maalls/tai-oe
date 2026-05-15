@@ -7,6 +7,8 @@ from typing import Dict
 from pathlib import Path
 import time
 
+from src.api.routes.server_auth_helpers import require_auth
+from src.api.routes.server_body_helpers import read_body, read_json
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
@@ -592,12 +594,12 @@ class RfqHandlers:
 
 def handle_rfq_generate_post(handler):
     """Handle /api/rfq/generate POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
     user_id = user_data.get('id') if user_data else None
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     text = payload.get('text') or payload.get('content')
     message_id = payload.get('message_id')
@@ -611,7 +613,7 @@ def handle_rfq_generate_post(handler):
 def handle_rfp_post(handler):
     """Handle /api/rfp POST endpoint."""
     content_type = handler.headers.get('Content-Type', '')
-    body = handler._read_body()
+    body = read_body(handler)
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_rfp_upload(body, content_type)

@@ -8,6 +8,8 @@ import uuid
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
+from src.api.routes.server_auth_helpers import require_auth
+from src.api.routes.server_body_helpers import read_json_or_error
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.storage_paths import get_storage_dir
 
@@ -389,7 +391,7 @@ class InvoiceHandlers:
 
 def handle_quote_invoice_post(handler, quote_invoice_match):
     """Handle /api/quote/{id}/invoice POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -404,7 +406,7 @@ def handle_quote_invoice_post(handler, quote_invoice_match):
 
 def handle_invoice_pdf_post(handler, invoice_pdf_match):
     """Handle /api/invoice/{id}/pdf POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -419,14 +421,14 @@ def handle_invoice_pdf_post(handler, invoice_pdf_match):
 
 def handle_invoice_send_post(handler, invoice_send_match):
     """Handle /api/invoice/{id}/send POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
     user_id = user_data.get('id') if user_data else None
     invoice_id = invoice_send_match.group(1)
 
-    payload = handler._read_json_or_error()
+    payload = read_json_or_error(handler)
     if payload is None:
         return None
 

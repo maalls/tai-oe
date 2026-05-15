@@ -7,6 +7,8 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
+from src.api.routes.server_auth_helpers import require_auth
+from src.api.routes.server_body_helpers import read_body, read_json
 from src.service.quote.service import QuoteService
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.storage_paths import get_storage_dir, get_storage_path
@@ -263,7 +265,7 @@ class Quote:
 def handle_quote_submit_post(handler):
     """Handle /api/quote POST endpoint."""
     content_type = handler.headers.get('Content-Type', '')
-    body = handler._read_body()
+    body = read_body(handler)
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_quote_submit(body, content_type)
     return handler.json(result)
@@ -273,7 +275,7 @@ def handle_quote_send_post(handler):
     """Handle /api/quote/send POST endpoint."""
     print(f"[RAG] Received request to send quote email, path: /api/quote/send, method: {handler.command}")
     content_type = handler.headers.get('Content-Type', '')
-    body = handler._read_body()
+    body = read_body(handler)
 
     request_handlers = handler.get_request_handlers()
     result = request_handlers.handle_quote_send(body, content_type)
@@ -282,13 +284,13 @@ def handle_quote_send_post(handler):
 
 def handle_quote_update_post(handler, quote_update_match):
     """Handle /api/quote/{id} POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
     user_id = user_data.get('id') if user_data else None
     document_id = quote_update_match.group(1)
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
     request_handlers = handler.get_request_handlers()
@@ -299,7 +301,7 @@ def handle_quote_update_post(handler, quote_update_match):
 
 def handle_quote_pdf_post(handler, quote_pdf_match):
     """Handle /api/quote/{id}/pdf POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 

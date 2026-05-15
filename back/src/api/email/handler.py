@@ -5,7 +5,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict
 
-from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth_user_id
+from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth, require_auth_user_id
+from src.api.routes.server_body_helpers import read_json
 from src.api.routes.server_query_helpers import get_qs_bool, get_qs_int, get_qs_value
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
@@ -356,7 +357,7 @@ def handle_emails_classify_post(handler, parsed_path):
     """Handle /api/emails/classify/{email_uuid} POST endpoint."""
     email_uuid = parsed_path.split('/')[-1]
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -371,7 +372,7 @@ def handle_emails_classify_post(handler, parsed_path):
 
 def handle_email_extract_contact_post(handler):
     """Handle /api/email/extract-contact POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
     email_id = payload.get('email_id')
     email_body = payload.get('email_body')
@@ -380,7 +381,7 @@ def handle_email_extract_contact_post(handler):
         return handler.json({"error": "Missing email_body parameter"}, 400)
 
     auth_header = handler.headers.get('Authorization', '')
-    user_data = handler._require_auth(auth_header=auth_header, required=False)
+    user_data = require_auth(handler, auth_header=auth_header, required=False)
     user_id = user_data.get('id') if user_data else None
     print(f"[RAG] Extract contact - Auth valid: {bool(user_data)}, user_id: {user_id}, auth_header: {auth_header[:50]}")
 
@@ -394,7 +395,7 @@ def handle_email_auth_status_post(handler, parsed_path):
     """Handle /api/email/auth/{email_id} POST endpoint."""
     email_id = parsed_path.split('/api/email/auth/')[-1]
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -416,12 +417,12 @@ def handle_email_resync_post(handler, parsed_path):
     if not email_id:
         return handler.json({"error": "Missing email_id"}, 400)
 
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
     provider_message_id = payload.get('provider_message_id')
     if not provider_message_id:
         return handler.json({"error": "Missing provider_message_id"}, 400)
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -437,7 +438,7 @@ def handle_email_resync_post(handler, parsed_path):
 
 def handle_email_senders_high_risk_post(handler):
     """Handle /api/email/senders/high-risk POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -453,7 +454,7 @@ def handle_email_senders_high_risk_post(handler):
 
 def handle_email_senders_verified_post(handler):
     """Handle /api/email/senders/verified POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -469,9 +470,9 @@ def handle_email_senders_verified_post(handler):
 
 def handle_imap_config_post(handler):
     """Handle /api/imap/config POST endpoint."""
-    payload = handler._read_json(default={})
+    payload = read_json(handler, default={})
 
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
@@ -484,7 +485,7 @@ def handle_imap_config_post(handler):
 
 def handle_imap_test_post(handler):
     """Handle /api/imap/test POST endpoint."""
-    user_data = handler._require_auth()
+    user_data = require_auth(handler)
     if user_data is None:
         return None
 
