@@ -924,7 +924,7 @@ def create_rag_handler(config):
 
             handlers = self.get_request_handlers()
             result = handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
-            status = 200 if result.get('status') == 'ok' else 400
+            status = self._status_from_result(result)
             return self.json(result, status)
 
         def _handle_opportunities_create_from_email_post(self):
