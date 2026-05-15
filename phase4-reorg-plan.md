@@ -178,7 +178,7 @@ Recommended validation command set per micro-step:
   - `extract_contact_from_file.py`
   - `extract_products_from_file.py`
     while keeping root compatibility wrappers.
-- Done: moved root test scripts under `back/tests/**` with compatibility wrappers:
+- Done: moved root test scripts under `back/tests/**` and removed root wrappers:
   - `test_action_cli.py` -> `tests/unit/command/test_action_cli.py`
   - `test_action_cli_comprehensive.py` -> `tests/integration/command/test_action_cli_comprehensive.py`
   - `test_llm_model.py` -> `tests/integration/llm/test_llm_model.py`
@@ -202,21 +202,21 @@ Cleanup rule:
 
 ### 10.1 Relocation Matrix (initial)
 
-| Current path                            | Proposed destination                                              | Action                          | Rationale                            |
-| --------------------------------------- | ----------------------------------------------------------------- | ------------------------------- | ------------------------------------ |
-| `back/dev.py`                           | `back/src/command/dev_server.py`                                  | done (move + wrapper)           | productized command entrypoint       |
-| `back/run_migration.py`                 | `back/src/command/run_migration.py`                               | done (move + wrapper)           | command should live in command layer |
-| `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (move + wrapper)           | operational command                  |
-| `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | done (move + wrapper)           | one-off utility script               |
-| `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | done (move + wrapper)           | one-off utility script               |
-| `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | done (move + wrapper)           | tests must be under tests tree       |
-| `back/test_action_cli_comprehensive.py` | `back/tests/integration/command/test_action_cli_comprehensive.py` | done (move + wrapper)           | broad scenario test                  |
-| `back/test_llm_model.py`                | `back/tests/integration/llm/test_llm_model.py`                    | done (move + wrapper)           | integration-level behavior           |
-| `back/test_scroll_uniqueness.py`        | `back/tests/integration/qdrant/test_scroll_uniqueness.py`         | done (move + wrapper)           | avoid tests at root                  |
-| `back/TOKEN_REGENERATION.md`            | `back/README.md` section or `back/docs/token_regeneration.md`     | move/merge                      | keep operational docs grouped        |
-| `back/qrant-remove.plan.md`             | `back/docs/archive/qrant-remove.plan.md`                          | archive/move                    | planning artifact, not runtime       |
-| `back/rag_server.egg-info/**`           | n/a                                                               | ignore/delete local artifact    | generated packaging metadata         |
-| `back/.pytest_cache/**`                 | n/a                                                               | ignore/delete local artifact    | generated test cache                 |
+| Current path                            | Proposed destination                                              | Action                       | Rationale                            |
+| --------------------------------------- | ----------------------------------------------------------------- | ---------------------------- | ------------------------------------ |
+| `back/dev.py`                           | `back/src/command/dev_server.py`                                  | done (move + wrapper)        | productized command entrypoint       |
+| `back/run_migration.py`                 | `back/src/command/run_migration.py`                               | done (move + wrapper)        | command should live in command layer |
+| `back/regenerate_google_token.py`       | `back/src/command/regenerate_google_token.py`                     | done (move + wrapper)        | operational command                  |
+| `back/extract_contact_from_file.py`     | `back/script/extract_contact_from_file.py`                        | done (move + wrapper)        | one-off utility script               |
+| `back/extract_products_from_file.py`    | `back/script/extract_products_from_file.py`                       | done (move + wrapper)        | one-off utility script               |
+| `back/test_action_cli.py`               | `back/tests/unit/command/test_action_cli.py`                      | done (moved, root removed)   | tests must be under tests tree       |
+| `back/test_action_cli_comprehensive.py` | `back/tests/integration/command/test_action_cli_comprehensive.py` | done (moved, root removed)   | broad scenario test                  |
+| `back/test_llm_model.py`                | `back/tests/integration/llm/test_llm_model.py`                    | done (moved, root removed)   | integration-level behavior           |
+| `back/test_scroll_uniqueness.py`        | `back/tests/integration/qdrant/test_scroll_uniqueness.py`         | done (moved, root removed)   | avoid tests at root                  |
+| `back/TOKEN_REGENERATION.md`            | `back/README.md` section or `back/docs/token_regeneration.md`     | move/merge                   | keep operational docs grouped        |
+| `back/qrant-remove.plan.md`             | `back/docs/archive/qrant-remove.plan.md`                          | archive/move                 | planning artifact, not runtime       |
+| `back/rag_server.egg-info/**`           | n/a                                                               | ignore/delete local artifact | generated packaging metadata         |
+| `back/.pytest_cache/**`                 | n/a                                                               | ignore/delete local artifact | generated test cache                 |
 
 ### 10.2 Execution Policy for Root Cleanup
 
