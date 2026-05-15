@@ -83,3 +83,22 @@ def handle_quote_delete(handler, quote_delete_match):
     result = request_handlers.handle_delete_quote_document(document_id=document_id, user_id=user_id)
     status = handler._status_from_result(result)
     return handler.json(result, status)
+
+
+def handle_opportunity_delete(handler, opportunity_delete_match):
+    """Handle DELETE /api/opportunities/{ids}."""
+    print("[RAG] DELETE /api/opportunities matched, processing deletion", file=sys.stderr)
+    user_data = handler._require_auth()
+    if user_data is None:
+        print("[RAG] DELETE - Auth failed", file=sys.stderr)
+        return None
+
+    user_id = user_data.get('id') if user_data else None
+    opportunity_ids = opportunity_delete_match.group(1)
+    print(f"[RAG] DELETE opportunity(ies) {opportunity_ids} for user {user_id}", file=sys.stderr)
+
+    request_handlers = handler.get_request_handlers()
+    result = request_handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
+    status = handler._status_from_result(result)
+    print(f"[RAG] DELETE result: {result}", file=sys.stderr)
+    return handler.json(result, status)

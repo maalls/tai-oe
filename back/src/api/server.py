@@ -33,6 +33,7 @@ from src.api.routes.server_delete_handlers import (
     handle_email_attachment_delete,
     handle_email_delete,
     handle_imap_config_delete,
+    handle_opportunity_delete,
     handle_quote_delete,
 )
 from src.api.routes.server_auth_helpers import (
@@ -259,21 +260,7 @@ def create_rag_handler(config):
 
         def _handle_opportunity_delete(self, opportunity_delete_match):
             """Handle DELETE /api/opportunities/{ids}."""
-            print(f"[RAG] DELETE /api/opportunities matched, processing deletion", file=sys.stderr)
-            user_data = self._require_auth()
-            if user_data is None:
-                print(f"[RAG] DELETE - Auth failed", file=sys.stderr)
-                return
-
-            user_id = user_data.get('id') if user_data else None
-            opportunity_ids = opportunity_delete_match.group(1)
-            print(f"[RAG] DELETE opportunity(ies) {opportunity_ids} for user {user_id}", file=sys.stderr)
-
-            handlers = self.get_request_handlers()
-            result = handlers.handle_delete_opportunity(opportunity_ids=opportunity_ids, user_id=user_id)
-            status = self._status_from_result(result)
-            print(f"[RAG] DELETE result: {result}", file=sys.stderr)
-            return self.json(result, status)
+            return handle_opportunity_delete(self, opportunity_delete_match)
 
         def do_POST(self):
             try:
