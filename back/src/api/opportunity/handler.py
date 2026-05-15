@@ -1,8 +1,8 @@
 """Opportunity-related request handlers (migrated from rfq/business split)."""
 
-from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
-from src.api.routes.server_body_helpers import read_body, read_json, read_json_or_error
-from src.api.routes.server_status_helpers import status_from_result
+from src.api.routes.helpers.server_auth_helpers import require_auth, require_auth_user_id
+from src.api.routes.helpers.server_body_helpers import read_body, read_json, read_json_or_error
+from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository

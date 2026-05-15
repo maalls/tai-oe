@@ -1,10 +1,10 @@
 from types import SimpleNamespace
 
-from src.api.routes.server_get_dispatch import dispatch_get_data_routes
+from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_data_routes
 
 
 def test_dispatch_get_data_routes_csv_prefix_path():
-    from src.api.routes import server_get_dispatch as module
+    from src.api.routes.dispatchers import server_get_dispatch as module
     module.dispatch_csv_routes = lambda *_args, **_kwargs: True
 
     handler = object()
@@ -17,7 +17,7 @@ def test_dispatch_get_data_routes_csv_prefix_path():
 
 def test_dispatch_get_data_routes_quotes_list_path(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_get_dispatch.dispatch_csv_routes",
+        "src.api.routes.dispatchers.server_get_dispatch.dispatch_csv_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
@@ -26,7 +26,7 @@ def test_dispatch_get_data_routes_quotes_list_path(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_get_dispatch.dispatch_quote_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_quote_routes", _fake)
 
     handler = object()
     parsed = SimpleNamespace(path="/api/quotes/list")
@@ -40,11 +40,11 @@ def test_dispatch_get_data_routes_quotes_list_path(monkeypatch):
 
 def test_dispatch_get_data_routes_delegates_opportunity_router(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_get_dispatch.dispatch_csv_routes",
+        "src.api.routes.dispatchers.server_get_dispatch.dispatch_csv_routes",
         lambda *_args, **_kwargs: False,
     )
     monkeypatch.setattr(
-        "src.api.routes.server_get_dispatch.dispatch_quote_routes",
+        "src.api.routes.dispatchers.server_get_dispatch.dispatch_quote_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
@@ -53,7 +53,7 @@ def test_dispatch_get_data_routes_delegates_opportunity_router(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_get_dispatch.dispatch_opportunity_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_opportunity_routes", _fake)
 
     handler = object()
     parsed = SimpleNamespace(path="/api/opportunities/search")

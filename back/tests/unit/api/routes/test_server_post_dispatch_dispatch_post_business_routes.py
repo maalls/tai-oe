@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.api.routes.server_post_dispatch import dispatch_post_business_routes
+from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_business_routes
 
 
 class _HandlerStub:
@@ -27,7 +27,7 @@ def test_dispatch_post_business_routes_send_quote_regex():
     def _quote_router(*_args, **_kwargs):
         return False
 
-    from src.api.routes import server_post_dispatch as module
+    from src.api.routes.dispatchers import server_post_dispatch as module
     module.dispatch_opportunity_routes = _opp_router
     module.dispatch_document_routes = _doc_router
     module.dispatch_quote_routes = _quote_router
@@ -44,11 +44,11 @@ def test_dispatch_post_business_routes_send_quote_regex():
 
 def test_dispatch_post_business_routes_delegates_quote_router(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_post_dispatch.dispatch_opportunity_routes",
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_opportunity_routes",
         lambda *_args, **_kwargs: False,
     )
     monkeypatch.setattr(
-        "src.api.routes.server_post_dispatch.dispatch_document_routes",
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_document_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
@@ -57,7 +57,7 @@ def test_dispatch_post_business_routes_delegates_quote_router(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_post_dispatch.dispatch_quote_routes", _quote_router)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_post_dispatch.dispatch_quote_routes", _quote_router)
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/quote/doc-8/pdf")

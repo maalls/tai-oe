@@ -1,5 +1,5 @@
-from src.api.routes.server_post_dispatch import dispatch_post_auth_routes
-from src.api.routes import server_post_dispatch
+from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_auth_routes
+from src.api.routes.dispatchers import server_post_dispatch
 
 
 class _HandlerStub:

@@ -8,9 +8,9 @@ import uuid
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
-from src.api.routes.server_auth_helpers import require_auth
-from src.api.routes.server_body_helpers import read_json_or_error
-from src.api.routes.server_status_helpers import status_from_result
+from src.api.routes.helpers.server_auth_helpers import require_auth
+from src.api.routes.helpers.server_body_helpers import read_json_or_error
+from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.storage_paths import get_storage_dir
 

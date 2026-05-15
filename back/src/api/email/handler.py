@@ -4,11 +4,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict
 
-from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth, require_auth_user_id
-from src.api.routes.server_body_helpers import read_json
-from src.api.routes.server_query_helpers import get_qs_bool, get_qs_int, get_qs_value
-from src.api.routes.server_response_helpers import send_error, send_redirect
-from src.api.routes.server_status_helpers import status_from_result
+from src.api.routes.helpers.server_auth_helpers import get_optional_user_id_from_auth, require_auth, require_auth_user_id
+from src.api.routes.helpers.server_body_helpers import read_json
+from src.api.routes.helpers.server_query_helpers import get_qs_bool, get_qs_int, get_qs_value
+from src.api.routes.helpers.server_response_helpers import send_error, send_redirect
+from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.api.classification.handler import ClassifyHandler
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service

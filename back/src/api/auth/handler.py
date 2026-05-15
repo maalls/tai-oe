@@ -5,10 +5,10 @@ Integrates with the RAG HTTP server.
 import json
 
 from src.api.auth.oauth_handler import OAuthHandler
-from src.api.routes.server_body_helpers import read_body
-from src.api.routes.server_query_helpers import get_qs_value
-from src.api.routes.server_response_helpers import send_error, send_redirect
-from src.api.routes.server_status_helpers import pop_status, status_from_result
+from src.api.routes.helpers.server_body_helpers import read_body
+from src.api.routes.helpers.server_query_helpers import get_qs_value
+from src.api.routes.helpers.server_response_helpers import send_error, send_redirect
+from src.api.routes.helpers.server_status_helpers import pop_status, status_from_result
 from src.infrastructure.clients.supabase import get_supabase_anon
 from supabase import AuthApiError
 

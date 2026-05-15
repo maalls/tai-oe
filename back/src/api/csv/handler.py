@@ -3,8 +3,8 @@
 import json
 from typing import Dict
 
-from src.api.routes.server_body_helpers import read_body
-from src.api.routes.server_response_helpers import send_error
+from src.api.routes.helpers.server_body_helpers import read_body
+from src.api.routes.helpers.server_response_helpers import send_error
 from src.api.file.handler import FileHandler
 
 

@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from src.api.routes.server_body_helpers import read_json_or_error
+from src.api.routes.helpers.server_body_helpers import read_json_or_error
 
 
 class _HandlerStub:

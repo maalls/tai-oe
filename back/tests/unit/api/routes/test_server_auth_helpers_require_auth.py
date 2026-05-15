@@ -1,4 +1,4 @@
-from src.api.routes.server_auth_helpers import require_auth
+from src.api.routes.helpers.server_auth_helpers import require_auth
 
 
 class _AuthHandlerStub:

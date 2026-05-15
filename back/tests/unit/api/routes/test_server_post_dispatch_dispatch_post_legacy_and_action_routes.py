@@ -1,4 +1,4 @@
-from src.api.routes.server_post_dispatch import (
+from src.api.routes.dispatchers.server_post_dispatch import (
     dispatch_action_post_routes,
     dispatch_post_legacy_and_action_routes,
 )
@@ -10,7 +10,7 @@ class _HandlerStub:
 
 def test_dispatch_post_legacy_and_action_routes_csv_source(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_post_dispatch.dispatch_csv_routes",
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_csv_routes",
         lambda *_args, **_kwargs: True,
     )
 
@@ -23,7 +23,7 @@ def test_dispatch_post_legacy_and_action_routes_csv_source(monkeypatch):
 
 def test_dispatch_post_legacy_and_action_routes_delegates_rfq_router(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_post_dispatch.dispatch_csv_routes",
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_csv_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
@@ -32,7 +32,7 @@ def test_dispatch_post_legacy_and_action_routes_delegates_rfq_router(monkeypatch
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_post_dispatch.dispatch_rfq_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_post_dispatch.dispatch_rfq_routes", _fake)
 
     handler = _HandlerStub()
 
@@ -49,7 +49,7 @@ def test_dispatch_action_post_routes_pause_regex(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_post_dispatch.dispatch_action_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_post_dispatch.dispatch_action_routes", _fake)
 
     handler = _HandlerStub()
 

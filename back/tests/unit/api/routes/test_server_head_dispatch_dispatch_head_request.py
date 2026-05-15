@@ -1,4 +1,4 @@
-from src.api.routes.server_head_dispatch import dispatch_head_request
+from src.api.routes.dispatchers.server_head_dispatch import dispatch_head_request
 
 
 class _HandlerStub:
@@ -12,7 +12,7 @@ def test_dispatch_head_request_routes_storage_path(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_head_dispatch.dispatch_file_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_head_dispatch.dispatch_file_routes", _fake)
 
     handler = _HandlerStub()
 
@@ -24,7 +24,7 @@ def test_dispatch_head_request_routes_storage_path(monkeypatch):
 
 def test_dispatch_head_request_returns_false_for_unknown_path(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_head_dispatch.dispatch_file_routes",
+        "src.api.routes.dispatchers.server_head_dispatch.dispatch_file_routes",
         lambda *_args, **_kwargs: False,
     )
 

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.api.routes.server_response_helpers import send_error
+from src.api.routes.helpers.server_response_helpers import send_error
 
 
 def resolve_fs_path(handler, current_file: str, raw_path: str):

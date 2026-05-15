@@ -1,9 +1,9 @@
 from pathlib import Path
 from io import BytesIO
 
-from src.api.routes.server_auth_helpers import get_optional_user_id_from_auth, require_auth_user_id
-from src.api.routes.server_path_helpers import resolve_fs_path
-from src.api.routes.server_response_helpers import send_redirect
+from src.api.routes.helpers.server_auth_helpers import get_optional_user_id_from_auth, require_auth_user_id
+from src.api.routes.helpers.server_path_helpers import resolve_fs_path
+from src.api.routes.helpers.server_response_helpers import send_redirect
 
 
 class _AuthHandlerStub:

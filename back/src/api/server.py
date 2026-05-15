@@ -22,16 +22,16 @@ from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.lib.readers.csv import CSVReader
 from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
 from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
-from src.api.routes.server_auth_helpers import require_auth
-from src.api.routes.server_body_helpers import read_json
+from src.api.routes.helpers.server_auth_helpers import require_auth
+from src.api.routes.helpers.server_body_helpers import read_json
 from src.api.file.handler import handle_prompt_get
-from src.api.routes.server_delete_dispatch import dispatch_delete_request
-from src.api.routes.server_get_dispatch import dispatch_get_request
-from src.api.routes.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
-from src.api.routes.server_post_dispatch import dispatch_post_request
-from src.api.routes.server_head_dispatch import dispatch_head_request
-from src.api.routes.server_path_helpers import resolve_fs_path
-from src.api.routes.server_response_helpers import send_json, send_error
+from src.api.routes.dispatchers.server_delete_dispatch import dispatch_delete_request
+from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_request
+from src.api.routes.dispatchers.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
+from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_request
+from src.api.routes.dispatchers.server_head_dispatch import dispatch_head_request
+from src.api.routes.helpers.server_path_helpers import resolve_fs_path
+from src.api.routes.helpers.server_response_helpers import send_json, send_error
 
 # Load .env before reading config values.
 load_runtime_env(__file__)

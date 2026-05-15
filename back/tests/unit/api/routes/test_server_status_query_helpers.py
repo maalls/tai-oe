@@ -1,5 +1,5 @@
-from src.api.routes.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
-from src.api.routes.server_status_helpers import pop_status, status_from_error, status_from_result
+from src.api.routes.helpers.server_query_helpers import get_payload_int, get_qs_bool, get_qs_int, get_qs_value
+from src.api.routes.helpers.server_status_helpers import pop_status, status_from_error, status_from_result
 
 
 def test_status_from_result_maps_ok_and_error():

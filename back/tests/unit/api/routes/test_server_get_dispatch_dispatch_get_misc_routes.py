@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.api.routes.server_get_dispatch import dispatch_get_misc_routes
+from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_misc_routes
 
 
 class _HandlerStub:
@@ -20,7 +20,7 @@ def test_dispatch_get_misc_routes_delegates_product_router(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_get_dispatch.dispatch_product_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_product_routes", _fake)
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/products")
@@ -33,7 +33,7 @@ def test_dispatch_get_misc_routes_delegates_product_router(monkeypatch):
 
 def test_dispatch_get_misc_routes_delegates_file_router(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_get_dispatch.dispatch_product_routes",
+        "src.api.routes.dispatchers.server_get_dispatch.dispatch_product_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
@@ -42,7 +42,7 @@ def test_dispatch_get_misc_routes_delegates_file_router(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_get_dispatch.dispatch_file_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_file_routes", _fake)
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/storage/file.pdf")

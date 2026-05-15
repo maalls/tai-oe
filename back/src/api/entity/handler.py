@@ -3,9 +3,9 @@
 from typing import Dict
 import re
 
-from src.api.routes.server_auth_helpers import require_auth
-from src.api.routes.server_body_helpers import read_json
-from src.api.routes.server_status_helpers import status_from_result
+from src.api.routes.helpers.server_auth_helpers import require_auth
+from src.api.routes.helpers.server_body_helpers import read_json
+from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.infrastructure.clients.supabase import get_supabase_service
 
 

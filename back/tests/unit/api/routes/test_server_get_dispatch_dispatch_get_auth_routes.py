@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-from src.api.routes.server_get_dispatch import dispatch_get_auth_routes
-from src.api.routes import server_get_dispatch
+from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_auth_routes
+from src.api.routes.dispatchers import server_get_dispatch
 
 
 class _HandlerStub:

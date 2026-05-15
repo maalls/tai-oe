@@ -1,4 +1,4 @@
-from src.api.routes.server_post_dispatch import dispatch_post_core_routes
+from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_core_routes
 
 
 class _HandlerStub:
@@ -12,7 +12,7 @@ def test_dispatch_post_core_routes_products(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_post_dispatch.dispatch_product_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_post_dispatch.dispatch_product_routes", _fake)
 
     handler = _HandlerStub()
 
@@ -24,11 +24,11 @@ def test_dispatch_post_core_routes_products(monkeypatch):
 
 def test_dispatch_post_core_routes_unknown_path(monkeypatch):
     monkeypatch.setattr(
-        "src.api.routes.server_post_dispatch.dispatch_product_routes",
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_product_routes",
         lambda *_args, **_kwargs: False,
     )
     monkeypatch.setattr(
-        "src.api.routes.server_post_dispatch.dispatch_file_routes",
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_file_routes",
         lambda *_args, **_kwargs: False,
     )
 

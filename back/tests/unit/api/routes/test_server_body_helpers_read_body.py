@@ -1,4 +1,4 @@
-from src.api.routes.server_body_helpers import read_body
+from src.api.routes.helpers.server_body_helpers import read_body
 
 
 class _ReaderStub:

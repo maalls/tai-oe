@@ -3,7 +3,7 @@
 
 from typing import Dict
 
-from src.api.routes.server_body_helpers import read_json
+from src.api.routes.helpers.server_body_helpers import read_json
 from src.service.product.service import ProductService
 
 

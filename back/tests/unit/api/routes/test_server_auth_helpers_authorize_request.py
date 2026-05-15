@@ -1,6 +1,6 @@
 import pytest
 
-from src.api.routes.server_auth_helpers import authorize_request
+from src.api.routes.helpers.server_auth_helpers import authorize_request
 
 
 class _AuthHandlerStub:

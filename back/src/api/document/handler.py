@@ -6,10 +6,10 @@ import uuid
 from datetime import datetime
 from typing import Callable, Dict
 
-from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
-from src.api.routes.server_body_helpers import read_body, read_json
-from src.api.routes.server_response_helpers import send_error
-from src.api.routes.server_status_helpers import status_from_result
+from src.api.routes.helpers.server_auth_helpers import require_auth, require_auth_user_id
+from src.api.routes.helpers.server_body_helpers import read_body, read_json
+from src.api.routes.helpers.server_response_helpers import send_error
+from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.service.opportunity.document_content_service import DocumentContentService

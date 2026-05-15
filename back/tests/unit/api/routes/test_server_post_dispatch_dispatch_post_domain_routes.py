@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.api.routes.server_post_dispatch import dispatch_post_domain_routes
+from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_domain_routes
 
 
 class _HandlerStub:
@@ -18,7 +18,7 @@ def test_dispatch_post_domain_routes_entity_update_regex():
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    from src.api.routes import server_post_dispatch as module
+    from src.api.routes.dispatchers import server_post_dispatch as module
     module.dispatch_email_routes = lambda *_args, **_kwargs: False
     module.dispatch_entity_routes = _entity_router
 
@@ -38,7 +38,7 @@ def test_dispatch_post_domain_routes_delegates_email_router(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.server_post_dispatch.dispatch_email_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_post_dispatch.dispatch_email_routes", _fake)
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/emails/classify/abc")

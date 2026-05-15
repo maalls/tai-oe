@@ -2,10 +2,10 @@
 
 from typing import Dict, Any, Optional
 
-from src.api.routes.server_auth_helpers import require_auth, require_auth_user_id
-from src.api.routes.server_body_helpers import read_json_or_error
-from src.api.routes.server_query_helpers import get_qs_int
-from src.api.routes.server_status_helpers import status_from_result
+from src.api.routes.helpers.server_auth_helpers import require_auth, require_auth_user_id
+from src.api.routes.helpers.server_body_helpers import read_json_or_error
+from src.api.routes.helpers.server_query_helpers import get_qs_int
+from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.service.action.service import ActionService
 
 
