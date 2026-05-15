@@ -302,11 +302,7 @@ def create_rag_handler(config):
                 
                 # Auth endpoints
                 if parsed.path == '/api/auth/signup':
-                    body = self._read_body()
-                    handlers = self.get_request_handlers()
-                    result = handlers.handle_auth_signup(body)
-                    status = result.pop('status', 200)
-                    return self.json(result, status)
+                    return self._handle_auth_signup_post()
                 elif parsed.path == '/api/auth/login':
                     body = self._read_body()
                     handlers = self.get_request_handlers()
@@ -1179,6 +1175,14 @@ def create_rag_handler(config):
                 return self.json(result)
             except Exception as e:
                 return self._send_error(500, f'Curl failed: {e}')
+
+        def _handle_auth_signup_post(self):
+            """Handle /api/auth/signup POST endpoint."""
+            body = self._read_body()
+            handlers = self.get_request_handlers()
+            result = handlers.handle_auth_signup(body)
+            status = result.pop('status', 200)
+            return self.json(result, status)
 
         def _handle_products_get(self, qs):
             """Handle /api/products GET endpoint."""
