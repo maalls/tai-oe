@@ -11,7 +11,7 @@ if curl -s http://localhost:8088/health > /dev/null 2>&1; then
     echo "✅ Backend is running"
 else
     echo "⚠️  Backend not running. Start it first:"
-    echo "   python dev.py"
+    echo "   python -m src.command.dev_server"
     exit 1
 fi
 
