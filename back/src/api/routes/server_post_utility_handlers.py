@@ -48,3 +48,41 @@ def handle_fs_read_post(handler):
     except Exception as e:
         return handler._send_error(500, f'Read failed: {e}')
     return handler.json(result)
+
+
+def handle_curl_post(handler):
+    """Handle /api/curl POST endpoint."""
+    payload = handler._read_json(default={})
+
+    target_url = str(payload.get('url') or '').strip()
+    if not target_url:
+        return handler._send_error(400, 'Missing url')
+    if not target_url.startswith('http://') and not target_url.startswith('https://'):
+        return handler._send_error(400, 'Invalid url scheme')
+
+    method = str(payload.get('method') or 'GET').upper()
+    if method not in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
+        return handler._send_error(400, 'Invalid method')
+
+    headers = payload.get('headers') if isinstance(payload.get('headers'), dict) else {}
+    body_text = payload.get('body') if isinstance(payload.get('body'), str) else None
+
+    max_chars = handler._get_payload_int(payload, 'max_chars', 10000)
+    timeout_ms = handler._get_payload_int(payload, 'timeout_ms', 8000)
+
+    max_chars = max(100, min(max_chars, 50000))
+    timeout_ms = max(1000, min(timeout_ms, 20000))
+
+    try:
+        request_handlers = handler.get_request_handlers()
+        result = request_handlers.handle_curl_request(
+            target_url=target_url,
+            method=method,
+            headers=headers,
+            body_text=body_text,
+            max_chars=max_chars,
+            timeout_ms=timeout_ms,
+        )
+        return handler.json(result)
+    except Exception as e:
+        return handler._send_error(500, f'Curl failed: {e}')
