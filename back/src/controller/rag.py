@@ -291,13 +291,8 @@ def create_rag_handler(config):
                 if self._handle_post_core_routes(parsed.path):
                     return
                 
-                # Auth endpoints
-                if parsed.path == '/api/auth/signup':
-                    return self._handle_auth_signup_post()
-                elif parsed.path == '/api/auth/login':
-                    return self._handle_auth_login_post()
-                elif parsed.path == '/api/auth/logout':
-                    return self._handle_auth_logout_post()
+                if self._handle_post_auth_routes(parsed.path):
+                    return
                 
                 entity_update_match = re.match(r"^/api/entity/([^/]+)/([^/]+)$", parsed.path)
                 if entity_update_match:
@@ -635,6 +630,22 @@ def create_rag_handler(config):
 
             if parsed_path == '/api/curl':
                 self._handle_curl_post()
+                return True
+
+            return False
+
+        def _handle_post_auth_routes(self, parsed_path: str) -> bool:
+            """Handle auth POST routes."""
+            if parsed_path == '/api/auth/signup':
+                self._handle_auth_signup_post()
+                return True
+
+            if parsed_path == '/api/auth/login':
+                self._handle_auth_login_post()
+                return True
+
+            if parsed_path == '/api/auth/logout':
+                self._handle_auth_logout_post()
                 return True
 
             return False
