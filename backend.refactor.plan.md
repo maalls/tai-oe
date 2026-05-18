@@ -37,9 +37,23 @@ schema conventions
 recommended structure
 
 - create a FastAPI app entrypoint for the backend server.
-- organize api code by domain modules and routers, not by a second duplicate "fastapi" copy of every layer.
+- keep legacy transport and new transport in separate folders so ownership is explicit.
 - keep shared dependencies, auth helpers, and service factories in reusable modules.
 - keep the existing domain handlers and services as the source of truth for business rules.
+
+folder strategy (legacy vs new)
+
+- keep legacy http.server transport in `src/api/**` as read-only except for critical fixes.
+- put new FastAPI transport in `src/api_fastapi/**`.
+- keep shared business code outside transport folders (`src/service/**`, `src/repository/**`, `src/domain/**`).
+- for each migrated route group, add the new router under `src/api_fastapi/<domain>/router.py` and schemas under `src/api_fastapi/<domain>/schemas.py`.
+- avoid copying handler logic from `src/api/**`; call shared services or handlers through adapters when needed.
+
+route migration tracking
+
+- maintain a route migration matrix in this file with columns: route, legacy owner, fastapi owner, status, parity tests.
+- allowed status values: `legacy`, `dual`, `fastapi`, `retired`.
+- only mark `fastapi` when tests pass and frontend calls are confirmed against new endpoint behavior.
 
 migration order
 prioritize endpoints based on what the frontend actually needs, starting with the most visible and central flows.
@@ -62,6 +76,15 @@ migration approach
 4. route each endpoint to the existing handler or service layer.
 5. keep the old server working until the migrated endpoints are stable.
 6. remove the old transport only after the fastapi app covers the required contract.
+
+cleanup protocol
+
+1. when a route group reaches `fastapi`, freeze legacy files for that group.
+2. run parity tests for legacy vs fastapi responses on critical scenarios.
+3. switch dispatcher/entrypoint mapping to fastapi only for that group.
+4. remove dead legacy handlers/routes for the migrated group in a dedicated cleanup commit.
+5. run full unit and integration test suites.
+6. repeat by route group until no active route remains in legacy transport.
 
 testing strategy
 
