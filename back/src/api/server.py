@@ -17,7 +17,6 @@ from src.infrastructure.runtime.env_loader import load_runtime_env
 from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.api.file.handler import handle_prompt_get
-from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_request
 from src.api.routes.helpers.server_path_helpers import resolve_fs_path
 from src.api.routes.helpers.server_response_helpers import send_json, send_error
 
@@ -104,9 +103,8 @@ def create_rag_handler(config):
             """Handle GET method."""
             try:
                 parsed = urllib.parse.urlparse(self.path)
-                qs = urllib.parse.parse_qs(parsed.query)
-
-                if dispatch_get_request(self, parsed, qs):
+                if parsed.path.startswith('/api/prompt/'):
+                    self._handle_prompt_get(parsed.path)
                     return None
 
                 return http.server.SimpleHTTPRequestHandler.do_GET(self)
