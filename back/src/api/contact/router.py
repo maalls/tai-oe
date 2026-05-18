@@ -16,8 +16,10 @@ def get_db():
 def list_contacts(db=Depends(get_db)):
     rows = db.execute_dict_query(
         """
-        SELECT id, account_id, name, email, phone, role_title, created_at
-        FROM contact
+        SELECT c.id, c.account_id, c.name, c.email, c.phone, c.role_title, c.created_at,
+               a.name AS account_name
+        FROM contact c
+        LEFT JOIN account a ON a.id = c.account_id
         ORDER BY created_at DESC
         """
     )
@@ -28,9 +30,11 @@ def list_contacts(db=Depends(get_db)):
 def get_contact(contact_id: str, db=Depends(get_db)):
     rows = db.execute_dict_query(
         """
-        SELECT id, account_id, name, email, phone, role_title, created_at
-        FROM contact
-        WHERE id = %s
+        SELECT c.id, c.account_id, c.name, c.email, c.phone, c.role_title, c.created_at,
+               a.name AS account_name
+        FROM contact c
+        LEFT JOIN account a ON a.id = c.account_id
+        WHERE c.id = %s
         """,
         (contact_id,),
     )
@@ -45,7 +49,8 @@ def create_contact(payload: ContactCreate, db=Depends(get_db)):
         """
         INSERT INTO contact (account_id, name, email, phone, role_title)
         VALUES (%s, %s, %s, %s, %s)
-        RETURNING id, account_id, name, email, phone, role_title, created_at
+        RETURNING id, account_id, name, email, phone, role_title, created_at,
+                  NULL::text AS account_name
         """,
         (payload.account_id, payload.name, payload.email, payload.phone, payload.role_title),
     )
@@ -80,7 +85,13 @@ def update_contact(contact_id: str, payload: ContactUpdate, db=Depends(get_db)):
     if not rows:
         raise HTTPException(status_code=404, detail="Contact not found")
 
-    return rows[0]
+    contact = rows[0]
+    if contact.get("account_id"):
+        account_rows = db.execute_dict_query("SELECT name FROM account WHERE id = %s", (contact["account_id"],))
+        contact["account_name"] = account_rows[0]["name"] if account_rows else None
+    else:
+        contact["account_name"] = None
+    return contact
 
 
 @router.delete("/api/contact/{contact_id}")

@@ -27,3 +27,4 @@ class ContactUpdate(BaseModel):
 class ContactResponse(ContactBase):
     id: str
     created_at: datetime
+    account_name: Optional[str] = None

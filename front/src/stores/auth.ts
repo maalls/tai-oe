@@ -10,7 +10,6 @@ const loading = ref(true);
 export function useAuth() {
    const isAuthenticated = computed(() => !!user.value);
 
-
    async function signUp(email: string, password: string) {
       const { data, error } = await supabase.auth.signUp({
          email,

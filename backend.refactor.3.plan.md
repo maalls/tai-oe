@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut      | Commit/Tag                                                                                                 |
-| --- | -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------- |
-| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                           |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                    |
-| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                         |
-| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91 |
-| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                                                                            |
-| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                            |
-| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                            |
-| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                            |
+| Lot | Description                            | Statut      | Commit/Tag                                                                                                          |
+| --- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------- |
+| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                                    |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                             |
+| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                  |
+| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d |
+| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                                                                                     |
+| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                                     |
+| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                     |
+| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                     |
 
 # backend.refactor.3.plan
 
@@ -157,7 +157,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 1. fait: geler la creation de nouveaux acces `supabase-direct` metier dans `front/src/**`
 2. fait: documenter la regle: `supabase.auth.*` autorise, `supabase.from(...)` metier interdit pour tout nouveau code
 3. fait: ajouter une verification outillee via `front/scripts/check-supabase-direct.mjs`
-4. fait: figer une baseline dans `front/config/supabase-direct-allowlist.txt` (43 fichiers)
+4. fait: figer une baseline dans `front/config/supabase-direct-allowlist.txt` (40 fichiers)
 5. fait: exposer la verification via `npm run check:supabase-direct` dans `front/package.json`
 
 ### lot 1 - auth/profil et garde de session
@@ -188,6 +188,8 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
   - fait: `front/src/components/contact/DetailPage.vue` (chargement liste account) -> `front/src/api/account.ts`
   - fait: `front/src/components/opportunity/IndexPage.vue` (mapping account_id -> account_name) -> `front/src/api/account.ts`
   - fait: `front/src/components/opportunity/components/quote/Quote.vue` (chargement account detail) -> `front/src/api/account.ts`
+  - fait: `front/src/components/contact/IndexPage.vue` (liste contacts) -> `front/src/api/contact.ts`
+  - fait: `front/src/components/contact/DetailPage.vue` (detail/create/update/delete contact) -> `front/src/api/contact.ts`
 
 ### lot 3 - brand/family/catalogue
 
