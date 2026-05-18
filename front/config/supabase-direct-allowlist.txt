@@ -1,7 +1,6 @@
 # Baseline files currently allowed to use supabase-direct.
 # Goal for refactor.3 is to shrink this list to zero (or auth/realtime-only exceptions).
 
-src/components/account/IndexPage.vue
 src/components/admin/components/cms/useCmsData.ts
 src/components/contact/DetailPage.vue
 src/components/contact/IndexPage.vue

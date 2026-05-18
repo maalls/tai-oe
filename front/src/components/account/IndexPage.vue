@@ -92,25 +92,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../lib/supabase';
+import { listAccounts, type Account } from '../../api/account';
 import { useAuth } from '../../stores/auth';
 import AccountNavHeader from './AccountNavHeader.vue';
 import { useI18n } from '../../i18n/useI18n';
-
-interface Account {
-   id: string;
-   name: string;
-   vat_number?: string;
-   siret?: string;
-   address_line1?: string;
-   address_line2?: string;
-   postal_code?: string;
-   city?: string;
-   country_code?: string;
-   payment_terms_default?: string;
-   created_at: string;
-   updated_at: string;
-}
 
 const accounts = ref<Account[]>([]);
 const isLoading = ref(false);
@@ -141,23 +126,7 @@ const loadAccounts = async () => {
          return;
       }
 
-      const { data, error } = await supabase
-         .from('account')
-         .select('*')
-         .order('created_at', { ascending: false });
-
-      if (error) {
-         // Ignore AbortError - it happens when component unmounts during fetch
-         if (error.message.includes('abort')) {
-            console.warn('[AccountPage] Request aborted, likely due to navigation');
-            return;
-         }
-         errorMessage.value = `${t('accounts.errors.loadFailed')}: ${error.message}`;
-         console.error('[AccountPage] Error:', error);
-         return;
-      }
-
-      accounts.value = data || [];
+      accounts.value = await listAccounts();
       console.log('[AccountPage] Loaded accounts:', accounts.value.length);
    } catch (error) {
       // Ignore AbortError - it happens when component unmounts during fetch
