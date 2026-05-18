@@ -5,7 +5,7 @@
 | -1  | Renommage packages/tests API           | ✅ Fait    | edb3ce7, 30a1f49                   |
 | 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait    | 1238346                            |
 | 1   | Migration du flux profile (auth)       | ✅ Fait    | f0064c1, 352adad, b91e2b0, 08fa2c9 |
-| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b |
+| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd |
 | 3   | Migration brand/family/catalogue       | ⏳ À faire |                                    |
 | 4   | Migration opportunity/source/documents | ⏳ À faire |                                    |
 | 5   | Migration invoices/quote read models   | ⏳ À faire |                                    |
@@ -166,6 +166,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 4. en cours: migrer les pages `account/*`, `contact/*`, `vendor/*`
   - fait: `front/src/components/account/Edit.vue` -> `front/src/api/account.ts`
   - fait: `front/src/components/account/IndexPage.vue` -> `front/src/api/account.ts`
+  - fait: `front/src/components/opportunity/OpportunityHeader.vue` (create/find account) -> `front/src/api/account.ts`
 
 ### lot 3 - brand/family/catalogue
 
