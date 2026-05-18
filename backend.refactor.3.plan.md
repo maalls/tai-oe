@@ -4,6 +4,14 @@
 
 Sortir le frontend des acces metier en `supabase-direct` et transferer ces flux vers des endpoints backend explicites.
 
+Prealable execute pour cette phase:
+
+- renommer `back/src/api_fastapi` en `back/src/api`
+- renommer les tests `back/tests/**/api_fastapi/**` en `back/tests/**/api/**`
+- remplacer les imports `src.api_fastapi.*` par `src.api.*`
+
+Rationale: l'ancien package `src.api` legacy a ete retire. Garder `api_fastapi` introduisait un bruit historique inutile dans le code, les tests et les commandes runtime.
+
 La regle de cette phase est la suivante:
 
 - les lectures/ecritures metier vers les tables `public` ne doivent plus etre faites directement depuis `front/src/**`
@@ -28,7 +36,7 @@ La regle de cette phase est la suivante:
 ## regles de lecture
 
 - `mode=supabase-direct`: lecture/ecriture metier directe depuis le frontend
-- `mode=fastapi`: flux deja passe par `fetch/apiUrl` vers `back/src/api_fastapi/**`
+- `mode=fastapi`: flux deja passe par `fetch/apiUrl` vers le package API HTTP principal `back/src/api/**`
 - `mode=auth-sdk`: usage frontend du SDK Supabase autorise a ce stade
 - `mode=realtime-sdk`: usage frontend du SDK Supabase a trancher mais acceptable provisoirement
 - `owner cible`: service/repository/backend owner qui devra prendre la responsabilite du flux
@@ -36,6 +44,8 @@ La regle de cette phase est la suivante:
 ## hypothese de travail
 
 Le plan.2 a termine la sortie du transport HTTP legacy. Le prochain goulot est maintenant le couplage direct du frontend aux tables Supabase. L'objectif du plan.3 n'est pas de supprimer `supabase-js` du frontend a tout prix, mais de supprimer les acces metier directs et de les remplacer par une API backend stable.
+
+Le nommage du package backend a ete normalise sur `src.api`, le suffixe `api_fastapi` ayant ete retire.
 
 ## inventaire initial observe
 
@@ -112,6 +122,15 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 ## priorisation
 
+### lot -1 - renommage de package avant migration metier
+
+1. fait: renommer `back/src/api_fastapi` en `back/src/api`
+2. fait: renommer `back/tests/unit/api_fastapi` en `back/tests/unit/api`
+3. fait: renommer `back/tests/integration/api_fastapi` en `back/tests/integration/api`
+4. fait: remplacer tous les imports `src.api_fastapi.*` par `src.api.*`
+5. fait: mettre a jour les commandes runtime et de dev (`src.api_fastapi.server` -> `src.api.server`)
+6. fait: valider que la suite API renommee passe avant d'entamer les lots `supabase-direct`
+
 ### lot 0 - frontiere et instrumentation
 
 1. geler la creation de nouveaux acces `supabase-direct` metier dans `front/src/**`
@@ -159,6 +178,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 ## decisions deja prises pour ce plan.3
 
 - `2026-05-18 | global | supabase-direct frontend metier | decision=supprimer progressivement | le transport HTTP legacy est retire, le prochain couplage structurel est l'acces direct du frontend aux tables`
+- `2026-05-18 | architecture | renommage src.api_fastapi -> src.api | decision=fait | le package legacy src.api n'existe plus, le suffixe fastapi etait devenu un nom de transition inutile`
 - `2026-05-18 | auth | supabase.auth.* | decision=conserver provisoirement | sortir du flux supabase-direct ne signifie pas forcement remplacer Supabase Auth dans cette phase`
 - `2026-05-18 | data metier | supabase.from(... ) dans front/src/** | decision=migrer vers backend | objectif central du plan.3`
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`

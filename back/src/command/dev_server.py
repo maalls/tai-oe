@@ -103,7 +103,7 @@ def kill_port_process(port=8088):
                 cmd = cmd_result.stdout.strip()
                 
                 # Only kill if it's one of our API server modules.
-                if "src.api_fastapi.server" in cmd:
+                if "src.api.server" in cmd:
                     os.kill(int(pid), signal.SIGTERM)  # SIGTERM (graceful) not SIGKILL
                     print(f"   Killed RAG process on port {port} (PID: {pid})")
                     time.sleep(0.2)
@@ -177,7 +177,7 @@ def run_server(server_port):
     env["PORT"] = str(server_port)
 
     process = subprocess.Popen(
-        [sys.executable, "-m", "src.api_fastapi.server"],
+        [sys.executable, "-m", "src.api.server"],
         cwd=str(back_dir),
         env=env,
     )
@@ -206,7 +206,7 @@ def main():
         )
         env["PORT"] = str(server_port)
         process = subprocess.run(
-            [sys.executable, "-m", "src.api_fastapi.server"],
+            [sys.executable, "-m", "src.api.server"],
             cwd=str(back_dir),
             env=env,
         )

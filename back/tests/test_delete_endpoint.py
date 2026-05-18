@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 """Test the DELETE /api/opportunities/{id} endpoint."""
 
+import os
 import requests
 import sys
+import pytest
+
+RUN_MANUAL_SMOKE_TESTS = os.getenv("RUN_MANUAL_SMOKE_TESTS") == "1"
+
+pytestmark = pytest.mark.skipif(
+    not RUN_MANUAL_SMOKE_TESTS,
+    reason="Manual smoke script; set RUN_MANUAL_SMOKE_TESTS=1 to execute against a live HTTP server.",
+)
 
 def test_delete_endpoint():
     """Test opportunity deletion endpoint."""
@@ -33,7 +42,7 @@ def test_delete_endpoint():
             
     except requests.exceptions.RequestException as e:
         print(f"❌ Request failed: {e}")
-        sys.exit(1)
+        pytest.fail(f"Request failed: {e}")
 
 if __name__ == "__main__":
     test_delete_endpoint()
