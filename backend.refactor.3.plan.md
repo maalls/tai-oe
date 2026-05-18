@@ -1,3 +1,16 @@
+# Progress map (plan.3)
+
+| Lot | Description                                 | Statut      | Commit/Tag                                    |
+|-----|---------------------------------------------|-------------|-----------------------------------------------|
+| -1  | Renommage packages/tests API                | ✅ Fait      | edb3ce7, 30a1f49                              |
+| 0   | Garde-fou supabase-direct (baseline)        | ✅ Fait      | 1238346                                       |
+| 1   | Migration du flux profile (auth)            | ✅ Fait      | f0064c1, 352adad, b91e2b0, 08fa2c9            |
+| 2   | Migration account/contact/vendor            | ⏳ À faire   |                                               |
+| 3   | Migration brand/family/catalogue            | ⏳ À faire   |                                               |
+| 4   | Migration opportunity/source/documents      | ⏳ À faire   |                                               |
+| 5   | Migration invoices/quote read models        | ⏳ À faire   |                                               |
+| 6   | Fermeture/realtime                         | ⏳ À faire   |                                               |
+
 # backend.refactor.3.plan
 
 ## objectif
