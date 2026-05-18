@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut      | Commit/Tag                                                    |
-| --- | -------------------------------------- | ----------- | ------------------------------------------------------------- |
-| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                              |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                       |
-| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                            |
+| Lot | Description                            | Statut      | Commit/Tag                                                                               |
+| --- | -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                         |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                  |
+| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                       |
 | 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a |
-| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                               |
-| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                               |
-| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                               |
-| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                               |
+| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                                                          |
+| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                          |
+| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                          |
+| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                          |
 
 # backend.refactor.3.plan
 
@@ -53,6 +53,14 @@ La regle de cette phase est la suivante:
 - `mode=auth-sdk`: usage frontend du SDK Supabase autorise a ce stade
 - `mode=realtime-sdk`: usage frontend du SDK Supabase a trancher mais acceptable provisoirement
 - `owner cible`: service/repository/backend owner qui devra prendre la responsabilite du flux
+
+## politique de tests obligatoire
+
+- toute modification de code dans ce plan doit inclure des tests associes si ils manquent (dans le meme commit ou la meme iteration)
+- backend: ajouter/mettre a jour des tests unitaires dans `back/tests/unit/**` avec structure miroir du code migre
+- frontend: ajouter/mettre a jour des tests sur les clients API (`front/src/api/**`) et la logique des composants/composables impactes
+- si un test ne peut pas etre ajoute immediatement, documenter explicitement le risque et ouvrir une tache de rattrapage dans le lot en cours
+- chaque iteration doit executer au minimum les tests cibles du flux modifie avant commit
 
 ## hypothese de travail
 
@@ -161,7 +169,9 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 ### lot 2 - account/contact/vendor de base
 
 1. fait: creer `account` list/detail/create/update/delete en FastAPI
-  - fait: disparition de `supabase.from('account')` dans `front/src/**`
+
+- fait: disparition de `supabase.from('account')` dans `front/src/**`
+
 2. creer `contact` list/detail/update en FastAPI
 3. completer `vendor` pour couvrir liste/detail/CRUD et les agregats actuellement reconstruits cote frontend
 4. en cours: migrer les pages `account/*`, `contact/*`, `vendor/*`
@@ -214,5 +224,5 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 1. aucun composant/frontend composable ne fait de lecture/ecriture metier directe via `supabase.from(...)`
 2. les jointures et agregats metier sont servis par des endpoints backend explicites
 3. `front/src/lib/supabase.ts` n'est plus utilise que pour `auth` et, si valide, `realtime`
-4. les composants migrés ont des tests associes quand un comportement vivant backend est introduit ou modifie
+4. chaque comportement migre ou modifie a des tests associes (obligatoire, pas optionnel)
 5. un grep repo confirme la disparition des acces frontend directs aux tables metier
