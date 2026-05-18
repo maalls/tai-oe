@@ -1,0 +1,1 @@
+"""FastAPI quote routes package."""

@@ -4,8 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api_fastapi.auth.router import router as auth_router
+from src.api_fastapi.csv.router import router as csv_router
 from src.api_fastapi.email.router import router as email_router
+from src.api_fastapi.opportunity.router import router as opportunity_router
+from src.api_fastapi.quote.router import router as quote_router
+from src.api_fastapi.rfq.router import router as rfq_router
+from src.api_fastapi.rfp.router import router as rfp_router
 from src.api_fastapi.utils.router import router as utils_router
+from src.api_fastapi.vendor.router import router as vendor_router
 
 
 def create_app() -> FastAPI:
@@ -20,8 +26,14 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth_router)
+    app.include_router(csv_router)
     app.include_router(email_router)
+    app.include_router(opportunity_router)
+    app.include_router(quote_router)
+    app.include_router(rfq_router)
+    app.include_router(rfp_router)
     app.include_router(utils_router)
+    app.include_router(vendor_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

@@ -1,0 +1,1 @@
+"""Opportunity FastAPI transport package."""
