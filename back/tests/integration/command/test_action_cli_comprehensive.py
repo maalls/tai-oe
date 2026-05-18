@@ -16,6 +16,7 @@ Opportunity ID: c32c94d9-66ea-427b-8ba0-4946191f4c31
 import subprocess
 import sys
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 import pytest
@@ -24,11 +25,19 @@ BACK_DIR = Path(__file__).resolve().parents[3]
 
 OPPORTUNITY_ID = "c32c94d9-66ea-427b-8ba0-4946191f4c31"
 USER_ID = "393be11f-807f-4f0d-bfbe-5aa93f409b48"
+RUN_MANUAL_SMOKE_TESTS = os.getenv("RUN_MANUAL_SMOKE_TESTS") == "1"
+
+pytestmark = pytest.mark.skipif(
+    not RUN_MANUAL_SMOKE_TESTS,
+    reason="Manual smoke script; set RUN_MANUAL_SMOKE_TESTS=1 to execute against a live backend.",
+)
 
 @pytest.fixture
 def action_id():
-    # Génère un action_id fictif pour les tests
-    return "test-action-id"
+    action_id = _create_follow_up_email()
+    if not action_id:
+        pytest.skip("Could not create a live action for CLI smoke tests")
+    return action_id
 
 def run_cli(command: str) -> tuple[int, str]:
     """Run an action CLI command and return exit code and output."""
@@ -42,87 +51,127 @@ def print_section(title: str):
     print(f"TEST: {title}")
     print(f"{'='*100}\n")
 
-def test_list_actions():
-    """Test listing all actions for an opportunity."""
-    print_section("List Actions for Opportunity")
+def _list_actions() -> bool:
     code, output = run_cli(f"list-actions {OPPORTUNITY_ID}")
     print(output)
     return code == 0
 
-def test_create_recurring_quote():
-    """Test creating a recurring quote action."""
-    print_section("Create Recurring Quote Action (Monthly on 1st at 09:00)")
+
+def _create_recurring_quote() -> bool:
     code, output = run_cli(
         f"""create-action {OPPORTUNITY_ID} {USER_ID} recurring_quote monthly '{{\"day_of_month\": 1, \"time\": \"09:00\", \"timezone\": \"UTC\"}}' '{{\"template_id\": \"default\", \"days_valid\": 30}}'"""
     )
     print(output)
     return code == 0
 
-def test_create_follow_up_email():
-    """Test creating a follow-up email action."""
-    print_section("Create Follow-up Email Action (Weekly on Tuesday at 10:00)")
+
+def _create_follow_up_email() -> str | None:
     code, output = run_cli(
         f"""create-action {OPPORTUNITY_ID} {USER_ID} follow_up_email weekly '{{\"day_of_week\": 2, \"time\": \"10:00\", \"timezone\": \"UTC\"}}' '{{\"subject\": \"Follow up\", \"email_template_id\": \"follow_up_001\"}}' 12"""
     )
     print(output)
-    # Extract action ID if successful
+    if code != 0:
+        return None
     if "Action ID:" in output:
         for line in output.split('\n'):
             if "Action ID:" in line:
-                action_id = line.split(":")[-1].strip()
-                return action_id
+                return line.split(":")[-1].strip()
     return None
 
-def test_create_recurring_invoice():
-    """Test creating a recurring invoice action."""
-    print_section("Create Recurring Invoice Action (Daily at 08:00)")
+
+def _create_recurring_invoice() -> bool:
     code, output = run_cli(
         f"""create-action {OPPORTUNITY_ID} {USER_ID} recurring_invoice daily '{{\"time\": \"08:00\", \"timezone\": \"UTC\"}}' '{{\"invoice_type\": \"standard\"}}'"""
     )
     print(output)
     return code == 0
 
-def test_get_action_details(action_id: str):
-    """Test getting details of a specific action."""
-    print_section(f"Get Action Details: {action_id}")
+
+def _get_action_details(action_id: str) -> bool:
     code, output = run_cli(f"get-action {action_id}")
     print(output)
     return code == 0
 
-def test_pause_action(action_id: str):
-    """Test pausing an action."""
-    print_section(f"Pause Action: {action_id}")
+
+def _pause_action(action_id: str) -> bool:
     code, output = run_cli(f"pause-action {action_id}")
     print(output)
     return code == 0
 
-def test_resume_action(action_id: str):
-    """Test resuming a paused action."""
-    print_section(f"Resume Action: {action_id}")
+
+def _resume_action(action_id: str) -> bool:
     code, output = run_cli(f"resume-action {action_id}")
     print(output)
     return code == 0
 
-def test_execute_action_manually(action_id: str):
-    """Test manually executing an action."""
-    print_section(f"Manually Execute Action: {action_id}")
+
+def _execute_action_manually(action_id: str) -> bool:
     code, output = run_cli(f"execute-action {action_id}")
     print(output)
     return code == 0
 
-def test_get_execution_logs(action_id: str):
-    """Test getting execution logs for an action."""
-    print_section(f"Get Execution Logs: {action_id}")
+
+def _get_execution_logs(action_id: str) -> bool:
     code, output = run_cli(f"get-logs {action_id} 5")
     print(output)
     return code == 0
 
-def test_delete_action(action_id: str):
-    """Test deleting an action."""
-    print_section(f"Delete Action: {action_id}")
+
+def _delete_action(action_id: str) -> bool:
     code, output = run_cli(f"delete-action {action_id}")
     print(output)
     return code == 0
+
+
+def test_list_actions():
+    """Test listing all actions for an opportunity."""
+    print_section("List Actions for Opportunity")
+    assert _list_actions()
+
+def test_create_recurring_quote():
+    """Test creating a recurring quote action."""
+    print_section("Create Recurring Quote Action (Monthly on 1st at 09:00)")
+    assert _create_recurring_quote()
+
+def test_create_follow_up_email():
+    """Test creating a follow-up email action."""
+    print_section("Create Follow-up Email Action (Weekly on Tuesday at 10:00)")
+    assert _create_follow_up_email() is not None
+
+def test_create_recurring_invoice():
+    """Test creating a recurring invoice action."""
+    print_section("Create Recurring Invoice Action (Daily at 08:00)")
+    assert _create_recurring_invoice()
+
+def test_get_action_details(action_id: str):
+    """Test getting details of a specific action."""
+    print_section(f"Get Action Details: {action_id}")
+    assert _get_action_details(action_id)
+
+def test_pause_action(action_id: str):
+    """Test pausing an action."""
+    print_section(f"Pause Action: {action_id}")
+    assert _pause_action(action_id)
+
+def test_resume_action(action_id: str):
+    """Test resuming a paused action."""
+    print_section(f"Resume Action: {action_id}")
+    assert _resume_action(action_id)
+
+def test_execute_action_manually(action_id: str):
+    """Test manually executing an action."""
+    print_section(f"Manually Execute Action: {action_id}")
+    assert _execute_action_manually(action_id)
+
+def test_get_execution_logs(action_id: str):
+    """Test getting execution logs for an action."""
+    print_section(f"Get Execution Logs: {action_id}")
+    assert _get_execution_logs(action_id)
+
+def test_delete_action(action_id: str):
+    """Test deleting an action."""
+    print_section(f"Delete Action: {action_id}")
+    assert _delete_action(action_id)
 
 def main():
     """Run all tests."""
@@ -138,55 +187,55 @@ def main():
     
     # Test 1: List existing actions
     tests_total += 1
-    if test_list_actions():
+    if _list_actions():
         tests_passed += 1
     
     # Test 2: Create recurring quote
     tests_total += 1
-    if test_create_recurring_quote():
+    if _create_recurring_quote():
         tests_passed += 1
     
     # Test 3: Create follow-up email (extract ID for later use)
     tests_total += 1
-    follow_up_id = test_create_follow_up_email()
+    follow_up_id = _create_follow_up_email()
     if follow_up_id:
         tests_passed += 1
     
     # Test 4: Create recurring invoice
     tests_total += 1
-    if test_create_recurring_invoice():
+    if _create_recurring_invoice():
         tests_passed += 1
     
     # Test 5: List again to see all actions
     tests_total += 1
-    if test_list_actions():
+    if _list_actions():
         tests_passed += 1
     
     # If we have an action ID, test other operations
     if follow_up_id:
         # Test 6: Get action details
         tests_total += 1
-        if test_get_action_details(follow_up_id):
+        if _get_action_details(follow_up_id):
             tests_passed += 1
         
         # Test 7: Pause action
         tests_total += 1
-        if test_pause_action(follow_up_id):
+        if _pause_action(follow_up_id):
             tests_passed += 1
         
         # Test 8: Resume action
         tests_total += 1
-        if test_resume_action(follow_up_id):
+        if _resume_action(follow_up_id):
             tests_passed += 1
         
         # Test 9: Get execution logs (should be empty)
         tests_total += 1
-        if test_get_execution_logs(follow_up_id):
+        if _get_execution_logs(follow_up_id):
             tests_passed += 1
     
     # Final: List all actions one more time
     tests_total += 1
-    if test_list_actions():
+    if _list_actions():
         tests_passed += 1
     
     # Summary

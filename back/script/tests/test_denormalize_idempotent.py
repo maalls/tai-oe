@@ -1,9 +1,9 @@
-import pytest
 import json
 import csv
 from pathlib import Path
 import tempfile
-import sys
+
+from script.denormalize import denormalize_csv
 
 
 def test_denormalize_idempotent():
@@ -53,8 +53,6 @@ def test_denormalize_idempotent():
         }
         with meta_file.open('w', encoding='utf-8') as f:
             json.dump(meta_content, f, indent=2)
-        
-        from denormalize import denormalize_csv
         
         # Run denormalization the first time
         denormalize_csv(main_csv, meta_file, source_dir, source_dir)
@@ -129,8 +127,6 @@ def test_denormalize_update_values():
         }
         with meta_file.open('w', encoding='utf-8') as f:
             json.dump(meta_content, f, indent=2)
-        
-        from denormalize import denormalize_csv
         
         # Run denormalization the first time
         denormalize_csv(main_csv, meta_file, source_dir, source_dir)

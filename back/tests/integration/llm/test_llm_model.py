@@ -7,6 +7,7 @@ Tests connection to Ollama and sends a simple chat completion.
 import sys
 import os
 from pathlib import Path
+import pytest
 
 # Add the back directory to Python path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -17,9 +18,14 @@ load_dotenv()
 
 from src.infrastructure.llm_factory import LLMClientFactory
 
-def test_llm_model():
-    """Test the LLM model by sending a simple completion request."""
-    
+RUN_MANUAL_SMOKE_TESTS = os.getenv("RUN_MANUAL_SMOKE_TESTS") == "1"
+
+pytestmark = pytest.mark.skipif(
+    not RUN_MANUAL_SMOKE_TESTS,
+    reason="Manual smoke script; set RUN_MANUAL_SMOKE_TESTS=1 to execute against a live LLM.",
+)
+
+def _run_llm_model_test() -> bool:
     print("=" * 60)
     print("LLM Model Test")
     print("=" * 60)
@@ -80,8 +86,13 @@ def test_llm_model():
         traceback.print_exc()
         return False
 
+
+def test_llm_model():
+    """Test the LLM model by sending a simple completion request."""
+    assert _run_llm_model_test()
+
 if __name__ == "__main__":
-    success = test_llm_model()
+    success = _run_llm_model_test()
     print("\n" + "=" * 60)
     if success:
         print("✓ LLM Model Test PASSED")

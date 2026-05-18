@@ -169,6 +169,9 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | legacy-http | get transport wrapper | decision=supprimer | dispatch_get_request retire, prompt GET gere directement dans src.api.server avec test direct create_rag_handler
 - 2026-05-18 | legacy-http | runtime server module | decision=supprimer | src.api.server supprime, dev_server passe FastAPI-only et le prompt reste servi par src.api_fastapi.utils.router
 - 2026-05-18 | legacy-http | router facade module | decision=supprimer | src.api.router et ses tests de migration supprimes, aucun consommateur runtime restant
+- 2026-05-18 | legacy-http | package src.api complet | decision=supprimer | aucun consommateur runtime restant dans back/src hors du package lui-meme, suppression totale du dossier legacy
+- 2026-05-18 | tests | suites encore couplees a src.api | decision=supprimer | suppression des tests unitaires/integration/functional ne couvrant plus que le package legacy retire, puis verification qu'il ne reste aucune reference src.api
+- 2026-05-18 | global | ouverture refactor.3 supabase-direct | decision=planifier | plan dedie cree dans backend.refactor.3.plan.md pour sortir le frontend des acces metier directs a Supabase
 
 ## criteres de done pour ce refactor.2
 

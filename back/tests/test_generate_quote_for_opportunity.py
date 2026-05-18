@@ -16,6 +16,7 @@ Usage:
 import sys
 import os
 from pathlib import Path
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,9 +24,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.repository.opportunity import OpportunityRepository
 from src.infrastructure.clients.supabase import get_supabase_service
 
+RUN_MANUAL_SMOKE_TESTS = os.getenv("RUN_MANUAL_SMOKE_TESTS") == "1"
 
-def test_generate_quote_for_opportunity():
-    """Test generating a quote for a specific opportunity."""
+pytestmark = pytest.mark.skipif(
+    not RUN_MANUAL_SMOKE_TESTS,
+    reason="Manual smoke script; set RUN_MANUAL_SMOKE_TESTS=1 to execute against live Supabase data.",
+)
+
+
+def _run_generate_quote_for_opportunity_test() -> bool:
     # Test opportunity ID from user
     opportunity_id = "46b3f829-b7bc-4b6e-9295-3eb219a21476"
     
@@ -202,12 +209,17 @@ def test_generate_quote_for_opportunity():
         return False
 
 
+def test_generate_quote_for_opportunity():
+    """Test generating a quote for a specific opportunity."""
+    assert _run_generate_quote_for_opportunity_test()
+
+
 if __name__ == "__main__":
     print("\n" + "="*80)
     print("Testing Quote Generation for Opportunity")
     print("="*80)
     
-    success = test_generate_quote_for_opportunity()
+    success = _run_generate_quote_for_opportunity_test()
     
     print("\n" + "="*80)
     if success:
