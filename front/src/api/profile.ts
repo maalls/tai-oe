@@ -1,5 +1,4 @@
 // API client for /api/profile
-import type { Ref } from 'vue';
 
 export interface Profile {
    id: string;
