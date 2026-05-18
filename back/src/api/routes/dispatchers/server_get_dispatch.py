@@ -27,10 +27,6 @@ def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
         handler._handle_prompt_get(parsed.path)
         return True
 
-    if parsed.path == '/api/email-fetch-loop/status':
-        handler._handle_email_fetch_loop_status_get()
-        return True
-
     if dispatch_file_routes(handler, "GET", parsed, qs, request_handlers):
         return True
 

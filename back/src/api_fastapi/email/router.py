@@ -14,6 +14,7 @@ from src.api_fastapi.email.schemas import (
     GmailOauthStartQuery,
     GmailStatusQuery,
     GmailUserQuery,
+    ImapConfigRequest,
 )
 from src.service.auth.auth_service import AuthService
 from src.service.email.gmail_service import GmailService
@@ -139,4 +140,75 @@ def gmail_message_body(
 ):
     user_id = _resolve_user_id(None, authorization, auth_service)
     result = gmail_service.get_message_body(message_id=message_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.get("/api/imap/status")
+def imap_status(
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.get_imap_status(user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.get("/api/imap/config")
+def imap_config_get(
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.get_imap_config(user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/imap/config")
+def imap_config_post(
+    payload: ImapConfigRequest,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.save_imap_config(user_id=user_id, payload=payload.model_dump())
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/imap/test")
+def imap_test(
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.test_imap_connection(user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.delete("/api/imap/config")
+def imap_config_delete(
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.clear_imap_config(user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))

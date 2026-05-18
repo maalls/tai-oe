@@ -21,11 +21,6 @@ from src.api.email.handler import (
     handle_gmail_profile_get,
     handle_gmail_revoke_get,
     handle_gmail_status_get,
-    handle_imap_config_delete,
-    handle_imap_config_get,
-    handle_imap_config_post,
-    handle_imap_status_get,
-    handle_imap_test_post,
 )
 
 
@@ -77,14 +72,6 @@ def dispatch_email_routes(handler, method: str, parsed, qs, _request_handlers) -
             handle_gmail_profile_get(handler, qs)
             return True
 
-        if path == '/api/imap/status':
-            handle_imap_status_get(handler)
-            return True
-
-        if path == '/api/imap/config':
-            handle_imap_config_get(handler)
-            return True
-
         if path == '/api/gmail/messages':
             handle_gmail_messages_get(handler, qs)
             return True
@@ -128,14 +115,6 @@ def dispatch_email_routes(handler, method: str, parsed, qs, _request_handlers) -
             handle_email_senders_verified_post(handler)
             return True
 
-        if path == '/api/imap/config':
-            handle_imap_config_post(handler)
-            return True
-
-        if path == '/api/imap/test':
-            handle_imap_test_post(handler)
-            return True
-
         return False
 
     if method == "DELETE":
@@ -147,10 +126,6 @@ def dispatch_email_routes(handler, method: str, parsed, qs, _request_handlers) -
         email_delete_match = re.match(r"^/api/email/([^/]+)$", path)
         if email_delete_match:
             handle_email_delete(handler, email_delete_match)
-            return True
-
-        if path == '/api/imap/config':
-            handle_imap_config_delete(handler)
             return True
 
         return False

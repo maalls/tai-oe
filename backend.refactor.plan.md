@@ -57,13 +57,15 @@ route migration tracking
 
 current route matrix
 
-| route group | legacy owner | fastapi owner | status | parity tests |
-|---|---|---|---|---|
-| `/api/auth/*` | `src/api/auth/*` | `src/api_fastapi/auth/*` | `dual` | `tests/unit/api_fastapi/auth/router/*`, `tests/integration/api/fastapi/test_app.py` |
-| `/api/gmail/*` | `src/api/email/*` | `src/api_fastapi/email/*` | `dual` | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`, `tests/integration/api/fastapi/test_app.py` |
-| `storage upload flow` | `src/api/file/handler.py` | pending router migration | `legacy` | `tests/integration/api/file/test_upload_integration.py` |
-| rag upload processing flow | legacy upload endpoint + service path | service/component path validated | `dual` | `tests/integration/api/rag/test_rag.py` |
-| utility endpoints (`/api/fetch`, `/api/curl`, `/api/fs/*`, `/api/prompt`) | `src/api/router.py` | `src/api_fastapi/utils/*` | `dual` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py` |
+| route group                                                               | legacy owner                                   | fastapi owner                    | status    | parity tests                                                                                            |
+| ------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `/api/auth/*`                                                             | `src/api/auth/*`                               | `src/api_fastapi/auth/*`         | `dual`    | `tests/unit/api_fastapi/auth/router/*`, `tests/integration/api/fastapi/test_app.py`                     |
+| `/api/gmail/*`                                                            | `src/api/email/*`                              | `src/api_fastapi/email/*`        | `dual`    | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`, `tests/integration/api/fastapi/test_app.py` |
+| `/api/imap/*` (settings)                                                  | retired from legacy dispatcher                 | `src/api_fastapi/email/*`        | `fastapi` | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`                                              |
+| `/api/email-fetch-loop/status`                                            | retired from legacy dispatcher                 | `src/api_fastapi/utils/*`        | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                              |
+| `storage upload flow`                                                     | `src/api/file/handler.py`                      | pending router migration         | `legacy`  | `tests/integration/api/file/test_upload_integration.py`                                                 |
+| rag upload processing flow                                                | legacy upload endpoint + service path          | service/component path validated | `dual`    | `tests/integration/api/rag/test_rag.py`                                                                 |
+| utility endpoints (`/api/fetch`, `/api/curl`, `/api/fs/*`, `/api/prompt`) | `fetch/curl/fs retired from legacy dispatcher` | `src/api_fastapi/utils/*`        | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                              |
 
 migration order
 prioritize endpoints based on what the frontend actually needs, starting with the most visible and central flows.

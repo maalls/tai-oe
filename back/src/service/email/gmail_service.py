@@ -54,3 +54,28 @@ class GmailService:
         if not user_id:
             return {"status": "error", "message": "Missing user_id"}
         return self.repository.get_message_body(uuid=message_id, user_id=user_id)
+
+    def get_imap_status(self, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.get_imap_status(user_id=user_id)
+
+    def get_imap_config(self, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.get_imap_config(user_id=user_id)
+
+    def save_imap_config(self, user_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.save_imap_config(user_id=user_id, payload=payload)
+
+    def test_imap_connection(self, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.test_imap_connection(user_id=user_id)
+
+    def clear_imap_config(self, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.clear_imap_config(user_id=user_id)

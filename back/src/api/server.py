@@ -35,17 +35,6 @@ from src.api.routes.helpers.server_response_helpers import send_json, send_error
 
 # Load .env before reading config values.
 load_runtime_env(__file__)
-
-
-def _handle_email_fetch_loop_status_get(handler, current_file: str):
-    """Handle /api/email-fetch-loop/status GET endpoint."""
-    status_path = Path(current_file).resolve().parents[3] / 'var' / 'email_fetch_loop.json'
-    legacy_path = Path(current_file).resolve().parents[2] / 'var' / 'email_fetch_loop.json'
-    request_handlers = handler.request_handlers
-    result = request_handlers.handle_email_fetch_loop_status(status_path=status_path, legacy_path=legacy_path)
-    return handler.json(result)
-
-
 config = {
     "PORT": int(os.environ.get("PORT", "8088")),
     "STORAGE_DIR": Path(os.environ.get("STORAGE_DIR", "var/storage")).resolve(),
@@ -233,10 +222,6 @@ def create_rag_handler(config):
                 print(f"[RAG] Error handling GET request: {e}")
 
                 return send_error(self, 500, f"Internal server error 3: {e}")
-
-        def _handle_email_fetch_loop_status_get(self):
-            """Handle /api/email-fetch-loop/status GET endpoint."""
-            return _handle_email_fetch_loop_status_get(self, __file__)
 
         def _handle_prompt_get(self, parsed_path: str):
             """Handle GET requests for prompt markdown content."""

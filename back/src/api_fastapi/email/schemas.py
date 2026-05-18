@@ -36,6 +36,16 @@ class GmailOauthCallbackQuery(BaseModel):
     state: str | None = None
 
 
+class ImapConfigRequest(BaseModel):
+    host: str | None = None
+    port: int | None = None
+    username: str | None = None
+    password: str | None = None
+    mailbox: str | None = None
+    use_ssl: bool = True
+    enabled: bool = True
+
+
 class GenericEmailResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 

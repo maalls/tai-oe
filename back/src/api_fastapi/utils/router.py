@@ -10,6 +10,14 @@ from src.service.utility.utility_service import UtilityService
 router = APIRouter(tags=["utils"])
 
 
+@router.get("/api/email-fetch-loop/status")
+def email_fetch_loop_status(
+    utility_service: UtilityService = Depends(get_utility_service),
+):
+    result = utility_service.get_email_fetch_loop_status()
+    return JSONResponse(result, status_code=200)
+
+
 @router.get("/api/fetch")
 def fetch_url(
     query: FetchQuery = Depends(),

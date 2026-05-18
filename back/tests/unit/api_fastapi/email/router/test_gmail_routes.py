@@ -10,19 +10,19 @@ from src.api_fastapi.main import create_app
 
 
 class _FakeGmailService:
-    def get_gmail_status(self, user_id: str | None = None) -> dict:
+    def get_status(self, user_id: str | None = None) -> dict:
         return {"status": "ok", "authorized": True, "user_id": user_id}
 
-    def handle_gmail_authorize(self, redirect_url: str | None = None) -> dict:
+    def authorize(self, redirect_url: str | None = None) -> dict:
         return {"status": "ok", "auth_url": "https://example.com/oauth", "redirect_url": redirect_url}
 
-    def get_gmail_oauth_url(self, redirect_url: str | None = None, user_id: str | None = None) -> dict:
+    def get_oauth_url(self, redirect_url: str | None = None, user_id: str | None = None) -> dict:
         return {"status": "ok", "auth_url": "https://example.com/start", "redirect_url": redirect_url, "user_id": user_id}
 
-    def revoke_gmail(self, user_id: str | None = None) -> dict:
+    def revoke(self, user_id: str | None = None) -> dict:
         return {"status": "ok", "message": "revoked", "user_id": user_id}
 
-    def get_gmail_profile(self, user_id: str | None = None) -> dict:
+    def get_profile(self, user_id: str | None = None) -> dict:
         return {"status": "ok", "email": "user@example.com", "user_id": user_id}
 
     def oauth_callback(self, code: str, state: str | None = None) -> dict:
@@ -37,6 +37,21 @@ class _FakeGmailService:
 
     def get_message_body(self, message_id: str, user_id: str | None) -> dict:
         return {"status": "ok", "message": "body", "message_id": message_id, "user_id": user_id}
+
+    def get_imap_status(self, user_id: str) -> dict:
+        return {"status": "ok", "configured": True, "enabled": True, "connected": True, "user_id": user_id}
+
+    def get_imap_config(self, user_id: str) -> dict:
+        return {"status": "ok", "configured": True, "config": {"host": "imap.example.com"}, "user_id": user_id}
+
+    def save_imap_config(self, user_id: str, payload: dict) -> dict:
+        return {"status": "ok", "configured": True, "config": payload, "user_id": user_id}
+
+    def test_imap_connection(self, user_id: str) -> dict:
+        return {"status": "ok", "message": "IMAP connection successful", "user_id": user_id}
+
+    def clear_imap_config(self, user_id: str) -> dict:
+        return {"status": "ok", "message": "IMAP configuration removed", "user_id": user_id}
 
 
 class _FakeAuthService:
@@ -141,3 +156,44 @@ def test_gmail_message_body_uses_token_user():
     assert response.status_code == 200
     assert response.json()["message_id"] == "m-1"
     assert response.json()["user_id"] == "u-token"
+
+
+def test_imap_status_requires_auth():
+    client = _client()
+
+    response = client.get("/api/imap/status")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_imap_status_uses_token_user():
+    client = _client()
+
+    response = client.get("/api/imap/status", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["user_id"] == "u-token"
+
+
+def test_imap_config_post_uses_payload_and_token():
+    client = _client()
+
+    response = client.post(
+        "/api/imap/config",
+        headers={"Authorization": "Bearer valid"},
+        json={"host": "imap.example.com", "port": 993, "username": "user"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["config"]["host"] == "imap.example.com"
+
+
+def test_imap_test_and_clear_routes():
+    client = _client()
+
+    test_response = client.post("/api/imap/test", headers={"Authorization": "Bearer valid"})
+    clear_response = client.delete("/api/imap/config", headers={"Authorization": "Bearer valid"})
+
+    assert test_response.status_code == 200
+    assert clear_response.status_code == 200

@@ -1,5 +1,7 @@
 """Service for HTTP and filesystem utility operations."""
 
+import json
+import os
 from pathlib import Path
 from typing import Any
 import urllib.parse
@@ -116,6 +118,44 @@ class UtilityService:
             raise FileNotFoundError("Prompt not found")
 
         return prompt_path.read_text(encoding="utf-8")
+
+    def get_email_fetch_loop_status(self) -> dict[str, Any]:
+        status_path = self.base_dir / "var" / "email_fetch_loop.json"
+        legacy_path = self.base_dir / "back" / "var" / "email_fetch_loop.json"
+
+        if not status_path.exists() and legacy_path.exists():
+            status_path = legacy_path
+
+        if not status_path.exists():
+            return {
+                "running": False,
+                "pid": None,
+                "started_at": None,
+                "last_heartbeat": None,
+                "mode": None,
+            }
+
+        try:
+            payload = json.loads(status_path.read_text(encoding="utf-8") or "{}")
+        except Exception:
+            payload = {}
+
+        pid = payload.get("pid")
+        running = False
+        if pid:
+            try:
+                os.kill(int(pid), 0)
+                running = True
+            except Exception:
+                running = False
+
+        return {
+            "running": running,
+            "pid": pid,
+            "started_at": payload.get("started_at"),
+            "last_heartbeat": payload.get("last_heartbeat"),
+            "mode": payload.get("mode"),
+        }
 
     @staticmethod
     def sanitize_storage_filename(raw_filename: str) -> str:

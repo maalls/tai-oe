@@ -469,46 +469,6 @@ def handle_email_senders_verified_post(handler):
     return handler.json(result, status)
 
 
-def handle_imap_config_post(handler):
-    """Handle /api/imap/config POST endpoint."""
-    payload = read_json(handler, default={})
-
-    user_data = require_auth(handler)
-    if user_data is None:
-        return None
-
-    user_id = user_data.get('id') if user_data else None
-    request_handlers = handler.request_handlers
-    result = request_handlers.email_handlers.save_imap_config(user_id=user_id, payload=payload)
-    status = status_from_result(result)
-    return handler.json(result, status)
-
-
-def handle_imap_test_post(handler):
-    """Handle /api/imap/test POST endpoint."""
-    user_data = require_auth(handler)
-    if user_data is None:
-        return None
-
-    user_id = user_data.get('id') if user_data else None
-    request_handlers = handler.request_handlers
-    result = request_handlers.email_handlers.test_imap_connection(user_id=user_id)
-    status = status_from_result(result)
-    return handler.json(result, status)
-
-
-def handle_imap_config_delete(handler):
-    """Handle DELETE /api/imap/config."""
-    user_id = require_auth_user_id(handler)
-    if user_id is None:
-        return None
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.email_handlers.clear_imap_config(user_id=user_id)
-    status = status_from_result(result)
-    return handler.json(result, status)
-
-
 def handle_email_delete(handler, email_delete_match):
     """Handle DELETE /api/email/{id}."""
     user_id = require_auth_user_id(handler)
@@ -575,26 +535,6 @@ def handle_gmail_profile_get(handler, qs):
     request_handlers = handler.request_handlers
     user_id = get_qs_value(qs, 'user_id')
     result = request_handlers.email_handlers.get_gmail_profile(user_id=user_id)
-    return handler.json(result)
-
-
-def handle_imap_status_get(handler):
-    """Handle /api/imap/status GET endpoint."""
-    user_id = require_auth_user_id(handler)
-    if user_id is None:
-        return None
-    request_handlers = handler.request_handlers
-    result = request_handlers.email_handlers.get_imap_status(user_id)
-    return handler.json(result)
-
-
-def handle_imap_config_get(handler):
-    """Handle /api/imap/config GET endpoint."""
-    user_id = require_auth_user_id(handler)
-    if user_id is None:
-        return None
-    request_handlers = handler.request_handlers
-    result = request_handlers.email_handlers.get_imap_config(user_id)
     return handler.json(result)
 
 

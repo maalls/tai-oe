@@ -75,6 +75,15 @@ class _FakeUtilityService:
             raise FileNotFoundError("Prompt not found")
         return prompt_path.read_text(encoding="utf-8")
 
+    def get_email_fetch_loop_status(self) -> dict:
+        return {
+            "running": False,
+            "pid": None,
+            "started_at": None,
+            "last_heartbeat": None,
+            "mode": None,
+        }
+
 
 def _client(tmp_path: Path) -> TestClient:
     prompt_base_dir = tmp_path / "prompts"
@@ -133,3 +142,12 @@ def test_prompt_route_returns_404_when_missing(tmp_path: Path):
 
     assert response.status_code == 404
     assert response.json()["error"] == "Prompt not found"
+
+
+def test_email_fetch_loop_status_route_returns_payload(tmp_path: Path):
+    client = _client(tmp_path)
+
+    response = client.get("/api/email-fetch-loop/status")
+
+    assert response.status_code == 200
+    assert response.json()["running"] is False

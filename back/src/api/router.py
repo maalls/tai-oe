@@ -6,8 +6,6 @@ from typing import Optional, Dict, Any, Iterator
 import urllib.request
 import urllib.parse
 from pathlib import Path
-import json
-import os
 
 from src.api.file.handler import FileHandler
 from src.api.csv.handler import CsvHandlers
@@ -322,42 +320,6 @@ class RequestHandlers:
             'path': str(target_path),
             'truncated': len(content) > max_chars,
             'text': truncated,
-        }
-
-    def handle_email_fetch_loop_status(self, status_path: Path, legacy_path: Path) -> Dict:
-        """Handle /api/email-fetch-loop/status request."""
-        if not status_path.exists() and legacy_path.exists():
-            status_path = legacy_path
-
-        if not status_path.exists():
-            return {
-                'running': False,
-                'pid': None,
-                'started_at': None,
-                'last_heartbeat': None,
-                'mode': None,
-            }
-
-        try:
-            payload = json.loads(status_path.read_text(encoding='utf-8') or '{}')
-        except Exception:
-            payload = {}
-
-        pid = payload.get('pid')
-        running = False
-        if pid:
-            try:
-                os.kill(int(pid), 0)
-                running = True
-            except Exception:
-                running = False
-
-        return {
-            'running': running,
-            'pid': pid,
-            'started_at': payload.get('started_at'),
-            'last_heartbeat': payload.get('last_heartbeat'),
-            'mode': payload.get('mode'),
         }
 
     def handle_storage_find_path(self, storage_dir: Path, filename: str) -> Optional[Path]:
