@@ -108,9 +108,9 @@ class EmailDatabaseHandler:
         candidate = redirect_url or default_origin
         parsed = urlparse(candidate)
         if parsed.scheme and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}/api/google/oauth/callback"
+            return f"{parsed.scheme}://{parsed.netloc}/api/gmail/oauth/callback"
 
-        return "http://localhost:7153/api/google/oauth/callback"
+        return "http://localhost:7153/api/gmail/oauth/callback"
 
     
     def _parse_email_date(self, date_string: str) -> Optional[str]:
@@ -535,9 +535,9 @@ class EmailRepository:
         candidate = redirect_url or default_origin
         parsed = urlparse(candidate)
         if parsed.scheme and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}/api/google/oauth/callback"
+            return f"{parsed.scheme}://{parsed.netloc}/api/gmail/oauth/callback"
 
-        return "http://localhost:7153/api/google/oauth/callback"
+        return "http://localhost:7153/api/gmail/oauth/callback"
 
     @staticmethod
     def _get_secret_fernet() -> Fernet:

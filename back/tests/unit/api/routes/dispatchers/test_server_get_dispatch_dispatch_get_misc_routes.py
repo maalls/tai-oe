@@ -9,18 +9,23 @@ class _HandlerStub:
         self.config = {"STORAGE_DIR": "/tmp"}
         self.calls = []
 
-def test_dispatch_get_misc_routes_delegates_google_oauth_callback(monkeypatch):
-    calls = []
+    def _handle_prompt_get(self, parsed_path):
+        self.calls.append(parsed_path)
 
-    def _fake(handler, qs):
-        calls.append((handler, qs))
-
-    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.handle_google_oauth_callback_get", _fake)
-
+def test_dispatch_get_misc_routes_delegates_prompt_path():
     handler = _HandlerStub()
-    parsed = SimpleNamespace(path="/api/google/oauth/callback")
+    parsed = SimpleNamespace(path="/api/prompt/mail/classify")
 
-    handled = dispatch_get_misc_routes(handler, parsed, {"code": ["abc"]})
+    handled = dispatch_get_misc_routes(handler, parsed, {})
 
     assert handled is True
-    assert calls == [(handler, {"code": ["abc"]})]
+    assert handler.calls == ["/api/prompt/mail/classify"]
+
+
+def test_dispatch_get_misc_routes_returns_false_for_unknown_path():
+    handler = _HandlerStub()
+    parsed = SimpleNamespace(path="/api/unknown")
+
+    handled = dispatch_get_misc_routes(handler, parsed, {})
+
+    assert handled is False

@@ -6,7 +6,6 @@ from typing import Dict
 
 from src.api.routes.helpers.server_auth_helpers import get_optional_user_id_from_auth, require_auth, require_auth_user_id
 from src.api.routes.helpers.server_body_helpers import read_json
-from src.api.routes.helpers.server_response_helpers import send_error, send_redirect
 from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.api.classification.handler import ClassifyHandler
 from src.infrastructure.factory import ServiceFactory
@@ -512,17 +511,3 @@ def handle_email_attachment_get(handler, parsed_path: str):
     return None
 
 
-def handle_google_oauth_callback_get(handler, qs):
-    """Handle Google OAuth callback route."""
-    request_handlers = handler.request_handlers
-    code = qs.get('code', [None])[0]
-    state = qs.get('state', [None])[0]
-    if not code:
-        return send_error(handler, 400, 'Missing code parameter')
-
-    result = request_handlers.email_handlers.handle_gmail_oauth_callback(code, state)
-    if result.get('status') == 'ok':
-        redirect_url = result.get('redirect_url') or 'http://localhost:5173/settings'
-        return send_redirect(handler, redirect_url)
-
-    return handler.json(result, 500)
