@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from src.api.routes.helpers.server_auth_helpers import require_auth
-from src.api.routes.helpers.server_body_helpers import read_body, read_json
+from src.api.routes.helpers.server_body_helpers import read_json
 from src.api.routes.helpers.server_response_helpers import send_error
 from src.api.routes.helpers.server_status_helpers import status_from_error, status_from_result
 from src.service.quote.service import QuoteService
@@ -376,92 +376,5 @@ class Quote:
         html_content = template.render(**template_data)
         HTML(string=html_content).write_pdf(str(pdf_path))
         return pdf_filename
-
-
-def handle_quote_submit_post(handler):
-    """Handle /api/quote POST endpoint."""
-    content_type = handler.headers.get('Content-Type', '')
-    body = read_body(handler)
-    _ = content_type
-    request_handlers = handler.request_handlers
-    result = request_handlers.business_handlers.quote_handlers.handle_quote_submit(body)
-    return handler.json(result)
-
-
-def handle_quote_send_post(handler):
-    """Handle /api/quote/send POST endpoint."""
-    print(f"[RAG] Received request to send quote email, path: /api/quote/send, method: {handler.command}")
-    content_type = handler.headers.get('Content-Type', '')
-    body = read_body(handler)
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.business_handlers.email_handlers.handle_quote_send(body, content_type)
-    return handler.json(result)
-
-
-def handle_quote_update_post(handler, quote_update_match):
-    """Handle /api/quote/{id} POST endpoint."""
-    user_data = require_auth(handler)
-    if user_data is None:
-        return None
-
-    user_id = user_data.get('id') if user_data else None
-    document_id = quote_update_match.group(1)
-    payload = read_json(handler, default={})
-
-    print(f"[RAG] Updating quote {document_id} by user {user_id} with payload: {payload}")
-    result = Quote().update(document_id=document_id, payload=payload, user_id=user_id)
-    status = status_from_error(result)
-    return handler.json(result, status)
-
-
-def handle_quote_pdf_post(handler, quote_pdf_match):
-    """Handle /api/quote/{id}/pdf POST endpoint."""
-    user_data = require_auth(handler)
-    if user_data is None:
-        return None
-
-    user_id = user_data.get('id') if user_data else None
-    document_id = quote_pdf_match.group(1)
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.business_handlers.quote_handlers.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
-    status = status_from_result(result)
-    return handler.json(result, status)
-
-
-def handle_quotes_list_get(handler, request_handlers):
-    """Handle /api/quotes/list GET endpoint."""
-    return handler.json(request_handlers.business_handlers.quote_handlers.handle_list_quotes())
-
-
-def handle_quotes_download_get(handler, parsed_path: str, qs, request_handlers):
-    """Handle /api/quotes/download/<filename> GET endpoint."""
-    filename = parsed_path.split('/api/quotes/download/')[-1]
-    return handle_quote_download(handler, filename, request_handlers, qs)
-
-
-def handle_quote_download(handler, filename, request_handlers, qs=None):
-    """Stream PDF quote file."""
-    try:
-        qs = qs or {}
-        is_inline = qs.get('inline', ['0'])[0] == '1'
-        content = request_handlers.business_handlers.quote_handlers.handle_get_quote_file(filename)
-        handler.send_response(200)
-        handler.send_header('Content-Type', 'application/pdf')
-        disposition = 'inline' if is_inline else 'attachment'
-        handler.send_header('Content-Disposition', f'{disposition}; filename="{filename}"')
-        handler.send_header('Content-Length', str(len(content)))
-        handler.send_header('Access-Control-Allow-Origin', 'http://localhost:5173')
-        handler.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        handler.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-        handler.send_header('Access-Control-Allow-Credentials', 'true')
-        handler._cors_header_sent = True
-        handler.end_headers()
-        handler.wfile.write(content)
-    except FileNotFoundError:
-        return send_error(handler, 404, 'Quote file not found')
-    except Exception as e:
-        return send_error(handler, 500, f"Error streaming PDF: {e}")
 
 

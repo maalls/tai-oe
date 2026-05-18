@@ -3,7 +3,6 @@
 import json
 from typing import Dict
 
-from src.api.routes.helpers.server_body_helpers import read_body
 from src.api.routes.helpers.server_response_helpers import send_error
 from src.api.file.handler import FileHandler
 
@@ -76,19 +75,6 @@ class CsvHandlers:
             raise ValueError(f"Source file {candidate} not found or invalid")
 
         return candidate.read_bytes()
-
-
-def handle_csv_source_post(handler):
-    """Handle /api/csv/source POST endpoint."""
-    content_type = handler.headers.get('Content-Type', '')
-    body = read_body(handler)
-    content_length = len(body)
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.file_handler.handle_file_upload(content_type, content_length, body)
-    return handler.json(result)
-
-
 def handle_csv_get(handler, parsed_path: str, qs):
     """Handle /api/csv* GET endpoints."""
     request_handlers = handler.request_handlers

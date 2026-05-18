@@ -2,17 +2,9 @@
 
 from typing import Any, Dict, Tuple
 
-from src.api.opportunity.routes import get_opportunity_route, advance_opportunity_route
-from src.api.vendor.routes import get_vendor_route
-from src.api.rfq.routes import get_rfp_route, submit_rfp_route
 
 
 DDD_GET_ROUTE_MAP = {
-    "/api/ddd/opportunity": get_opportunity_route,
-    "/api/ddd/opportunity/advance": advance_opportunity_route,
-    "/api/ddd/vendor": get_vendor_route,
-    "/api/ddd/rfp": get_rfp_route,
-    "/api/ddd/rfp/submit": submit_rfp_route,
 }
 
 

@@ -1,9 +1,6 @@
 """Main request handlers orchestration for the RAG server."""
 
-from dataclasses import asdict
-from enum import Enum
-from typing import Optional, Dict, Any, Iterator
-import urllib.parse
+from typing import Dict
 from pathlib import Path
 
 from src.api.file.handler import FileHandler
@@ -19,7 +16,6 @@ from src.api.quote.handler import Quote as QuoteController
 from src.api.action.handler import ActionHandlers
 from src.infrastructure.clients.database import DatabaseHandler
 from src.infrastructure.clients.supabase import get_supabase_service
-from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
 from src.lib.encoders.embeddings import EmbeddingGenerator
 from src.lib.storage_paths import get_storage_dir, get_storage_path
@@ -222,14 +218,6 @@ class RequestHandlers:
             self._embedding_generator = EmbeddingGenerator()
         return self._embedding_generator
 
-    def _serialize_domain_entity(self, entity: Any) -> Dict[str, Any]:
-        """Convert dataclass entities to JSON-serializable dictionaries."""
-        payload = asdict(entity)
-        for key, value in payload.items():
-            if isinstance(value, Enum):
-                payload[key] = value.value
-        return payload
-
     @property
     def opportunity_from_email_service(self) -> OpportunityFromEmailService:
         if getattr(self, "_opportunity_from_email_service", None) is None:
@@ -238,104 +226,6 @@ class RequestHandlers:
                 generate_quote_for_opportunity=self.business_handlers.handle_generate_quote_for_opportunity,
             )
         return self._opportunity_from_email_service
-
-    def handle_storage_find_path(self, storage_dir: Path, filename: str) -> Optional[Path]:
-        """Locate a storage file across known subdirectories then root storage."""
-        storage_subdirs = ['rfp_uploads', 'attachment', 'attachments', 'email', 'quotes']
-        for subdir in storage_subdirs:
-            candidate = storage_dir / subdir / filename
-            if candidate.exists():
-                return candidate
-
-        root_candidate = storage_dir / filename
-        if root_candidate.exists():
-            return root_candidate
-
-        return None
-
-    def handle_storage_sanitize_filename(self, raw_filename: str) -> str:
-        """Sanitize filename from storage routes to prevent traversal."""
-        filename = urllib.parse.unquote(raw_filename)
-        return filename.replace('..', '').replace('/', '')
-
-    def handle_storage_file_metadata(self, filename: str, storage_path: Path) -> Dict[str, Any]:
-        """Build storage file metadata and headers needed by HEAD/GET responses."""
-        file_ext = storage_path.suffix.lower()
-        content_type_map = {
-            '.pdf': 'application/pdf',
-            '.txt': 'text/plain; charset=utf-8',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.xls': 'application/vnd.ms-excel',
-            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.zip': 'application/zip',
-        }
-        content_type = content_type_map.get(file_ext, 'application/octet-stream')
-        file_size = storage_path.stat().st_size
-        encoded_filename = urllib.parse.quote(filename)
-        disposition = 'inline' if content_type == 'application/pdf' else 'attachment'
-
-        return {
-            'content_type': content_type,
-            'file_size': file_size,
-            'content_disposition': f"{disposition}; filename*=UTF-8''{encoded_filename}",
-        }
-
-    def handle_storage_resolve_file(self, storage_dir: Path, raw_filename: str) -> Dict[str, Any]:
-        """Resolve a storage file and compute metadata from a raw route filename."""
-        filename = self.handle_storage_sanitize_filename(raw_filename)
-        storage_path = self.handle_storage_find_path(storage_dir, filename)
-        if not storage_path or not storage_path.exists():
-            raise FileNotFoundError(f"Storage file not found: {filename}")
-
-        metadata = self.handle_storage_file_metadata(filename, storage_path)
-        return {
-            'filename': filename,
-            'storage_path': storage_path,
-            'metadata': metadata,
-        }
-
-    def handle_storage_read_chunks(self, storage_path: Path, chunk_size: int = 8192) -> Iterator[bytes]:
-        """Yield file content as chunks for storage streaming responses."""
-        with open(storage_path, 'rb') as file_handle:
-            while True:
-                chunk = file_handle.read(chunk_size)
-                if not chunk:
-                    break
-                yield chunk
-
-    def handle_storage_response_headers(self, metadata: Dict[str, Any]) -> Dict[str, str]:
-        """Build HTTP headers for storage HEAD/GET responses from metadata."""
-        return {
-            'Content-Type': metadata['content_type'],
-            'Content-Length': str(metadata['file_size']),
-            'Accept-Ranges': 'bytes',
-            'Content-Disposition': metadata['content_disposition'],
-        }
-
-    def handle_storage_not_found_payload(self, raw_filename: str, include_body: bool = False) -> Dict[str, Any]:
-        """Build normalized 404 payload pieces for storage routes."""
-        filename = self.handle_storage_sanitize_filename(raw_filename)
-        payload: Dict[str, Any] = {
-            'filename': filename,
-            'content_type': 'text/plain',
-        }
-        if include_body:
-            payload['body'] = b'File not found'
-        return payload
-
-    def handle_storage_read_error_payload(self, error: Exception) -> Dict[str, Any]:
-        """Build normalized 500 payload for storage read failures."""
-        message = f"Error reading file: {str(error)}"
-        return {
-            'content_type': 'text/plain',
-            'body': message.encode('utf-8'),
-            'message': message,
-        }
 
     def handle_get_prompt_content(self, relative_path: str, prompt_base_dir: Path) -> str:
         """Resolve and read prompt markdown content safely."""
@@ -350,80 +240,4 @@ class RequestHandlers:
 
         return prompt_path.read_text(encoding='utf-8')
 
-    # New DDD services (incremental migration path)
-    def handle_get_opportunity(self, opportunity_id: str) -> Dict:
-        """Handle DDD get-opportunity use-case."""
-        try:
-            service = self.service_factory.create_opportunity_service()
-            opportunity = service.get_opportunity(opportunity_id)
-            return {
-                "status": "ok",
-                "opportunity": self._serialize_domain_entity(opportunity),
-            }
-        except Exception as exc:
-            return {
-                "status": "error",
-                "message": str(exc),
-            }
-
-    def handle_advance_opportunity(self, opportunity_id: str, stage: str) -> Dict:
-        """Handle DDD advance-opportunity use-case."""
-        try:
-            parsed_stage = OpportunityStage(stage)
-            service = self.service_factory.create_opportunity_service()
-            opportunity = service.advance_opportunity(opportunity_id, parsed_stage)
-            return {
-                "status": "ok",
-                "opportunity": self._serialize_domain_entity(opportunity),
-            }
-        except Exception as exc:
-            return {
-                "status": "error",
-                "message": str(exc),
-            }
-
-    def handle_get_vendor(self, vendor_id: str) -> Dict:
-        """Handle DDD get-vendor use-case."""
-        try:
-            service = self.service_factory.create_vendor_service()
-            vendor = service.get_vendor(vendor_id)
-            return {
-                "status": "ok",
-                "vendor": self._serialize_domain_entity(vendor),
-            }
-        except Exception as exc:
-            return {
-                "status": "error",
-                "message": str(exc),
-            }
-
-    def handle_get_rfp(self, rfp_id: str) -> Dict:
-        """Handle DDD get-rfp use-case."""
-        try:
-            service = self.service_factory.create_rfp_service()
-            rfp = service.get_rfp(rfp_id)
-            return {
-                "status": "ok",
-                "rfp": self._serialize_domain_entity(rfp),
-            }
-        except Exception as exc:
-            return {
-                "status": "error",
-                "message": str(exc),
-            }
-
-    def handle_submit_rfp(self, rfp_id: str) -> Dict:
-        """Handle DDD submit-rfp use-case."""
-        try:
-            service = self.service_factory.create_rfp_service()
-            rfp = service.submit_rfp(rfp_id)
-            return {
-                "status": "ok",
-                "rfp": self._serialize_domain_entity(rfp),
-            }
-        except Exception as exc:
-            return {
-                "status": "error",
-                "message": str(exc),
-            }
 

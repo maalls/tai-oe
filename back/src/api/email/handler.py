@@ -6,7 +6,6 @@ from typing import Dict
 
 from src.api.routes.helpers.server_auth_helpers import get_optional_user_id_from_auth, require_auth, require_auth_user_id
 from src.api.routes.helpers.server_body_helpers import read_json
-from src.api.routes.helpers.server_query_helpers import get_qs_bool, get_qs_int, get_qs_value
 from src.api.routes.helpers.server_response_helpers import send_error, send_redirect
 from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.api.classification.handler import ClassifyHandler
@@ -15,7 +14,6 @@ from src.infrastructure.clients.supabase import get_supabase_service
 from src.service.email.auth_status_service import AuthStatusService
 from src.service.email.quote_send_service import QuoteSendService
 from src.lib.storage_paths import get_storage_dir, get_storage_path
-from src.config import EMAIL_FETCH_MAX_RESULTS
 
 
 def _get_legacy_repo():
@@ -495,107 +493,6 @@ def handle_email_attachment_delete(handler, attachment_delete_match):
     result = request_handlers.email_handlers.handle_email_attachment_delete(attachment_id=attachment_id, user_id=user_id)
     status = status_from_result(result)
     return handler.json(result, status)
-
-
-def handle_gmail_status_get(handler, qs):
-    """Handle /api/gmail/status GET endpoint."""
-    request_handlers = handler.request_handlers
-    user_id = get_qs_value(qs, 'user_id')
-    result = request_handlers.email_handlers.get_gmail_status(user_id=user_id)
-    return handler.json(result)
-
-
-def handle_gmail_authorize_get(handler, qs):
-    """Handle /api/gmail/authorize GET endpoint."""
-    request_handlers = handler.request_handlers
-    redirect_url = get_qs_value(qs, 'redirect_url')
-    result = request_handlers.email_handlers.handle_gmail_authorize(redirect_url)
-    return handler.json(result)
-
-
-def handle_gmail_oauth_start_get(handler, qs):
-    """Handle /api/gmail/oauth/start GET endpoint."""
-    request_handlers = handler.request_handlers
-    redirect_url = get_qs_value(qs, 'redirect_url')
-    user_id = get_qs_value(qs, 'user_id')
-    result = request_handlers.email_handlers.get_gmail_oauth_url(redirect_url, user_id=user_id)
-    return handler.json(result)
-
-
-def handle_gmail_revoke_get(handler, qs):
-    """Handle /api/gmail/revoke GET endpoint."""
-    request_handlers = handler.request_handlers
-    user_id = get_qs_value(qs, 'user_id')
-    result = request_handlers.email_handlers.revoke_gmail(user_id=user_id)
-    return handler.json(result)
-
-
-def handle_gmail_profile_get(handler, qs):
-    """Handle /api/gmail/profile GET endpoint."""
-    request_handlers = handler.request_handlers
-    user_id = get_qs_value(qs, 'user_id')
-    result = request_handlers.email_handlers.get_gmail_profile(user_id=user_id)
-    return handler.json(result)
-
-
-def handle_gmail_messages_get(handler, qs):
-    """Handle /api/gmail/messages GET endpoint."""
-    request_handlers = handler.request_handlers
-    max_results = get_qs_int(qs, 'max_results', EMAIL_FETCH_MAX_RESULTS)
-    user_id = qs.get('user_id', [None])[0]
-    force = get_qs_bool(qs, 'force', False)
-
-    print(f"[RAG] /api/gmail/messages - user_id from query: {user_id}, force: {force}")
-
-    if not user_id:
-        auth_header = handler.headers.get('Authorization', '')
-        print(f"[RAG] Auth header: {auth_header[:50] if auth_header else 'None'}...")
-        user_id = get_optional_user_id_from_auth(handler, auth_header)
-        print(f"[RAG] Extracted user_id from token: {user_id}")
-
-    print(f"[RAG] Final user_id: {user_id}")
-    if not user_id:
-        return send_error(handler, 400, 'Missing user_id')
-
-    result = request_handlers.email_handlers.handle_gmail_list_messages(
-        max_results=max_results,
-        user_id=user_id,
-        save_to_db=True,
-        force=force,
-    )
-    return handler.json(result)
-
-
-def handle_gmail_classify_unclassified_get(handler, qs):
-    """Handle /api/gmail/classify-unclassified GET endpoint."""
-    request_handlers = handler.request_handlers
-    user_id = qs.get('user_id', [None])[0]
-    limit = get_qs_int(qs, 'limit', 200)
-
-    if not user_id:
-        auth_header = handler.headers.get('Authorization', '')
-        user_id = get_optional_user_id_from_auth(handler, auth_header)
-
-    if not user_id:
-        return send_error(handler, 400, 'Missing user_id')
-
-    result = request_handlers.email_handlers.handle_classify_unclassified(user_id=user_id, limit=limit)
-    status = status_from_result(result)
-    return handler.json(result, status)
-
-
-def handle_gmail_message_get(handler, parsed_path: str):
-    """Handle /api/gmail/message/<id> GET endpoint."""
-    message_id = parsed_path.split('/api/gmail/message/')[-1]
-    auth_header = handler.headers.get('Authorization', '')
-    print(f"[RAG] /api/gmail/message/{message_id} - Auth header: {auth_header[:50] if auth_header else 'None'}...")
-    user_id = get_optional_user_id_from_auth(handler, auth_header)
-    print(f"[RAG] Extracted user_id from token: {user_id}")
-    print(f"[RAG] Final user_id for message body: {user_id}")
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.email_handlers.handle_get_message_body(message_id, user_id)
-    return handler.json(result)
 
 
 def handle_email_attachment_get(handler, parsed_path: str):

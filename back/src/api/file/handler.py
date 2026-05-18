@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from typing import Dict, Any
-import traceback
 
 from src.api.routes.helpers.server_response_helpers import send_error, send_text_response
 from src.lib.email.multipart import parse_multipart, extract_boundary_from_header
@@ -111,6 +110,13 @@ class FileHandler:
         if not filename or not file_data:
             raise ValueError("No file data found")
 
+        return self.handle_uploaded_file(filename=filename, file_data=file_data)
+
+    def handle_uploaded_file(self, filename: str, file_data: bytes) -> Dict[str, Any]:
+        """Persist an uploaded file and convert it when needed."""
+        if not filename or not file_data:
+            raise ValueError("No file data found")
+
         # Validate file extension
         valid_extensions = ('.xlsx', '.xls', '.csv')
         if not any(filename.lower().endswith(ext) for ext in valid_extensions):
@@ -146,65 +152,3 @@ def handle_prompt_get(handler, parsed_path: str, current_file: str):
     return send_text_response(handler, 200, 'text/plain; charset=utf-8', content.encode('utf-8'))
 
 
-def handle_storage_head(handler, storage_dir, parsed_path: str):
-    """Handle HEAD requests for storage files."""
-    raw_filename = parsed_path[len('/api/storage/'):]
-    request_handlers = handler.request_handlers
-    try:
-        storage_info = request_handlers.handle_storage_resolve_file(storage_dir, raw_filename)
-    except FileNotFoundError:
-        not_found = request_handlers.handle_storage_not_found_payload(raw_filename, include_body=False)
-        print(f"[RAG] File not found in any storage location: {not_found['filename']}")
-        send_text_response(handler, 404, not_found['content_type'])
-        return
-
-    filename = storage_info['filename']
-    metadata = storage_info['metadata']
-
-    print(f"[RAG] Storage HEAD request for file: {filename}")
-    response_headers = request_handlers.handle_storage_response_headers(metadata)
-
-    handler.send_response(200)
-    for header_name, header_value in response_headers.items():
-        handler.send_header(header_name, header_value)
-    handler.end_headers()
-
-
-def handle_storage_get(handler, storage_dir, parsed_path: str):
-    """Handle GET requests for storage files."""
-    raw_filename = parsed_path[len('/api/storage/'):]
-    request_handlers = handler.request_handlers
-    try:
-        storage_info = request_handlers.handle_storage_resolve_file(storage_dir, raw_filename)
-    except FileNotFoundError:
-        not_found = request_handlers.handle_storage_not_found_payload(raw_filename, include_body=True)
-        print(f"[RAG] Storage request for file: {not_found['filename']}")
-        print(f"[RAG] File not found in any storage location: {not_found['filename']}")
-        send_text_response(handler, 404, not_found['content_type'], not_found['body'])
-        return
-
-    filename = storage_info['filename']
-    storage_path = storage_info['storage_path']
-    metadata = storage_info['metadata']
-
-    print(f"[RAG] Storage request for file: {filename}")
-
-    try:
-        print(f"[RAG] Reading file: {storage_path}")
-        response_headers = request_handlers.handle_storage_response_headers(metadata)
-
-        handler.send_response(200)
-        for header_name, header_value in response_headers.items():
-            handler.send_header(header_name, header_value)
-        handler.end_headers()
-
-        for chunk in request_handlers.handle_storage_read_chunks(storage_path):
-            handler.wfile.write(chunk)
-        print(f"[RAG] File sent successfully: {filename} ({metadata['file_size']} bytes)")
-        return
-    except Exception as error:
-        print(f"[RAG] Error reading file {filename}: {error}")
-        traceback.print_exc()
-        error_payload = request_handlers.handle_storage_read_error_payload(error)
-        send_text_response(handler, 500, error_payload['content_type'], error_payload['body'])
-        return

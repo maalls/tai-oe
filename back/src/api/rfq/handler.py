@@ -7,9 +7,6 @@ from typing import Dict
 from pathlib import Path
 import time
 
-from src.api.routes.helpers.server_auth_helpers import require_auth
-from src.api.routes.helpers.server_body_helpers import read_body, read_json
-from src.api.routes.helpers.server_status_helpers import status_from_result
 from src.infrastructure.factory import ServiceFactory
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
@@ -591,31 +588,3 @@ class RfqHandlers:
     @staticmethod
     def _get_storage_dir(source: str) -> Path:
         return get_storage_dir(source)
-
-
-def handle_rfq_generate_post(handler):
-    """Handle /api/rfq/generate POST endpoint."""
-    user_data = require_auth(handler)
-    if user_data is None:
-        return None
-
-    user_id = user_data.get('id') if user_data else None
-    payload = read_json(handler, default={})
-
-    text = payload.get('text') or payload.get('content')
-    message_id = payload.get('message_id')
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.business_handlers.rfq_handlers.handle_rfq_generate(text=text, message_id=message_id, user_id=user_id)
-    status = status_from_result(result)
-    return handler.json(result, status)
-
-
-def handle_rfp_post(handler):
-    """Handle /api/rfp POST endpoint."""
-    content_type = handler.headers.get('Content-Type', '')
-    body = read_body(handler)
-
-    request_handlers = handler.request_handlers
-    result = request_handlers.business_handlers.rfq_handlers.handle_rfp_upload(body, content_type)
-    return handler.json(result)

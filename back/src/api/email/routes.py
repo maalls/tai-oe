@@ -1,7 +1,6 @@
 """Domain router for email endpoints."""
 
 import re
-from typing import Any, Dict, Tuple
 
 from src.api.email.handler import (
     handle_email_attachment_delete,
@@ -13,38 +12,7 @@ from src.api.email.handler import (
     handle_email_senders_high_risk_post,
     handle_email_senders_verified_post,
     handle_emails_classify_post,
-    handle_gmail_authorize_get,
-    handle_gmail_classify_unclassified_get,
-    handle_gmail_message_get,
-    handle_gmail_messages_get,
-    handle_gmail_oauth_start_get,
-    handle_gmail_profile_get,
-    handle_gmail_revoke_get,
-    handle_gmail_status_get,
 )
-
-
-def classify_unclassified_route(
-    handlers: Any,
-    query: Dict[str, str],
-    auth_user_id: str | None = None,
-) -> Tuple[Dict[str, Any], int]:
-    """Handle classify-unclassified request in a transport-agnostic way."""
-    user_id = query.get("user_id") or auth_user_id
-    if not user_id:
-        return {"status": "error", "message": "Missing user_id"}, 400
-
-    try:
-        limit = int(query.get("limit", "200"))
-    except Exception:
-        limit = 200
-
-    result = handlers.handle_classify_unclassified(
-        user_id=user_id,
-        limit=limit,
-    )
-    status_code = 200 if result.get("status") == "ok" else 400
-    return result, status_code
 
 
 def dispatch_email_routes(handler, method: str, parsed, qs, _request_handlers) -> bool:
@@ -52,38 +20,6 @@ def dispatch_email_routes(handler, method: str, parsed, qs, _request_handlers) -
     path = parsed.path
 
     if method == "GET":
-        if path == '/api/gmail/oauth/start':
-            handle_gmail_oauth_start_get(handler, qs)
-            return True
-
-        if path == '/api/gmail/authorize':
-            handle_gmail_authorize_get(handler, qs)
-            return True
-
-        if path == '/api/gmail/status':
-            handle_gmail_status_get(handler, qs)
-            return True
-
-        if path == '/api/gmail/revoke':
-            handle_gmail_revoke_get(handler, qs)
-            return True
-
-        if path == '/api/gmail/profile':
-            handle_gmail_profile_get(handler, qs)
-            return True
-
-        if path == '/api/gmail/messages':
-            handle_gmail_messages_get(handler, qs)
-            return True
-
-        if path == '/api/gmail/classify-unclassified':
-            handle_gmail_classify_unclassified_get(handler, qs)
-            return True
-
-        if path.startswith('/api/gmail/message/'):
-            handle_gmail_message_get(handler, path)
-            return True
-
         if path.startswith('/api/email-attachment/'):
             handle_email_attachment_get(handler, path)
             return True
