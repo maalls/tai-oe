@@ -7,7 +7,6 @@ src/components/invoices/InvoicesPage.vue
 src/components/login/ResetPasswordPage.vue
 src/components/mail/IndexPage.vue
 src/components/opportunity/components/invoices/InvoiceDetailPage.vue
-src/components/opportunity/components/invoices/InvoicesPage.vue
 src/components/opportunity/components/quote/QuoteDocument.vue
 src/components/products/DetailPage.vue
 src/components/products/IndexPage.vue
