@@ -6,7 +6,6 @@ from src.api.document.routes import dispatch_document_routes
 from src.api.email.handler import handle_google_oauth_callback_get
 from src.api.email.routes import dispatch_email_routes
 from src.api.opportunity.routes import dispatch_opportunity_routes
-from src.api.quote.routes import dispatch_quote_routes
 
 
 def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
@@ -30,9 +29,6 @@ def dispatch_get_mail_routes(handler, parsed, qs) -> bool:
 def dispatch_get_data_routes(handler, parsed, qs, request_handlers) -> bool:
     """Dispatch csv/quotes/opportunity search GET routes and return True when handled."""
     if dispatch_csv_routes(handler, "GET", parsed, qs):
-        return True
-
-    if dispatch_quote_routes(handler, "GET", parsed, qs, request_handlers):
         return True
 
     if dispatch_opportunity_routes(handler, "GET", parsed, qs, request_handlers):

@@ -15,7 +15,7 @@ def test_dispatch_get_data_routes_csv_prefix_path():
     assert handled is True
 
 
-def test_dispatch_get_data_routes_quotes_list_path(monkeypatch):
+def test_dispatch_get_data_routes_opportunity_path(monkeypatch):
     monkeypatch.setattr(
         "src.api.routes.dispatchers.server_get_dispatch.dispatch_csv_routes",
         lambda *_args, **_kwargs: False,
@@ -26,25 +26,21 @@ def test_dispatch_get_data_routes_quotes_list_path(monkeypatch):
         calls.append((handler, method, parsed.path, qs, request_handlers))
         return True
 
-    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_quote_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_opportunity_routes", _fake)
 
     handler = object()
-    parsed = SimpleNamespace(path="/api/quotes/list")
+    parsed = SimpleNamespace(path="/api/opportunities/search")
     request_handlers = object()
 
-    handled = dispatch_get_data_routes(handler, parsed, {}, request_handlers=request_handlers)
+    handled = dispatch_get_data_routes(handler, parsed, {"q": ["acme"]}, request_handlers=request_handlers)
 
     assert handled is True
-    assert calls == [(handler, "GET", "/api/quotes/list", {}, request_handlers)]
+    assert calls == [(handler, "GET", "/api/opportunities/search", {"q": ["acme"]}, request_handlers)]
 
 
 def test_dispatch_get_data_routes_delegates_opportunity_router(monkeypatch):
     monkeypatch.setattr(
         "src.api.routes.dispatchers.server_get_dispatch.dispatch_csv_routes",
-        lambda *_args, **_kwargs: False,
-    )
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_get_dispatch.dispatch_quote_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
