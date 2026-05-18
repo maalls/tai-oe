@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../lib/supabase';
+import { getProduct } from '../../api/product';
 import { useI18n } from '../../i18n/useI18n';
 
 interface Product {
@@ -102,29 +102,19 @@ async function loadProduct() {
    error.value = '';
 
    try {
-      const { data, error: queryError } = await supabase
-         .from('product')
-         .select('id, sku, name, price, brand:brand_id(marque,name)')
-         .eq('id', id)
-         .single();
-
-      if (queryError) {
-         throw new Error(queryError.message || t('products.detail.loadFailed'));
-      }
+      const data = await getProduct(String(id));
 
       if (!data) {
          product.value = null;
          return;
       }
 
-      const brandData = Array.isArray(data.brand) ? (data.brand[0] as any) : (data.brand as any);
-
       product.value = {
          id: data.id,
-         marque: brandData?.marque || brandData?.name || '',
-         refciale: (data as any).sku || '',
-         libelle240: (data as any).name || '',
-         tarif: (data as any).price ?? '',
+         marque: data.marque || '',
+         refciale: data.refciale || '',
+         libelle240: data.libelle240 || '',
+         tarif: data.tarif ?? '',
          gamme: '',
          qt: '',
       };
