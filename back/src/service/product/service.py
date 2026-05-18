@@ -26,6 +26,49 @@ class ProductService:
         self.upsert_family(product, payload)
         return product
 
+    def get_product_by_id(self, product_id: str) -> Optional[Dict[str, Any]]:
+        result = (
+            self.supabase
+            .from_("product")
+            .select("*,brand(*),product_family(*,family(*))")
+            .eq("id", product_id)
+            .maybe_single()
+            .execute()
+        )
+        return result.data if result and result.data else None
+
+    def update_product(self, product_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        fields = ["family_codes", "libelle240", "marque", "refciale", "tarif", "vector_text"]
+        for field in fields:
+            if field not in payload:
+                raise ValueError(f"Missing product field: {field}")
+
+        brands = self.supabase.from_("brand").select("*").eq("marque", payload["marque"]).execute()
+        if not brands.data:
+            brands = self.supabase.from_("brand").select("*").eq("name", payload["marque"]).execute()
+        if not brands.data:
+            raise ValueError(f"Brand '{payload['marque']}' not found in database")
+        brand = brands.data[0]
+
+        update_data = {
+            "sku": payload["refciale"],
+            "name": payload["libelle240"],
+            "brand_id": brand["id"],
+            "price": payload["tarif"],
+        }
+
+        update_result = self.supabase.from_("product").update(update_data).eq("id", product_id).execute()
+        if not update_result.data:
+            raise RuntimeError("Failed to update product in database")
+
+        product = update_result.data[0]
+        product["brand"] = brand
+
+        self.supabase.from_("product_family").delete().eq("product_id", product_id).execute()
+        self.upsert_family(product, payload)
+
+        return product
+
     def upsert_family(self, product: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
         brand_id = (product.get("brand") or {}).get("id") or product.get("brand_id")
         if not brand_id:

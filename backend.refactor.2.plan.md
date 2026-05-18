@@ -52,8 +52,8 @@ Hors scope immediat (mis de cote pour cette phase):
 | contact/doc   | `/api/document/{id}`                         | DELETE  | fastapi          | `front/src/components/opportunity/components/documents/DocumentsPage.vue`                                                                                                                             | `back/src/api_fastapi/document/router.py`    | migre                  |
 | contact/doc   | `/api/chat/attachments`                      | POST    | fastapi          | `front/src/components/chat/ChatPanel.ts`                                                                                                                                                              | `back/src/api_fastapi/document/router.py`    | migre                  |
 | vendor        | `/api/ddd/vendor`                            | GET     | fastapi          | `front/src/components/vendor/Edit.vue` (via `fetchDddJson`)                                                                                                                                           | `back/src/api_fastapi/vendor/router.py`      | migre                  |
-| product       | `/api/products`                              | POST    | legacy           | `front/src/components/products/edit.vue`                                                                                                                                                              | `back/src/api/product/routes.py`             | migrer                 |
-| product       | `/api/products/{id}`                         | GET/PUT | unknown          | `front/src/components/products/edit.vue`                                                                                                                                                              | non trouve tel quel dans routers             | migrer (a implementer) |
+| product       | `/api/products`                              | POST    | fastapi          | `front/src/components/products/edit.vue`                                                                                                                                                              | `back/src/api_fastapi/product/router.py`     | migre                  |
+| product       | `/api/products/{id}`                         | GET/PUT | fastapi          | `front/src/components/products/edit.vue`                                                                                                                                                              | `back/src/api_fastapi/product/router.py`     | migre                  |
 
 ### 2) parking lot (hors scope immediat): supabase-direct
 
@@ -110,24 +110,24 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 
 - domaines cibles: 10
 - domaines clotures: 2/10
-- endpoints HTTP legacy a migrer (dans ce scope): 1
-- endpoints HTTP unknown a implementer: 1
+- endpoints HTTP legacy a migrer (dans ce scope): 0
+- endpoints HTTP unknown a implementer: 0
 - supabase-direct: hors scope immediat (10 domaines reportes)
 
 ### tableau de progression par domaine
 
-| domaine     | HTTP FastAPI  | HTTP legacy restant      | unknown | statut     | notes                                    |
-| ----------- | ------------- | ------------------------ | ------- | ---------- | ---------------------------------------- |
-| opportunity | oui           | non                      | non     | migre      | lot A migre en FastAPI                   |
-| rfq         | oui           | non                      | non     | migre      | routes opportunity/\*/rfq migrees        |
-| quote       | oui           | non                      | non     | migre      | endpoint quote/generate migre FastAPI    |
-| client      | non           | non                      | non     | a trancher | pas d'appel HTTP explicite detecte       |
-| contact     | oui           | non                      | non     | migre      | document/chat migres en FastAPI          |
-| account     | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
-| vendor      | oui (ddd get) | non                      | non     | en cours   | CRUD HTTP vendor a confirmer             |
-| brand       | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
-| family      | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
-| product     | partiel       | oui                      | oui     | en cours   | `/api/products/{id}` non resolu          |
+| domaine     | HTTP FastAPI  | HTTP legacy restant | unknown | statut     | notes                                    |
+| ----------- | ------------- | ------------------- | ------- | ---------- | ---------------------------------------- |
+| opportunity | oui           | non                 | non     | migre      | lot A migre en FastAPI                   |
+| rfq         | oui           | non                 | non     | migre      | routes opportunity/\*/rfq migrees        |
+| quote       | oui           | non                 | non     | migre      | endpoint quote/generate migre FastAPI    |
+| client      | non           | non                 | non     | a trancher | pas d'appel HTTP explicite detecte       |
+| contact     | oui           | non                 | non     | migre      | document/chat migres en FastAPI          |
+| account     | non           | non                 | non     | a trancher | principalement supabase-direct (reporte) |
+| vendor      | oui (ddd get) | non                 | non     | en cours   | CRUD HTTP vendor a confirmer             |
+| brand       | non           | non                 | non     | a trancher | principalement supabase-direct (reporte) |
+| family      | non           | non                 | non     | a trancher | principalement supabase-direct (reporte) |
+| product     | oui           | non                 | non     | migre      | GET/PUT/POST produits migres FastAPI     |
 
 ### journal des decisions
 
@@ -148,6 +148,8 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | contact/doc | /api/document/update-content | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
 - 2026-05-18 | contact/doc | /api/document/{id} | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
 - 2026-05-18 | contact/doc | /api/chat/attachments | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
+- 2026-05-18 | product | /api/products | decision=migrer | endpoint implemente dans back/src/api_fastapi/product/router.py
+- 2026-05-18 | product | /api/products/{id} | decision=migrer | endpoint implemente dans back/src/api_fastapi/product/router.py
 
 ## criteres de done pour ce refactor.2
 

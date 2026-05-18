@@ -8,6 +8,7 @@ from src.api_fastapi.csv.router import router as csv_router
 from src.api_fastapi.document.router import router as document_router
 from src.api_fastapi.email.router import router as email_router
 from src.api_fastapi.opportunity.router import router as opportunity_router
+from src.api_fastapi.product.router import router as product_router
 from src.api_fastapi.quote.router import router as quote_router
 from src.api_fastapi.rfq.router import router as rfq_router
 from src.api_fastapi.rfp.router import router as rfp_router
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(document_router)
     app.include_router(email_router)
     app.include_router(opportunity_router)
+    app.include_router(product_router)
     app.include_router(quote_router)
     app.include_router(rfq_router)
     app.include_router(rfp_router)
