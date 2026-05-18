@@ -47,3 +47,21 @@ def test_dispatch_post_domain_routes_delegates_email_router(monkeypatch):
 
     assert handled is True
     assert calls == [(handler, "POST", "/api/emails/classify/abc", {}, handler.request_handlers)]
+
+
+def test_dispatch_post_domain_routes_returns_false_when_not_handled(monkeypatch):
+    monkeypatch.setattr(
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_email_routes",
+        lambda *_args, **_kwargs: False,
+    )
+    monkeypatch.setattr(
+        "src.api.routes.dispatchers.server_post_dispatch.dispatch_entity_routes",
+        lambda *_args, **_kwargs: False,
+    )
+
+    handler = _HandlerStub()
+    parsed = SimpleNamespace(path="/api/opportunity/opp-1/send-quote")
+
+    handled = dispatch_post_domain_routes(handler, parsed)
+
+    assert handled is False

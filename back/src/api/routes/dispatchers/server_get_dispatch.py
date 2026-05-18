@@ -2,10 +2,8 @@
 
 from src.api.action.routes import dispatch_action_routes
 from src.api.csv.routes import dispatch_csv_routes
-from src.api.document.routes import dispatch_document_routes
 from src.api.email.handler import handle_google_oauth_callback_get
 from src.api.email.routes import dispatch_email_routes
-from src.api.opportunity.routes import dispatch_opportunity_routes
 
 
 def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
@@ -26,12 +24,9 @@ def dispatch_get_mail_routes(handler, parsed, qs) -> bool:
     return dispatch_email_routes(handler, "GET", parsed, qs, handler.request_handlers)
 
 
-def dispatch_get_data_routes(handler, parsed, qs, request_handlers) -> bool:
-    """Dispatch csv/quotes/opportunity search GET routes and return True when handled."""
+def dispatch_get_data_routes(handler, parsed, qs) -> bool:
+    """Dispatch csv GET routes and return True when handled."""
     if dispatch_csv_routes(handler, "GET", parsed, qs):
-        return True
-
-    if dispatch_opportunity_routes(handler, "GET", parsed, qs, request_handlers):
         return True
 
     return False
@@ -40,9 +35,6 @@ def dispatch_get_data_routes(handler, parsed, qs, request_handlers) -> bool:
 def dispatch_get_action_download_routes(handler, parsed, qs, request_handlers) -> bool:
     """Dispatch action/download GET routes and return True when handled."""
     if dispatch_action_routes(handler, "GET", parsed, qs, request_handlers):
-        return True
-
-    if dispatch_document_routes(handler, "GET", parsed, qs, request_handlers):
         return True
 
     return False
@@ -56,10 +48,10 @@ def dispatch_get_request(handler, parsed, qs) -> bool:
     if dispatch_get_mail_routes(handler, parsed, qs):
         return True
 
-    request_handlers = handler.request_handlers
-    if dispatch_get_data_routes(handler, parsed, qs, request_handlers):
+    if dispatch_get_data_routes(handler, parsed, qs):
         return True
 
+    request_handlers = handler.request_handlers
     if dispatch_get_action_download_routes(handler, parsed, qs, request_handlers):
         return True
 

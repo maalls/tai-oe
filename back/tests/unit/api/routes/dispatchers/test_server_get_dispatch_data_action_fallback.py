@@ -14,7 +14,7 @@ def test_dispatch_get_request_calls_data_then_action_groups(monkeypatch):
 
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_misc_routes", lambda h, p, q: False)
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_mail_routes", lambda h, p, q: False)
-    monkeypatch.setattr(server_get_dispatch, "dispatch_get_data_routes", lambda h, p, q, rh: False)
+    monkeypatch.setattr(server_get_dispatch, "dispatch_get_data_routes", lambda h, p, q: False)
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_action_download_routes", lambda h, p, q, rh: rh == "rh")
 
     handled = server_get_dispatch.dispatch_get_request(handler, parsed, {})
@@ -28,7 +28,7 @@ def test_dispatch_get_request_returns_false_when_nothing_matches(monkeypatch):
 
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_misc_routes", lambda h, p, q: False)
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_mail_routes", lambda h, p, q: False)
-    monkeypatch.setattr(server_get_dispatch, "dispatch_get_data_routes", lambda h, p, q, rh: False)
+    monkeypatch.setattr(server_get_dispatch, "dispatch_get_data_routes", lambda h, p, q: False)
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_action_download_routes", lambda h, p, q, rh: False)
 
     handled = server_get_dispatch.dispatch_get_request(handler, parsed, {})
