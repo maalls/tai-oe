@@ -7,7 +7,7 @@
 | 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                                                                                                                                                                                                                       |
 | 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                                                                                                                                                                                                                 |
 | 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30]                                                                                                                                                                                             |
-| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + PipelineStageClosedWon + ActionsPage + SettingsPage + AccountPage + OpportunityHeader + OpportunityIndexPage + OpportunityInvoicesPage + tests + baseline 10] |
+| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + PipelineStageClosedWon + ActionsPage + SettingsPage + AccountPage + OpportunityHeader + OpportunityIndexPage + OpportunityInvoicesPage + OpportunityInvoiceDetailPage + tests + baseline 9] |
 | 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                                                                                                                                                                                                                                          |
 | 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                                                                                                                                                                                                                                          |
 
@@ -362,8 +362,14 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: tests unitaires frontend executes sur le client API utilise
 - fait: guardrail supabase-direct valide, baseline reduite a `10` fichiers
 
-19. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
-20. centraliser les agregats source/document/participant cote backend
+19. fait: migrer `components/invoices/InvoiceDetailPage.vue` hors `supabase.from('document'|'sent_email'|'opportunity'|'contact')`
+
+- fait: `front/src/components/opportunity/components/invoices/InvoiceDetailPage.vue` migre vers APIs backend `document`, `opportunity` et `contact`
+- fait: tests unitaires frontend executes sur les clients API reutilises
+- fait: guardrail supabase-direct valide, baseline reduite a `9` fichiers
+
+20. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
+21. centraliser les agregats source/document/participant cote backend
 
 ### lot 5 - invoices et quote read models
 
