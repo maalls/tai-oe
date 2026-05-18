@@ -156,6 +156,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | legacy-http | google oauth callback path | decision=supprimer | callback oauth unifie sur /api/gmail/oauth/callback, hook /api/google/oauth/callback retire
 - 2026-05-18 | legacy-http | get mail dispatch stage | decision=supprimer | suppression de dispatch_get_mail_routes (no-op) du flux GET legacy
 - 2026-05-18 | legacy-http | post domain dispatch stage | decision=supprimer | suppression de dispatch_post_domain_routes et du branchement entity au niveau dispatcher
+- 2026-05-18 | legacy-http | head/patch no-op dispatchers | decision=supprimer | 404 gere directement dans src.api.server, modules de dispatch no-op retires
 
 ## criteres de done pour ce refactor.2
 

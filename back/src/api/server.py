@@ -23,9 +23,8 @@ from src.lib.readers.csv import CSVReader
 from src.api.file.handler import handle_prompt_get
 from src.api.routes.dispatchers.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_request
-from src.api.routes.dispatchers.server_mutation_dispatch import dispatch_patch_request, dispatch_put_request
+from src.api.routes.dispatchers.server_mutation_dispatch import dispatch_put_request
 from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_request
-from src.api.routes.dispatchers.server_head_dispatch import dispatch_head_request
 from src.api.routes.helpers.server_path_helpers import resolve_fs_path
 from src.api.routes.helpers.server_response_helpers import send_json, send_error
 
@@ -100,9 +99,6 @@ def create_rag_handler(config):
             try:
                 parsed = urllib.parse.urlparse(self.path)
                 print(f"[RAG] PATCH request to: {parsed.path}")
-                if dispatch_patch_request(self, parsed.path):
-                    return None
-
                 print(f"[RAG] PATCH path not matched: {parsed.path}")
                 return send_error(self, 404, "Not found")
             except Exception as e:
@@ -141,11 +137,6 @@ def create_rag_handler(config):
         def do_HEAD(self):
             """Handle HEAD method."""
             try:
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_head_request(self, parsed.path):
-                    return None
-
                 return send_error(self, 404, "Not found")
             except Exception as e:
                 return send_error(self, 500, f"Internal server error 2: {e}")
