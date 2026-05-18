@@ -3,7 +3,6 @@
 from src.api.action.routes import dispatch_action_routes
 from src.api.csv.routes import dispatch_csv_routes
 from src.api.email.handler import handle_google_oauth_callback_get
-from src.api.email.routes import dispatch_email_routes
 
 
 def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
@@ -20,8 +19,11 @@ def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
 
 
 def dispatch_get_mail_routes(handler, parsed, qs) -> bool:
-    """Dispatch gmail/imap/email attachment GET routes and return True when handled."""
-    return dispatch_email_routes(handler, "GET", parsed, qs, handler.request_handlers)
+    """Legacy GET mail routes are disabled (served by FastAPI)."""
+    _ = handler
+    _ = parsed
+    _ = qs
+    return False
 
 
 def dispatch_get_data_routes(handler, parsed, qs) -> bool:

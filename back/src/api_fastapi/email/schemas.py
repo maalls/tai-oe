@@ -46,6 +46,10 @@ class ImapConfigRequest(BaseModel):
     enabled: bool = True
 
 
+class EmailResyncRequest(BaseModel):
+    provider_message_id: str
+
+
 class GenericEmailResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 

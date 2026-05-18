@@ -4,6 +4,7 @@ from typing import Any
 
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
+from src.service.classification.handler_service import ClassifyService
 
 
 class GmailService:
@@ -79,3 +80,36 @@ class GmailService:
         if not user_id:
             return {"status": "error", "message": "Missing user_id"}
         return self.repository.clear_imap_config(user_id=user_id)
+
+    def classify_email(self, email_id: str, user_id: str, force: bool = True) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return ClassifyService(service_factory=self.service_factory, repository=self.repository).handle_classify(
+            email_uuid=email_id,
+            user_id=user_id,
+            force=force,
+        )
+
+    def resync_email(self, email_id: str, provider_message_id: str, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        if not provider_message_id:
+            return {"status": "error", "message": "Missing provider_message_id"}
+        return self.repository.resync_email_from_gmail(
+            email_id=email_id,
+            provider_message_id=provider_message_id,
+            user_id=user_id,
+        )
+
+    def delete_email(self, email_id: str, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.delete_email(email_id=email_id, user_id=user_id)
+
+    def delete_attachment(self, attachment_id: str, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return self.repository.delete_attachment(attachment_id=attachment_id, user_id=user_id)
+
+    def download_attachment(self, attachment_id: str, user_id: str | None):
+        return self.repository.get_attachment_download(attachment_id=attachment_id, user_id=user_id)

@@ -152,6 +152,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | product | /api/products/{id} | decision=migrer | endpoint implemente dans back/src/api_fastapi/product/router.py
 - 2026-05-18 | legacy-http | opportunity/document GET/POST legacy | decision=supprimer | dispatch legacy reduit a DELETE-only apres migration FastAPI
 - 2026-05-18 | legacy-http | quote/opportunity/document route wrappers | decision=supprimer | suppression des wrappers routes.py, matching DELETE centralise dans server_delete_dispatch
+- 2026-05-18 | legacy-http | email classify/resync/delete/attachment-download | decision=supprimer | endpoints exposes en FastAPI, dispatch email retire des dispatchers legacy
 
 ## criteres de done pour ce refactor.2
 

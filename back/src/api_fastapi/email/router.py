@@ -3,7 +3,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from src.api_fastapi.dependencies import get_auth_service, get_gmail_service
 from src.api_fastapi.email.schemas import (
@@ -14,6 +14,7 @@ from src.api_fastapi.email.schemas import (
     GmailOauthStartQuery,
     GmailStatusQuery,
     GmailUserQuery,
+    EmailResyncRequest,
     ImapConfigRequest,
 )
 from src.service.auth.auth_service import AuthService
@@ -141,6 +142,83 @@ def gmail_message_body(
     user_id = _resolve_user_id(None, authorization, auth_service)
     result = gmail_service.get_message_body(message_id=message_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/emails/classify/{email_id}")
+def email_classify(
+    email_id: str,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.classify_email(email_id=email_id, user_id=user_id, force=True)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/email/{email_id}/resync")
+def email_resync(
+    email_id: str,
+    payload: EmailResyncRequest,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.resync_email(
+        email_id=email_id,
+        provider_message_id=payload.provider_message_id,
+        user_id=user_id,
+    )
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.delete("/api/email/{email_id}")
+def email_delete(
+    email_id: str,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.delete_email(email_id=email_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.delete("/api/email-attachment/{attachment_id}")
+def email_attachment_delete(
+    attachment_id: str,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.delete_attachment(attachment_id=attachment_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.get("/api/email-attachment/{attachment_id}/download")
+def email_attachment_download(
+    attachment_id: str,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    status_code, headers, file_content = gmail_service.download_attachment(attachment_id=attachment_id, user_id=user_id)
+    return Response(content=file_content, status_code=status_code, headers=headers)
 
 
 @router.get("/api/imap/status")

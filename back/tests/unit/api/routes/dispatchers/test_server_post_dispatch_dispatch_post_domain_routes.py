@@ -19,7 +19,6 @@ def test_dispatch_post_domain_routes_entity_update_regex():
         return True
 
     from src.api.routes.dispatchers import server_post_dispatch as module
-    module.dispatch_email_routes = lambda *_args, **_kwargs: False
     module.dispatch_entity_routes = _entity_router
 
     handler = _HandlerStub()
@@ -31,29 +30,19 @@ def test_dispatch_post_domain_routes_entity_update_regex():
     assert calls == [(handler, "POST", "/api/entity/opportunities/name", {}, handler.request_handlers)]
 
 
-def test_dispatch_post_domain_routes_delegates_email_router(monkeypatch):
-    calls = []
-
-    def _fake(handler, method, parsed, qs, request_handlers):
-        calls.append((handler, method, parsed.path, qs, request_handlers))
-        return True
-
-    monkeypatch.setattr("src.api.routes.dispatchers.server_post_dispatch.dispatch_email_routes", _fake)
+def test_dispatch_post_domain_routes_returns_false_for_legacy_email_path():
+    from src.api.routes.dispatchers import server_post_dispatch as module
+    module.dispatch_entity_routes = lambda *_args, **_kwargs: False
 
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/emails/classify/abc")
 
     handled = dispatch_post_domain_routes(handler, parsed)
 
-    assert handled is True
-    assert calls == [(handler, "POST", "/api/emails/classify/abc", {}, handler.request_handlers)]
+    assert handled is False
 
 
 def test_dispatch_post_domain_routes_returns_false_when_not_handled(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_post_dispatch.dispatch_email_routes",
-        lambda *_args, **_kwargs: False,
-    )
     monkeypatch.setattr(
         "src.api.routes.dispatchers.server_post_dispatch.dispatch_entity_routes",
         lambda *_args, **_kwargs: False,

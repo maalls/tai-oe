@@ -53,6 +53,41 @@ class _FakeGmailService:
     def clear_imap_config(self, user_id: str) -> dict:
         return {"status": "ok", "message": "IMAP configuration removed", "user_id": user_id}
 
+    def classify_email(self, email_id: str, user_id: str, force: bool = True) -> dict:
+        _ = force
+        return {
+            "status": "ok",
+            "result": {
+                "category": "rfq",
+                "category_suggestion": "RFQ",
+                "classification_reason": "contains quote request",
+                "classified_at": "2026-01-01T00:00:00Z",
+            },
+            "email_id": email_id,
+            "user_id": user_id,
+        }
+
+    def resync_email(self, email_id: str, provider_message_id: str, user_id: str) -> dict:
+        return {
+            "status": "ok",
+            "email_id": email_id,
+            "provider_message_id": provider_message_id,
+            "user_id": user_id,
+        }
+
+    def delete_email(self, email_id: str, user_id: str) -> dict:
+        return {"status": "ok", "deleted": email_id, "user_id": user_id}
+
+    def delete_attachment(self, attachment_id: str, user_id: str) -> dict:
+        return {"status": "ok", "deleted": attachment_id, "user_id": user_id}
+
+    def download_attachment(self, attachment_id: str, user_id: str | None):
+        headers = {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": f'inline; filename="{attachment_id}.pdf"',
+        }
+        return 200, headers, b"pdf-bytes"
+
 
 class _FakeAuthService:
     def verify_token(self, auth_header: str):
@@ -197,3 +232,53 @@ def test_imap_test_and_clear_routes():
 
     assert test_response.status_code == 200
     assert clear_response.status_code == 200
+
+
+def test_email_classify_route_uses_token_user():
+    client = _client()
+
+    response = client.post("/api/emails/classify/e-1", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["email_id"] == "e-1"
+    assert response.json()["user_id"] == "u-token"
+
+
+def test_email_resync_route_uses_payload_and_token_user():
+    client = _client()
+
+    response = client.post(
+        "/api/email/e-2/resync",
+        headers={"Authorization": "Bearer valid"},
+        json={"provider_message_id": "gmail-123"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["provider_message_id"] == "gmail-123"
+
+
+def test_email_delete_route_uses_token_user():
+    client = _client()
+
+    response = client.delete("/api/email/e-3", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["deleted"] == "e-3"
+
+
+def test_email_attachment_download_and_delete_routes():
+    client = _client()
+
+    download_response = client.get(
+        "/api/email-attachment/a-1/download",
+        headers={"Authorization": "Bearer valid"},
+    )
+    delete_response = client.delete(
+        "/api/email-attachment/a-1",
+        headers={"Authorization": "Bearer valid"},
+    )
+
+    assert download_response.status_code == 200
+    assert download_response.headers["content-type"] == "application/pdf"
+    assert delete_response.status_code == 200
+    assert delete_response.json()["deleted"] == "a-1"
