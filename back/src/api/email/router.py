@@ -194,6 +194,21 @@ def email_delete(
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
+@router.get("/api/email/{email_id}/attachments")
+def email_attachments_list(
+    email_id: str,
+    authorization: str | None = Header(default=None),
+    gmail_service: GmailService = Depends(get_gmail_service),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    user_id = _resolve_user_id(None, authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = gmail_service.list_attachments(email_id=email_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
 @router.delete("/api/email-attachment/{attachment_id}")
 def email_attachment_delete(
     attachment_id: str,

@@ -106,6 +106,11 @@ class GmailService:
             return {"status": "error", "message": "Missing user_id"}
         return self.repository.delete_email(email_id=email_id, user_id=user_id)
 
+    def list_attachments(self, email_id: str, user_id: str) -> dict[str, Any]:
+        if not user_id:
+            return {"status": "error", "message": "Missing user_id"}
+        return {"status": "ok", "attachments": self.repository.list_attachments(email_id=email_id, user_id=user_id)}
+
     def delete_attachment(self, attachment_id: str, user_id: str) -> dict[str, Any]:
         if not user_id:
             return {"status": "error", "message": "Missing user_id"}

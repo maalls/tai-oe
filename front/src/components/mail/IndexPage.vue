@@ -96,6 +96,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '../../stores/auth';
 import { supabase } from '../../lib/supabase';
+import { listEmailAttachments } from '../../api/email';
 import MailNotification from './MailNotification.vue';
 import MailAuthRequired from './MailAuthRequired.vue';
 import MailLoader from './MailLoader.vue';
@@ -278,17 +279,15 @@ const handleExpand = async (messageId: string) => {
 const loadAttachments = async (messageId: string) => {
    loadingAttachments.value[messageId] = true;
    try {
-      const { data, error } = await supabase
-         .from('email_attachment')
-         .select('id, filename, mime_type, size, storage_path')
-         .eq('email_id', messageId);
-
-      if (error) {
-         console.error('Failed to load attachments:', error);
+      if (!session.value?.access_token) {
          messageAttachments.value[messageId] = [];
-      } else {
-         messageAttachments.value[messageId] = data || [];
+         return;
       }
+
+      messageAttachments.value[messageId] = await listEmailAttachments(
+         messageId,
+         session.value.access_token
+      );
    } catch (error) {
       console.error('Error loading attachments:', error);
       messageAttachments.value[messageId] = [];

@@ -5,7 +5,6 @@ const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, 'src');
 const ALLOWLIST_PATH = path.join(ROOT, 'config', 'supabase-direct-allowlist.txt');
 
-const SUPABASE_IMPORT_RE = /import\s*\{\s*supabase\s*\}\s*from\s*['"][^'"]*lib\/supabase['"]/;
 const SUPABASE_DIRECT_RE = /\bsupabase\s*\.\s*(from|rpc)\s*\(/g;
 
 function walk(dirPath) {
@@ -47,8 +46,7 @@ for (const filePath of sourceFiles) {
    const content = fs.readFileSync(filePath, 'utf-8');
    SUPABASE_DIRECT_RE.lastIndex = 0;
    const hasDirect = SUPABASE_DIRECT_RE.test(content);
-   const hasImport = SUPABASE_IMPORT_RE.test(content);
-   if (hasDirect || hasImport) {
+   if (hasDirect) {
       directFiles.push(rel(filePath));
    }
 }

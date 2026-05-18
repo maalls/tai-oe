@@ -2666,6 +2666,31 @@ class EmailRepository:
             print(f"[EmailRepository] Error downloading attachment: {e}")
             return 500, {}, b''
 
+    def list_attachments(self, email_id: str, user_id: str | None = None) -> list[Dict]:
+        try:
+            supabase = get_supabase_service()
+            if user_id:
+                email_response = (
+                    supabase.table('email')
+                    .select('id, user_id')
+                    .eq('id', email_id)
+                    .single()
+                    .execute()
+                )
+                if not email_response.data or email_response.data.get('user_id') != user_id:
+                    return []
+
+            response = (
+                supabase.table('email_attachment')
+                .select('id, filename, mime_type, size, storage_path')
+                .eq('email_id', email_id)
+                .execute()
+            )
+            return response.data or []
+        except Exception as exc:
+            print(f"[EmailRepository] Error listing attachments: {exc}")
+            return []
+
     def delete_attachment(self, attachment_id: str, user_id: str = None) -> Dict:
         """Delete an email attachment (record + local file).
 
