@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 import yaml
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
@@ -86,7 +87,25 @@ class DatabaseHandler:
         return config
     
     def _get_db_config(self) -> dict:
-        """Extract database configuration from config."""
+        """Extract database configuration from environment or config.
+
+        Priority order:
+        1) DATABASE_URL from environment
+        2) supabase.db from config.yml
+        """
+        database_url = os.environ.get("DATABASE_URL")
+        if database_url:
+            parsed = urlparse(database_url)
+            query = parse_qs(parsed.query)
+            return {
+                "host": parsed.hostname,
+                "port": parsed.port or 5432,
+                "user": parsed.username,
+                "password": parsed.password,
+                "database": (parsed.path or "").lstrip("/") or "fabdis",
+                "sslmode": query.get("sslmode", ["prefer"])[0],
+            }
+
         supabase = self.config.get("supabase", {})
         db = supabase.get("db", {})
         
@@ -94,6 +113,9 @@ class DatabaseHandler:
         missing = [k for k in required if not db.get(k)]
         if missing:
             raise ValueError(f"Missing DB config keys: {', '.join(missing)}")
+
+        if not db.get("database"):
+            db["database"] = "fabdis"
         
         return db
     
@@ -103,7 +125,7 @@ class DatabaseHandler:
             return psycopg2.connect(
                 host=self.db_config["host"],
                 port=self.db_config["port"],
-                database=name if name else 'fabdis',
+                database=name if name else self.db_config.get("database", "fabdis"),
                 user=self.db_config["user"],
                 password=self.db_config["password"],
                 sslmode=self.db_config.get("sslmode", "prefer")
@@ -112,7 +134,7 @@ class DatabaseHandler:
             return pg8000.connect(
                 host=self.db_config["host"],
                 port=self.db_config["port"],
-                database=name if name else 'fabdis',
+                database=name if name else self.db_config.get("database", "fabdis"),
                 user=self.db_config["user"],
                 password=self.db_config["password"],
                 ssl_context=True if self.db_config.get("sslmode") != "disable" else None
