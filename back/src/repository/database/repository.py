@@ -9,30 +9,31 @@ from typing import Any, Dict, List, Optional
 from src.infrastructure.clients.database import DatabaseHandler
 
 
+
 class DatabaseRepository:
-
-        def fetch_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
-            query = "SELECT id, email, full_name FROM profile WHERE id = %s LIMIT 1"
-            rows = self.execute_dict_query(query, (user_id,))
-            return rows[0] if rows else None
-
-        def update_profile(self, user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-            # Only allow updating full_name for now
-            set_clauses = []
-            params = []
-            if 'full_name' in updates:
-                set_clauses.append('full_name = %s')
-                params.append(updates['full_name'])
-            if not set_clauses:
-                return self.fetch_profile(user_id)
-            params.append(user_id)
-            query = f"UPDATE profile SET {', '.join(set_clauses)} WHERE id = %s RETURNING id, email, full_name"
-            rows = self.execute_dict_query(query, tuple(params))
-            return rows[0] if rows else None
     """Encapsulate database query execution and metadata retrieval."""
 
     def __init__(self, db_handler: Optional[DatabaseHandler] = None):
         self.db_handler = db_handler or DatabaseHandler()
+
+    def fetch_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        query = "SELECT id, email, full_name FROM profile WHERE id = %s LIMIT 1"
+        rows = self.execute_dict_query(query, (user_id,))
+        return rows[0] if rows else None
+
+    def update_profile(self, user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        # Only allow updating full_name for now
+        set_clauses = []
+        params = []
+        if 'full_name' in updates:
+            set_clauses.append('full_name = %s')
+            params.append(updates['full_name'])
+        if not set_clauses:
+            return self.fetch_profile(user_id)
+        params.append(user_id)
+        query = f"UPDATE profile SET {', '.join(set_clauses)} WHERE id = %s RETURNING id, email, full_name"
+        rows = self.execute_dict_query(query, tuple(params))
+        return rows[0] if rows else None
 
     def execute_dict_query(self, query: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
         """Execute a query and return rows as dictionaries."""
