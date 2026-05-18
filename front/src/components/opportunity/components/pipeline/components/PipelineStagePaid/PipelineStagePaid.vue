@@ -150,7 +150,8 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { listOpportunityDocuments } from '../../../../../../api/document';
-import { advanceOpportunityStage } from '../../../../../../api/opportunity';
+import { updateOpportunityStageState } from '../../../../../../api/opportunity';
+import { useAuth } from '../../../../../../stores/auth';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -166,6 +167,7 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
+const { getValidToken } = useAuth();
 const { t } = useI18n();
 const isLoadingInvoice = ref(true);
 const isClosing = ref(false);
@@ -225,7 +227,10 @@ const closeAsWon = async () => {
    closeMessage.value = '';
 
    try {
-      await advanceOpportunityStage(props.opportunity.id, 'CLOSED_WON');
+      const token = await getValidToken();
+      if (!token) throw new Error('Unauthorized');
+
+      await updateOpportunityStageState(props.opportunity.id, 'CLOSED_WON', 'WON', token);
 
       closeMessage.value = t('opportunities.pipeline.messages.closedWonSuccess');
 

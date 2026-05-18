@@ -5,6 +5,7 @@ export interface OpportunitySummary {
    source?: string | null;
    source_reference_id?: string | null;
    stage?: string | null;
+   status?: string | null;
 }
 
 export interface SentEmailRecord {
@@ -22,6 +23,14 @@ export interface OpportunityAdvanceResult {
    status: string;
    opportunity?: OpportunitySummary;
    message?: string;
+}
+
+export interface OpportunityStageTransition {
+   opportunity_id: string;
+   from_stage?: string | null;
+   to_stage?: string | null;
+   changed_by?: string | null;
+   changed_at?: string | null;
 }
 
 export async function getOpportunitySummary(opportunityId: string): Promise<OpportunitySummary> {
@@ -116,4 +125,36 @@ export async function advanceOpportunityStage(
       throw new Error(payload?.message || 'Erreur lors de la mise à jour du stage');
    }
    return payload as OpportunityAdvanceResult;
+}
+
+export async function getOpportunityStageHistory(
+   opportunityId: string,
+   limit = 10
+): Promise<OpportunityStageTransition[]> {
+   const res = await fetch(
+      `/api/opportunity/${opportunityId}/stage-history?limit=${encodeURIComponent(String(limit))}`
+   );
+   if (!res.ok) throw new Error('Erreur lors du chargement de l’historique des stages');
+   return await res.json();
+}
+
+export async function updateOpportunityStageState(
+   opportunityId: string,
+   stage: string,
+   status: string,
+   token: string
+): Promise<{ id: string; stage: string; status: string }> {
+   const res = await fetch(`/api/opportunity/${opportunityId}/stage-state`, {
+      method: 'PUT',
+      headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ stage, status }),
+   });
+   const payload = await res.json();
+   if (!res.ok) {
+      throw new Error(payload?.message || payload?.error || 'Erreur lors de la mise à jour du stage');
+   }
+   return payload;
 }

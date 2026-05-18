@@ -37,3 +37,12 @@ class OpportunityUpdateNameRequest(BaseModel):
 class OpportunityExtractAuthorContactRequest(BaseModel):
     from_email: str
     from_name: str | None = None
+
+
+class OpportunityUpdateStageStateRequest(BaseModel):
+    stage: str
+    status: str
+
+
+class OpportunityStageHistoryQuery(BaseModel):
+    limit: int = 10

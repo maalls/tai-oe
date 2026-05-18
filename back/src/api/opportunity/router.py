@@ -23,6 +23,8 @@ from src.api.opportunity.schemas import (
     OpportunityCreateManualRequest,
     OpportunityQuery,
     OpportunitySearchQuery,
+    OpportunityStageHistoryQuery,
+    OpportunityUpdateStageStateRequest,
     OpportunityUpdateNameRequest,
 )
 from src.domain.enums import OpportunityStage
@@ -165,6 +167,81 @@ def get_opportunity(
         return JSONResponse({"status": "ok", "opportunity": _serialize_opportunity(opportunity)}, status_code=200)
     except Exception as exc:
         return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
+
+
+@router.get("/api/opportunity/{opportunity_id}/stage-history")
+def get_opportunity_stage_history(
+    opportunity_id: str,
+    query: OpportunityStageHistoryQuery = Depends(),
+    db=Depends(get_db),
+):
+    capped_limit = max(1, min(query.limit, 50))
+    rows = db.execute_dict_query(
+        """
+        SELECT opportunity_id,
+               from_stage,
+               to_stage,
+               changed_by,
+               changed_at
+        FROM opportunity_state_transition
+        WHERE opportunity_id = %s
+        ORDER BY changed_at DESC
+        LIMIT %s
+        """,
+        (opportunity_id, capped_limit),
+    )
+    return rows
+
+
+@router.put("/api/opportunity/{opportunity_id}/stage-state")
+def update_opportunity_stage_state(
+    opportunity_id: str,
+    payload: OpportunityUpdateStageStateRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    current_rows = db.execute_dict_query(
+        "SELECT stage, status FROM opportunity WHERE id = %s",
+        (opportunity_id,),
+    )
+    if not current_rows:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    current_stage = current_rows[0].get("stage")
+    rows = db.execute_dict_query(
+        """
+        UPDATE opportunity
+        SET stage = %s,
+            status = %s,
+            updated_at = now()
+        WHERE id = %s
+        RETURNING id, stage, status
+        """,
+        (payload.stage, payload.status, opportunity_id),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    db.execute_dict_query(
+        """
+        INSERT INTO opportunity_state_transition (
+            opportunity_id,
+            from_stage,
+            to_stage,
+            changed_by,
+            changed_at
+        )
+        VALUES (%s, %s, %s, %s, now())
+        """,
+        (opportunity_id, current_stage, payload.stage, user_id),
+    )
+
+    return rows[0]
 
 
 @router.get("/api/opportunity/advance")

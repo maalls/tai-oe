@@ -133,7 +133,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../../../../lib/supabase';
+import {
+   getOpportunityStageHistory,
+   getOpportunitySummary,
+   updateOpportunityStageState,
+} from '../../../../../api/opportunity';
 import { useAuth } from '../../../../../stores/auth';
 import { useI18n } from '../../../../../i18n/useI18n';
 
@@ -413,16 +417,8 @@ const formatDate = (dateStr: string) => {
 
 const loadOpportunity = async () => {
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('stage, status')
-         .eq('id', props.opportunityId)
-         .single();
-
-      if (error) throw error;
-
-      if (data) {
-         const opportunity = data as any;
+      const opportunity = await getOpportunitySummary(props.opportunityId);
+      if (opportunity) {
          currentStage.value = opportunity.stage || 'NEW_LEAD';
          currentStatus.value = opportunity.status || 'OPEN';
          manualStage.value = currentStage.value;
@@ -435,16 +431,7 @@ const loadOpportunity = async () => {
 
 const loadStageHistory = async () => {
    try {
-      const { data, error } = await supabase
-         .from('opportunity_state_transition')
-         .select('*')
-         .eq('opportunity_id', props.opportunityId)
-         .order('changed_at', { ascending: false })
-         .limit(10);
-
-      if (error) throw error;
-
-      stageHistory.value = data || [];
+      stageHistory.value = await getOpportunityStageHistory(props.opportunityId, 10);
    } catch (error) {
       console.error('[StageManager] Error loading stage history:', error);
    }
@@ -521,37 +508,22 @@ const updateStage = async (newStage: string, newStatus: string) => {
    isUpdating.value = true;
 
    try {
-      // Update opportunity
-      const { error: updateError } = await (supabase.from('opportunity') as any)
-         .update({
-            stage: newStage,
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-         })
-         .eq('id', props.opportunityId);
+      const token = await getValidToken();
+      if (!token) throw new Error('Unauthorized');
 
-      if (updateError) throw updateError;
-
-      // Record transition
-      await (supabase.from('opportunity_state_transition') as any).insert({
-         opportunity_id: props.opportunityId,
-         from_stage: currentStage.value,
-         to_stage: newStage,
-         changed_by: user.value?.id,
-         changed_at: new Date().toISOString(),
-      });
+      const updated = await updateOpportunityStageState(props.opportunityId, newStage, newStatus, token);
 
       // Update local state
-      currentStage.value = newStage;
-      currentStatus.value = newStatus;
-      manualStage.value = newStage;
-      manualStatus.value = newStatus;
+      currentStage.value = updated.stage || newStage;
+      currentStatus.value = updated.status || newStatus;
+      manualStage.value = currentStage.value;
+      manualStatus.value = currentStatus.value;
 
       // Reload history
       await loadStageHistory();
 
       // Emit event
-      emit('stageUpdated', newStage, newStatus);
+      emit('stageUpdated', currentStage.value, currentStatus.value);
    } catch (error) {
       console.error('[StageManager] Error updating stage:', error);
       alert(t('opportunities.stageManager.failedToUpdateStage'));
