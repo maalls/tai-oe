@@ -226,13 +226,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
-import { supabase } from '../../lib/supabase';
 import { createAccount, listAccounts } from '../../api/account';
+import { listOpportunityDocuments } from '../../api/document';
+import { createDraftOpportunity, searchOpportunities } from '../../api/opportunity';
 import { useI18n } from '../../i18n/useI18n';
 import { useApiQuery } from '../../composables/useApiQuery';
+import { useAuth } from '../../stores/auth';
 
 const { t, te } = useI18n();
 const { fetchApiJson } = useApiQuery();
+const { getValidToken } = useAuth();
 
 import { useRouter, useRoute } from 'vue-router';
 
@@ -301,53 +304,34 @@ const getSourceLabel = (source?: string) => {
 
 const createNewOpportunity = async () => {
    try {
-      // Get current user
-      const {
-         data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const token = await getValidToken();
+      if (!token) {
          console.error('[OpportunityHeader] No authenticated user');
          return;
       }
 
-      // Find or create a default account
       let accountId: string | null = null;
-
-      // Try to find an existing "Default Account" for this user
       const accounts = await listAccounts();
       const existingAccount = accounts.find((account) => account.name === 'Default Account');
 
       if (existingAccount) {
          accountId = existingAccount.id;
       } else {
-         // Create a default account
          const newAccount = await createAccount({
             name: 'Default Account',
          });
          accountId = newAccount.id;
       }
 
-      // Create a new opportunity
-      const { data, error } = await (supabase.from('opportunity') as any)
-         .insert({
-            name: '',
-            stage: 'NEW_LEAD',
-            source: 'user_form',
-            account_id: accountId,
-            owner_user_id: user.id,
-         })
-         .select()
-         .single();
-
-      if (error) {
-         console.error('[OpportunityHeader] Error creating opportunity:', error);
+      if (!accountId) {
+         console.error('[OpportunityHeader] Missing default account id');
          return;
       }
 
-      if (data) {
-         // Navigate to the new opportunity
-         router.push(`/opportunities/${(data as any).id}/source`);
-         // Reload recent opportunities to include the new one
+      const created = await createDraftOpportunity(accountId, token);
+
+      if (created?.id) {
+         router.push(`/opportunities/${created.id}/source`);
          await loadRecentOpportunities();
       }
    } catch (error) {
@@ -387,16 +371,10 @@ const loadOpportunity = async () => {
       };
       selectedOpportunityId.value = props.opportunityId;
 
-      // Check for PDF
-      const { data: docData } = await supabase
-         .from('document')
-         .select('storage_key')
-         .eq('opportunity_id', props.opportunityId)
-         .eq('type', 'QUOTE')
-         .not('storage_key', 'is', null)
-         .limit(1);
-
-      hasPdf.value = !!(docData && docData.length > 0);
+      const documents = await listOpportunityDocuments(props.opportunityId);
+      hasPdf.value = documents.some(
+         (document) => document.type === 'QUOTE' && !!document.storage_key
+      );
    } catch (error) {
       console.error('[OpportunityHeader] Error loading opportunity:', error);
    }
@@ -410,17 +388,20 @@ const refreshOpportunity = async () => {
 const loadRecentOpportunities = async () => {
    loadingRecent.value = true;
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('id, name, updated_at, source')
-         .neq('stage', 'CLOSED_WON')
-         .order('updated_at', { ascending: false })
-         .limit(50);
-
-      if (!error && data) {
-         recentOpportunities.value = data;
-         //console.log('[OpportunityHeader] Loaded recent opportunities:', data);
+      const token = await getValidToken();
+      if (!token) {
+         recentOpportunities.value = [];
+         return;
       }
+      const opportunities = await searchOpportunities(token);
+      recentOpportunities.value = opportunities
+         .filter((opportunity) => opportunity.stage !== 'CLOSED_WON')
+         .sort((left, right) => {
+            const leftTime = left.updated_at ? new Date(left.updated_at).getTime() : 0;
+            const rightTime = right.updated_at ? new Date(right.updated_at).getTime() : 0;
+            return rightTime - leftTime;
+         })
+         .slice(0, 50);
    } catch (error) {
       console.error('[OpportunityHeader] Error loading recent opportunities:', error);
    } finally {
@@ -436,19 +417,20 @@ const searchOpportunities = async (query: string) => {
    }
    loadingSearch.value = true;
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('id, name, updated_at, source')
-         .neq('stage', 'CLOSED_WON')
-         .ilike('name', `%${query.trim()}%`)
-         .order('updated_at', { ascending: false })
-         .limit(50);
-
-      if (!error && data) {
-         searchResults.value = data;
-      } else {
+      const token = await getValidToken();
+      if (!token) {
          searchResults.value = [];
+         return;
       }
+      const opportunities = await searchOpportunities(token, { name: query.trim() });
+      searchResults.value = opportunities
+         .filter((opportunity) => opportunity.stage !== 'CLOSED_WON')
+         .sort((left, right) => {
+            const leftTime = left.updated_at ? new Date(left.updated_at).getTime() : 0;
+            const rightTime = right.updated_at ? new Date(right.updated_at).getTime() : 0;
+            return rightTime - leftTime;
+         })
+         .slice(0, 50);
    } catch (error) {
       console.error('[OpportunityHeader] Error searching opportunities:', error);
       searchResults.value = [];

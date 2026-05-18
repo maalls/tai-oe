@@ -26,6 +26,12 @@ class OpportunityCreateManualRequest(BaseModel):
     name: str
 
 
+class OpportunityCreateDraftRequest(BaseModel):
+    account_id: str
+    name: str = ""
+    source: str = "user_form"
+
+
 class OpportunityCreateFromEmailRequest(BaseModel):
     message_id: str
 

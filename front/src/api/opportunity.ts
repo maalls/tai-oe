@@ -6,6 +6,7 @@ export interface OpportunitySummary {
    source_reference_id?: string | null;
    stage?: string | null;
    status?: string | null;
+   updated_at?: string | null;
 }
 
 export interface SentEmailRecord {
@@ -59,6 +60,31 @@ export async function createManualOpportunity(
    const payload = await res.json();
    if (payload?.status !== 'ok' || !payload?.opportunity) {
       throw new Error(payload?.message || 'Erreur lors de la création de l’opportunité');
+   }
+   return payload.opportunity as OpportunitySummary;
+}
+
+export async function createDraftOpportunity(
+   accountId: string,
+   token: string,
+   options?: { name?: string; source?: string }
+): Promise<OpportunitySummary> {
+   const res = await fetch('/api/opportunities/create-draft', {
+      method: 'POST',
+      headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+         account_id: accountId,
+         name: options?.name ?? '',
+         source: options?.source ?? 'user_form',
+      }),
+   });
+   if (!res.ok) throw new Error('Erreur lors de la création de l’opportunité brouillon');
+   const payload = await res.json();
+   if (payload?.status !== 'ok' || !payload?.opportunity) {
+      throw new Error(payload?.message || 'Erreur lors de la création de l’opportunité brouillon');
    }
    return payload.opportunity as OpportunitySummary;
 }
@@ -126,6 +152,28 @@ export async function getOpportunitySentEmail(
    return (payload?.sent_email as SentEmailRecord | null) || null;
 }
 
+export async function searchOpportunities(
+   token: string,
+   params?: { name?: string; sourceReferenceId?: string }
+): Promise<OpportunitySummary[]> {
+   const query = new URLSearchParams();
+   if (params?.name) {
+      query.set('name', params.name);
+   }
+   if (params?.sourceReferenceId) {
+      query.set('source_reference_id', params.sourceReferenceId);
+   }
+   const suffix = query.size > 0 ? `?${query.toString()}` : '';
+   const res = await fetch(`/api/opportunities/search${suffix}`, {
+      headers: {
+         Authorization: `Bearer ${token}`,
+      },
+   });
+   if (!res.ok) throw new Error('Erreur lors du chargement des opportunités');
+   const payload = await res.json();
+   return (payload?.opportunities as OpportunitySummary[]) || [];
+}
+
 export async function advanceOpportunityStage(
    opportunityId: string,
    stage: string
@@ -171,7 +219,9 @@ export async function updateOpportunityStageState(
    });
    const payload = await res.json();
    if (!res.ok) {
-      throw new Error(payload?.message || payload?.error || 'Erreur lors de la mise à jour du stage');
+      throw new Error(
+         payload?.message || payload?.error || 'Erreur lors de la mise à jour du stage'
+      );
    }
    return payload;
 }

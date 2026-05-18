@@ -19,6 +19,7 @@ from src.api.opportunity.schemas import (
     OpportunityAdvanceQuery,
     OpportunityAdvanceRequest,
     OpportunityUpdateAccountRequest,
+    OpportunityCreateDraftRequest,
     OpportunityCreateFromEmailRequest,
     OpportunityExtractAuthorContactRequest,
     OpportunityCreateManualRequest,
@@ -311,6 +312,31 @@ def opportunities_create_manual(
         name=payload.name,
     )
     return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/opportunities/create-draft")
+def opportunities_create_draft(
+    payload: OpportunityCreateDraftRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    rows = db.execute_dict_query(
+        """
+        INSERT INTO opportunity (owner_user_id, account_id, name, stage, status, source)
+        VALUES (%s, %s, %s, 'NEW_LEAD', 'OPEN', %s)
+        RETURNING id, account_id, name, stage, status, source
+        """,
+        (user_id, payload.account_id, payload.name, payload.source),
+    )
+    if not rows:
+        raise HTTPException(status_code=400, detail="Opportunity draft not created")
+
+    return JSONResponse({"status": "ok", "opportunity": rows[0]}, status_code=200)
 
 
 @router.put("/api/opportunity/{opportunity_id}/name")
