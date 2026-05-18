@@ -3,8 +3,8 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
 
-from src.api.file.handler import FileHandler
 from src.api_fastapi.dependencies import get_file_handler
+from src.service.csv.file_service import CsvFileService
 
 router = APIRouter(tags=["csv"])
 
@@ -12,7 +12,7 @@ router = APIRouter(tags=["csv"])
 @router.post("/api/csv/source")
 async def csv_source_upload(
     file: UploadFile = File(...),
-    file_handler: FileHandler = Depends(get_file_handler),
+    file_handler: CsvFileService = Depends(get_file_handler),
 ):
     try:
         file_data = await file.read()

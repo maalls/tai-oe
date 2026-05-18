@@ -5,11 +5,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, Response
 
-from src.api.invoice.handler import InvoiceHandlers
 from src.api_fastapi.dependencies import get_auth_service, get_invoice_handlers, get_quote_controller, get_quote_send_service
 from src.api_fastapi.quote.schemas import QuoteDownloadQuery, QuoteSendRequest, QuoteSubmitRequest, QuoteUpdateRequest
 from src.service.auth.auth_service import AuthService
 from src.service.email.quote_send_service import QuoteSendService
+from src.service.invoice.invoice_service import InvoiceService
 from src.service.quote.quote_controller import QuoteController
 
 router = APIRouter(tags=["quote"])
@@ -95,7 +95,7 @@ def quote_generate_invoice(
     quote_id: str,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    invoice_handlers: InvoiceHandlers = Depends(get_invoice_handlers),
+    invoice_handlers: InvoiceService = Depends(get_invoice_handlers),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -110,7 +110,7 @@ def invoice_generate_pdf(
     invoice_id: str,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    invoice_handlers: InvoiceHandlers = Depends(get_invoice_handlers),
+    invoice_handlers: InvoiceService = Depends(get_invoice_handlers),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -126,7 +126,7 @@ def invoice_send(
     payload: dict[str, Any],
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    invoice_handlers: InvoiceHandlers = Depends(get_invoice_handlers),
+    invoice_handlers: InvoiceService = Depends(get_invoice_handlers),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:

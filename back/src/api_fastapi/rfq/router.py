@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse
 
-from src.api.rfq.handler import RfqHandlers
 from src.api_fastapi.dependencies import get_auth_service, get_rfq_handlers
 from src.api_fastapi.rfq.schemas import RfqGenerateRequest
 from src.service.auth.auth_service import AuthService
+from src.service.rfq.rfq_service import RfqService
 
 router = APIRouter(tags=["rfq"])
 
@@ -25,7 +25,7 @@ def rfq_generate(
     payload: RfqGenerateRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    rfq_handlers: RfqHandlers = Depends(get_rfq_handlers),
+    rfq_handlers: RfqService = Depends(get_rfq_handlers),
 ):
     is_valid, user_data = auth_service.verify_token(authorization or "")
     if not is_valid or not user_data:
@@ -42,7 +42,7 @@ def rfq_generate(
 @router.post("/api/rfp")
 async def rfp_upload(
     request: Request,
-    rfq_handlers: RfqHandlers = Depends(get_rfq_handlers),
+    rfq_handlers: RfqService = Depends(get_rfq_handlers),
 ):
     content_type = request.headers.get("content-type", "")
     body = await request.body()
