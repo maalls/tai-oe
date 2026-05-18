@@ -199,7 +199,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { supabase } from '../../lib/supabase';
+import { createAccount, deleteAccount, getAccount, updateAccount } from '../../api/account';
 import { useAuth } from '../../stores/auth';
 import AccountNavHeader from './AccountNavHeader.vue';
 
@@ -256,31 +256,18 @@ const loadAccount = async () => {
    errorMessage.value = '';
 
    try {
-      const { data, error } = await supabase
-         .from('account')
-         .select('*')
-         .eq('id', accountId.value)
-         .single();
-
-      if (error) {
-         errorMessage.value = `Failed to load account: ${error.message}`;
-         return;
-      }
-
-      if (data) {
-         const account = data as any;
-         formData.value = {
-            name: account.name || '',
-            vat_number: account.vat_number || '',
-            siret: account.siret || '',
-            address_line1: account.address_line1 || '',
-            address_line2: account.address_line2 || '',
-            postal_code: account.postal_code || '',
-            city: account.city || '',
-            country_code: account.country_code || 'FR',
-            payment_terms_default: account.payment_terms_default || '',
-         };
-      }
+      const account = await getAccount(accountId.value);
+      formData.value = {
+         name: account.name || '',
+         vat_number: account.vat_number || '',
+         siret: account.siret || '',
+         address_line1: account.address_line1 || '',
+         address_line2: account.address_line2 || '',
+         postal_code: account.postal_code || '',
+         city: account.city || '',
+         country_code: account.country_code || 'FR',
+         payment_terms_default: account.payment_terms_default || '',
+      };
    } catch (error) {
       errorMessage.value = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
    } finally {
@@ -313,17 +300,8 @@ const handleSave = async () => {
       };
 
       if (isNewAccount.value) {
-         // Create new account
-         const { data, error } = await (supabase.from('account') as any)
-            .insert([accountData])
-            .select();
-
-         if (error) {
-            errorMessage.value = `Failed to create account: ${error.message}`;
-            return;
-         }
-
-         if (data && data.length > 0) {
+         const created = await createAccount(accountData);
+         if (created?.id) {
             successMessage.value = 'Account created successfully';
             setTimeout(() => {
                router.push('/accounts');
@@ -335,14 +313,7 @@ const handleSave = async () => {
             errorMessage.value = 'Missing account id';
             return;
          }
-         const { error } = await (supabase.from('account') as any)
-            .update(accountData)
-            .eq('id', accountId.value);
-
-         if (error) {
-            errorMessage.value = `Failed to update account: ${error.message}`;
-            return;
-         }
+         await updateAccount(accountId.value, accountData);
 
          successMessage.value = 'Account updated successfully';
          setTimeout(() => {
@@ -369,12 +340,7 @@ const handleDelete = async () => {
          errorMessage.value = 'Missing account id';
          return;
       }
-      const { error } = await (supabase.from('account') as any).delete().eq('id', accountId.value);
-
-      if (error) {
-         errorMessage.value = `Failed to delete account: ${error.message}`;
-         return;
-      }
+      await deleteAccount(accountId.value);
 
       successMessage.value = 'Account deleted successfully';
       setTimeout(() => {
