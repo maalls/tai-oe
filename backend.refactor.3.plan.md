@@ -6,7 +6,7 @@
 | 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                                                                                  |
 | 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                       |
 | 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38] |
-| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + tests + baseline 34]                                                     |
+| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + useSuggestionSearch + tests + baseline 31]  |
 | 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                                                                                          |
 | 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                          |
 | 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                          |
@@ -224,6 +224,11 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 4. migrer `BrandEditPage`, `family/index`, `family/show`, `FamilyDiscountPage`
 
+- fait: `front/src/components/family/index.vue` migre vers `front/src/api/family.ts` + `front/src/composables/useSuggestionSearch.ts`
+- fait: `front/src/components/family/show.vue` migre vers `front/src/api/family.ts`
+- fait: `front/src/composables/useSuggestionSearch.ts` migre vers `GET /api/products`
+- en cours: `front/src/components/products/FamilyDiscountPage.vue` garde encore `document` / `document_line` en direct
+
 ### lot 4 - opportunity/source/documents restants
 
 1. sortir `useOpportunitySource` du direct DB
@@ -250,7 +255,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - `2026-05-18 | data metier | supabase.from(... ) dans front/src/** | decision=migrer vers backend | objectif central du plan.3`
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`
 - `2026-05-18 | lot 0 | guardrail supabase-direct | decision=actif | toute nouvelle surface frontend utilisant supabase direct hors allowlist echoue via npm run check:supabase-direct`
-- `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData/useBrandFamilyData/BrandEditPage migres, baseline guardrail 34`
+- `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData/useBrandFamilyData/BrandEditPage/family/index/family/show/useSuggestionSearch migres, baseline guardrail 31`
 
 ## criteres de done pour ce refactor.3
 

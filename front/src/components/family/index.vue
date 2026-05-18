@@ -486,9 +486,9 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ProductsSubHeader from './../products/ProductsSubHeader.vue';
 import { useBrandFamilyData } from '../products/useBrandFamilyData';
-import { supabase } from '../../lib/supabase';
 import { searchProductBySku } from '../../composables/useSuggestionSearch';
 import { useI18n } from '../../i18n/useI18n';
+import { createFamily, deleteFamily, updateFamily } from '../../api/family';
 
 const router = useRouter();
 const route = useRoute();
@@ -754,24 +754,8 @@ const addFamily = async () => {
          net_price: type === 'net_price' ? 0 : null,
       };
 
-      const { data, error } = await (supabase as any)
-         .from('family')
-         .insert(payload)
-         .select('*')
-         .single();
-      if (error) {
-         alert('Failed to add family: ' + error.message);
-         throw error;
-      }
-
-      families.value = [
-         ...families.value,
-         {
-            ...data,
-            product_family_count: 0,
-            product: null,
-         },
-      ];
+      await createFamily(payload);
+      await loadData();
 
       if (type === 'discount' && showDiscountOnly.value) {
          // New rows start with discount 0; show them immediately.
@@ -883,86 +867,12 @@ const closeProductCodeSuggestions = (familyId: string) => {
 };
 
 const syncNetPriceFamilyProductLink = async (family: (typeof families.value)[number]) => {
-   if ((family.type || '').toLowerCase() !== 'net_price') {
-      delete lastSyncedNetPriceSkuByFamilyId.value[family.id];
-      return;
-   }
-
    const sku = String(family.product_code || '').trim();
    const normalizedSku = sku.length > 0 ? sku : null;
    if (lastSyncedNetPriceSkuByFamilyId.value[family.id] === normalizedSku) {
       return;
    }
 
-   if (!normalizedSku) {
-      const { error: deleteError } = await (supabase as any)
-         .from('product_family')
-         .delete()
-         .eq('family_id', family.id);
-      if (deleteError) {
-         console.error(
-            '[FamilyPage] Failed to clear product_family links for net_price family:',
-            deleteError
-         );
-      }
-      family.product = null;
-      lastSyncedNetPriceSkuByFamilyId.value[family.id] = null;
-      return;
-   }
-
-   const { data: product, error: productError } = await (supabase as any)
-      .from('product')
-      .select('id,sku,name,price,brand_id')
-      .eq('sku', normalizedSku)
-      .maybeSingle();
-   if (productError) {
-      console.error('[FamilyPage] Failed to resolve product by SKU:', productError);
-      return;
-   }
-
-   if (!product?.id) {
-      const { error: deleteError } = await (supabase as any)
-         .from('product_family')
-         .delete()
-         .eq('family_id', family.id);
-      if (deleteError) {
-         console.error('[FamilyPage] Failed to clear stale product_family links:', deleteError);
-      }
-      family.product = null;
-      lastSyncedNetPriceSkuByFamilyId.value[family.id] = normalizedSku;
-      return;
-   }
-
-   const { error: linkError } = await (supabase as any).from('product_family').upsert(
-      {
-         product_id: product.id,
-         family_id: family.id,
-      },
-      {
-         onConflict: 'product_id,family_id',
-      }
-   );
-   if (linkError) {
-      console.error('[FamilyPage] Failed to upsert product_family link:', linkError);
-      return;
-   }
-
-   const { error: cleanupError } = await (supabase as any)
-      .from('product_family')
-      .delete()
-      .eq('family_id', family.id)
-      .neq('product_id', product.id);
-   if (cleanupError) {
-      console.error('[FamilyPage] Failed to cleanup extra product_family links:', cleanupError);
-   }
-
-   family.product = {
-      id: product.id,
-      sku: product.sku,
-      name: product.name ?? null,
-      price: product.price ?? null,
-      brand_id: product.brand_id ?? null,
-   };
    lastSyncedNetPriceSkuByFamilyId.value[family.id] = normalizedSku;
 };
 
@@ -983,9 +893,9 @@ const saveFamily = async (family: (typeof families.value)[number]) => {
          net_price: family.net_price,
       };
 
-      const { error } = await (supabase as any).from('family').update(payload).eq('id', family.id);
-      if (error) throw error;
+      await updateFamily(family.id, payload);
       await syncNetPriceFamilyProductLink(family);
+      await loadData();
       triggerSavedFlash(family.id);
    } catch (error) {
       console.error('[FamilyPage] Failed to save family fields:', error);
@@ -1002,19 +912,8 @@ const deleteFamily = async (family: (typeof families.value)[number]) => {
    errorMessage.value = '';
 
    try {
-      const { error: linkDeleteError } = await (supabase as any)
-         .from('product_family')
-         .delete()
-         .eq('family_id', family.id);
-      if (linkDeleteError) throw linkDeleteError;
-
-      const { error: familyDeleteError } = await (supabase as any)
-         .from('family')
-         .delete()
-         .eq('id', family.id);
-      if (familyDeleteError) throw familyDeleteError;
-
-      families.value = families.value.filter((entry) => entry.id !== family.id);
+      await deleteFamily(family.id);
+      await loadData();
 
       if (activeProductCodeFamilyId.value === family.id) {
          activeProductCodeFamilyId.value = null;

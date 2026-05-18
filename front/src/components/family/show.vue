@@ -54,7 +54,7 @@
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
-import { supabase } from '../../lib/supabase';
+import { getFamily } from '../../api/family';
 
 interface FamilyRecord {
    id: string;
@@ -77,19 +77,14 @@ const route = useRoute();
 
 onMounted(async () => {
    isLoading.value = true;
-   console.log(`Fetching family data for ID: ${route.params.familyId}`, route.params);
    const familyId = String(route.params.id || '');
-   const { data } = await (supabase.from('family') as any).select('*').eq('id', familyId);
-   if (!data || data.length === 0) {
+   try {
+      family.value = await getFamily(familyId);
+   } catch {
       errorMessage.value = 'Family not found.';
       isLoading.value = false;
-      throw new Error(`No family found with ID: ${familyId}`);
+      return;
    }
-   console.log('Raw data from Supabase:', data[0]);
-   family.value = (data?.[0] as FamilyRecord) || null;
-   console.log('Fetched family data:', family.value);
-   //family.value = data?.[0] || null;
    isLoading.value = false;
-   console.log('loading state set to false');
 });
 </script>
