@@ -7,10 +7,6 @@ class _HandlerStub:
     def __init__(self):
         self.request_handlers = "rh"
 
-    def _handle_ddd_get_routes(self, parsed, qs):
-        _ = (parsed, qs)
-        return False
-
 
 def test_dispatch_get_request_calls_data_then_action_groups(monkeypatch):
     handler = _HandlerStub()

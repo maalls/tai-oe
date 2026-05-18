@@ -4,16 +4,14 @@ from src.api.routes.dispatchers import server_get_dispatch
 
 
 class _HandlerStub:
-    def _handle_ddd_get_routes(self, parsed, qs):
-        _ = (parsed, qs)
-        return False
+    pass
 
 
-def test_dispatch_get_request_short_circuits_on_ddd(monkeypatch):
+def test_dispatch_get_request_short_circuits_on_misc(monkeypatch):
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/anything")
 
-    monkeypatch.setattr(handler, "_handle_ddd_get_routes", lambda parsed, qs: True)
+    monkeypatch.setattr(server_get_dispatch, "dispatch_get_misc_routes", lambda h, p, q: True)
 
     handled = server_get_dispatch.dispatch_get_request(handler, parsed, {})
 

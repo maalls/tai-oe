@@ -70,9 +70,6 @@ def dispatch_post_legacy_and_action_routes(handler, parsed_path: str) -> bool:
 
 def dispatch_post_request(handler, parsed) -> bool:
     """Dispatch POST routes and return True when handled."""
-    if handler._handle_ddd_post_routes(parsed):
-        return True
-
     if dispatch_post_core_routes(handler, parsed.path):
         return True
 

@@ -20,10 +20,6 @@ from src.infrastructure.runtime.env_loader import load_runtime_env
 from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
 from src.lib.readers.csv import CSVReader
-from src.api.routes.ddd_get_routes import handle_ddd_get_route, is_ddd_get_route
-from src.api.routes.ddd_post_routes import handle_ddd_post_route, is_ddd_post_route
-from src.api.routes.helpers.server_auth_helpers import require_auth
-from src.api.routes.helpers.server_body_helpers import read_json
 from src.api.file.handler import handle_prompt_get
 from src.api.routes.dispatchers.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_request
@@ -153,43 +149,6 @@ def create_rag_handler(config):
                 return send_error(self, 404, "Not found")
             except Exception as e:
                 return send_error(self, 500, f"Internal server error 2: {e}")
-
-        def _handle_ddd_post_routes(self, parsed):
-            """Handle incremental DDD POST routes through API adapters."""
-            if not is_ddd_post_route(parsed.path):
-                return False
-
-            # Mutating DDD routes require authentication.
-            if require_auth(self) is None:
-                return True
-
-            payload = read_json(self, default={})
-            if not isinstance(payload, dict):
-                payload = {}
-
-            handlers = self.request_handlers
-            handled, response_payload, status = handle_ddd_post_route(parsed.path, payload, handlers)
-            if not handled:
-                return False
-
-            self.json(response_payload, status)
-            return True
-
-        def _handle_ddd_get_routes(self, parsed, qs):
-            """Handle incremental DDD GET routes through API adapters."""
-            if not is_ddd_get_route(parsed.path):
-                return False
-
-            if require_auth(self) is None:
-                return True
-
-            query = {key: values[0] for key, values in qs.items() if values}
-            handlers = self.request_handlers
-            handled, payload, status = handle_ddd_get_route(parsed.path, query, handlers)
-            if not handled:
-                return False
-            self.json(payload, status)
-            return True
 
         def do_GET(self):
             """Handle GET method."""

@@ -60,9 +60,6 @@ def dispatch_get_action_download_routes(handler, parsed, qs, request_handlers) -
 
 def dispatch_get_request(handler, parsed, qs) -> bool:
     """Dispatch GET routes and return True when handled."""
-    if handler._handle_ddd_get_routes(parsed, qs):
-        return True
-
     if dispatch_get_misc_routes(handler, parsed, qs):
         return True
 
