@@ -11,6 +11,16 @@ export interface Vendor {
    product_count?: number | null;
 }
 
+export interface VendorBrand {
+   id: string;
+   name?: string | null;
+   marque?: string | null;
+   website?: string | null;
+   target_margin?: number | null;
+   minimum_margin?: number | null;
+   product_count: number;
+}
+
 export type VendorCreate = {
    name: string;
    email?: string | null;
@@ -55,5 +65,11 @@ export async function updateVendor(id: string, data: VendorUpdate): Promise<Vend
 export async function deleteVendor(id: string): Promise<{ id: string }> {
    const res = await fetch(`/api/vendor/${id}`, { method: 'DELETE' });
    if (!res.ok) throw new Error('Erreur lors de la suppression du fournisseur');
+   return await res.json();
+}
+
+export async function listVendorBrands(id: string): Promise<VendorBrand[]> {
+   const res = await fetch(`/api/vendor/${id}/brands`);
+   if (!res.ok) throw new Error('Erreur lors du chargement des marques du fournisseur');
    return await res.json();
 }

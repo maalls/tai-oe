@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from .schemas import VendorCreate, VendorResponse, VendorUpdate
+from .schemas import VendorBrandResponse, VendorCreate, VendorResponse, VendorUpdate
 from src.repository.database.repository import DatabaseRepository
 
 router = APIRouter()
@@ -120,3 +120,21 @@ def delete_vendor(vendor_id: str, db=Depends(get_db)):
     if not rows:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return {"id": rows[0]["id"]}
+
+
+@router.get("/api/vendor/{vendor_id}/brands", response_model=List[VendorBrandResponse])
+def list_vendor_brands(vendor_id: str, db=Depends(get_db)):
+    rows = db.execute_dict_query(
+        """
+        SELECT b.id, b.name, b.marque, b.website, b.target_margin, b.minimum_margin,
+               COALESCE(COUNT(pf.id), 0)::int AS product_count
+        FROM brand b
+        LEFT JOIN family f ON f.brand_id = b.id
+        LEFT JOIN product_family pf ON pf.family_id = f.id
+        WHERE b.vendor_id = %s
+        GROUP BY b.id
+        ORDER BY b.name ASC
+        """,
+        (vendor_id,),
+    )
+    return rows

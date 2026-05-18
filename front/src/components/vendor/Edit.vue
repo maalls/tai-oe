@@ -155,26 +155,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
 import {
    createVendor,
    deleteVendor as deleteVendorApi,
    getVendor,
+   listVendorBrands,
+   type VendorBrand,
    updateVendor,
 } from '../../api/vendor';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
-
-interface Brand {
-   id: string;
-   name?: string | null;
-   marque?: string | null;
-   website?: string | null;
-   target_margin?: number | null;
-   minimum_margin?: number | null;
-   product_count?: number;
-}
 
 const route = useRoute();
 const router = useRouter();
@@ -190,7 +181,7 @@ const errorMessage = ref('');
 const successMessage = ref('');
 const brandsErrorMessage = ref('');
 const isBrandsLoading = ref(false);
-const relatedBrands = ref<Brand[]>([]);
+const relatedBrands = ref<VendorBrand[]>([]);
 const showForm = ref(false);
 
 const formData = ref({
@@ -246,27 +237,7 @@ const loadRelatedBrands = async () => {
    brandsErrorMessage.value = '';
 
    try {
-      const { data, error } = await supabase
-         .from('brand')
-         .select('*, family(product_family(count))')
-         .eq('vendor_id', vendorId.value)
-         .order('name', { ascending: true });
-
-      if (error) {
-         brandsErrorMessage.value = t('vendors.relatedBrands.loadFailed', {
-            message: error.message,
-         });
-         relatedBrands.value = [];
-         return;
-      }
-
-      relatedBrands.value = (data || []).map((b: any) => ({
-         ...b,
-         product_count: (b.family || []).reduce(
-            (sum: number, f: any) => sum + (f.product_family?.[0]?.count ?? 0),
-            0
-         ),
-      }));
+      relatedBrands.value = await listVendorBrands(vendorId.value);
    } catch (error) {
       brandsErrorMessage.value = t('vendors.relatedBrands.loadFailed', {
          message: error instanceof Error ? error.message : t('vendors.errors.unknown'),

@@ -30,3 +30,13 @@ class VendorUpdate(BaseModel):
     email: str | None = None
     phone: str | None = None
     website: str | None = None
+
+
+class VendorBrandResponse(BaseModel):
+    id: str
+    name: str | None = None
+    marque: str | None = None
+    website: str | None = None
+    target_margin: float | None = None
+    minimum_margin: float | None = None
+    product_count: int
