@@ -115,7 +115,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { listOpportunityDocuments } from '../../api/document';
+import { listOpportunityInvoices } from '../../api/invoice';
 import OpportunityHeader from '../opportunity/OpportunityHeader.vue';
 
 const route = useRoute();
@@ -127,14 +127,7 @@ const errorMessage = ref('');
 
 const loadInvoices = async () => {
    try {
-      const documents = await listOpportunityDocuments(opportunityId.value);
-      invoices.value = documents
-         .filter((document) => document.type === 'INVOICE')
-         .sort((left, right) => {
-            const leftTime = left.created_at ? new Date(left.created_at).getTime() : 0;
-            const rightTime = right.created_at ? new Date(right.created_at).getTime() : 0;
-            return rightTime - leftTime;
-         });
+      invoices.value = await listOpportunityInvoices(opportunityId.value);
    } catch (error: any) {
       errorMessage.value = error?.message || 'Failed to load invoices';
       console.error('[InvoicesPage] Error loading invoices:', error);

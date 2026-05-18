@@ -71,6 +71,121 @@ def document_list(
     return rows
 
 
+@router.get("/api/invoice")
+def invoice_list(
+    opportunity_id: str | None = Query(default=None),
+    db=Depends(get_db),
+):
+    if not opportunity_id:
+        return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
+
+    rows = db.execute_dict_query(
+        """
+        SELECT id,
+               opportunity_id,
+               type,
+               status,
+               title,
+               external_ref,
+               currency,
+               total_excl_tax,
+               total_tax,
+               total_incl_tax,
+               storage_key,
+               issued_at,
+               received_at,
+               created_at
+        FROM document
+        WHERE opportunity_id = %s
+          AND type = 'INVOICE'
+        ORDER BY created_at DESC
+        """,
+        (opportunity_id,),
+    )
+    return rows
+
+
+@router.get("/api/invoice/{invoice_id}/view")
+def invoice_get_view(
+    invoice_id: str,
+    opportunity_id: str | None = Query(default=None),
+    db=Depends(get_db),
+):
+    if not opportunity_id:
+        return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
+
+    invoice_rows = db.execute_dict_query(
+        """
+        SELECT id,
+               opportunity_id,
+               type,
+               status,
+               title,
+               external_ref,
+               currency,
+               total_excl_tax,
+               total_tax,
+               total_incl_tax,
+               storage_key,
+               issued_at,
+               received_at,
+               created_at
+        FROM document
+        WHERE id = %s
+          AND opportunity_id = %s
+          AND type = 'INVOICE'
+        LIMIT 1
+        """,
+        (invoice_id, opportunity_id),
+    )
+    if not invoice_rows:
+        return JSONResponse({"error": "Invoice not found"}, status_code=404)
+
+    sent_email_rows = db.execute_dict_query(
+        """
+        SELECT id,
+               document_id,
+               subject,
+               body,
+               from_email,
+               to_emails,
+               cc_emails,
+               sent_at
+        FROM sent_email
+        WHERE document_id = %s
+        ORDER BY sent_at DESC
+        LIMIT 1
+        """,
+        (invoice_id,),
+    )
+
+    contact_rows = db.execute_dict_query(
+        """
+        SELECT c.id,
+               c.account_id,
+               c.name,
+               c.email,
+               c.phone,
+               c.role_title,
+               c.created_at
+        FROM opportunity o
+        JOIN contact c ON c.account_id = o.account_id
+        WHERE o.id = %s
+          AND c.email IS NOT NULL
+          AND c.email <> ''
+        ORDER BY c.created_at ASC
+        LIMIT 1
+        """,
+        (opportunity_id,),
+    )
+
+    return {
+        "invoice": invoice_rows[0],
+        "sent_email": sent_email_rows[0] if sent_email_rows else None,
+        "default_contact": contact_rows[0] if contact_rows else None,
+    }
+
+
 @router.get("/api/document/{document_id}")
 def document_get(
     document_id: str,

@@ -254,9 +254,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { listContacts } from '../../api/contact';
-import { getOpportunityDocument } from '../../api/document';
-import { getOpportunitySentEmail, getOpportunitySummary } from '../../api/opportunity';
+import { getOpportunityInvoiceView } from '../../api/invoice';
 import PdfViewer from '../PdfViewer.vue';
 import OpportunityHeader from '../opportunity/OpportunityHeader.vue';
 import { useAuth } from '../../stores/auth';
@@ -285,15 +283,11 @@ const emailForm = ref({
 const sentEmail = ref<any>(null);
 
 const invoiceDownloadUrl = computed(() => {
-   return pdfFilename.value
-      ? `/api/documents/download/${pdfFilename.value}`
-      : '';
+   return pdfFilename.value ? `/api/documents/download/${pdfFilename.value}` : '';
 });
 
 const invoicePreviewUrl = computed(() => {
-   return pdfFilename.value
-      ? `/api/documents/download/${pdfFilename.value}?inline=1`
-      : '';
+   return pdfFilename.value ? `/api/documents/download/${pdfFilename.value}?inline=1` : '';
 });
 
 const getDefaultEmailBody = () => {
@@ -307,7 +301,8 @@ const getDefaultEmailBody = () => {
 
 const loadInvoice = async () => {
    try {
-      const data = await getOpportunityDocument(opportunityId, invoiceId);
+      const view = await getOpportunityInvoiceView(opportunityId, invoiceId);
+      const data = view.invoice;
 
       if (!data || data.type !== 'INVOICE') {
          errorMessage.value = 'Invoice not found';
@@ -320,31 +315,14 @@ const loadInvoice = async () => {
 
       // Load sent email data if invoice was sent
       if (data.status === 'SENT') {
-         try {
-            console.log('[InvoiceDetailPage] Loading sent email for invoice:', invoiceId);
-            const sentEmailData = await getOpportunitySentEmail(opportunityId, invoiceId);
-
-            console.log('[InvoiceDetailPage] Sent email query result:', {
-               sentEmailData,
-               sentEmailError: null,
-            });
-
-            if (sentEmailData) {
-               sentEmail.value = sentEmailData;
-               console.log('[InvoiceDetailPage] Sent email loaded:', sentEmailData);
-               // Populate email form with sent data for display
-               emailForm.value = {
-                  to: sentEmailData.to_emails?.join(', ') || '',
-                  cc: sentEmailData.cc_emails?.join(', ') || '',
-                  subject: sentEmailData.subject || '',
-                  body: sentEmailData.body || '',
-               };
-               console.log('[InvoiceDetailPage] Email form populated:', emailForm.value);
-            } else {
-               console.warn('[InvoiceDetailPage] No sent email data found or error:', null);
-            }
-         } catch (error) {
-            console.error('[InvoiceDetailPage] Error loading sent email data:', error);
+         if (view.sent_email) {
+            sentEmail.value = view.sent_email;
+            emailForm.value = {
+               to: view.sent_email.to_emails?.join(', ') || '',
+               cc: view.sent_email.cc_emails?.join(', ') || '',
+               subject: view.sent_email.subject || '',
+               body: view.sent_email.body || '',
+            };
          }
       }
 
@@ -358,22 +336,8 @@ const loadInvoice = async () => {
             body: getDefaultEmailBody(),
          };
 
-         // Try to load contact email from opportunity account
-         try {
-            const oppData = await getOpportunitySummary(opportunityId);
-
-            if (oppData?.account_id) {
-               const contacts = await listContacts();
-               const firstContact = contacts
-                  .filter((contact) => contact.account_id === oppData.account_id)
-                  .sort((left, right) => left.created_at.localeCompare(right.created_at))[0];
-
-               if (firstContact?.email) {
-                  emailForm.value.to = firstContact.email;
-               }
-            }
-         } catch (error) {
-            console.log('Could not auto-fill email:', error);
+         if (view.default_contact?.email) {
+            emailForm.value.to = view.default_contact.email;
          }
       }
    } catch (error: any) {
