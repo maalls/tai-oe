@@ -4,11 +4,14 @@ import os
 from pathlib import Path
 
 from src.api.file.handler import FileHandler
+from src.api.email.handler import EmailHandlers
+from src.api.invoice.handler import InvoiceHandlers
 from src.api.rfq.handler import RfqHandlers
 from src.service.auth.auth_service import AuthService
 from src.service.auth.oauth_service import OAuthService
 from src.service.email.gmail_service import GmailService
 from src.service.email.quote_send_service import QuoteSendService
+from src.service.quote.quote_controller import QuoteController
 from src.service.rfq.rfq_source_service import RfqSourceService
 from src.service.utility.utility_service import UtilityService
 from src.repository.email_repository import EmailRepository
@@ -41,6 +44,18 @@ def get_quote_send_service() -> QuoteSendService:
     repository = EmailRepository()
     return QuoteSendService(
         send_email=repository.send_email,
+        storage_path_resolver=get_storage_path,
+    )
+
+
+def get_quote_controller() -> QuoteController:
+    return QuoteController()
+
+
+def get_invoice_handlers() -> InvoiceHandlers:
+    email_handlers = EmailHandlers()
+    return InvoiceHandlers(
+        send_email_with_attachments=email_handlers.handle_send_email_with_attachments,
         storage_path_resolver=get_storage_path,
     )
 

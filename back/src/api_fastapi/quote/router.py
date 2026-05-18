@@ -5,11 +5,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, Response
 
-from src.api_fastapi.dependencies import get_auth_service, get_quote_send_service
+from src.api.invoice.handler import InvoiceHandlers
+from src.api_fastapi.dependencies import get_auth_service, get_invoice_handlers, get_quote_controller, get_quote_send_service
 from src.api_fastapi.quote.schemas import QuoteDownloadQuery, QuoteSendRequest, QuoteSubmitRequest, QuoteUpdateRequest
 from src.service.auth.auth_service import AuthService
 from src.service.email.quote_send_service import QuoteSendService
-from src.api.quote.handler import Quote
+from src.service.quote.quote_controller import QuoteController
 
 router = APIRouter(tags=["quote"])
 
@@ -33,25 +34,9 @@ def _resolve_user_id(
     return user_data.get("id")
 
 
-@router.post("/api/quote/{document_id}")
-def quote_update(
-    document_id: str,
-    payload: QuoteUpdateRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
-):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-
-    result = Quote().update(document_id=document_id, payload=payload.model_dump(), user_id=user_id)
-    status = 400 if result.get("error") else 200
-    return JSONResponse(result, status_code=status)
-
-
 @router.post("/api/quote")
-def quote_submit(payload: QuoteSubmitRequest):
-    result = Quote().handle_quote_submit(payload.model_dump())
+def quote_submit(payload: QuoteSubmitRequest, quote_controller: QuoteController = Depends(get_quote_controller)):
+    result = quote_controller.handle_quote_submit(payload.model_dump())
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
@@ -67,9 +52,26 @@ def quote_send(
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
+@router.post("/api/quote/{document_id}")
+def quote_update(
+    document_id: str,
+    payload: QuoteUpdateRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    quote_controller: QuoteController = Depends(get_quote_controller),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = quote_controller.update(document_id=document_id, payload=payload.model_dump(), user_id=user_id)
+    status = 400 if result.get("error") else 200
+    return JSONResponse(result, status_code=status)
+
+
 @router.get("/api/quotes/list")
-def quotes_list():
-    result = Quote().handle_list_quotes()
+def quotes_list(quote_controller: QuoteController = Depends(get_quote_controller)):
+    result = quote_controller.handle_list_quotes()
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
@@ -78,12 +80,28 @@ def quote_generate_pdf(
     document_id: str,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
+    quote_controller: QuoteController = Depends(get_quote_controller),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
-    result = Quote().handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+    result = quote_controller.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/quote/{quote_id}/invoice")
+def quote_generate_invoice(
+    quote_id: str,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    invoice_handlers: InvoiceHandlers = Depends(get_invoice_handlers),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = invoice_handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
@@ -91,11 +109,12 @@ def quote_generate_pdf(
 def quote_download(
     filename: str,
     query: QuoteDownloadQuery = Depends(),
+    quote_controller: QuoteController = Depends(get_quote_controller),
 ):
     is_inline = query.inline == 1
 
     try:
-        content = Quote().handle_get_quote_file(filename)
+        content = quote_controller.handle_get_quote_file(filename)
         disposition = "inline" if is_inline else "attachment"
         return Response(
             content=content,

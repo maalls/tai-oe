@@ -5,7 +5,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api_fastapi.dependencies import get_auth_service, get_quote_send_service
+from src.api_fastapi.dependencies import get_auth_service, get_invoice_handlers, get_quote_controller, get_quote_send_service
 from src.api_fastapi.main import create_app
 
 
@@ -17,8 +17,6 @@ class _FakeAuthService:
 
 
 def _client(monkeypatch) -> TestClient:
-    from src.api_fastapi.quote import router as quote_router_module
-
     class _FakeQuoteController:
         def update(self, document_id: str, payload: dict, user_id: str | None = None):
             return {"status": "ok", "document_id": document_id, "payload": payload, "user_id": user_id}
@@ -37,16 +35,20 @@ def _client(monkeypatch) -> TestClient:
                 raise FileNotFoundError("missing")
             return b"%PDF-1.4\n"
 
-    monkeypatch.setattr(quote_router_module, "Quote", _FakeQuoteController)
-
     class _FakeQuoteSendService:
         def handle_quote_send(self, body: bytes, content_type: str):
             del body, content_type
             return {"status": "ok", "message": "sent"}
 
+    class _FakeInvoiceHandlers:
+        def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str | None = None):
+            return {"status": "ok", "invoice_id": "inv-1", "quote_id": quote_id, "user_id": user_id}
+
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_quote_send_service] = lambda: _FakeQuoteSendService()
+    app.dependency_overrides[get_quote_controller] = lambda: _FakeQuoteController()
+    app.dependency_overrides[get_invoice_handlers] = lambda: _FakeInvoiceHandlers()
     return TestClient(app)
 
 
@@ -121,3 +123,12 @@ def test_quotes_list_route(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["total"] == 1
+
+
+def test_quote_invoice_route(monkeypatch):
+    client = _client(monkeypatch)
+
+    response = client.post("/api/quote/doc-9/invoice", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["quote_id"] == "doc-9"
