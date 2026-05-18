@@ -4,8 +4,6 @@ from typing import Dict
 from pathlib import Path
 
 from src.api.file.handler import FileHandler
-from src.api.csv.handler import CsvHandlers
-from src.api.database.handler import DatabaseHandlers
 from src.api.email.handler import EmailHandlers
 from src.api.document.handler import DocumentHandlers
 from src.api.entity.handler import EntityHandlers
@@ -14,10 +12,8 @@ from src.api.opportunity.handler import OpportunityHandlers
 from src.api.rfq.handler import RfqHandlers
 from src.api.quote.handler import Quote as QuoteController
 from src.api.action.handler import ActionHandlers
-from src.infrastructure.clients.database import DatabaseHandler
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.infrastructure.factory import ServiceFactory
-from src.lib.encoders.embeddings import EmbeddingGenerator
 from src.lib.storage_paths import get_storage_dir, get_storage_path
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
@@ -194,9 +190,6 @@ class RequestHandlers:
         file_handler: FileHandler,
     ):
         self.file_handler = file_handler
-        self._embedding_generator = None
-        # Delegate to specialized handlers
-        self.csv_handlers = CsvHandlers(file_handler)
         self.email_handlers = EmailHandlers()
         self.action_handlers = ActionHandlers()
         self.service_factory = ServiceFactory()
@@ -204,19 +197,6 @@ class RequestHandlers:
             service_factory=self.service_factory,
             email_handlers=self.email_handlers,
         )
-
-        try:
-            db_handler = DatabaseHandler()
-            self.database_handlers = DatabaseHandlers(db_handler)
-        except Exception as e:
-            print(f"[Rag] Warning: Could not initialize DatabaseHandler: {e}")
-
-    @property
-    def embedding_generator(self) -> EmbeddingGenerator:
-        if self._embedding_generator is None:
-            print("[Rag] Initializing embedding generator...")
-            self._embedding_generator = EmbeddingGenerator()
-        return self._embedding_generator
 
     @property
     def opportunity_from_email_service(self) -> OpportunityFromEmailService:

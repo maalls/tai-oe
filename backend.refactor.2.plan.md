@@ -160,6 +160,8 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | fastapi | action frontend endpoints | decision=migrer | ajout du routeur FastAPI action pour execute/logs et CRUD, sans dependance a src.api
 - 2026-05-18 | legacy-http | action transport fallback | decision=supprimer | dispatch_action_routes retire du serveur legacy, routeur legacy action supprime
 - 2026-05-18 | fastapi | csv frontend endpoints | decision=migrer | ajout des routes FastAPI csv sources/files/preview/raw/source/download/query pour couvrir les appels frontend
+- 2026-05-18 | legacy-http | csv GET transport fallback | decision=supprimer | dispatch_get_data_routes et src.api.csv.routes retires du serveur legacy
+- 2026-05-18 | legacy-http | request handlers dead csv deps | decision=supprimer | RequestHandlers n'initialise plus CsvHandlers, DatabaseHandlers ni EmbeddingGenerator
 
 ## criteres de done pour ce refactor.2
 

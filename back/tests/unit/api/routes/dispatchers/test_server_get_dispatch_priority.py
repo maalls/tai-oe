@@ -20,11 +20,16 @@ def test_dispatch_get_request_short_circuits_on_misc(monkeypatch):
 
 def test_dispatch_get_request_uses_data_group(monkeypatch):
     handler = _HandlerStub()
-    parsed = SimpleNamespace(path="/api/csv/query")
+    parsed = SimpleNamespace(path="/api/prompt/opportunity/source")
 
-    monkeypatch.setattr(server_get_dispatch, "dispatch_get_misc_routes", lambda h, p, q: False)
-    monkeypatch.setattr(server_get_dispatch, "dispatch_get_data_routes", lambda h, p, q: True)
+    calls = []
+    monkeypatch.setattr(
+        server_get_dispatch,
+        "dispatch_get_misc_routes",
+        lambda h, p, q: calls.append((h, p.path, q)) or True,
+    )
 
     handled = server_get_dispatch.dispatch_get_request(handler, parsed, {})
 
     assert handled is True
+    assert calls == [(handler, "/api/prompt/opportunity/source", {})]
