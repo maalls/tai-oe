@@ -115,7 +115,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../lib/supabase';
+import { listOpportunityDocuments } from '../../api/document';
 import OpportunityHeader from '../opportunity/OpportunityHeader.vue';
 
 const route = useRoute();
@@ -127,20 +127,14 @@ const errorMessage = ref('');
 
 const loadInvoices = async () => {
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select(
-            'id, type, status, title, external_ref, currency, total_excl_tax, total_tax, total_incl_tax, storage_key, issued_at, received_at, created_at'
-         )
-         .eq('opportunity_id', opportunityId.value)
-         .eq('type', 'INVOICE')
-         .order('created_at', { ascending: false });
-
-      if (error) {
-         throw error;
-      }
-
-      invoices.value = data || [];
+      const documents = await listOpportunityDocuments(opportunityId.value);
+      invoices.value = documents
+         .filter((document) => document.type === 'INVOICE')
+         .sort((left, right) => {
+            const leftTime = left.created_at ? new Date(left.created_at).getTime() : 0;
+            const rightTime = right.created_at ? new Date(right.created_at).getTime() : 0;
+            return rightTime - leftTime;
+         });
    } catch (error: any) {
       errorMessage.value = error?.message || 'Failed to load invoices';
       console.error('[InvoicesPage] Error loading invoices:', error);
