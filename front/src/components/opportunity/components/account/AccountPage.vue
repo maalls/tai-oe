@@ -200,6 +200,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '../../../../lib/supabase';
+import { createAccount, getAccount, listAccounts, updateAccount } from '../../../../api/account';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 
@@ -248,37 +249,22 @@ const accountForm = ref<AccountForm>({
 const loadAccountDetails = async (accountId: string) => {
    if (!accountId) return;
    try {
-      const { data, error } = await supabase
-         .from('account')
-         .select(
-            'id, name, vat_number, siret, address_line1, address_line2, postal_code, city, country_code, payment_terms_default'
-         )
-         .eq('id', accountId)
-         .single();
+      const accountData = await getAccount(accountId);
+      accountForm.value = {
+         id: accountData.id,
+         name: accountData.name || '',
+         vat_number: accountData.vat_number || '',
+         siret: accountData.siret || '',
+         address_line1: accountData.address_line1 || '',
+         address_line2: accountData.address_line2 || '',
+         postal_code: accountData.postal_code || '',
+         city: accountData.city || '',
+         country_code: accountData.country_code || 'FR',
+         payment_terms_default: accountData.payment_terms_default || '',
+      };
 
-      if (error) {
-         console.error('[AccountPage] Error loading account details:', error);
-         return;
-      }
-
-      if (data) {
-         const accountData = data as any;
-         accountForm.value = {
-            id: accountData.id,
-            name: accountData.name || '',
-            vat_number: accountData.vat_number || '',
-            siret: accountData.siret || '',
-            address_line1: accountData.address_line1 || '',
-            address_line2: accountData.address_line2 || '',
-            postal_code: accountData.postal_code || '',
-            city: accountData.city || '',
-            country_code: accountData.country_code || 'FR',
-            payment_terms_default: accountData.payment_terms_default || '',
-         };
-
-         // Load contacts for this account
-         await loadAccountContacts(accountData.id);
-      }
+      // Load contacts for this account
+      await loadAccountContacts(accountData.id);
    } catch (error) {
       console.error('[AccountPage] Unexpected error loading account:', error);
    }
@@ -361,20 +347,11 @@ const onAccountSearchInput = () => {
    searchDebounce.value = setTimeout(async () => {
       isSearching.value = true;
       try {
-         const { data, error } = await supabase
-            .from('account')
-            .select('id, name')
-            .ilike('name', `%${query}%`)
-            .order('name', { ascending: true })
-            .limit(10);
-
-         if (error) {
-            console.error('[AccountPage] Error searching accounts:', error);
-            accountSearchResults.value = [];
-            return;
-         }
-
-         accountSearchResults.value = data || [];
+         const accounts = await listAccounts();
+         accountSearchResults.value = accounts
+            .filter((account) => account.name.toLowerCase().includes(query.toLowerCase()))
+            .slice(0, 10)
+            .map((account) => ({ id: account.id, name: account.name }));
       } catch (err) {
          console.error('[AccountPage] Unexpected error searching accounts:', err);
          accountSearchResults.value = [];
@@ -442,14 +419,7 @@ const createAccountAndAssign = async () => {
    isSearching.value = true;
 
    try {
-      const { data: newAccount, error: createError } = await (supabase.from('account') as any)
-         .insert({ name })
-         .select('id, name')
-         .single();
-
-      if (createError) {
-         throw new Error(createError.message);
-      }
+      const newAccount = await createAccount({ name });
 
       const { error: assignError } = await (supabase.from('opportunity') as any)
          .update({ account_id: newAccount.id })
@@ -491,16 +461,9 @@ const saveAccountDetails = async () => {
          city: accountForm.value.city || null,
          country_code: accountForm.value.country_code || 'FR',
          payment_terms_default: accountForm.value.payment_terms_default || null,
-         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await (supabase.from('account') as any)
-         .update(payload)
-         .eq('id', accountForm.value.id);
-
-      if (error) {
-         throw new Error(error.message);
-      }
+      await updateAccount(accountForm.value.id, payload);
 
       successMessage.value = t('opportunities.accountUpdatedSuccess');
       setTimeout(() => {
