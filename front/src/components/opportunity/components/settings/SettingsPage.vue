@@ -80,7 +80,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../stores/auth';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
