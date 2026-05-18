@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { supabase } from '../../../../lib/supabase';
+import { listCatalogBrands, listCatalogFamilies } from '../../../../api/catalog';
 
 export interface Brand {
    id: string;
@@ -28,19 +28,10 @@ export const useCmsData = () => {
       errorMessage.value = '';
 
       try {
-         const { data: brandData, error: brandError } = await supabase
-            .from('brand')
-            .select('id,name,website,email,phone,created_at')
-            .order('name', { ascending: true });
-
-         if (brandError) throw brandError;
-
-         const { data: familyData, error: familyError } = await supabase
-            .from('family')
-            .select('id,name,type,brand_id')
-            .order('name', { ascending: true });
-
-         if (familyError) throw familyError;
+         const [brandData, familyData] = await Promise.all([
+            listCatalogBrands(),
+            listCatalogFamilies(),
+         ]);
 
          brands.value = brandData || [];
          families.value = familyData || [];

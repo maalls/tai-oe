@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.action.router import router as action_router
 from src.api.auth.router import router as auth_router
+from src.api.catalog.router import router as catalog_router
 from src.api.contact.router import router as contact_router
 from src.api.csv.router import router as csv_router
 from src.api.document.router import router as document_router
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
 
     app.include_router(action_router)
     app.include_router(auth_router)
+    app.include_router(catalog_router)
     app.include_router(contact_router)
     app.include_router(csv_router)
     app.include_router(document_router)

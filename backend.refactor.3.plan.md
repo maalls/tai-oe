@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut     | Commit/Tag                                                                                                                                                               |
-| --- | -------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| -1  | Renommage packages/tests API           | ✅ Fait    | edb3ce7, 30a1f49                                                                                                                                                         |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait    | 1238346                                                                                                                                                                  |
-| 1   | Migration du flux profile (auth)       | ✅ Fait    | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                       |
-| 2   | Migration account/contact/vendor       | ✅ Fait    | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38] |
-| 3   | Migration brand/family/catalogue       | ⏳ À faire |                                                                                                                                                                          |
-| 4   | Migration opportunity/source/documents | ⏳ À faire |                                                                                                                                                                          |
-| 5   | Migration invoices/quote read models   | ⏳ À faire |                                                                                                                                                                          |
-| 6   | Fermeture/realtime                     | ⏳ À faire |                                                                                                                                                                          |
+| Lot | Description                            | Statut      | Commit/Tag                                                                                                                                                               |
+| --- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                                                                                         |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                                                                                  |
+| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                       |
+| 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38] |
+| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + tests + baseline 36]                                                                                          |
+| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                                                                                          |
+| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                          |
+| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                          |
 
 # backend.refactor.3.plan
 
@@ -204,9 +204,21 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 ### lot 3 - brand/family/catalogue
 
-1. creer endpoints `brand` et `family` manquants
+1. en cours: creer endpoints `brand` et `family` manquants
+
+- fait: ajout des endpoints de reference `GET /api/catalog/brands` et `GET /api/catalog/families`
+- fait: tests unitaires backend ajoutes (`back/tests/unit/api/catalog/router/test_list_catalog_brands.py`, `back/tests/unit/api/catalog/router/test_list_catalog_families.py`)
+
 2. traiter les operations sur `product_family` via backend
-3. remplacer les composables catalogue partages (`useCmsData`, `useBrandFamilyData`, `useSuggestionSearch`)
+
+3. en cours: remplacer les composables catalogue partages (`useCmsData`, `useBrandFamilyData`, `useSuggestionSearch`)
+
+- fait: `front/src/components/products/cms/useCmsData.ts` migre vers `front/src/api/catalog.ts`
+- fait: `front/src/components/admin/components/cms/useCmsData.ts` migre vers `front/src/api/catalog.ts`
+- fait: nouveau client API `front/src/api/catalog.ts`
+- fait: tests unitaires frontend ajoutes pour API catalog et composables `useCmsData`
+- fait: guardrail supabase-direct valide, baseline reduite a `36` fichiers
+
 4. migrer `BrandEditPage`, `family/index`, `family/show`, `FamilyDiscountPage`
 
 ### lot 4 - opportunity/source/documents restants
@@ -235,6 +247,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - `2026-05-18 | data metier | supabase.from(... ) dans front/src/** | decision=migrer vers backend | objectif central du plan.3`
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`
 - `2026-05-18 | lot 0 | guardrail supabase-direct | decision=actif | toute nouvelle surface frontend utilisant supabase direct hors allowlist echoue via npm run check:supabase-direct`
+- `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData migres, baseline guardrail 36`
 
 ## criteres de done pour ce refactor.3
 
