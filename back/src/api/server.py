@@ -13,17 +13,11 @@ import traceback
 import urllib.parse
 from pathlib import Path
 
-from src.api.file.handler import FileHandler
-from src.api.router import RequestHandlers
-from src.api.auth.handler import AuthHandler
 from src.infrastructure.runtime.env_loader import load_runtime_env
 from src.infrastructure.runtime.http_server import ReusableThreadingHTTPServer
 from src.infrastructure.runtime.llm_health import test_llm_connection
-from src.lib.readers.csv import CSVReader
 from src.api.file.handler import handle_prompt_get
-from src.api.routes.dispatchers.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_request
-from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_request
 from src.api.routes.helpers.server_path_helpers import resolve_fs_path
 from src.api.routes.helpers.server_response_helpers import send_json, send_error
 
@@ -41,25 +35,6 @@ def create_rag_handler(config):
     """Factory to create HTTP request handler with config."""
     
     class Rag(http.server.SimpleHTTPRequestHandler):
-        # Shared resources (class variables)
-        _request_handlers = None
-        _auth_handler = None
-
-        @property
-        def auth_handler(self):
-            if self.__class__._auth_handler is None:
-                self.__class__._auth_handler = AuthHandler()
-                print("[Rag] Initialized AuthHandler")
-            return self.__class__._auth_handler
-
-        @property
-        def request_handlers(self):
-            if self.__class__._request_handlers is None:
-                self.__class__._request_handlers = RequestHandlers(
-                    FileHandler(config["STORAGE_DIR"], CSVReader())
-                )
-            return self.__class__._request_handlers
-
         def __init__(self, *args, **kwargs):
             self.config = config
             super().__init__(*args, **kwargs)
@@ -83,11 +58,6 @@ def create_rag_handler(config):
             """Handle DELETE method."""
             try:
                 print(f"[RAG] do_DELETE called with path: {self.path}", file=sys.stderr)
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_delete_request(self, parsed.path):
-                    return None
-
                 return send_error(self, 404, "Not found")
             except Exception as e:
                 traceback.print_exc()
@@ -116,11 +86,6 @@ def create_rag_handler(config):
         def do_POST(self):
             """Handle POST method."""
             try:
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_post_request(self, parsed):
-                    return None
-
                 return send_error(self, 404, "Not found")
             except Exception as e:
                 traceback.print_exc()
@@ -170,10 +135,6 @@ make_handler = create_rag_handler
 
 
 def main():
-    if not config["STORAGE_DIR"].exists():
-        print(f"Storage directory not found: {config['STORAGE_DIR']}")
-        sys.exit(1)
-    
     # Test LLM connection (non-blocking)
     test_llm_connection()
     
@@ -184,9 +145,8 @@ def main():
 
     Handler = create_rag_handler(config)
     with ReusableThreadingHTTPServer(('', config["PORT"]), Handler) as httpd:
-        print(f"CSV server on http://127.0.0.1:{config['PORT']}")
-        print(f"Storage dir: {config['STORAGE_DIR']}")
-        print(f"ex: http://127.0.0.1:{config['PORT']}/api/csv/sources")
+        print(f"Legacy prompt/static server on http://127.0.0.1:{config['PORT']}")
+        print(f"ex: http://127.0.0.1:{config['PORT']}/api/prompt/opportunity/source")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

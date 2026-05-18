@@ -26,6 +26,7 @@ Hors scope immediat (mis de cote pour cette phase):
 - `transport=fastapi`: endpoint deja servi par `back/src/api_fastapi/**`
 - `transport=legacy`: endpoint servi par `back/src/api/**`
 - `transport=unknown`: endpoint appele par le frontend mais non trouve tel quel dans les routers actuels
+- `tests legacy orphelins`: un test qui ne couvre plus aucun comportement supporte ni aucun symbole existant doit etre supprime, pas reanime artificiellement
 
 ## inventaire complet des appels frontend (scope demande)
 
@@ -163,6 +164,8 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | legacy-http | csv GET transport fallback | decision=supprimer | dispatch_get_data_routes et src.api.csv.routes retires du serveur legacy
 - 2026-05-18 | legacy-http | request handlers dead csv deps | decision=supprimer | RequestHandlers n'initialise plus CsvHandlers, DatabaseHandlers ni EmbeddingGenerator
 - 2026-05-18 | tests | request handlers legacy helpers | decision=supprimer | suppression des tests cibles sur des methodes RequestHandlers deja retirees du code courant
+- 2026-05-18 | legacy-http | post/delete transport fallback | decision=supprimer | server.py retourne 404 directement en POST/DELETE, dispatchers et wrappers invoice legacy retires
+- 2026-05-18 | legacy-http | server runtime dead deps | decision=supprimer | server.py n'initialise plus AuthHandler ni RequestHandlers, reduit au prompt/static GET
 
 ## criteres de done pour ce refactor.2
 
