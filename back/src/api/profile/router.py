@@ -17,7 +17,7 @@ def get_profile(user_id: str = Depends(get_auth_service)):
 @router.put("/api/profile", response_model=ProfileResponse)
 def update_profile(payload: ProfileUpdateRequest, user_id: str = Depends(get_auth_service)):
     db = DatabaseRepository()
-    updated = db.update_profile(user_id, payload.dict(exclude_unset=True))
+    updated = db.update_profile(user_id, payload.model_dump(exclude_unset=True))
     if not updated:
         raise HTTPException(status_code=404, detail="Profile not found")
     return ProfileResponse(**updated)
