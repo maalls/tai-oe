@@ -23,6 +23,7 @@ class _FakeDbOk:
                     "updated_at": "2026-01-02T00:00:00+00:00",
                 }
             ]
+        assert "COUNT(DISTINCT pf.product_id)" in query
         return [{"brand_count": 2, "family_count": 3, "product_count": 4}]
 
 

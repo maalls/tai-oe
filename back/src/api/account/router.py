@@ -14,7 +14,10 @@ def list_accounts(db=Depends(get_db)):
         """
         SELECT id, name, vat_number, siret, address_line1, address_line2,
                postal_code, city, country_code, payment_terms_default,
-               phone, website, industry, created_at, updated_at
+               NULL::text AS phone,
+               NULL::text AS website,
+               NULL::text AS industry,
+               created_at, updated_at
         FROM account
         ORDER BY created_at DESC
         """
@@ -27,7 +30,10 @@ def get_account(account_id: str, db=Depends(get_db)):
         """
         SELECT id, name, vat_number, siret, address_line1, address_line2,
                postal_code, city, country_code, payment_terms_default,
-               phone, website, industry, created_at, updated_at
+               NULL::text AS phone,
+               NULL::text AS website,
+               NULL::text AS industry,
+               created_at, updated_at
         FROM account
         WHERE id = %s
         """,
@@ -43,13 +49,15 @@ def create_account(payload: AccountCreate, db=Depends(get_db)):
         """
         INSERT INTO account (
             name, vat_number, siret, address_line1, address_line2,
-            postal_code, city, country_code, payment_terms_default,
-            phone, website, industry
+            postal_code, city, country_code, payment_terms_default
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id, name, vat_number, siret, address_line1, address_line2,
                   postal_code, city, country_code, payment_terms_default,
-                  phone, website, industry, created_at, updated_at
+                  NULL::text AS phone,
+                  NULL::text AS website,
+                  NULL::text AS industry,
+                  created_at, updated_at
         """,
         (
             payload.name,
@@ -61,9 +69,6 @@ def create_account(payload: AccountCreate, db=Depends(get_db)):
             payload.city,
             payload.country_code,
             payload.payment_terms_default,
-            payload.phone,
-            payload.website,
-            payload.industry,
         ),
     )
     return row[0]
@@ -82,9 +87,6 @@ def update_account(account_id: str, payload: AccountUpdate, db=Depends(get_db)):
         'city',
         'country_code',
         'payment_terms_default',
-        'phone',
-        'website',
-        'industry',
     ]:
         value = getattr(payload, field)
         if value is not None:
@@ -100,7 +102,10 @@ def update_account(account_id: str, payload: AccountUpdate, db=Depends(get_db)):
         WHERE id = %s
         RETURNING id, name, vat_number, siret, address_line1, address_line2,
                   postal_code, city, country_code, payment_terms_default,
-                  phone, website, industry, created_at, updated_at
+                  NULL::text AS phone,
+                  NULL::text AS website,
+                  NULL::text AS industry,
+                  created_at, updated_at
         """,
         tuple(values)
     )

@@ -7,6 +7,9 @@ from src.api.main import create_app
 class _FakeDbOk:
     def execute_dict_query(self, query, params=None):
         assert params == ("acc-1",)
+        assert "NULL::text AS phone" in query
+        assert "NULL::text AS website" in query
+        assert "NULL::text AS industry" in query
         return [
             {
                 "id": "acc-1",

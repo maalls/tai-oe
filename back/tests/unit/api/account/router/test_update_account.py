@@ -7,6 +7,11 @@ from src.api.main import create_app
 class _FakeDbOk:
     def execute_dict_query(self, query, params=None):
         assert "UPDATE account" in query
+        set_part = query.split("RETURNING", 1)[0]
+        assert "phone" not in set_part
+        assert "website" not in set_part
+        assert "industry" not in set_part
+        assert "NULL::text AS phone" in query
         return [
             {
                 "id": "acc-1",

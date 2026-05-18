@@ -19,7 +19,7 @@ def list_vendors(db=Depends(get_db)):
         SELECT v.id, v.name, v.email, v.phone, v.website, v.created_at, v.updated_at,
                COALESCE(COUNT(DISTINCT b.id), 0)::int AS brand_count,
                COALESCE(COUNT(DISTINCT f.id), 0)::int AS family_count,
-               COALESCE(COUNT(DISTINCT pf.id), 0)::int AS product_count
+             COALESCE(COUNT(DISTINCT pf.product_id), 0)::int AS product_count
         FROM vendor v
         LEFT JOIN brand b ON b.vendor_id = v.id
         LEFT JOIN family f ON f.brand_id = b.id
@@ -38,7 +38,7 @@ def get_vendor(vendor_id: str, db=Depends(get_db)):
         SELECT v.id, v.name, v.email, v.phone, v.website, v.created_at, v.updated_at,
                COALESCE(COUNT(DISTINCT b.id), 0)::int AS brand_count,
                COALESCE(COUNT(DISTINCT f.id), 0)::int AS family_count,
-               COALESCE(COUNT(DISTINCT pf.id), 0)::int AS product_count
+             COALESCE(COUNT(DISTINCT pf.product_id), 0)::int AS product_count
         FROM vendor v
         LEFT JOIN brand b ON b.vendor_id = v.id
         LEFT JOIN family f ON f.brand_id = b.id
@@ -98,7 +98,7 @@ def update_vendor(vendor_id: str, payload: VendorUpdate, db=Depends(get_db)):
         """
         SELECT COALESCE(COUNT(DISTINCT b.id), 0)::int AS brand_count,
                COALESCE(COUNT(DISTINCT f.id), 0)::int AS family_count,
-               COALESCE(COUNT(DISTINCT pf.id), 0)::int AS product_count
+             COALESCE(COUNT(DISTINCT pf.product_id), 0)::int AS product_count
         FROM vendor v
         LEFT JOIN brand b ON b.vendor_id = v.id
         LEFT JOIN family f ON f.brand_id = b.id
@@ -127,7 +127,7 @@ def list_vendor_brands(vendor_id: str, db=Depends(get_db)):
     rows = db.execute_dict_query(
         """
         SELECT b.id, b.name, b.marque, b.website, b.target_margin, b.minimum_margin,
-               COALESCE(COUNT(pf.id), 0)::int AS product_count
+             COALESCE(COUNT(pf.product_id), 0)::int AS product_count
         FROM brand b
         LEFT JOIN family f ON f.brand_id = b.id
         LEFT JOIN product_family pf ON pf.family_id = f.id

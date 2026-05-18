@@ -7,6 +7,7 @@ from src.api.vendor.router import get_db
 class _FakeDb:
     def execute_dict_query(self, query, params=None):
         assert "FROM brand b" in query
+        assert "COUNT(pf.product_id)" in query
         assert params == ("v-1",)
         return [
             {

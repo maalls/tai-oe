@@ -7,6 +7,11 @@ from src.api.main import create_app
 class _FakeDb:
     def execute_dict_query(self, query, params=None):
         assert "INSERT INTO account" in query
+        insert_part = query.split("VALUES", 1)[0]
+        assert "phone" not in insert_part
+        assert "website" not in insert_part
+        assert "industry" not in insert_part
+        assert "NULL::text AS phone" in query
         assert params[0] == "Acme"
         return [
             {
