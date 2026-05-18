@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 import urllib.parse
 import urllib.request
 
@@ -14,6 +14,31 @@ class UtilityService:
     def __init__(self, base_dir: Path, prompt_base_dir: Path):
         self.base_dir = base_dir
         self.prompt_base_dir = prompt_base_dir
+
+    def _resolve_storage_dirs(self) -> list[Path]:
+        configured = os.environ.get("STORAGE_DIR")
+        candidates: list[Path] = []
+
+        if configured:
+            configured_path = Path(configured)
+            if not configured_path.is_absolute():
+                candidates.append((self.base_dir / configured_path).resolve())
+                candidates.append((self.base_dir / "back" / configured_path).resolve())
+            else:
+                candidates.append(configured_path.resolve())
+
+        candidates.extend(
+            [
+                (self.base_dir / "back" / "var" / "storage").resolve(),
+                (self.base_dir / "var" / "storage").resolve(),
+            ]
+        )
+
+        deduplicated: list[Path] = []
+        for candidate in candidates:
+            if candidate not in deduplicated:
+                deduplicated.append(candidate)
+        return deduplicated
 
     def fetch_url(self, target_url: str, max_chars: int, timeout_ms: int) -> dict[str, Any]:
         with urllib.request.urlopen(target_url, timeout=timeout_ms / 1000) as resp:
@@ -155,6 +180,96 @@ class UtilityService:
             "started_at": payload.get("started_at"),
             "last_heartbeat": payload.get("last_heartbeat"),
             "mode": payload.get("mode"),
+        }
+
+    def find_storage_path(self, filename: str) -> Path | None:
+        storage_subdirs = ["rfp_uploads", "attachment", "attachments", "email", "quotes"]
+
+        for storage_dir in self._resolve_storage_dirs():
+            for subdir in storage_subdirs:
+                candidate = storage_dir / subdir / filename
+                if candidate.exists():
+                    return candidate
+
+            root_candidate = storage_dir / filename
+            if root_candidate.exists():
+                return root_candidate
+
+        return None
+
+    def storage_file_metadata(self, filename: str, storage_path: Path) -> dict[str, Any]:
+        file_ext = storage_path.suffix.lower()
+        content_type_map = {
+            ".pdf": "application/pdf",
+            ".txt": "text/plain; charset=utf-8",
+            ".doc": "application/msword",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls": "application/vnd.ms-excel",
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".zip": "application/zip",
+        }
+        content_type = content_type_map.get(file_ext, "application/octet-stream")
+        file_size = storage_path.stat().st_size
+        encoded_filename = urllib.parse.quote(filename)
+        disposition = "inline" if content_type == "application/pdf" else "attachment"
+
+        return {
+            "content_type": content_type,
+            "file_size": file_size,
+            "content_disposition": f"{disposition}; filename*=UTF-8''{encoded_filename}",
+        }
+
+    def resolve_storage_file(self, raw_filename: str) -> dict[str, Any]:
+        filename = self.sanitize_storage_filename(raw_filename)
+        storage_path = self.find_storage_path(filename)
+        if not storage_path or not storage_path.exists():
+            raise FileNotFoundError(f"Storage file not found: {filename}")
+
+        metadata = self.storage_file_metadata(filename, storage_path)
+        return {
+            "filename": filename,
+            "storage_path": storage_path,
+            "metadata": metadata,
+        }
+
+    def storage_read_chunks(self, storage_path: Path, chunk_size: int = 8192) -> Iterator[bytes]:
+        with open(storage_path, "rb") as file_handle:
+            while True:
+                chunk = file_handle.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+
+    @staticmethod
+    def storage_response_headers(metadata: dict[str, Any]) -> dict[str, str]:
+        return {
+            "Content-Type": metadata["content_type"],
+            "Content-Length": str(metadata["file_size"]),
+            "Accept-Ranges": "bytes",
+            "Content-Disposition": metadata["content_disposition"],
+        }
+
+    def storage_not_found_payload(self, raw_filename: str, include_body: bool = False) -> dict[str, Any]:
+        filename = self.sanitize_storage_filename(raw_filename)
+        payload: dict[str, Any] = {
+            "filename": filename,
+            "content_type": "text/plain",
+        }
+        if include_body:
+            payload["body"] = b"File not found"
+        return payload
+
+    @staticmethod
+    def storage_read_error_payload(error: Exception) -> dict[str, Any]:
+        message = f"Error reading file: {str(error)}"
+        return {
+            "content_type": "text/plain",
+            "body": message.encode("utf-8"),
+            "message": message,
         }
 
     @staticmethod

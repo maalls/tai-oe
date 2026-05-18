@@ -1,7 +1,7 @@
 """FastAPI utility router for fetch/curl/fs/prompt endpoints."""
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
 from src.api_fastapi.dependencies import get_utility_service
 from src.api_fastapi.utils.schemas import CurlRequest, FetchQuery, FsCreateRequest, FsReadRequest
@@ -128,3 +128,46 @@ def get_prompt_content(
         return JSONResponse({"error": str(exc)}, status_code=404)
     except Exception as exc:
         return JSONResponse({"error": f"Error reading prompt: {exc}"}, status_code=500)
+
+
+@router.head("/api/storage/{raw_filename:path}")
+def storage_head(
+    raw_filename: str,
+    utility_service: UtilityService = Depends(get_utility_service),
+):
+    try:
+        storage_info = utility_service.resolve_storage_file(raw_filename)
+    except FileNotFoundError:
+        not_found = utility_service.storage_not_found_payload(raw_filename, include_body=False)
+        return Response(status_code=404, media_type=not_found["content_type"])
+
+    metadata = storage_info["metadata"]
+    response_headers = utility_service.storage_response_headers(metadata)
+    return Response(status_code=200, headers=response_headers)
+
+
+@router.get("/api/storage/{raw_filename:path}")
+def storage_get(
+    raw_filename: str,
+    utility_service: UtilityService = Depends(get_utility_service),
+):
+    try:
+        storage_info = utility_service.resolve_storage_file(raw_filename)
+    except FileNotFoundError:
+        not_found = utility_service.storage_not_found_payload(raw_filename, include_body=True)
+        return Response(content=not_found["body"], status_code=404, media_type=not_found["content_type"])
+
+    storage_path = storage_info["storage_path"]
+    metadata = storage_info["metadata"]
+
+    try:
+        response_headers = utility_service.storage_response_headers(metadata)
+        return StreamingResponse(
+            utility_service.storage_read_chunks(storage_path),
+            status_code=200,
+            headers=response_headers,
+            media_type=metadata["content_type"],
+        )
+    except Exception as error:
+        error_payload = utility_service.storage_read_error_payload(error)
+        return Response(content=error_payload["body"], status_code=500, media_type=error_payload["content_type"])

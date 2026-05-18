@@ -84,6 +84,41 @@ class _FakeUtilityService:
             "mode": None,
         }
 
+    def resolve_storage_file(self, raw_filename: str) -> dict:
+        if raw_filename == "missing.txt":
+            raise FileNotFoundError("Storage file not found")
+        return {
+            "filename": raw_filename,
+            "storage_path": self.prompt_base_dir / "dummy.bin",
+            "metadata": {
+                "content_type": "text/plain",
+                "file_size": 5,
+                "content_disposition": "attachment; filename*=UTF-8''dummy.txt",
+            },
+        }
+
+    def storage_response_headers(self, metadata: dict) -> dict[str, str]:
+        return {
+            "Content-Type": metadata["content_type"],
+            "Content-Length": str(metadata["file_size"]),
+            "Accept-Ranges": "bytes",
+            "Content-Disposition": metadata["content_disposition"],
+        }
+
+    def storage_read_chunks(self, storage_path: Path):
+        _ = storage_path
+        yield b"hello"
+
+    def storage_not_found_payload(self, raw_filename: str, include_body: bool = False) -> dict:
+        payload = {"filename": raw_filename, "content_type": "text/plain"}
+        if include_body:
+            payload["body"] = b"File not found"
+        return payload
+
+    def storage_read_error_payload(self, error: Exception) -> dict:
+        _ = error
+        return {"content_type": "text/plain", "body": b"Error reading file: x", "message": "x"}
+
 
 def _client(tmp_path: Path) -> TestClient:
     prompt_base_dir = tmp_path / "prompts"
@@ -151,3 +186,29 @@ def test_email_fetch_loop_status_route_returns_payload(tmp_path: Path):
 
     assert response.status_code == 200
     assert response.json()["running"] is False
+
+
+def test_storage_head_route_returns_headers(tmp_path: Path):
+    client = _client(tmp_path)
+
+    response = client.head("/api/storage/dummy.txt")
+
+    assert response.status_code == 200
+    assert response.headers["content-length"] == "5"
+
+
+def test_storage_get_route_returns_content(tmp_path: Path):
+    client = _client(tmp_path)
+
+    response = client.get("/api/storage/dummy.txt")
+
+    assert response.status_code == 200
+    assert response.content == b"hello"
+
+
+def test_storage_get_route_returns_404_when_missing(tmp_path: Path):
+    client = _client(tmp_path)
+
+    response = client.get("/api/storage/missing.txt")
+
+    assert response.status_code == 404
