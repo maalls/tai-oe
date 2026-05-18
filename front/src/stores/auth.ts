@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { supabase } from '../lib/supabase';
+import { fetchProfile, updateProfile } from '../api/profile';
 import type { User, Session } from '@supabase/supabase-js';
 
 const user = ref<User | null>(null);
@@ -9,42 +10,6 @@ const loading = ref(true);
 export function useAuth() {
    const isAuthenticated = computed(() => !!user.value);
 
-   async function ensureProfileExists() {
-      if (!user.value) return;
-
-      try {
-         // Check if profile exists
-         const { data: existingProfile, error: fetchError } = await supabase
-            .from('profile')
-            .select('id')
-            .eq('id', user.value.id)
-            .maybeSingle();
-
-         if (fetchError) {
-            console.error('[Auth] Error checking profile:', fetchError);
-            return;
-         }
-
-         // Profile doesn't exist, create one
-         if (!existingProfile) {
-            const { error: insertError } = await (supabase.from('profile') as any).insert({
-               id: user.value.id,
-               email: user.value.email,
-               full_name: user.value.user_metadata?.full_name || '',
-            });
-
-            if (insertError) {
-               console.error('[Auth] Error creating profile:', insertError);
-            } else {
-               console.log('[Auth] Profile created successfully for:', user.value.email);
-            }
-         } else {
-            console.log('[Auth] Profile already exists for:', user.value.email);
-         }
-      } catch (error) {
-         console.error('[Auth] Unexpected error in ensureProfileExists:', error);
-      }
-   }
 
    async function signUp(email: string, password: string) {
       const { data, error } = await supabase.auth.signUp({
@@ -63,12 +28,7 @@ export function useAuth() {
       if (error) throw error;
       user.value = data.user;
       session.value = data.session;
-
-      // Ensure profile exists
-      if (data.user) {
-         await ensureProfileExists();
-      }
-
+      // Optionnel: fetch profile côté backend si besoin
       return data;
    }
 
@@ -81,8 +41,8 @@ export function useAuth() {
 
    async function updateDisplayName(displayName: string) {
       if (!user.value) throw new Error('No authenticated user');
-
       const fullName = displayName.trim();
+      // Met à jour le nom côté auth (supabase)
       const currentMetadata = (user.value.user_metadata || {}) as Record<string, any>;
       const { data, error } = await supabase.auth.updateUser({
          data: {
@@ -90,9 +50,7 @@ export function useAuth() {
             full_name: fullName,
          },
       });
-
       if (error) throw error;
-
       if (data?.user) {
          user.value = data.user;
          if (session.value) {
@@ -102,16 +60,9 @@ export function useAuth() {
             };
          }
       }
-
-      // Keep profile table aligned with auth metadata when available.
-      await (supabase.from('profile') as any).upsert(
-         {
-            id: user.value.id,
-            email: user.value.email,
-            full_name: fullName,
-         },
-         { onConflict: 'id' }
-      );
+      // Met à jour le profil côté backend
+      const token = await getValidToken();
+      await updateProfile(token, { full_name: fullName });
    }
 
    async function initialize() {
