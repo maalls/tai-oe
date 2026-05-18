@@ -6,10 +6,6 @@ class _HandlerStub:
 
 
 def test_dispatch_delete_request_delegates_quote_delete(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_delete_dispatch.dispatch_action_routes",
-        lambda *_args, **_kwargs: False,
-    )
     calls = []
 
     def _fake(handler, match):
@@ -26,10 +22,6 @@ def test_dispatch_delete_request_delegates_quote_delete(monkeypatch):
 
 
 def test_dispatch_delete_request_delegates_opportunity_delete(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_delete_dispatch.dispatch_action_routes",
-        lambda *_args, **_kwargs: False,
-    )
     calls = []
 
     def _fake(handler, match):
@@ -46,10 +38,6 @@ def test_dispatch_delete_request_delegates_opportunity_delete(monkeypatch):
 
 
 def test_dispatch_delete_request_delegates_document_delete(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_delete_dispatch.dispatch_action_routes",
-        lambda *_args, **_kwargs: False,
-    )
     calls = []
 
     def _fake(handler, match):
@@ -66,10 +54,6 @@ def test_dispatch_delete_request_delegates_document_delete(monkeypatch):
 
 
 def test_dispatch_delete_request_returns_false_when_unmatched(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_delete_dispatch.dispatch_action_routes",
-        lambda *_args, **_kwargs: False,
-    )
     handler = _HandlerStub()
 
     handled = dispatch_delete_request(handler, "/api/unknown")

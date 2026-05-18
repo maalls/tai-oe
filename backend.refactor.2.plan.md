@@ -157,6 +157,9 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | legacy-http | get mail dispatch stage | decision=supprimer | suppression de dispatch_get_mail_routes (no-op) du flux GET legacy
 - 2026-05-18 | legacy-http | post domain dispatch stage | decision=supprimer | suppression de dispatch_post_domain_routes et du branchement entity au niveau dispatcher
 - 2026-05-18 | legacy-http | head/patch no-op dispatchers | decision=supprimer | 404 gere directement dans src.api.server, modules de dispatch no-op retires
+- 2026-05-18 | fastapi | action frontend endpoints | decision=migrer | ajout du routeur FastAPI action pour execute/logs et CRUD, sans dependance a src.api
+- 2026-05-18 | legacy-http | action transport fallback | decision=supprimer | dispatch_action_routes retire du serveur legacy, routeur legacy action supprime
+- 2026-05-18 | fastapi | csv frontend endpoints | decision=migrer | ajout des routes FastAPI csv sources/files/preview/raw/source/download/query pour couvrir les appels frontend
 
 ## criteres de done pour ce refactor.2
 

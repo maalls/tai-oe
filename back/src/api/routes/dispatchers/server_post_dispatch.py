@@ -1,6 +1,5 @@
 """POST route dispatch for legacy API server."""
 
-from src.api.action.routes import dispatch_action_routes
 from src.api.invoice.routes import dispatch_invoice_routes
 
 
@@ -14,29 +13,9 @@ def dispatch_post_business_routes(handler, parsed) -> bool:
     return False
 
 
-def dispatch_action_post_routes(handler, parsed_path: str) -> bool:
-    """Dispatch action-specific POST regex routes and return True when handled."""
-    from types import SimpleNamespace
-
-    parsed = SimpleNamespace(path=parsed_path)
-    request_handlers = handler.request_handlers
-    return dispatch_action_routes(handler, "POST", parsed, {}, request_handlers)
-
-
-def dispatch_post_legacy_and_action_routes(handler, parsed_path: str) -> bool:
-    """Dispatch remaining legacy/action POST routes and return True when handled."""
-    if dispatch_action_post_routes(handler, parsed_path):
-        return True
-
-    return False
-
-
 def dispatch_post_request(handler, parsed) -> bool:
     """Dispatch POST routes and return True when handled."""
     if dispatch_post_business_routes(handler, parsed):
-        return True
-
-    if dispatch_post_legacy_and_action_routes(handler, parsed.path):
         return True
 
     return False

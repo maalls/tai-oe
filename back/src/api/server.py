@@ -23,7 +23,6 @@ from src.lib.readers.csv import CSVReader
 from src.api.file.handler import handle_prompt_get
 from src.api.routes.dispatchers.server_delete_dispatch import dispatch_delete_request
 from src.api.routes.dispatchers.server_get_dispatch import dispatch_get_request
-from src.api.routes.dispatchers.server_mutation_dispatch import dispatch_put_request
 from src.api.routes.dispatchers.server_post_dispatch import dispatch_post_request
 from src.api.routes.helpers.server_path_helpers import resolve_fs_path
 from src.api.routes.helpers.server_response_helpers import send_json, send_error
@@ -109,11 +108,6 @@ def create_rag_handler(config):
         def do_PUT(self):
             """Handle PUT method."""
             try:
-                parsed = urllib.parse.urlparse(self.path)
-
-                if dispatch_put_request(self, parsed.path):
-                    return None
-
                 return send_error(self, 404, "Not found")
             except Exception as e:
                 traceback.print_exc()

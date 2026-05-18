@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+from src.service.action.service import ActionService
 from src.service.auth.auth_service import AuthService
 from src.service.auth.oauth_service import OAuthService
 from src.service.csv.file_service import CsvFileService
@@ -16,6 +17,7 @@ from src.service.rfq.rfq_service import RfqService
 from src.service.rfq.rfq_source_service import RfqSourceService
 from src.service.utility.utility_service import UtilityService
 from src.repository.email_repository import EmailRepository
+from src.repository.database.repository import DatabaseRepository
 from src.repository.opportunity import OpportunityRepository
 from src.infrastructure.factory import ServiceFactory
 from src.lib.storage_paths import get_storage_path
@@ -24,6 +26,10 @@ from src.lib.readers.csv import CSVReader
 
 def get_auth_service() -> AuthService:
     return AuthService()
+
+
+def get_action_service() -> ActionService:
+    return ActionService()
 
 
 def get_oauth_service() -> OAuthService:
@@ -72,6 +78,10 @@ def get_file_handler() -> CsvFileService:
 
 def get_opportunity_repository() -> OpportunityRepository:
     return OpportunityRepository()
+
+
+def get_database_repository() -> DatabaseRepository:
+    return DatabaseRepository()
 
 
 def get_email_repository() -> EmailRepository:

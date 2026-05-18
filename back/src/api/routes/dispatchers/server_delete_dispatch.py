@@ -3,7 +3,6 @@
 import re
 from types import SimpleNamespace
 
-from src.api.action.routes import dispatch_action_routes
 from src.api.document.handler import handle_document_delete, handle_quote_delete
 from src.api.opportunity.handler import handle_opportunity_delete
 
@@ -11,10 +10,6 @@ from src.api.opportunity.handler import handle_opportunity_delete
 def dispatch_delete_request(handler, parsed_path: str) -> bool:
     """Dispatch DELETE routes and return True when handled."""
     parsed = SimpleNamespace(path=parsed_path)
-    request_handlers = handler.request_handlers
-
-    if dispatch_action_routes(handler, "DELETE", parsed, {}, request_handlers):
-        return True
 
     quote_delete_match = re.match(r"^/api/quote/([^/]+)$", parsed.path)
     if quote_delete_match:

@@ -1,6 +1,5 @@
 """GET route dispatch for legacy API server."""
 
-from src.api.action.routes import dispatch_action_routes
 from src.api.csv.routes import dispatch_csv_routes
 
 
@@ -21,24 +20,12 @@ def dispatch_get_data_routes(handler, parsed, qs) -> bool:
     return False
 
 
-def dispatch_get_action_download_routes(handler, parsed, qs, request_handlers) -> bool:
-    """Dispatch action/download GET routes and return True when handled."""
-    if dispatch_action_routes(handler, "GET", parsed, qs, request_handlers):
-        return True
-
-    return False
-
-
 def dispatch_get_request(handler, parsed, qs) -> bool:
     """Dispatch GET routes and return True when handled."""
     if dispatch_get_misc_routes(handler, parsed, qs):
         return True
 
     if dispatch_get_data_routes(handler, parsed, qs):
-        return True
-
-    request_handlers = handler.request_handlers
-    if dispatch_get_action_download_routes(handler, parsed, qs, request_handlers):
         return True
 
     return False

@@ -28,6 +28,12 @@ class CsvFileService:
 
         raise ValueError(f"File {candidate} not found or invalid")
 
+    def read_source_file(self, source: str) -> bytes:
+        candidate = (self.storage_dir / source).resolve()
+        if not candidate.exists() or candidate.suffix.lower() not in (".xls", ".xlsx"):
+            raise ValueError(f"Source file {candidate} not found or invalid")
+        return candidate.read_bytes()
+
     def list_sources(self) -> list:
         return sorted([p.name for p in self.storage_dir.glob("*.xls*")])
 
