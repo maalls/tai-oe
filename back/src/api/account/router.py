@@ -10,12 +10,29 @@ def get_db():
 
 @router.get("/api/account", response_model=List[AccountResponse])
 def list_accounts(db=Depends(get_db)):
-    rows = db.execute_dict_query("SELECT id, name, email, phone, address FROM account ORDER BY name")
+    rows = db.execute_dict_query(
+        """
+        SELECT id, name, vat_number, siret, address_line1, address_line2,
+               postal_code, city, country_code, payment_terms_default,
+               phone, website, industry, created_at, updated_at
+        FROM account
+        ORDER BY created_at DESC
+        """
+    )
     return rows
 
 @router.get("/api/account/{account_id}", response_model=AccountResponse)
 def get_account(account_id: str, db=Depends(get_db)):
-    rows = db.execute_dict_query("SELECT id, name, email, phone, address FROM account WHERE id = %s", (account_id,))
+    rows = db.execute_dict_query(
+        """
+        SELECT id, name, vat_number, siret, address_line1, address_line2,
+               postal_code, city, country_code, payment_terms_default,
+               phone, website, industry, created_at, updated_at
+        FROM account
+        WHERE id = %s
+        """,
+        (account_id,),
+    )
     if not rows:
         raise HTTPException(status_code=404, detail="Account not found")
     return rows[0]
@@ -24,11 +41,30 @@ def get_account(account_id: str, db=Depends(get_db)):
 def create_account(payload: AccountCreate, db=Depends(get_db)):
     row = db.execute_dict_query(
         """
-        INSERT INTO account (name, email, phone, address)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id, name, email, phone, address
+        INSERT INTO account (
+            name, vat_number, siret, address_line1, address_line2,
+            postal_code, city, country_code, payment_terms_default,
+            phone, website, industry
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id, name, vat_number, siret, address_line1, address_line2,
+                  postal_code, city, country_code, payment_terms_default,
+                  phone, website, industry, created_at, updated_at
         """,
-        (payload.name, payload.email, payload.phone, payload.address)
+        (
+            payload.name,
+            payload.vat_number,
+            payload.siret,
+            payload.address_line1,
+            payload.address_line2,
+            payload.postal_code,
+            payload.city,
+            payload.country_code,
+            payload.payment_terms_default,
+            payload.phone,
+            payload.website,
+            payload.industry,
+        ),
     )
     return row[0]
 
@@ -36,7 +72,20 @@ def create_account(payload: AccountCreate, db=Depends(get_db)):
 def update_account(account_id: str, payload: AccountUpdate, db=Depends(get_db)):
     fields = []
     values = []
-    for field in ['name', 'email', 'phone', 'address']:
+    for field in [
+        'name',
+        'vat_number',
+        'siret',
+        'address_line1',
+        'address_line2',
+        'postal_code',
+        'city',
+        'country_code',
+        'payment_terms_default',
+        'phone',
+        'website',
+        'industry',
+    ]:
         value = getattr(payload, field)
         if value is not None:
             fields.append(f"{field} = %s")
@@ -45,7 +94,14 @@ def update_account(account_id: str, payload: AccountUpdate, db=Depends(get_db)):
         raise HTTPException(status_code=400, detail="No fields to update")
     values.append(account_id)
     row = db.execute_dict_query(
-        f"UPDATE account SET {', '.join(fields)} WHERE id = %s RETURNING id, name, email, phone, address",
+        f"""
+        UPDATE account
+        SET {', '.join(fields)}, updated_at = now()
+        WHERE id = %s
+        RETURNING id, name, vat_number, siret, address_line1, address_line2,
+                  postal_code, city, country_code, payment_terms_default,
+                  phone, website, industry, created_at, updated_at
+        """,
         tuple(values)
     )
     if not row:
