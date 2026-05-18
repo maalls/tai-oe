@@ -19,9 +19,11 @@ from src.api.opportunity.schemas import (
     OpportunityAdvanceQuery,
     OpportunityAdvanceRequest,
     OpportunityCreateFromEmailRequest,
+    OpportunityExtractAuthorContactRequest,
     OpportunityCreateManualRequest,
     OpportunityQuery,
     OpportunitySearchQuery,
+    OpportunityUpdateNameRequest,
 )
 from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
@@ -231,6 +233,111 @@ def opportunities_create_manual(
         name=payload.name,
     )
     return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.put("/api/opportunity/{opportunity_id}/name")
+def opportunity_update_name(
+    opportunity_id: str,
+    payload: OpportunityUpdateNameRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    trimmed_name = (payload.name or "").strip()
+    rows = db.execute_dict_query(
+        """
+        UPDATE opportunity
+        SET name = %s, updated_at = now()
+        WHERE id = %s
+        RETURNING id, account_id, name
+        """,
+        (trimmed_name, opportunity_id),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    return rows[0]
+
+
+@router.post("/api/opportunity/{opportunity_id}/extract-author-contact")
+def opportunity_extract_author_contact(
+    opportunity_id: str,
+    payload: OpportunityExtractAuthorContactRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    rows = db.execute_dict_query(
+        "SELECT id, account_id FROM opportunity WHERE id = %s",
+        (opportunity_id,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    account_id = rows[0].get("account_id")
+    if not account_id:
+        raise HTTPException(status_code=400, detail="Opportunity has no account")
+
+    email_value = payload.from_email.strip().lower()
+    existing_contact_rows = db.execute_dict_query(
+        """
+        SELECT id
+        FROM contact
+        WHERE email = %s AND account_id = %s
+        LIMIT 1
+        """,
+        (email_value, account_id),
+    )
+
+    if existing_contact_rows:
+        contact_id = existing_contact_rows[0]["id"]
+        db.execute_dict_query(
+            "UPDATE contact SET name = %s WHERE id = %s",
+            ((payload.from_name or email_value), contact_id),
+        )
+    else:
+        created_contact_rows = db.execute_dict_query(
+            """
+            INSERT INTO contact (account_id, name, email)
+            VALUES (%s, %s, %s)
+            RETURNING id
+            """,
+            (account_id, (payload.from_name or email_value), email_value),
+        )
+        contact_id = created_contact_rows[0]["id"]
+
+    existing_participant_rows = db.execute_dict_query(
+        """
+        SELECT opportunity_id, contact_id
+        FROM opportunity_participant
+        WHERE opportunity_id = %s AND contact_id = %s
+        LIMIT 1
+        """,
+        (opportunity_id, contact_id),
+    )
+    linked = bool(existing_participant_rows)
+    if not linked:
+        db.execute_dict_query(
+            """
+            INSERT INTO opportunity_participant (opportunity_id, contact_id, role)
+            VALUES (%s, %s, %s)
+            """,
+            (opportunity_id, contact_id, "BUYER"),
+        )
+        linked = True
+
+    return {
+        "status": "ok",
+        "contact_id": contact_id,
+        "linked": linked,
+    }
 
 
 @router.post("/api/opportunities/create-from-email")

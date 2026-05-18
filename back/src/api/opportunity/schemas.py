@@ -28,3 +28,12 @@ class OpportunityCreateManualRequest(BaseModel):
 
 class OpportunityCreateFromEmailRequest(BaseModel):
     message_id: str
+
+
+class OpportunityUpdateNameRequest(BaseModel):
+    name: str
+
+
+class OpportunityExtractAuthorContactRequest(BaseModel):
+    from_email: str
+    from_name: str | None = None

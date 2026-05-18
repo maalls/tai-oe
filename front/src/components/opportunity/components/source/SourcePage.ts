@@ -1,11 +1,15 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../stores/auth';
-import { createAccount, listAccounts } from '../../../../api/account';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useOpportunitySource } from '../../../../composables/useOpportunitySource';
+import {
+   createManualOpportunity,
+   extractOpportunityAuthorContact,
+   getOpportunitySummary,
+   updateOpportunityName,
+} from '../../../../api/opportunity';
 
 export function useSourcePage() {
    const { t } = useI18n();
@@ -69,70 +73,18 @@ export function useSourcePage() {
       isExtracting.value = true;
       try {
          const { from_name, from_email } = sourceEmail.value;
-         const { account_id } = opportunity.value;
-
-         // Check if contact already exists
-         const { data: existingContact } = await supabase
-            .from('contact')
-            .select('id')
-            .eq('email', from_email)
-            .eq('account_id', account_id)
-            .single();
-
-         let contactId;
-         const existing = existingContact as any;
-
-         if (existing) {
-            // Update existing contact
-            const { error } = await (supabase.from('contact') as any)
-               .update({
-                  name: from_name || from_email,
-               })
-               .eq('id', existing.id);
-
-            if (error) {
-               console.error('[SourcePage] Error updating contact:', error);
-               alert('Error updating contact');
-               return;
-            }
-            contactId = existing.id;
-         } else {
-            // Create new contact
-            const { data: newContact, error } = await (supabase.from('contact') as any)
-               .insert({
-                  name: from_name || from_email,
-                  email: from_email,
-                  account_id: account_id,
-               })
-               .select('id')
-               .single();
-
-            if (error) {
-               console.error('[SourcePage] Error creating contact:', error);
-               alert('Error creating contact');
-               return;
-            }
-
-            contactId = (newContact as any)?.id;
+         const token = await getValidToken();
+         if (!token) {
+            alert('Unauthorized');
+            return;
          }
 
-         // Link contact to opportunity if not already linked
-         if (contactId) {
-            const { data: existingParticipant } = await supabase
-               .from('opportunity_participant')
-               .select('opportunity_id, contact_id')
-               .eq('opportunity_id', opportunityId.value)
-               .eq('contact_id', contactId)
-               .single();
-
-            if (!existingParticipant) {
-               await (supabase.from('opportunity_participant') as any).insert({
-                  opportunity_id: opportunityId.value,
-                  contact_id: contactId,
-                  role: 'BUYER',
-               });
-            }
-         }
+         await extractOpportunityAuthorContact(
+            opportunityId.value,
+            String(from_email || ''),
+            from_name || null,
+            token
+         );
 
          // Reload participants to show the newly added contact
          await loadParticipants();
@@ -196,59 +148,26 @@ export function useSourcePage() {
 
       if (opportunityId.value === 'new') {
          try {
-            const {
-               data: { user },
-            } = await supabase.auth.getUser();
-
-            if (!user) {
-               console.error('[SourcePage] No authenticated user');
+            const token = await getValidToken();
+            if (!token) {
+               console.error('[SourcePage] No authenticated token');
                opportunity.value = null;
                resetSourceState();
                isLoading.value = false;
                return;
             }
 
-            let accountId: string | null = null;
-            const accounts = await listAccounts();
-            const existingAccount = accounts.find((account) => account.name === 'Default Account');
+            const created = await createManualOpportunity('New Opportunity', token);
 
-            if (existingAccount) {
-               accountId = existingAccount.id;
-            } else {
-               try {
-                  const newAccount = await createAccount({
-                     name: 'Default Account',
-                  });
-                  accountId = newAccount.id;
-               } catch (accountError) {
-                  console.error('[SourcePage] Error creating account:', accountError);
-                  opportunity.value = null;
-                  resetSourceState();
-                  isLoading.value = false;
-                  return;
-               }
-            }
-
-            const { data, error } = await (supabase.from('opportunity') as any)
-               .insert({
-                  name: '',
-                  stage: 'NEW_LEAD',
-                  source: 'user_form',
-                  account_id: accountId,
-                  owner_user_id: user.id,
-               })
-               .select()
-               .single();
-
-            if (error || !data) {
-               console.error('[SourcePage] Error creating opportunity:', error);
+            if (!created?.id) {
+               console.error('[SourcePage] Error creating opportunity: no id returned');
                opportunity.value = null;
                resetSourceState();
                isLoading.value = false;
                return;
             }
 
-            await router.replace(`/opportunities/${(data as any).id}/source`);
+            await router.replace(`/opportunities/${created.id}/source`);
             return;
          } catch (error) {
             console.error('[SourcePage] Error creating new opportunity:', error);
@@ -260,19 +179,8 @@ export function useSourcePage() {
       }
 
       try {
-         const { data, error } = await supabase
-            .from('opportunity')
-            .select('account_id, name')
-            .eq('id', opportunityId.value)
-            .single();
-
-         if (error) {
-            console.error('[SourcePage] Error loading opportunity:', error);
-            return;
-         }
-
-         if (data) {
-            const opportunityData = data as any;
+         const opportunityData = await getOpportunitySummary(opportunityId.value);
+         if (opportunityData) {
             opportunity.value = opportunityData;
             opportunityName.value = opportunityData.name || '';
          }
@@ -299,14 +207,13 @@ export function useSourcePage() {
       nameError.value = '';
 
       try {
-         const { error } = await (supabase.from('opportunity') as any)
-            .update({ name: trimmed })
-            .eq('id', opportunityId.value);
-
-         if (error) {
-            nameError.value = error.message || 'Failed to update name.';
+         const token = await getValidToken();
+         if (!token) {
+            nameError.value = 'Unauthorized';
             return;
          }
+
+         await updateOpportunityName(opportunityId.value, trimmed, token);
 
          opportunity.value.name = trimmed;
          headerRef.value?.refreshOpportunity?.();

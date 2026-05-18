@@ -7,7 +7,7 @@
 | 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                           |
 | 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                     |
 | 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30] |
-| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + /api/opportunity/{id}/source + tests + baseline 29]                                                                                                              |
+| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + /api/opportunity/{id}/source + tests + baseline 28]                                                                                                 |
 | 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                                              |
 | 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                                              |
 
@@ -86,7 +86,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------ |
 | `front/src/components/mail/IndexPage.vue`                                      | `email_attachment`, realtime, auth session reuse                                  | mix `fastapi` + `supabase-direct` + `realtime-sdk` | backend email/doc + decision specifique realtime |
 | `front/src/composables/useOpportunitySource.ts`                                | `opportunity_participant`, `email_attachment`, `document`, `email`, `opportunity` | `fastapi` + storage HTTP                           | routers opportunity/document/email               |
-| `front/src/components/opportunity/components/source/SourcePage.ts`             | source opportunity/doc                                                            | mixte                                              | router opportunity/document                      |
+| `front/src/components/opportunity/components/source/SourcePage.ts`             | source opportunity/doc                                                            | `fastapi`                                          | router opportunity/document                      |
 | `front/src/components/opportunity/components/documents/DocumentsPage.vue`      | documents                                                                         | mixte                                              | router document                                  |
 | `front/src/components/opportunity/components/documents/DocumentDetailPage.vue` | document detail                                                                   | mixte                                              | router document                                  |
 
@@ -238,8 +238,9 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: nouvel endpoint backend `GET /api/opportunity/{id}/source`
 - fait: nouveau client frontend `front/src/api/opportunitySource.ts`
 - fait: `front/src/composables/useOpportunitySource.ts` migre vers API backend
+- fait: `front/src/components/opportunity/components/source/SourcePage.ts` migre vers `front/src/api/opportunity.ts`
 - fait: tests unitaires backend/frontend ajoutes pour cette API
-- fait: guardrail supabase-direct valide, baseline reduite a `29` fichiers
+- fait: guardrail supabase-direct valide, baseline reduite a `28` fichiers
 
 2. finir la migration des composants opportunity qui lisent encore `opportunity`, `document`, `email`, `participant` en direct
 3. centraliser les agregats source/document/participant cote backend
@@ -265,7 +266,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`
 - `2026-05-18 | lot 0 | guardrail supabase-direct | decision=actif | toute nouvelle surface frontend utilisant supabase direct hors allowlist echoue via npm run check:supabase-direct`
 - `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData/useBrandFamilyData/BrandEditPage/family/index/family/show/FamilyDiscountPage/useSuggestionSearch migres, baseline guardrail 30`
-- `2026-05-18 | lot 4 | source opportunity | decision=en cours | useOpportunitySource migre vers /api/opportunity/{id}/source, baseline guardrail 29`
+- `2026-05-18 | lot 4 | source opportunity | decision=en cours | useOpportunitySource + SourcePage migres vers /api/opportunity/{id}/source et /api/opportunity/{id}/name, baseline guardrail 28`
 
 ## criteres de done pour ce refactor.3
 
