@@ -33,8 +33,20 @@ export const useCmsData = () => {
             listCatalogFamilies(),
          ]);
 
-         brands.value = brandData || [];
-         families.value = familyData || [];
+         brands.value = (brandData || []).map((brand) => ({
+            id: brand.id,
+            name: brand.name || '',
+            website: brand.website ?? null,
+            email: brand.email ?? null,
+            phone: brand.phone ?? null,
+            created_at: brand.created_at ?? null,
+         }));
+         families.value = (familyData || []).map((family) => ({
+            id: family.id,
+            name: family.name || '',
+            type: family.type || '',
+            brand_id: family.brand_id,
+         }));
       } catch (error) {
          errorMessage.value = error instanceof Error ? error.message : 'Failed to load CMS data.';
       } finally {

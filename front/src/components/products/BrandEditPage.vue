@@ -50,6 +50,21 @@
                </div>
                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
+                     {{ t('products.brand.columns.vendor') }} *
+                  </label>
+                  <select
+                     v-model="formData.vendor_id"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     required
+                  >
+                     <option value="" disabled>{{ t('common.loading') }}</option>
+                     <option v-for="vendor in vendors" :key="vendor.id" :value="vendor.id">
+                        {{ vendor.name }}
+                     </option>
+                  </select>
+               </div>
+               <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
                      {{ t('products.brand.emailField') }}
                   </label>
                   <input
@@ -238,8 +253,15 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
-import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
+import {
+   createBrand,
+   getBrand,
+   listBrandFamilies,
+   updateBrand,
+   type BrandFamily,
+} from '../../api/brand';
+import { listVendors, type Vendor } from '../../api/vendor';
 
 const route = useRoute();
 const router = useRouter();
@@ -250,6 +272,7 @@ const isNewBrand = computed(() => !brandId.value);
 
 const formData = ref({
    name: '',
+   vendor_id: '',
    email: '',
    phone: '',
    website: '',
@@ -261,7 +284,8 @@ const originalData = ref({ ...formData.value });
 const isSaving = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
-const families = ref<any[]>([]);
+const families = ref<BrandFamily[]>([]);
+const vendors = ref<Vendor[]>([]);
 const showDiscountOnly = ref(true);
 const showForm = ref(false);
 
@@ -314,18 +338,11 @@ const loadBrand = async () => {
    if (!brandId.value) return;
 
    try {
-      const { data, error } = await supabase
-         .from('brand')
-         .select('*')
-         .eq('id', brandId.value)
-         .single();
-
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error('Brand not found');
-      const brand = data as any;
+      const brand = await getBrand(brandId.value);
 
       formData.value = {
          name: brand.name || '',
+         vendor_id: brand.vendor_id || '',
          email: brand.email || '',
          phone: brand.phone || '',
          website: brand.website || '',
@@ -335,16 +352,20 @@ const loadBrand = async () => {
       originalData.value = { ...formData.value };
 
       // Load related families
-      const { data: familiesData, error: familiesError } = await supabase
-         .from('family')
-         .select('*')
-         .eq('brand_id', brandId.value)
-         .order('name', { ascending: true });
-
-      if (familiesError) throw new Error(familiesError.message);
-      families.value = familiesData || [];
+      families.value = await listBrandFamilies(brandId.value);
    } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : 'Failed to load brand';
+   }
+};
+
+const loadVendors = async () => {
+   try {
+      vendors.value = await listVendors();
+      if (!formData.value.vendor_id && vendors.value.length > 0) {
+         formData.value.vendor_id = vendors.value[0]!.id;
+      }
+   } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : 'Failed to load vendors';
    }
 };
 
@@ -361,6 +382,7 @@ const saveBrand = async () => {
    try {
       const payload = {
          name: formData.value.name,
+         vendor_id: formData.value.vendor_id,
          email: formData.value.email || null,
          phone: formData.value.phone || null,
          website: formData.value.website || null,
@@ -369,18 +391,14 @@ const saveBrand = async () => {
       };
 
       if (isNewBrand.value) {
-         const { error } = await (supabase.from('brand') as any).insert([payload]);
-         if (error) throw new Error(error.message);
+         await createBrand(payload);
          successMessage.value = 'Brand created successfully';
          setTimeout(() => router.push('/vendors/brand'), 1500);
       } else {
          if (!brandId.value) {
             throw new Error('Missing brand ID');
          }
-         const { error } = await (supabase.from('brand') as any)
-            .update(payload)
-            .eq('id', brandId.value);
-         if (error) throw new Error(error.message);
+         await updateBrand(brandId.value, payload);
          successMessage.value = 'Brand updated successfully';
          originalData.value = { ...formData.value };
          showForm.value = false;
@@ -405,6 +423,8 @@ onMounted(() => {
    if (!isNewBrand.value && isEditModeQueryEnabled()) {
       showForm.value = true;
    }
+
+   loadVendors();
 
    if (!isNewBrand.value) {
       loadBrand();

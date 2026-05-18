@@ -63,11 +63,32 @@ export const useBrandFamilyData = () => {
          }, {});
 
          brands.value = (brandData || []).map((b: any) => ({
-            ...b,
+            id: b.id,
+            name: b.name || '',
+            vendor_id: b.vendor_id ?? null,
             vendor_name: b.vendor_id ? vendorMap[b.vendor_id] : null,
+            website: b.website ?? null,
+            email: b.email ?? null,
+            phone: b.phone ?? null,
+            minimum_margin: b.minimum_margin ?? null,
+            target_margin: b.target_margin ?? null,
+            created_at: b.created_at ?? null,
          }));
          families.value = (familyData || []).map((f: any) => ({
-            ...f,
+            id: f.id,
+            name: f.name || '',
+            code: f.code ?? null,
+            type: f.type || '',
+            brand_id: f.brand_id,
+            product_code: f.product_code ?? null,
+            quantity: f.quantity ?? null,
+            discount: f.discount ?? null,
+            minimum_margin: f.minimum_margin ?? null,
+            target_margin: f.target_margin ?? null,
+            unit: f.unit ?? null,
+            packing: f.packing ?? null,
+            lead_time_week: f.lead_time_week ?? null,
+            net_price: f.net_price ?? null,
             product_family_count: f.product_family_count ?? 0,
             product: f.product ?? null,
          }));

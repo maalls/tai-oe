@@ -2,17 +2,17 @@
 export interface Account {
    id: string;
    name: string;
-   vat_number?: string;
-   siret?: string;
-   address_line1?: string;
-   address_line2?: string;
-   postal_code?: string;
-   city?: string;
-   country_code?: string;
-   payment_terms_default?: string;
-   phone?: string;
-   website?: string;
-   industry?: string;
+   vat_number?: string | null;
+   siret?: string | null;
+   address_line1?: string | null;
+   address_line2?: string | null;
+   postal_code?: string | null;
+   city?: string | null;
+   country_code?: string | null;
+   payment_terms_default?: string | null;
+   phone?: string | null;
+   website?: string | null;
+   industry?: string | null;
    created_at: string;
    updated_at: string;
 }

@@ -2,9 +2,9 @@ export interface Contact {
    id: string;
    account_id: string;
    name: string;
-   email?: string;
-   phone?: string;
-   role_title?: string;
+   email?: string | null;
+   phone?: string | null;
+   role_title?: string | null;
    created_at: string;
    account_name?: string | null;
 }
