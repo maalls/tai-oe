@@ -7,7 +7,7 @@
 | 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                           |
 | 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                     |
 | 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30] |
-| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + tests + baseline 23]                                                                   |
+| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + tests + baseline 22]                                                    |
 | 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                                              |
 | 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                                              |
 
@@ -274,8 +274,14 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: tests unitaires backend/frontend ajoutes pour le nouvel endpoint/client
 - fait: guardrail supabase-direct valide, baseline reduite a `23` fichiers
 
-6. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
-7. centraliser les agregats source/document/participant cote backend
+6. fait: migrer `PipelinePage.vue` hors `supabase.from('opportunity'|'contact')`
+
+- fait: `front/src/components/opportunity/components/pipeline/PipelinePage.vue` migre vers clients API backend (`opportunity`, `account`, `contact`)
+- fait: tests unitaires frontend executes sur les clients API utilises
+- fait: guardrail supabase-direct valide, baseline reduite a `22` fichiers
+
+7. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
+8. centraliser les agregats source/document/participant cote backend
 
 ### lot 5 - invoices et quote read models
 

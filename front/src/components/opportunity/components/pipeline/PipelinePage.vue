@@ -24,7 +24,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
+import { getAccount } from '../../../../api/account';
+import { listContacts } from '../../../../api/contact';
+import { getOpportunitySummary } from '../../../../api/opportunity';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import StageManager from './components/StageManager.vue';
 import PipelineStagePanel from './PipelineStagePanel.vue';
@@ -40,32 +42,28 @@ const headerRef = ref<any>(null);
 
 const loadOpportunity = async () => {
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select(
-            'id, name, stage, status, currency, amount_estimated, probability, expected_close_date, created_at, updated_at, account_id, account:account_id(id, name)'
-         )
-         .eq('id', opportunityId)
-         .single();
+      const opportunityData = (await getOpportunitySummary(opportunityId)) as any;
 
-      if (error) throw error;
-
-      if (data) {
-         const opportunityData = data as any;
+      if (opportunityData) {
          opportunity.value = opportunityData;
-         account.value = opportunityData.account;
+         account.value = null;
+
+         if (opportunityData.account_id) {
+            try {
+               account.value = await getAccount(opportunityData.account_id);
+            } catch (accountError) {
+               console.error('[PipelinePage] Error loading account:', accountError);
+            }
+         }
 
          // Load contacts for this account
          if (opportunityData.account_id) {
-            const { data: contactsData, error: contactsError } = await supabase
-               .from('contact')
-               .select('id, name, email, phone, role_title')
-               .eq('account_id', opportunityData.account_id)
-               .order('name', { ascending: true });
-
-            if (!contactsError) {
-               contacts.value = contactsData || [];
-            }
+            const contactsData = await listContacts();
+            contacts.value = contactsData
+               .filter((contact) => contact.account_id === opportunityData.account_id)
+               .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+         } else {
+            contacts.value = [];
          }
       }
    } catch (error) {
