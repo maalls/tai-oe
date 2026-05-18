@@ -18,7 +18,8 @@ from src.api.vendor.router import router as vendor_router
 
 
 def create_app() -> FastAPI:
-        from src.api.profile.router import router as profile_router
+    from src.api.profile.router import router as profile_router
+    from src.api.account.router import router as account_router
     app = FastAPI(title="RAG Server API", version="0.1.0")
 
     app.add_middleware(
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(utils_router)
     app.include_router(vendor_router)
     app.include_router(profile_router)
+    app.include_router(account_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
