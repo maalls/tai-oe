@@ -9,6 +9,7 @@ from src.api.dependencies import get_auth_service, get_document_service
 from src.api.document.schemas import (
     DocumentExtractRfpRequest,
     DocumentUpdateContentRequest,
+    DocumentUpdateStatusRequest,
     DocumentUpdateStorageKeyRequest,
 )
 from src.repository.database.repository import DatabaseRepository
@@ -147,6 +148,33 @@ def document_update_storage_key(
         RETURNING id, opportunity_id, storage_key
         """,
         (payload.storage_key, document_id),
+    )
+    if not rows:
+        return JSONResponse({"error": "Document not found"}, status_code=404)
+    return rows[0]
+
+
+@router.put("/api/document/{document_id}/status")
+def document_update_status(
+    document_id: str,
+    payload: DocumentUpdateStatusRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    rows = db.execute_dict_query(
+        """
+        UPDATE document
+        SET status = %s,
+            updated_at = now()
+        WHERE id = %s
+        RETURNING id, opportunity_id, status
+        """,
+        (payload.status, document_id),
     )
     if not rows:
         return JSONResponse({"error": "Document not found"}, status_code=404)

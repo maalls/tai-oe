@@ -65,3 +65,25 @@ export async function clearDocumentStorageKey(
    }
    return await res.json();
 }
+
+export async function updateDocumentStatus(
+   documentId: string,
+   status: string,
+   token: string
+): Promise<OpportunityDocument> {
+   const res = await fetch(`/api/document/${documentId}/status`, {
+      method: 'PUT',
+      headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+   });
+   if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error(
+         payload?.message || payload?.error || 'Erreur lors de la mise à jour du statut du document'
+      );
+   }
+   return await res.json();
+}

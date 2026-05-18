@@ -121,7 +121,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../../../../../lib/supabase';
+import { useAuth } from '../../../../../../stores/auth';
+import { listOpportunityDocuments, updateDocumentStatus } from '../../../../../../api/document';
+import { advanceOpportunityStage } from '../../../../../../api/opportunity';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -133,6 +135,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const { getValidToken } = useAuth();
 const { t } = useI18n();
 const isLoadingInvoice = ref(true);
 const isUpdating = ref(false);
@@ -148,20 +151,9 @@ const loadInvoice = async () => {
 
    try {
       isLoadingInvoice.value = true;
-      const { data, error } = await supabase
-         .from('document')
-         .select('*')
-         .eq('opportunity_id', props.opportunity.id)
-         .eq('type', 'INVOICE')
-         .order('created_at', { ascending: false })
-         .limit(1);
-
-      if (error) {
-         console.error('[PipelineStageInvoiced] Error loading invoice:', error);
-         return;
-      }
-
-      invoice.value = data && data.length > 0 ? data[0] : null;
+      const documents = await listOpportunityDocuments(props.opportunity.id);
+      const invoices = documents.filter((document) => document.type === 'INVOICE');
+      invoice.value = invoices.length > 0 ? (invoices[0] as any) : null;
    } catch (error) {
       console.error('[PipelineStageInvoiced] Unexpected error loading invoice:', error);
    } finally {
@@ -214,20 +206,17 @@ const markAsPaid = async () => {
    paymentMessage.value = '';
 
    try {
-      const { error } = await (supabase.from('document') as any)
-         .update({ status: 'PAID' })
-         .eq('id', invoice.value.id);
+      const token = await getValidToken();
+      if (!token) throw new Error('Unauthorized');
 
-      if (error) throw error;
+      await updateDocumentStatus(invoice.value.id, 'PAID', token);
 
       invoice.value.status = 'PAID';
       paymentMessage.value = t('opportunities.pipeline.messages.invoiceMarkedPaidSuccess');
 
       // Optionally update opportunity stage to PAID
       if (props.opportunity?.id) {
-         await (supabase.from('opportunity') as any)
-            .update({ stage: 'PAID' })
-            .eq('id', props.opportunity.id);
+         await advanceOpportunityStage(props.opportunity.id, 'PAID');
       }
    } catch (error: any) {
       paymentError.value = error?.message || t('opportunities.errors.failedToUpdateInvoiceStatus');

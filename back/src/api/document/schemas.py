@@ -14,3 +14,7 @@ class DocumentUpdateContentRequest(BaseModel):
 
 class DocumentUpdateStorageKeyRequest(BaseModel):
     storage_key: str | None = None
+
+
+class DocumentUpdateStatusRequest(BaseModel):
+    status: str
