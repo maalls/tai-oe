@@ -214,12 +214,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../stores/auth';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import PdfViewer from '../../../PdfViewer.vue';
 import EmailSentView from '../../../shared/EmailSentView.vue';
 import { useI18n } from '../../../../i18n/useI18n';
+import { listContacts } from '../../../../api/contact';
+import { listOpportunityDocuments } from '../../../../api/document';
+import { getOpportunitySentEmail, getOpportunitySummary } from '../../../../api/opportunity';
+import { getOpportunitySource } from '../../../../api/opportunitySource';
 const route = useRoute();
 const router = useRouter();
 const { session, user } = useAuth();
@@ -273,23 +276,14 @@ const quotePreviewUrl = computed(() => {
 
 const loadQuoteDocument = async () => {
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('id, title, storage_key, status')
-         .eq('opportunity_id', opportunityId)
-         .eq('type', 'QUOTE')
-         .in('status', ['DRAFT', 'SENT'])
-         .order('created_at', { ascending: false })
-         .limit(1);
+      const documents = await listOpportunityDocuments(opportunityId);
+      const latestQuote =
+         documents.find(
+            (doc) => doc.type === 'QUOTE' && (doc.status === 'DRAFT' || doc.status === 'SENT')
+         ) || null;
 
-      if (error) {
-         console.error('[SendPage] Error loading quote document:', error);
-         return;
-      }
-      console.log('[SendPage] Loaded quote document:', data);
-
-      if (data && data.length > 0) {
-         quoteDocument.value = data[0];
+      if (latestQuote) {
+         quoteDocument.value = latestQuote as any;
          quoteDocument.value.pdf_url = `/api/quotes/download/${quoteDocument.value.storage_key}`;
          // Set default subject
          if (!emailForm.value.subject) {
@@ -297,6 +291,8 @@ const loadQuoteDocument = async () => {
                title: quoteDocument.value.title || t('opportunities.yourRequest'),
             });
          }
+      } else {
+         quoteDocument.value = null;
       }
    } catch (error) {
       console.error('[SendPage] Unexpected error loading quote document:', error);
@@ -329,21 +325,10 @@ const loadSentEmailRecord = async () => {
          return;
       }
 
-      const { data, error } = await supabase
-         .from('sent_email')
-         .select('*')
-         .eq('document_id', quoteDocument.value.id)
-         .order('sent_at', { ascending: false })
-         .limit(1)
-         .single();
-
-      if (error) {
-         console.error('[SendPage] Error loading sent email record:', error);
-         return;
-      }
+      const data = await getOpportunitySentEmail(opportunityId, quoteDocument.value.id);
 
       if (data) {
-         sentEmail.value = data;
+         sentEmail.value = data as any;
          console.log('[SendPage] Loaded sent email record:', data);
          emailForm.value = {
             to: (data as any).to_emails?.join(', ') || '',
@@ -361,16 +346,13 @@ const loadSentEmailRecord = async () => {
 
 const loadRecipientEmail = async () => {
    try {
-      // Load opportunity to get source email and stage
-      const { data: oppDataRaw, error: oppError } = await supabase
-         .from('opportunity')
-         .select('source, source_reference_id, name, stage, account_id')
-         .eq('id', opportunityId)
-         .single();
-      const oppData = oppDataRaw as any;
+      const [oppData, sourceData] = await Promise.all([
+         getOpportunitySummary(opportunityId),
+         getOpportunitySource(opportunityId),
+      ]);
 
-      if (oppError || !oppData) {
-         console.error('[SendPage] Error loading opportunity:', oppError);
+      if (!oppData) {
+         console.error('[SendPage] Error loading opportunity: empty payload');
          return;
       }
 
@@ -380,17 +362,11 @@ const loadRecipientEmail = async () => {
       console.log('[SendPage] Opportunity source:', oppData.source);
 
       // First, try to load BUYER participant email
-      const { data: buyerParticipants, error: participantError } = await supabase
-         .from('opportunity_participant')
-         .select('contact:contact_id(email, name)')
-         .eq('opportunity_id', opportunityId)
-         .eq('role', 'BUYER')
-         .limit(1);
+      const buyerContact = (sourceData?.participants || []).find(
+         (participant) => participant?.role === 'BUYER' && participant?.contact?.email
+      )?.contact as any;
 
-      console.log('[SendPage] BUYER participants:', buyerParticipants, 'error:', participantError);
-
-      if (!participantError && buyerParticipants && buyerParticipants.length > 0) {
-         const buyerContact = (buyerParticipants[0] as any)?.contact;
+      if (buyerContact) {
          if (buyerContact?.email && !emailForm.value.to) {
             emailForm.value.to = buyerContact.email;
             console.log('[SendPage] Auto-filled "To" from BUYER participant:', buyerContact.email);
@@ -411,15 +387,11 @@ const loadRecipientEmail = async () => {
 
       // Fallback: load first account contact
       if (oppData.account_id) {
-         const { data: accountContacts, error: accountContactError } = await supabase
-            .from('contact')
-            .select('email, name')
-            .eq('account_id', oppData.account_id)
-            .order('created_at', { ascending: true })
-            .limit(1);
-
-         if (!accountContactError && accountContacts && accountContacts.length > 0) {
-            const accountContact = accountContacts[0] as any;
+         const contacts = await listContacts();
+         const accountContact = contacts.find(
+            (contact) => contact.account_id === oppData.account_id
+         ) as any;
+         if (accountContact) {
             if (accountContact?.email && !emailForm.value.to) {
                emailForm.value.to = accountContact.email;
                console.log(
@@ -442,18 +414,9 @@ const loadRecipientEmail = async () => {
       }
 
       // Fallback: If source is email, load the email details
-      if (oppData.source === 'email' && oppData.source_reference_id) {
-         const { data: emailDataRaw, error: emailError } = await supabase
-            .from('email')
-            .select('from_email, from_name')
-            .eq('id', oppData.source_reference_id)
-            .single();
-         const emailData = emailDataRaw as any;
-
-         if (emailError || !emailData) {
-            console.error('[SendPage] Error loading source email:', emailError);
-            return;
-         }
+      if (oppData.source === 'email') {
+         const emailData = sourceData?.email as any;
+         if (!emailData) return;
 
          // Auto-fill "To" field only (not CC)
          if (emailData.from_email && !emailForm.value.to) {

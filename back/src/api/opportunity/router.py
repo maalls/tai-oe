@@ -434,3 +434,47 @@ def opportunity_send_quote(
         user_id=user_id,
     )
     return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.get("/api/opportunity/{opportunity_id}/sent-email")
+def opportunity_get_sent_email(
+    opportunity_id: str,
+    document_id: str | None = None,
+    db=Depends(get_db),
+):
+    target_document_id = document_id
+
+    if not target_document_id:
+        quote_rows = db.execute_dict_query(
+            """
+            SELECT id
+            FROM document
+            WHERE opportunity_id = %s
+              AND type = 'QUOTE'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (opportunity_id,),
+        )
+        if not quote_rows:
+            return {"sent_email": None}
+        target_document_id = quote_rows[0].get("id")
+
+    rows = db.execute_dict_query(
+        """
+        SELECT id,
+               document_id,
+               subject,
+               body,
+               from_email,
+               to_emails,
+               cc_emails,
+               sent_at
+        FROM sent_email
+        WHERE document_id = %s
+        ORDER BY sent_at DESC
+        LIMIT 1
+        """,
+        (target_document_id,),
+    )
+    return {"sent_email": rows[0] if rows else None}

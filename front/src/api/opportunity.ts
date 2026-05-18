@@ -4,6 +4,18 @@ export interface OpportunitySummary {
    name?: string | null;
    source?: string | null;
    source_reference_id?: string | null;
+   stage?: string | null;
+}
+
+export interface SentEmailRecord {
+   id: string;
+   document_id?: string | null;
+   subject?: string | null;
+   body?: string | null;
+   from_email?: string | null;
+   to_emails?: string[] | null;
+   cc_emails?: string[] | null;
+   sent_at?: string | null;
 }
 
 export async function getOpportunitySummary(opportunityId: string): Promise<OpportunitySummary> {
@@ -69,4 +81,15 @@ export async function extractOpportunityAuthorContact(
    });
    if (!res.ok) throw new Error('Erreur lors de l’extraction du contact auteur');
    return await res.json();
+}
+
+export async function getOpportunitySentEmail(
+   opportunityId: string,
+   documentId?: string
+): Promise<SentEmailRecord | null> {
+   const query = documentId ? `?document_id=${encodeURIComponent(documentId)}` : '';
+   const res = await fetch(`/api/opportunity/${opportunityId}/sent-email${query}`);
+   if (!res.ok) throw new Error('Erreur lors du chargement de l’email envoyé');
+   const payload = await res.json();
+   return (payload?.sent_email as SentEmailRecord | null) || null;
 }
