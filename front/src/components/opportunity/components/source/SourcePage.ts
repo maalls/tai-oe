@@ -2,6 +2,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../stores/auth';
+import { createAccount, listAccounts } from '../../../../api/account';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useOpportunitySource } from '../../../../composables/useOpportunitySource';
@@ -208,33 +209,24 @@ export function useSourcePage() {
             }
 
             let accountId: string | null = null;
-            const { data: existingAccount } = await supabase
-               .from('account')
-               .select('id')
-               .eq('name', 'Default Account')
-               .limit(1)
-               .maybeSingle();
+            const accounts = await listAccounts();
+            const existingAccount = accounts.find((account) => account.name === 'Default Account');
 
             if (existingAccount) {
-               accountId = (existingAccount as any).id;
+               accountId = existingAccount.id;
             } else {
-               const { data: newAccount, error: accountError } = await (
-                  supabase.from('account') as any
-               )
-                  .insert({
+               try {
+                  const newAccount = await createAccount({
                      name: 'Default Account',
-                  })
-                  .select()
-                  .single();
-
-               if (accountError) {
+                  });
+                  accountId = newAccount.id;
+               } catch (accountError) {
                   console.error('[SourcePage] Error creating account:', accountError);
                   opportunity.value = null;
                   resetSourceState();
                   isLoading.value = false;
                   return;
                }
-               accountId = (newAccount as any).id;
             }
 
             const { data, error } = await (supabase.from('opportunity') as any)
