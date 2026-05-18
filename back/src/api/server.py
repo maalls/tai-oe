@@ -154,22 +154,6 @@ def create_rag_handler(config):
             except Exception as e:
                 return send_error(self, 500, f"Internal server error 2: {e}")
 
-        def do_GET(self):
-            """Handle GET method."""
-            try:
-                parsed = urllib.parse.urlparse(self.path)
-                qs = urllib.parse.parse_qs(parsed.query)
-
-                if dispatch_get_request(self, parsed, qs):
-                    return None
-
-                return http.server.SimpleHTTPRequestHandler.do_GET(self)
-            except Exception as e:
-                traceback.print_exc()
-                print(f"[RAG] Error handling GET request: {e}")
-
-                return send_error(self, 500, f"Internal server error 3: {e}")
-
         def _handle_ddd_post_routes(self, parsed):
             """Handle incremental DDD POST routes through API adapters."""
             if not is_ddd_post_route(parsed.path):
