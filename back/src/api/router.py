@@ -3,7 +3,6 @@
 from dataclasses import asdict
 from enum import Enum
 from typing import Optional, Dict, Any, Iterator
-import urllib.request
 import urllib.parse
 from pathlib import Path
 
@@ -239,88 +238,6 @@ class RequestHandlers:
                 generate_quote_for_opportunity=self.business_handlers.handle_generate_quote_for_opportunity,
             )
         return self._opportunity_from_email_service
-
-    # Utility operations used by server/file routes
-    def handle_fetch_url(self, target_url: str, max_chars: int, timeout_ms: int) -> Dict:
-        """Handle /api/fetch request."""
-        with urllib.request.urlopen(target_url, timeout=timeout_ms / 1000) as resp:
-            content_type = resp.headers.get('Content-Type', '')
-            status = getattr(resp, 'status', 200)
-            raw = resp.read()
-
-        text = raw.decode('utf-8', errors='replace')
-        truncated = text[:max_chars]
-
-        return {
-            'status': status,
-            'ok': status >= 200 and status < 300,
-            'url': target_url,
-            'content_type': content_type,
-            'truncated': len(text) > max_chars,
-            'text': truncated,
-        }
-
-    def handle_curl_request(
-        self,
-        target_url: str,
-        method: str,
-        headers: Dict[str, str],
-        body_text: str,
-        max_chars: int,
-        timeout_ms: int,
-    ) -> Dict:
-        """Handle /api/curl request."""
-        data_bytes = body_text.encode('utf-8') if body_text is not None else None
-        req = urllib.request.Request(target_url, data=data_bytes, method=method)
-        for key, value in headers.items():
-            if isinstance(key, str) and isinstance(value, str):
-                req.add_header(key, value)
-
-        with urllib.request.urlopen(req, timeout=timeout_ms / 1000) as resp:
-            content_type = resp.headers.get('Content-Type', '')
-            status = getattr(resp, 'status', 200)
-            raw = resp.read()
-
-        text = raw.decode('utf-8', errors='replace')
-        truncated = text[:max_chars]
-
-        return {
-            'status': status,
-            'ok': status >= 200 and status < 300,
-            'url': target_url,
-            'content_type': content_type,
-            'truncated': len(text) > max_chars,
-            'text': truncated,
-        }
-
-    def handle_fs_create(self, target_path: Path, kind: str) -> Dict:
-        """Handle /api/fs/create request after path validation."""
-        if kind == 'file':
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            target_path.touch(exist_ok=True)
-            if not target_path.exists() or not target_path.is_file():
-                raise RuntimeError('file not created')
-        else:
-            target_path.mkdir(parents=True, exist_ok=True)
-            if not target_path.exists() or not target_path.is_dir():
-                raise RuntimeError('directory not created')
-
-        return {
-            'status': 'ok',
-            'path': str(target_path),
-            'type': 'file' if kind == 'file' else 'dir',
-        }
-
-    def handle_fs_read(self, target_path: Path, max_chars: int) -> Dict:
-        """Handle /api/fs/read request after path and existence validation."""
-        content = target_path.read_text(encoding='utf-8', errors='replace')
-        truncated = content[:max_chars]
-        return {
-            'status': 'ok',
-            'path': str(target_path),
-            'truncated': len(content) > max_chars,
-            'text': truncated,
-        }
 
     def handle_storage_find_path(self, storage_dir: Path, filename: str) -> Optional[Path]:
         """Locate a storage file across known subdirectories then root storage."""
