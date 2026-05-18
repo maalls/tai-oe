@@ -15,3 +15,16 @@ class OpportunityAdvanceQuery(BaseModel):
 class OpportunityAdvanceRequest(BaseModel):
     opportunity_id: str
     stage: str
+
+
+class OpportunitySearchQuery(BaseModel):
+    source_reference_id: str | None = None
+    name: str | None = None
+
+
+class OpportunityCreateManualRequest(BaseModel):
+    name: str
+
+
+class OpportunityCreateFromEmailRequest(BaseModel):
+    message_id: str

@@ -1,0 +1,150 @@
+# backend.refactor.2.plan
+
+## objectif
+
+Refactorer vers FastAPI a partir de l'inventaire des appels frontend pour les domaines:
+
+- opportunity
+- rfq
+- quote
+- client
+- contact
+- account
+- vendor
+- brand
+- family
+- product
+
+Le plan fixe une regle unique: **toutes les APIs HTTP listees ci-dessous doivent etre migrees vers FastAPI**.
+
+Hors scope immediat (mis de cote pour cette phase):
+
+- appels frontend en `supabase-direct`
+
+## regles de lecture
+
+- `transport=fastapi`: endpoint deja servi par `back/src/api_fastapi/**`
+- `transport=legacy`: endpoint servi par `back/src/api/**`
+- `transport=unknown`: endpoint appele par le frontend mais non trouve tel quel dans les routers actuels
+
+## inventaire complet des appels frontend (scope demande)
+
+### 1) appels HTTP frontend (fetch/apiUrl)
+
+| domaine       | endpoint (pattern)                           | methode | transport actuel | evidence frontend                                                                                                                                                                                     | backend owner actuel                         | decision               |
+| ------------- | -------------------------------------------- | ------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------- |
+| opportunity   | `/api/opportunities/search`                  | GET     | fastapi          | `front/src/components/opportunity/IndexPage.vue`                                                                                                                                                      | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| opportunity   | `/api/opportunities/create-manual`           | POST    | fastapi          | `front/src/components/opportunity/IndexPage.vue`                                                                                                                                                      | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| opportunity   | `/api/opportunities/create-from-email`       | POST    | fastapi          | `front/src/components/mail/IndexPage.vue`                                                                                                                                                             | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| opportunity   | `/api/opportunities/{ids}`                   | DELETE  | fastapi          | `front/src/components/opportunity/IndexPage.vue`                                                                                                                                                      | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| opportunity   | `/api/opportunities/{id}`                    | DELETE  | fastapi          | `front/src/components/opportunity/components/settings/SettingsPage.vue`                                                                                                                               | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| opportunity   | `/api/ddd/opportunity`                       | GET     | fastapi          | `front/src/components/opportunity/OpportunityHeader.vue`, `front/src/components/opportunity/components/settings/SettingsPage.vue` (via `fetchDddJson`)                                                | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| rfq           | `/api/opportunity/{id}/rfq/generate`         | POST    | fastapi          | `front/src/components/opportunity/components/quote/Quote.vue`                                                                                                                                         | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| rfq           | `/api/opportunity/{id}/rfq/create-from-text` | POST    | fastapi          | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| quote         | `/api/quote/{document_id}`                   | POST    | fastapi          | `front/src/components/opportunity/components/quote/Quote.vue`                                                                                                                                         | `back/src/api_fastapi/quote/router.py`       | migre                  |
+| quote         | `/api/quote/{document_id}/pdf`               | POST    | fastapi          | `front/src/components/opportunity/components/quote/Quote.vue`, `front/src/components/opportunity/components/send/SendPage.vue`                                                                        | `back/src/api_fastapi/quote/router.py`       | migre                  |
+| quote         | `/api/quotes/download/{filename}`            | GET     | fastapi          | `front/src/components/opportunity/components/send/SendPage.vue`, `front/src/components/opportunity/components/preview/PreviewPage.vue`                                                                | `back/src/api_fastapi/quote/router.py`       | migre                  |
+| quote         | `/api/opportunity/{id}/send-quote`           | POST    | fastapi          | `front/src/components/opportunity/components/send/SendPage.vue`                                                                                                                                       | `back/src/api_fastapi/opportunity/router.py` | migre                  |
+| quote         | `/api/quote/{opportunity_id}/generate`       | POST    | unknown          | `front/src/components/opportunity/components/pipeline/components/PipelineStageRfp/PipelineStageRfp.vue`                                                                                               | non trouve tel quel                          | migrer (a implementer) |
+| quote/invoice | `/api/quote/{id}/invoice`                    | POST    | legacy           | `front/src/components/opportunity/components/pipeline/components/PipelineStageAccepted/PipelineStageAccepted.vue`, `front/src/components/opportunity/components/pipeline/components/StageManager.vue` | `back/src/api/invoice/routes.py`             | migrer                 |
+| contact/doc   | `/api/document/extract-rfp`                  | POST    | legacy           | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api/document/routes.py`            | migrer                 |
+| contact/doc   | `/api/document/update-content`               | POST    | legacy           | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api/document/routes.py`            | migrer                 |
+| contact/doc   | `/api/document/{id}`                         | DELETE  | legacy           | `front/src/components/opportunity/components/documents/DocumentsPage.vue`                                                                                                                             | `back/src/api/document/routes.py`            | migrer                 |
+| contact/doc   | `/api/chat/attachments`                      | POST    | legacy           | `front/src/components/chat/ChatPanel.ts`                                                                                                                                                              | `back/src/api/document/routes.py`            | migrer                 |
+| vendor        | `/api/ddd/vendor`                            | GET     | fastapi          | `front/src/components/vendor/Edit.vue` (via `fetchDddJson`)                                                                                                                                           | `back/src/api_fastapi/vendor/router.py`      | migre                  |
+| product       | `/api/products`                              | POST    | legacy           | `front/src/components/products/edit.vue`                                                                                                                                                              | `back/src/api/product/routes.py`             | migrer                 |
+| product       | `/api/products/{id}`                         | GET/PUT | unknown          | `front/src/components/products/edit.vue`                                                                                                                                                              | non trouve tel quel dans routers             | migrer (a implementer) |
+
+### 2) parking lot (hors scope immediat): supabase-direct
+
+Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
+
+| domaine     | statut  |
+| ----------- | ------- |
+| opportunity | reporte |
+| rfq         | reporte |
+| quote       | reporte |
+| client      | reporte |
+| contact     | reporte |
+| account     | reporte |
+| vendor      | reporte |
+| brand       | reporte |
+| family      | reporte |
+| product     | reporte |
+
+## backlog refactor vers FastAPI (propose)
+
+### lot A - opportunity/rfq coeur
+
+1. fait: migrer `/api/opportunities/search` (GET)
+2. fait: migrer `/api/opportunities/create-manual` (POST)
+3. fait: migrer `/api/opportunities/create-from-email` (POST)
+4. fait: migrer `/api/opportunities/{id|ids}` (DELETE)
+5. fait: migrer `/api/opportunity/{id}/rfq/generate` et `/api/opportunity/{id}/rfq/create-from-text`
+
+### lot B - quote/invoice legacy restants
+
+1. fait: migrer `/api/opportunity/{id}/send-quote`
+2. migrer `/api/quote/{id}/invoice`
+3. migrer `/api/invoice/{id}/pdf`
+4. migrer `/api/invoice/{id}/send`
+5. implementer `/api/quote/{opportunity_id}/generate` (ou aligner le frontend sur un endpoint FastAPI equivalent)
+
+### lot C - document/contact flows
+
+1. migrer `/api/document/extract-rfp`
+2. migrer `/api/document/update-content`
+3. migrer `/api/document/{id}` (DELETE)
+4. migrer `/api/chat/attachments`
+
+### lot D - product/vendor/brand/family/account/contact
+
+1. preparer les endpoints HTTP manquants uniquement
+2. creer endpoints FastAPI minimaux pour operations critiques retenues
+3. migrer ecran par ecran avec tests de parite
+4. traiter `supabase-direct` dans une phase ulterieure dediee
+
+## suivi de progression (section de pilotage)
+
+### snapshot global
+
+- domaines cibles: 10
+- domaines clotures: 2/10
+- endpoints HTTP legacy a migrer (dans ce scope): 6
+- endpoints HTTP unknown a implementer: 2
+- supabase-direct: hors scope immediat (10 domaines reportes)
+
+### tableau de progression par domaine
+
+| domaine     | HTTP FastAPI  | HTTP legacy restant      | unknown | statut     | notes                                    |
+| ----------- | ------------- | ------------------------ | ------- | ---------- | ---------------------------------------- |
+| opportunity | oui           | non                      | non     | migre      | lot A migre en FastAPI                   |
+| rfq         | oui           | non                      | non     | migre      | routes opportunity/\*/rfq migrees        |
+| quote       | majoritaire   | oui                      | oui     | en cours   | quote/generate a clarifier               |
+| client      | non           | non                      | non     | a trancher | pas d'appel HTTP explicite detecte       |
+| contact     | non           | oui (document/chat lies) | non     | en cours   | definir perimetre api contact            |
+| account     | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
+| vendor      | oui (ddd get) | non                      | non     | en cours   | CRUD HTTP vendor a confirmer             |
+| brand       | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
+| family      | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
+| product     | partiel       | oui                      | oui     | en cours   | `/api/products/{id}` non resolu          |
+
+### journal des decisions
+
+- format attendu: `YYYY-MM-DD | domaine | endpoint | decision=migrer | rationale`
+- 2026-05-18 | global | tous les endpoints HTTP listes | decision=migrer | directive: toutes les API notees doivent etre migrees
+- 2026-05-18 | opportunity | /api/opportunities/search | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+- 2026-05-18 | opportunity | /api/opportunities/create-manual | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+- 2026-05-18 | opportunity | /api/opportunities/create-from-email | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+- 2026-05-18 | opportunity | /api/opportunities/{id|ids} | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+- 2026-05-18 | rfq | /api/opportunity/{id}/rfq/generate | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+- 2026-05-18 | rfq | /api/opportunity/{id}/rfq/create-from-text | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+- 2026-05-18 | quote | /api/opportunity/{id}/send-quote | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
+
+## criteres de done pour ce refactor.2
+
+1. chaque ligne HTTP de l'inventaire est en etat `migre`
+2. chaque endpoint `legacy` est migre vers FastAPI avec tests associes
+3. chaque endpoint `unknown` est implemente et utilise via FastAPI
+4. suppression finale du code legacy HTTP non utilise apres verification de parite
+5. ouvrir ensuite un plan dedie pour `supabase-direct`

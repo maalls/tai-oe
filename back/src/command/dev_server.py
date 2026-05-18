@@ -3,9 +3,9 @@
 Hot-reload server: automatically restart when Python files or config changes.
 
 Usage:
-    python -m src.command.dev_server          # Start with auto-reload
-    python -m src.command.dev_server --no-watch   # Run without watching (normal start)
-    python -m src.command.dev_server --fastapi    # Run FastAPI transport
+    python -m src.command.dev_server               # Start with auto-reload (FastAPI default)
+    python -m src.command.dev_server --no-watch    # Run without watching (FastAPI default)
+    python -m src.command.dev_server --legacy      # Run legacy transport
 
 Watches:
     - src/rag/*.py
@@ -191,7 +191,13 @@ def run_server(server_port, use_fastapi=False):
 def main():
     """Main hot-reload loop."""
     no_watch = "--no-watch" in sys.argv
-    use_fastapi = "--fastapi" in sys.argv or os.environ.get("USE_FASTAPI") == "1"
+    # FastAPI is the default transport. Use --legacy or USE_FASTAPI=0 to force legacy.
+    if "--legacy" in sys.argv:
+        use_fastapi = False
+    elif "--fastapi" in sys.argv:
+        use_fastapi = True
+    else:
+        use_fastapi = os.environ.get("USE_FASTAPI", "1") != "0"
     server_port = get_server_port()
     
     # Kill any existing process on configured server port

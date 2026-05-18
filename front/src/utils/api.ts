@@ -8,21 +8,22 @@ if (!rawApiBaseUrl || !rawApiBaseUrl.trim()) {
  * Generate API URL with /api path prefix
  * - Dev (localhost): relative path /api/... (proxied by Vite to http://localhost:8080)
  * - Production: full URL with /api prefix
- * 
+ *
  * Usage: apiUrl('embeddings') → /api/embeddings or https://gme.ai-oe.co/api/embeddings
  */
 export function apiUrl(path: string): string {
    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-   const isDev = import.meta.env.DEV;
-   const isLocalhost = rawApiBaseUrl.includes('localhost');
-   
-   if (isLocalhost) {
-      // Localhost: use relative /api path for Vite proxy (dev or preview)
+
+   // Relative base (/api): rely on same-origin/proxy routing.
+   if (!rawApiBaseUrl.startsWith('http')) {
       return `/api${normalizedPath}`;
    }
-   
-   // Production: use full URL with /api prefix
-   const baseUrl = rawApiBaseUrl.replace(/\/$/, '');
+
+   // Absolute base: call backend directly and avoid duplicate /api/api paths.
+   let baseUrl = rawApiBaseUrl.replace(/\/$/, '');
+   if (baseUrl.endsWith('/api')) {
+      baseUrl = baseUrl.slice(0, -4);
+   }
    return `${baseUrl}/api${normalizedPath}`;
 }
 
