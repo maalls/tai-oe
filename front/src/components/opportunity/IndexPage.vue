@@ -239,6 +239,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
+import { listAccounts } from '../../api/account';
 import { supabase } from '../../lib/supabase';
 import { apiUrl } from '../../utils/api';
 
@@ -352,19 +353,13 @@ const loadAccountNames = async (items: Opportunity[]) => {
    if (accountIds.length === 0) return;
 
    try {
-      const { data, error } = await supabase
-         .from('account')
-         .select('id, name')
-         .in('id', accountIds);
-
-      if (error) {
-         console.warn('[OpportunityPage] Failed to load account names:', error);
-         return;
-      }
+      const data = await listAccounts();
 
       const accountMap = new Map<string, string>();
-      (data || []).forEach((account: any) => {
-         if (account?.id) accountMap.set(account.id, account.name || '');
+      data.forEach((account) => {
+         if (account?.id && accountIds.includes(account.id)) {
+            accountMap.set(account.id, account.name || '');
+         }
       });
 
       items.forEach((opp) => {

@@ -244,6 +244,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../../../lib/supabase';
+import { getAccount } from '../../../../api/account';
 import { useI18n } from '../../../../i18n/useI18n';
 import { buildAuthHeaders } from '../../utils/auth';
 import SourceViewer from '../source/SourceViewer.vue';
@@ -455,14 +456,18 @@ const loadAccountAndContact = async () => {
       const accountId = (oppData as any)?.account_id;
 
       if (accountId) {
-         const { data: accountData, error: accountError } = await supabase
-            .from('account')
-            .select('id, name, vat_number, siret, city, country_code')
-            .eq('id', accountId)
-            .single();
-
-         if (!accountError && accountData) {
-            accountInfo.value = accountData as any;
+         try {
+            const accountData = await getAccount(accountId);
+            accountInfo.value = {
+               id: accountData.id,
+               name: accountData.name,
+               vat_number: accountData.vat_number,
+               siret: accountData.siret,
+               city: accountData.city,
+               country_code: accountData.country_code,
+            } as any;
+         } catch (accountError) {
+            console.error('[QuotePage] Error loading account details:', accountError);
          }
       }
 
