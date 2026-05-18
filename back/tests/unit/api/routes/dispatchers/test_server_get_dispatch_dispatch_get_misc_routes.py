@@ -31,23 +31,22 @@ def test_dispatch_get_misc_routes_delegates_product_router(monkeypatch):
     assert calls == [(handler, "GET", "/api/products", {"q": ["1"]}, handler.request_handlers)]
 
 
-def test_dispatch_get_misc_routes_delegates_file_router(monkeypatch):
+def test_dispatch_get_misc_routes_delegates_google_oauth_callback(monkeypatch):
     monkeypatch.setattr(
         "src.api.routes.dispatchers.server_get_dispatch.dispatch_product_routes",
         lambda *_args, **_kwargs: False,
     )
     calls = []
 
-    def _fake(handler, method, parsed, qs, request_handlers):
-        calls.append((handler, method, parsed.path, qs, request_handlers))
-        return True
+    def _fake(handler, qs):
+        calls.append((handler, qs))
 
-    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_file_routes", _fake)
+    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.handle_google_oauth_callback_get", _fake)
 
     handler = _HandlerStub()
-    parsed = SimpleNamespace(path="/api/storage/file.pdf")
+    parsed = SimpleNamespace(path="/api/google/oauth/callback")
 
-    handled = dispatch_get_misc_routes(handler, parsed, {})
+    handled = dispatch_get_misc_routes(handler, parsed, {"code": ["abc"]})
 
     assert handled is True
-    assert calls == [(handler, "GET", "/api/storage/file.pdf", {}, handler.request_handlers)]
+    assert calls == [(handler, {"code": ["abc"]})]
