@@ -3,7 +3,7 @@
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -27,12 +27,17 @@ from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
+from src.repository.database.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 from src.service.email.opportunity_from_email_service import OpportunityFromEmailService
 from src.service.email.quote_send_service import QuoteSendService
 from src.service.rfq.rfq_source_service import RfqSourceService
 
 router = APIRouter(tags=["opportunity"])
+
+
+def get_db():
+    return DatabaseRepository()
 
 
 def _serialize_opportunity(opportunity) -> dict:
@@ -53,6 +58,95 @@ def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> st
     if not is_valid or not user_data:
         return None
     return user_data.get("id")
+
+
+@router.get("/api/opportunity/{opportunity_id}/source")
+def get_opportunity_source(opportunity_id: str, db=Depends(get_db)):
+    rows = db.execute_dict_query(
+        """
+        SELECT id, source, source_reference_id
+        FROM opportunity
+        WHERE id = %s
+        """,
+        (opportunity_id,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    opportunity = rows[0]
+    source_type = opportunity.get("source")
+    source_reference_id = opportunity.get("source_reference_id")
+
+    participants_rows = db.execute_dict_query(
+        """
+        SELECT op.role,
+               op.contact_id,
+               c.id AS contact_id_ref,
+               c.name AS contact_name,
+               c.email AS contact_email
+        FROM opportunity_participant op
+        LEFT JOIN contact c ON c.id = op.contact_id
+        WHERE op.opportunity_id = %s
+        """,
+        (opportunity_id,),
+    )
+    participants = [
+        {
+            "role": row.get("role"),
+            "contact_id": row.get("contact_id"),
+            "contact": {
+                "id": row.get("contact_id_ref"),
+                "name": row.get("contact_name"),
+                "email": row.get("contact_email"),
+            }
+            if row.get("contact_id_ref")
+            else None,
+        }
+        for row in participants_rows
+    ]
+
+    source_email = None
+    source_document = None
+    attachments = []
+
+    if source_type == "email" and source_reference_id:
+        email_rows = db.execute_dict_query(
+            "SELECT * FROM email WHERE id = %s",
+            (source_reference_id,),
+        )
+        source_email = email_rows[0] if email_rows else None
+        if source_email and source_email.get("id"):
+            attachments = db.execute_dict_query(
+                """
+                SELECT id, filename, mime_type, size, storage_path
+                FROM email_attachment
+                WHERE email_id = %s
+                """,
+                (source_email["id"],),
+            )
+    elif source_type in ("rfp_upload", "user_form") and source_reference_id:
+        document_rows = db.execute_dict_query(
+            "SELECT * FROM document WHERE id = %s",
+            (source_reference_id,),
+        )
+        source_document = document_rows[0] if document_rows else None
+        attachments = db.execute_dict_query(
+            """
+            SELECT id, title, storage_key, created_at
+            FROM document
+            WHERE opportunity_id = %s
+              AND type = 'ATTACHMENT'
+            """,
+            (opportunity_id,),
+        )
+
+    return {
+        "source_type": source_type,
+        "email": source_email,
+        "document": source_document,
+        "participants": participants,
+        "attachments": attachments,
+    }
 
 
 @router.get("/api/opportunity")

@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { supabase } from '../lib/supabase';
+import { getOpportunitySource } from '../api/opportunitySource';
 
 type MaybeRef<T> = T | { value: T };
 
@@ -138,19 +138,19 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
       getAttachmentUrl,
    }));
 
+   const loadSourceSnapshot = async () => {
+      const payload = await getOpportunitySource(resolveOpportunityId());
+      sourceType.value = payload.source_type || null;
+      sourceEmail.value = payload.email || null;
+      sourceDocument.value = payload.document || null;
+      participants.value = payload.participants || [];
+      attachments.value = payload.attachments || [];
+   };
+
    const loadParticipants = async () => {
       try {
-         const { data, error } = await supabase
-            .from('opportunity_participant')
-            .select('role, contact_id, contact:contact_id(id, name, email)')
-            .eq('opportunity_id', resolveOpportunityId());
-
-         if (error) {
-            console.error('[OpportunitySource] Error loading participants:', error);
-            return;
-         }
-
-         participants.value = data || [];
+         const payload = await getOpportunitySource(resolveOpportunityId());
+         participants.value = payload.participants || [];
       } catch (error) {
          console.error('[OpportunitySource] Unexpected error loading participants:', error);
       }
@@ -159,17 +159,8 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
    const loadAttachments = async () => {
       if (sourceEmail.value?.id) {
          try {
-            const { data, error } = await supabase
-               .from('email_attachment')
-               .select('id, filename, mime_type, size, storage_path')
-               .eq('email_id', sourceEmail.value.id);
-
-            if (error) {
-               console.error('[OpportunitySource] Error loading email attachments:', error);
-               return;
-            }
-
-            attachments.value = data || [];
+            const payload = await getOpportunitySource(resolveOpportunityId());
+            attachments.value = payload.attachments || [];
          } catch (error) {
             console.error('[OpportunitySource] Unexpected error loading email attachments:', error);
          }
@@ -178,18 +169,8 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
 
       if (sourceDocument.value) {
          try {
-            const { data, error } = await supabase
-               .from('document')
-               .select('id, title, storage_key, created_at')
-               .eq('opportunity_id', resolveOpportunityId())
-               .eq('type', 'ATTACHMENT');
-
-            if (error) {
-               console.error('[OpportunitySource] Error loading document attachments:', error);
-               return;
-            }
-
-            const rows = (data as any[]) || [];
+            const payload = await getOpportunitySource(resolveOpportunityId());
+            const rows = payload.attachments || [];
 
             // Fetch file sizes from storage API for each attachment
             const attachmentsWithSize = await Promise.all(
@@ -230,19 +211,12 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
    };
 
    const loadSourceEmail = async (emailId: string) => {
+      if (!emailId) return;
       try {
-         const { data, error } = await supabase
-            .from('email')
-            .select('*')
-            .eq('id', emailId)
-            .single();
-
-         if (error) {
-            console.error('[OpportunitySource] Error loading source email:', error);
-            return;
+         await loadSourceSnapshot();
+         if (sourceEmail.value?.id !== emailId) {
+            sourceEmail.value = null;
          }
-
-         sourceEmail.value = data;
          sourceDocument.value = null;
          await loadAttachments();
       } catch (error) {
@@ -251,19 +225,15 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
    };
 
    const loadSourceDocument = async (documentId: string) => {
+      if (!documentId) return;
       try {
-         const { data, error } = await supabase
-            .from('document')
-            .select('*')
-            .eq('id', documentId)
-            .single();
-
-         if (error) {
-            console.error('[OpportunitySource] Error loading source document:', error);
+         await loadSourceSnapshot();
+         const doc = sourceDocument.value as any;
+         if (!doc || doc.id !== documentId) {
+            sourceDocument.value = null;
+            sourceEmail.value = null;
             return;
          }
-
-         const doc = data as any;
          sourceDocument.value = doc;
          sourceEmail.value = null;
 
@@ -297,18 +267,11 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
 
    const loadSourceFromOpportunity = async () => {
       try {
-         const { data, error } = await supabase
-            .from('opportunity')
-            .select('source, source_reference_id')
-            .eq('id', resolveOpportunityId())
-            .single();
-
-         if (error) {
-            console.error('[OpportunitySource] Error loading opportunity source:', error);
-            return;
-         }
-
-         const opp = data as any;
+         await loadSourceSnapshot();
+         const opp: any = {
+            source: sourceType.value,
+            source_reference_id: sourceEmail.value?.id || sourceDocument.value?.id || null,
+         };
          sourceType.value = opp?.source || null;
          if (opp?.source === 'email' && opp?.source_reference_id) {
             await loadSourceEmail(opp.source_reference_id);
@@ -319,7 +282,7 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
             await loadSourceDocument(opp.source_reference_id);
          }
 
-         await loadParticipants();
+         participants.value = participants.value || [];
       } catch (error) {
          console.error('[OpportunitySource] Unexpected error loading opportunity source:', error);
       }

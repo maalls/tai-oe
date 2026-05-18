@@ -29,5 +29,4 @@ src/components/opportunity/components/settings/SettingsPage.vue
 src/components/opportunity/components/source/SourcePage.ts
 src/components/products/DetailPage.vue
 src/components/products/IndexPage.vue
-src/composables/useOpportunitySource.ts
 src/stores/auth.ts
