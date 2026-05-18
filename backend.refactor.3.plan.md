@@ -133,9 +133,11 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 ### lot 0 - frontiere et instrumentation
 
-1. geler la creation de nouveaux acces `supabase-direct` metier dans `front/src/**`
-2. documenter la regle: `supabase.auth.*` autorise, `supabase.from(...)` metier interdit pour tout nouveau code
-3. ajouter, si utile, une verification simple CI ou grep cible qui remonte les nouveaux imports/queries directes
+1. fait: geler la creation de nouveaux acces `supabase-direct` metier dans `front/src/**`
+2. fait: documenter la regle: `supabase.auth.*` autorise, `supabase.from(...)` metier interdit pour tout nouveau code
+3. fait: ajouter une verification outillee via `front/scripts/check-supabase-direct.mjs`
+4. fait: figer une baseline dans `front/config/supabase-direct-allowlist.txt` (43 fichiers)
+5. fait: exposer la verification via `npm run check:supabase-direct` dans `front/package.json`
 
 ### lot 1 - auth/profil et garde de session
 
@@ -182,6 +184,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - `2026-05-18 | auth | supabase.auth.* | decision=conserver provisoirement | sortir du flux supabase-direct ne signifie pas forcement remplacer Supabase Auth dans cette phase`
 - `2026-05-18 | data metier | supabase.from(... ) dans front/src/** | decision=migrer vers backend | objectif central du plan.3`
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`
+- `2026-05-18 | lot 0 | guardrail supabase-direct | decision=actif | toute nouvelle surface frontend utilisant supabase direct hors allowlist echoue via npm run check:supabase-direct`
 
 ## criteres de done pour ce refactor.3
 
