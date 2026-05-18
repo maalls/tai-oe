@@ -1,4 +1,4 @@
-"""FastAPI RFP router for DDD RFP endpoints."""
+"""FastAPI RFP router."""
 
 from dataclasses import asdict
 
@@ -17,7 +17,7 @@ def _serialize_rfp(rfp) -> dict:
     return jsonable_encoder(asdict(rfp))
 
 
-@router.get("/api/ddd/rfp")
+@router.get("/api/rfp")
 def get_rfp(
     query: RfpQuery = Depends(),
     service_factory: ServiceFactory = Depends(get_service_factory),
@@ -33,7 +33,7 @@ def get_rfp(
         return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
 
 
-@router.get("/api/ddd/rfp/submit")
+@router.get("/api/rfp/submit")
 def submit_rfp_get(
     query: RfpQuery = Depends(),
     service_factory: ServiceFactory = Depends(get_service_factory),
@@ -49,7 +49,7 @@ def submit_rfp_get(
         return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
 
 
-@router.post("/api/ddd/rfp/submit")
+@router.post("/api/rfp/submit")
 def submit_rfp_post(
     payload: RfpSubmitRequest,
     service_factory: ServiceFactory = Depends(get_service_factory),

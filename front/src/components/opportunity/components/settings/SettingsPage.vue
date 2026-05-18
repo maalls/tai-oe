@@ -110,7 +110,7 @@ const loadOpportunity = async () => {
    errorMessage.value = '';
 
    try {
-      const result = await fetchDddJson<{ status: string; opportunity?: any }>('ddd/opportunity', {
+      const result = await fetchDddJson<{ status: string; opportunity?: any }>('opportunity', {
          opportunity_id: opportunityId.value,
       });
 

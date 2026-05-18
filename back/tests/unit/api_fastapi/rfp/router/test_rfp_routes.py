@@ -49,7 +49,7 @@ def _client() -> TestClient:
 def test_get_rfp_requires_query_param():
     client = _client()
 
-    response = client.get("/api/ddd/rfp")
+    response = client.get("/api/rfp")
 
     assert response.status_code == 400
     assert response.json()["message"] == "Missing rfp_id"
@@ -58,7 +58,7 @@ def test_get_rfp_requires_query_param():
 def test_get_rfp_returns_payload():
     client = _client()
 
-    response = client.get("/api/ddd/rfp?rfp_id=rfp-1")
+    response = client.get("/api/rfp?rfp_id=rfp-1")
 
     assert response.status_code == 200
     assert response.json()["rfp"]["id"] == "rfp-1"
@@ -68,7 +68,7 @@ def test_get_rfp_returns_payload():
 def test_submit_rfp_get_returns_payload():
     client = _client()
 
-    response = client.get("/api/ddd/rfp/submit?rfp_id=rfp-1")
+    response = client.get("/api/rfp/submit?rfp_id=rfp-1")
 
     assert response.status_code == 200
     assert response.json()["rfp"]["status"] == "SUBMITTED"
@@ -77,7 +77,7 @@ def test_submit_rfp_get_returns_payload():
 def test_submit_rfp_post_returns_payload():
     client = _client()
 
-    response = client.post("/api/ddd/rfp/submit", json={"rfp_id": "rfp-1"})
+    response = client.post("/api/rfp/submit", json={"rfp_id": "rfp-1"})
 
     assert response.status_code == 200
     assert response.json()["rfp"]["status"] == "SUBMITTED"
@@ -86,7 +86,7 @@ def test_submit_rfp_post_returns_payload():
 def test_get_rfp_returns_error_when_service_fails():
     client = _client()
 
-    response = client.get("/api/ddd/rfp?rfp_id=missing")
+    response = client.get("/api/rfp?rfp_id=missing")
 
     assert response.status_code == 400
     assert response.json()["status"] == "error"

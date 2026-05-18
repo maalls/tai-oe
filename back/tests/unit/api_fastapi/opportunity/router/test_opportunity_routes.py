@@ -51,7 +51,7 @@ def _client() -> TestClient:
 def test_get_opportunity_requires_query_param():
     client = _client()
 
-    response = client.get("/api/ddd/opportunity")
+    response = client.get("/api/opportunity")
 
     assert response.status_code == 400
     assert response.json()["message"] == "Missing opportunity_id"
@@ -60,7 +60,7 @@ def test_get_opportunity_requires_query_param():
 def test_get_opportunity_returns_payload():
     client = _client()
 
-    response = client.get("/api/ddd/opportunity?opportunity_id=opp-1")
+    response = client.get("/api/opportunity?opportunity_id=opp-1")
 
     assert response.status_code == 200
     assert response.json()["opportunity"]["id"] == "opp-1"
@@ -70,7 +70,7 @@ def test_get_opportunity_returns_payload():
 def test_advance_opportunity_get_requires_stage():
     client = _client()
 
-    response = client.get("/api/ddd/opportunity/advance?opportunity_id=opp-1")
+    response = client.get("/api/opportunity/advance?opportunity_id=opp-1")
 
     assert response.status_code == 400
     assert response.json()["message"] == "Missing stage"
@@ -79,7 +79,7 @@ def test_advance_opportunity_get_requires_stage():
 def test_advance_opportunity_get_returns_payload():
     client = _client()
 
-    response = client.get("/api/ddd/opportunity/advance?opportunity_id=opp-1&stage=NEGOTIATION")
+    response = client.get("/api/opportunity/advance?opportunity_id=opp-1&stage=NEGOTIATION")
 
     assert response.status_code == 200
     assert response.json()["opportunity"]["stage"] == "NEGOTIATION"
@@ -88,7 +88,7 @@ def test_advance_opportunity_get_returns_payload():
 def test_advance_opportunity_post_returns_payload():
     client = _client()
 
-    response = client.post("/api/ddd/opportunity/advance", json={"opportunity_id": "opp-1", "stage": "COMMITMENT"})
+    response = client.post("/api/opportunity/advance", json={"opportunity_id": "opp-1", "stage": "COMMITMENT"})
 
     assert response.status_code == 200
     assert response.json()["opportunity"]["stage"] == "COMMITMENT"
@@ -97,7 +97,7 @@ def test_advance_opportunity_post_returns_payload():
 def test_get_opportunity_returns_error_when_service_fails():
     client = _client()
 
-    response = client.get("/api/ddd/opportunity?opportunity_id=missing")
+    response = client.get("/api/opportunity?opportunity_id=missing")
 
     assert response.status_code == 400
     assert response.json()["status"] == "error"

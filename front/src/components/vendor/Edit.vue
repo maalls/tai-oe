@@ -216,7 +216,7 @@ const loadVendor = async () => {
          return;
       }
 
-      const result = await fetchDddJson<{ status: string; vendor?: any }>('ddd/vendor', {
+      const result = await fetchDddJson<{ status: string; vendor?: any }>('vendor', {
          vendor_id: vendorId.value,
       });
 

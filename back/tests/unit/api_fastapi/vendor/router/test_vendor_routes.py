@@ -40,7 +40,7 @@ def _client() -> TestClient:
 def test_vendor_requires_vendor_id_query_param():
     client = _client()
 
-    response = client.get("/api/ddd/vendor")
+    response = client.get("/api/vendor")
 
     assert response.status_code == 400
     assert response.json()["message"] == "Missing vendor_id"
@@ -49,7 +49,7 @@ def test_vendor_requires_vendor_id_query_param():
 def test_vendor_returns_payload():
     client = _client()
 
-    response = client.get("/api/ddd/vendor?vendor_id=v-1")
+    response = client.get("/api/vendor?vendor_id=v-1")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
@@ -59,7 +59,7 @@ def test_vendor_returns_payload():
 def test_vendor_returns_error_when_service_fails():
     client = _client()
 
-    response = client.get("/api/ddd/vendor?vendor_id=missing")
+    response = client.get("/api/vendor?vendor_id=missing")
 
     assert response.status_code == 400
     assert response.json()["status"] == "error"

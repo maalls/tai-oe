@@ -382,7 +382,7 @@ const loadOpportunity = async () => {
          return;
       }
 
-      const result = await fetchDddJson<{ status: string; opportunity?: any }>('ddd/opportunity', {
+      const result = await fetchDddJson<{ status: string; opportunity?: any }>('opportunity', {
          opportunity_id: props.opportunityId,
       });
 

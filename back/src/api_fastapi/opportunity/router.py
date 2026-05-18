@@ -1,4 +1,4 @@
-"""FastAPI opportunity router for DDD and legacy-migrated opportunity endpoints."""
+"""FastAPI opportunity router."""
 
 from dataclasses import asdict
 from typing import Any
@@ -55,7 +55,7 @@ def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> st
     return user_data.get("id")
 
 
-@router.get("/api/ddd/opportunity")
+@router.get("/api/opportunity")
 def get_opportunity(
     query: OpportunityQuery = Depends(),
     service_factory: ServiceFactory = Depends(get_service_factory),
@@ -71,7 +71,7 @@ def get_opportunity(
         return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
 
 
-@router.get("/api/ddd/opportunity/advance")
+@router.get("/api/opportunity/advance")
 def advance_opportunity_get(
     query: OpportunityAdvanceQuery = Depends(),
     service_factory: ServiceFactory = Depends(get_service_factory),
@@ -89,7 +89,7 @@ def advance_opportunity_get(
         return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
 
 
-@router.post("/api/ddd/opportunity/advance")
+@router.post("/api/opportunity/advance")
 def advance_opportunity_post(
     payload: OpportunityAdvanceRequest,
     service_factory: ServiceFactory = Depends(get_service_factory),

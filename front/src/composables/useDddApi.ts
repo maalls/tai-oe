@@ -6,7 +6,7 @@ type QueryValue = string | number | boolean | null | undefined;
 export function useDddApi() {
    const { getValidToken } = useAuth();
 
-   async function fetchDddJson<T>(
+   async function fetchApiJson<T>(
       path: string,
       query: Record<string, QueryValue> = {}
    ): Promise<T> {
@@ -35,7 +35,15 @@ export function useDddApi() {
       return payload as T;
    }
 
+   async function fetchDddJson<T>(
+      path: string,
+      query: Record<string, QueryValue> = {}
+   ): Promise<T> {
+      return fetchApiJson<T>(path, query);
+   }
+
    return {
+      fetchApiJson,
       fetchDddJson,
    };
 }
