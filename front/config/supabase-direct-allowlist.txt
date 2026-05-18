@@ -28,7 +28,6 @@ src/components/opportunity/components/send/SendPage.vue
 src/components/opportunity/components/settings/SettingsPage.vue
 src/components/opportunity/components/source/SourcePage.ts
 src/components/products/DetailPage.vue
-src/components/products/FamilyDiscountPage.vue
 src/components/products/IndexPage.vue
 src/composables/useOpportunitySource.ts
 src/stores/auth.ts

@@ -179,7 +179,12 @@
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
-import { supabase } from '../../lib/supabase';
+import {
+   getFamily,
+   getFamilyDiscountLines,
+   saveFamilyDiscountLines,
+   type FamilyDiscountLine,
+} from '../../api/family';
 import { useI18n } from '../../i18n/useI18n';
 
 interface FamilyRecord {
@@ -190,17 +195,7 @@ interface FamilyRecord {
    brand_id: string;
 }
 
-interface DocumentLineRecord {
-   id: string;
-   position: number;
-   quantity: number;
-   unit: string;
-   unit_price_excl_tax: number;
-   discount_rate: number;
-   sku: string | null;
-   line_total_excl_tax: number;
-   isNew?: boolean;
-}
+type DocumentLineRecord = FamilyDiscountLine;
 
 interface NewLineInput {
    sku: string;
@@ -246,14 +241,7 @@ const loadFamily = async () => {
    errorMessage.value = '';
 
    try {
-      const { data, error } = await supabase
-         .from('family')
-         .select('id,name,code,type,brand_id')
-         .eq('id', familyId)
-         .single();
-
-      if (error) throw error;
-      family.value = data as FamilyRecord;
+      family.value = (await getFamily(familyId)) as FamilyRecord;
       await loadDocument();
       await loadLines();
    } catch (error) {
@@ -266,19 +254,11 @@ const loadFamily = async () => {
 
 const loadDocument = async () => {
    documentId.value = null;
-   if (!family.value?.brand_id) return;
+   if (!family.value?.id) return;
 
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('id')
-         .eq('type', 'FAMILY_DISCOUNT')
-         .eq('external_ref', family.value.brand_id)
-         .limit(1);
-
-      if (error) throw error;
-      const rows = (data as any[]) || [];
-      documentId.value = rows.length > 0 ? String(rows[0].id) : null;
+      const response = await getFamilyDiscountLines(family.value.id);
+      documentId.value = response.document_id;
    } catch (error) {
       errorMessage.value =
          error instanceof Error ? error.message : t('products.familyDiscount.loadFailed');
@@ -295,16 +275,10 @@ const loadLines = async () => {
    }
 
    try {
-      const { data, error } = await supabase
-         .from('document_line')
-         .select(
-            'id,position,quantity,unit,unit_price_excl_tax,discount_rate,sku,line_total_excl_tax'
-         )
-         .eq('document_id', docId)
-         .order('position', { ascending: true });
-
-      if (error) throw error;
-      lines.value = (data as DocumentLineRecord[]) || [];
+      if (!family.value?.id) return;
+      const response = await getFamilyDiscountLines(family.value.id);
+      documentId.value = response.document_id;
+      lines.value = (response.lines as DocumentLineRecord[]) || [];
    } catch (error) {
       linesError.value = error instanceof Error ? error.message : 'Failed to load discount lines.';
    }
@@ -347,49 +321,20 @@ const saveLines = async () => {
    try {
       const docId = documentId.value;
       if (!docId) return;
-      const existingLines = lines.value.filter((line) => !line.isNew);
-      const newLines = lines.value.filter((line) => line.isNew);
-
-      if (existingLines.length) {
-         const updates = existingLines.map((line) => ({
-            id: line.id,
-            document_id: docId,
-            position: line.position,
-            description: line.sku?.trim() || 'Discount line',
-            sku: line.sku?.trim() || null,
-            quantity: line.quantity || 1,
-            unit: line.unit || 'U',
-            unit_price_excl_tax: line.unit_price_excl_tax || 0,
-            discount_rate: line.discount_rate ?? 0,
-            line_total_excl_tax: computeLineTotal(line),
-         }));
-
-         const { error: upsertError } = await (supabase.from('document_line') as any).upsert(
-            updates,
-            { onConflict: 'id' }
-         );
-
-         if (upsertError) throw upsertError;
-      }
-
-      if (newLines.length) {
-         const inserts = newLines.map((line) => ({
-            document_id: docId,
-            position: line.position,
-            description: line.sku?.trim() || 'Discount line',
-            sku: line.sku?.trim() || null,
-            quantity: line.quantity || 1,
-            unit: line.unit || 'U',
-            unit_price_excl_tax: line.unit_price_excl_tax || 0,
-            discount_rate: line.discount_rate ?? 0,
-            line_total_excl_tax: computeLineTotal(line),
-         }));
-
-         const { error } = await (supabase.from('document_line') as any).insert(inserts);
-         if (error) throw error;
-      }
-
-      await loadLines();
+      if (!family.value?.id) return;
+      const payloadLines = lines.value.map((line) => ({
+         id: line.id,
+         position: line.position,
+         sku: line.sku?.trim() || null,
+         quantity: line.quantity || 1,
+         unit: line.unit || 'U',
+         unit_price_excl_tax: line.unit_price_excl_tax || 0,
+         discount_rate: line.discount_rate ?? 0,
+         line_total_excl_tax: computeLineTotal(line),
+      }));
+      const response = await saveFamilyDiscountLines(family.value.id, payloadLines);
+      documentId.value = response.document_id;
+      lines.value = response.lines;
    } catch (error) {
       linesError.value = error instanceof Error ? error.message : 'Failed to save lines.';
    } finally {

@@ -51,6 +51,29 @@ def _sync_net_price_family_link(db: DatabaseRepository, family_id: str, product_
     )
 
 
+def _resolve_family_discount_document_id(db: DatabaseRepository, family_id: str) -> tuple[str, str | None]:
+    rows = db.execute_dict_query(
+        """
+        SELECT f.id AS family_id,
+               (
+                   SELECT d.id
+                   FROM document d
+                   WHERE d.type = 'FAMILY_DISCOUNT' AND d.external_ref = f.brand_id
+                   ORDER BY d.created_at ASC
+                   LIMIT 1
+               ) AS document_id
+        FROM family f
+        WHERE f.id = %s
+        """,
+        (family_id,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail='Family not found')
+
+    row = rows[0]
+    return row['family_id'], row.get('document_id')
+
+
 @router.get('/api/family/{family_id}')
 def get_family(family_id: str, db=Depends(get_db)):
     rows = db.execute_dict_query(
@@ -155,5 +178,114 @@ def delete_family(family_id: str, db=Depends(get_db)):
     )
     rows = db.execute_dict_query('DELETE FROM family WHERE id = %s RETURNING id', (family_id,))
     if not rows:
-      raise HTTPException(status_code=404, detail='Family not found')
+        raise HTTPException(status_code=404, detail='Family not found')
     return {'id': rows[0]['id']}
+
+
+@router.get('/api/family/{family_id}/discount-lines')
+def list_family_discount_lines(family_id: str, db=Depends(get_db)):
+    _, document_id = _resolve_family_discount_document_id(db, family_id)
+    if not document_id:
+        return {'document_id': None, 'lines': []}
+
+    rows = db.execute_dict_query(
+        """
+        SELECT id,
+               position,
+               quantity,
+               unit,
+               unit_price_excl_tax,
+               discount_rate,
+               sku,
+               line_total_excl_tax
+        FROM document_line
+        WHERE document_id = %s
+        ORDER BY position ASC
+        """,
+        (document_id,),
+    )
+    return {'document_id': document_id, 'lines': rows}
+
+
+@router.put('/api/family/{family_id}/discount-lines')
+def save_family_discount_lines(family_id: str, payload: dict, db=Depends(get_db)):
+    _, document_id = _resolve_family_discount_document_id(db, family_id)
+    if not document_id:
+        raise HTTPException(status_code=400, detail='No FAMILY_DISCOUNT document found for this family')
+
+    lines = payload.get('lines') or []
+    for line in lines:
+        line_id = str(line.get('id') or '')
+        params = (
+            line.get('position'),
+            line.get('sku') or None,
+            line.get('quantity') or 1,
+            line.get('unit') or 'U',
+            line.get('unit_price_excl_tax') or 0,
+            line.get('discount_rate') or 0,
+            line.get('line_total_excl_tax') or 0,
+            document_id,
+        )
+        if line_id and not line_id.startswith('new-'):
+            db.execute_dict_query(
+                """
+                UPDATE document_line
+                SET position = %s,
+                    description = COALESCE(NULLIF(%s, ''), 'Discount line'),
+                    sku = %s,
+                    quantity = %s,
+                    unit = %s,
+                    unit_price_excl_tax = %s,
+                    discount_rate = %s,
+                    line_total_excl_tax = %s
+                WHERE id = %s AND document_id = %s
+                """,
+                (
+                    line.get('position'),
+                    line.get('sku') or None,
+                    line.get('sku') or None,
+                    line.get('quantity') or 1,
+                    line.get('unit') or 'U',
+                    line.get('unit_price_excl_tax') or 0,
+                    line.get('discount_rate') or 0,
+                    line.get('line_total_excl_tax') or 0,
+                    line_id,
+                    document_id,
+                ),
+            )
+        else:
+            db.execute_dict_query(
+                """
+                INSERT INTO document_line (
+                    document_id,
+                    position,
+                    description,
+                    sku,
+                    quantity,
+                    unit,
+                    unit_price_excl_tax,
+                    discount_rate,
+                    line_total_excl_tax
+                )
+                VALUES (%s, %s, COALESCE(NULLIF(%s, ''), 'Discount line'), %s, %s, %s, %s, %s, %s)
+                """,
+                (document_id, *params),
+            )
+
+    rows = db.execute_dict_query(
+        """
+        SELECT id,
+               position,
+               quantity,
+               unit,
+               unit_price_excl_tax,
+               discount_rate,
+               sku,
+               line_total_excl_tax
+        FROM document_line
+        WHERE document_id = %s
+        ORDER BY position ASC
+        """,
+        (document_id,),
+    )
+    return {'document_id': document_id, 'lines': rows}

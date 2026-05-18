@@ -35,6 +35,23 @@ export interface FamilyCreate {
 
 export type FamilyUpdate = Partial<FamilyCreate>;
 
+export interface FamilyDiscountLine {
+   id: string;
+   position: number;
+   quantity: number;
+   unit: string;
+   unit_price_excl_tax: number;
+   discount_rate: number;
+   sku: string | null;
+   line_total_excl_tax: number;
+   isNew?: boolean;
+}
+
+export interface FamilyDiscountLinesResponse {
+   document_id: string | null;
+   lines: FamilyDiscountLine[];
+}
+
 export async function getFamily(id: string): Promise<Family> {
    const res = await fetch(`/api/family/${id}`);
    if (!res.ok) throw new Error('Famille introuvable');
@@ -66,4 +83,23 @@ export async function deleteFamily(id: string): Promise<void> {
       method: 'DELETE',
    });
    if (!res.ok) throw new Error('Erreur lors de la suppression de la famille');
+}
+
+export async function getFamilyDiscountLines(id: string): Promise<FamilyDiscountLinesResponse> {
+   const res = await fetch(`/api/family/${id}/discount-lines`);
+   if (!res.ok) throw new Error('Erreur lors du chargement des lignes de remise');
+   return await res.json();
+}
+
+export async function saveFamilyDiscountLines(
+   id: string,
+   lines: FamilyDiscountLine[]
+): Promise<FamilyDiscountLinesResponse> {
+   const res = await fetch(`/api/family/${id}/discount-lines`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines }),
+   });
+   if (!res.ok) throw new Error('Erreur lors de la sauvegarde des lignes de remise');
+   return await res.json();
 }
