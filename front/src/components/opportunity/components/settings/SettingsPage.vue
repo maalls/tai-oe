@@ -84,13 +84,13 @@ import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../stores/auth';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
-import { useDddApi } from '../../../../composables/useDddApi';
+import { useApiQuery } from '../../../../composables/useApiQuery';
 
 const route = useRoute();
 const router = useRouter();
 const { session } = useAuth();
 const { t } = useI18n();
-const { fetchDddJson } = useDddApi();
+const { fetchApiJson } = useApiQuery();
 
 const opportunityId = ref(route.params.id as string);
 const opportunity = ref<any>(null);
@@ -110,7 +110,7 @@ const loadOpportunity = async () => {
    errorMessage.value = '';
 
    try {
-      const result = await fetchDddJson<{ status: string; opportunity?: any }>('opportunity', {
+      const result = await fetchApiJson<{ status: string; opportunity?: any }>('opportunity', {
          opportunity_id: opportunityId.value,
       });
 

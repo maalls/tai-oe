@@ -157,7 +157,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
-import { useDddApi } from '../../composables/useDddApi';
+import { useApiQuery } from '../../composables/useApiQuery';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
 
@@ -174,7 +174,7 @@ interface Brand {
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
-const { fetchDddJson } = useDddApi();
+const { fetchApiJson } = useApiQuery();
 
 const isNewVendor = computed(() => route.params.id === 'new');
 const vendorId = computed(() => (isNewVendor.value ? null : (route.params.id as string)));
@@ -216,7 +216,7 @@ const loadVendor = async () => {
          return;
       }
 
-      const result = await fetchDddJson<{ status: string; vendor?: any }>('vendor', {
+      const result = await fetchApiJson<{ status: string; vendor?: any }>('vendor', {
          vendor_id: vendorId.value,
       });
 

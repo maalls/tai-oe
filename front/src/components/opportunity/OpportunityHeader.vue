@@ -228,10 +228,10 @@
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
-import { useDddApi } from '../../composables/useDddApi';
+import { useApiQuery } from '../../composables/useApiQuery';
 
 const { t, te } = useI18n();
-const { fetchDddJson } = useDddApi();
+const { fetchApiJson } = useApiQuery();
 
 import { useRouter, useRoute } from 'vue-router';
 
@@ -382,7 +382,7 @@ const loadOpportunity = async () => {
          return;
       }
 
-      const result = await fetchDddJson<{ status: string; opportunity?: any }>('opportunity', {
+      const result = await fetchApiJson<{ status: string; opportunity?: any }>('opportunity', {
          opportunity_id: props.opportunityId,
       });
 
