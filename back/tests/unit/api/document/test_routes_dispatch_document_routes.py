@@ -7,38 +7,12 @@ class _HandlerStub:
     request_handlers = object()
 
 
-def test_dispatch_document_routes_get_download(monkeypatch):
-    calls = []
-
-    def _fake(handler, parsed_path, qs, request_handlers):
-        calls.append((handler, parsed_path, qs, request_handlers))
-
-    monkeypatch.setattr("src.api.document.routes.handle_documents_download_get", _fake)
-
-    handler = _HandlerStub()
-    parsed = SimpleNamespace(path="/api/documents/download/doc-1.pdf")
-
-    handled = dispatch_document_routes(handler, "GET", parsed, {"inline": ["1"]}, handler.request_handlers)
-
-    assert handled is True
-    assert calls == [(handler, "/api/documents/download/doc-1.pdf", {"inline": ["1"]}, handler.request_handlers)]
-
-
-def test_dispatch_document_routes_post_extract_rfp(monkeypatch):
-    calls = []
-
-    def _fake(handler):
-        calls.append(handler)
-
-    monkeypatch.setattr("src.api.document.routes.handle_document_extract_rfp_post", _fake)
-
+def test_dispatch_document_routes_non_delete_returns_false():
     handler = _HandlerStub()
     parsed = SimpleNamespace(path="/api/document/extract-rfp")
 
-    handled = dispatch_document_routes(handler, "POST", parsed, {}, handler.request_handlers)
-
-    assert handled is True
-    assert calls == [handler]
+    assert dispatch_document_routes(handler, "GET", parsed, {"inline": ["1"]}, handler.request_handlers) is False
+    assert dispatch_document_routes(handler, "POST", parsed, {}, handler.request_handlers) is False
 
 
 def test_dispatch_document_routes_delete(monkeypatch):

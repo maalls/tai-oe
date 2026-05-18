@@ -109,25 +109,25 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 ### snapshot global
 
 - domaines cibles: 10
-- domaines clotures: 2/10
+- domaines clotures: 6/10
 - endpoints HTTP legacy a migrer (dans ce scope): 0
 - endpoints HTTP unknown a implementer: 0
 - supabase-direct: hors scope immediat (10 domaines reportes)
 
 ### tableau de progression par domaine
 
-| domaine     | HTTP FastAPI  | HTTP legacy restant | unknown | statut     | notes                                    |
-| ----------- | ------------- | ------------------- | ------- | ---------- | ---------------------------------------- |
-| opportunity | oui           | non                 | non     | migre      | lot A migre en FastAPI                   |
-| rfq         | oui           | non                 | non     | migre      | routes opportunity/\*/rfq migrees        |
-| quote       | oui           | non                 | non     | migre      | endpoint quote/generate migre FastAPI    |
-| client      | non           | non                 | non     | a trancher | pas d'appel HTTP explicite detecte       |
-| contact     | oui           | non                 | non     | migre      | document/chat migres en FastAPI          |
-| account     | non           | non                 | non     | a trancher | principalement supabase-direct (reporte) |
-| vendor      | oui (ddd get) | non                 | non     | en cours   | CRUD HTTP vendor a confirmer             |
-| brand       | non           | non                 | non     | a trancher | principalement supabase-direct (reporte) |
-| family      | non           | non                 | non     | a trancher | principalement supabase-direct (reporte) |
-| product     | oui           | non                 | non     | migre      | GET/PUT/POST produits migres FastAPI     |
+| domaine     | HTTP FastAPI | HTTP legacy restant | unknown | statut     | notes                                    |
+| ----------- | ------------ | ------------------- | ------- | ---------- | ---------------------------------------- |
+| opportunity | oui          | non                 | non     | migre      | lot A migre en FastAPI                   |
+| rfq         | oui          | non                 | non     | migre      | routes opportunity/\*/rfq migrees        |
+| quote       | oui          | non                 | non     | migre      | endpoint quote/generate migre FastAPI    |
+| client      | non          | non                 | non     | a trancher | pas d'appel HTTP explicite detecte       |
+| contact     | oui          | non                 | non     | migre      | document/chat migres en FastAPI          |
+| account     | non          | non                 | non     | a trancher | principalement supabase-direct (reporte) |
+| vendor      | oui          | non                 | non     | migre      | endpoint /api/vendor migre FastAPI       |
+| brand       | non          | non                 | non     | a trancher | principalement supabase-direct (reporte) |
+| family      | non          | non                 | non     | a trancher | principalement supabase-direct (reporte) |
+| product     | oui          | non                 | non     | migre      | GET/PUT/POST produits migres FastAPI     |
 
 ### journal des decisions
 
@@ -150,6 +150,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | contact/doc | /api/chat/attachments | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
 - 2026-05-18 | product | /api/products | decision=migrer | endpoint implemente dans back/src/api_fastapi/product/router.py
 - 2026-05-18 | product | /api/products/{id} | decision=migrer | endpoint implemente dans back/src/api_fastapi/product/router.py
+- 2026-05-18 | legacy-http | opportunity/document GET/POST legacy | decision=supprimer | dispatch legacy reduit a DELETE-only apres migration FastAPI
 
 ## criteres de done pour ce refactor.2
 
