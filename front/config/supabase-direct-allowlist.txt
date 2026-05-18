@@ -3,7 +3,6 @@
 
 src/components/admin/components/cms/useCmsData.ts
 src/components/contact/DetailPage.vue
-src/components/contact/IndexPage.vue
 src/components/family/index.vue
 src/components/family/show.vue
 src/components/invoices/InvoiceDetailPage.vue

@@ -176,6 +176,12 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../lib/supabase';
+import {
+   createContact,
+   deleteContact as deleteContactApi,
+   getContact,
+   updateContact,
+} from '../../api/contact';
 import { listAccounts } from '../../api/account';
 import AccountNavHeader from '../account/AccountNavHeader.vue';
 
@@ -219,27 +225,20 @@ const loadContact = async () => {
 
    isLoading.value = true;
    try {
-      const { data, error } = await supabase
-         .from('contact')
-         .select('*, account:account_id(id, name)')
-         .eq('id', contactId)
-         .single();
-
-      if (error) throw error;
-
-      if (data) {
-         const contact = data as any;
-         contactData.value = data;
-         formData.value = {
-            name: contact.name,
-            email: contact.email || '',
-            phone: contact.phone || '',
-            role_title: contact.role_title || '',
-            account_id: contact.account_id,
-         };
-         contactAccount.value = contact.account || null;
-         await loadRelatedOpportunities();
-      }
+      const contact = await getContact(contactId);
+      contactData.value = contact;
+      formData.value = {
+         name: contact.name,
+         email: contact.email || '',
+         phone: contact.phone || '',
+         role_title: contact.role_title || '',
+         account_id: contact.account_id,
+      };
+      contactAccount.value =
+         contact.account_name && contact.account_id
+            ? { id: contact.account_id, name: contact.account_name }
+            : null;
+      await loadRelatedOpportunities();
    } catch (error) {
       errorMessage.value = `Failed to load contact: ${error instanceof Error ? error.message : 'Unknown error'}`;
    } finally {
@@ -291,36 +290,25 @@ const saveContact = async () => {
 
    try {
       if (isNew) {
-         // Create new contact
-         const { data, error } = await (supabase.from('contact') as any)
-            .insert({
-               name: formData.value.name,
-               email: formData.value.email || null,
-               phone: formData.value.phone || null,
-               role_title: formData.value.role_title || null,
-               account_id: formData.value.account_id,
-            })
-            .select()
-            .single();
-
-         if (error) throw error;
+         const data = await createContact({
+            name: formData.value.name,
+            email: formData.value.email || null,
+            phone: formData.value.phone || null,
+            role_title: formData.value.role_title || null,
+            account_id: formData.value.account_id,
+         });
          successMessage.value = 'Contact created successfully';
          setTimeout(() => {
             router.push(`/contacts/${(data as any).id}`);
          }, 1000);
       } else {
-         // Update existing contact
-         const { error } = await (supabase.from('contact') as any)
-            .update({
-               name: formData.value.name,
-               email: formData.value.email || null,
-               phone: formData.value.phone || null,
-               role_title: formData.value.role_title || null,
-               account_id: formData.value.account_id,
-            })
-            .eq('id', contactId);
-
-         if (error) throw error;
+         await updateContact(contactId, {
+            name: formData.value.name,
+            email: formData.value.email || null,
+            phone: formData.value.phone || null,
+            role_title: formData.value.role_title || null,
+            account_id: formData.value.account_id,
+         });
          successMessage.value = 'Contact updated successfully';
          await loadContact();
       }
@@ -338,9 +326,7 @@ const deleteContact = async () => {
    errorMessage.value = '';
 
    try {
-      const { error } = await supabase.from('contact').delete().eq('id', contactId);
-
-      if (error) throw error;
+      await deleteContactApi(contactId);
       successMessage.value = 'Contact deleted successfully';
       setTimeout(() => {
          router.push('/contacts');

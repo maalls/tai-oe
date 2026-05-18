@@ -73,7 +73,7 @@
                            {{ contact.role_title || '-' }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
-                           {{ contact.account?.name || '-' }}
+                           {{ contact.account_name || '-' }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-600 wrap-break-word">
                            {{ formatDate(contact.created_at) }}
@@ -90,48 +90,20 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../lib/supabase';
+import { listContacts, type Contact } from '../../api/contact';
 import AccountNavHeader from '../account/AccountNavHeader.vue';
-
-interface Contact {
-   id: string;
-   name: string;
-   email?: string;
-   phone?: string;
-   role_title?: string;
-   created_at?: string;
-   account_id: string;
-   account?: {
-      id: string;
-      name: string;
-   };
-}
 
 const contacts = ref<Contact[]>([]);
 const isLoading = ref(false);
 const errorMessage = ref('');
 const router = useRouter();
-const pageSize = 50; // Increased page size to load more contacts
 
 const loadContacts = async () => {
    isLoading.value = true;
    errorMessage.value = '';
 
    try {
-      // Load contacts ordered by created_at DESC to show newest first
-      const { data, error } = await supabase
-         .from('contact')
-         .select('*, account:account_id(id, name)')
-         .order('created_at', { ascending: false })
-         .limit(pageSize);
-
-      if (error) {
-         errorMessage.value = `Failed to load contacts: ${error.message}`;
-         console.error('[ContactPage] Error:', error);
-         return;
-      }
-
-      contacts.value = data || [];
+      contacts.value = await listContacts();
       console.log('[ContactPage] Loaded contacts:', contacts.value.length);
    } catch (error) {
       errorMessage.value = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
