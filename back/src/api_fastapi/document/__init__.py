@@ -1,0 +1,1 @@
+"""Document FastAPI router package."""

@@ -47,10 +47,10 @@ Hors scope immediat (mis de cote pour cette phase):
 | quote         | `/api/opportunity/{id}/send-quote`           | POST    | fastapi          | `front/src/components/opportunity/components/send/SendPage.vue`                                                                                                                                       | `back/src/api_fastapi/opportunity/router.py` | migre                  |
 | quote         | `/api/quote/{opportunity_id}/generate`       | POST    | fastapi          | `front/src/components/opportunity/components/pipeline/components/PipelineStageRfp/PipelineStageRfp.vue`                                                                                               | `back/src/api_fastapi/quote/router.py`       | migre                  |
 | quote/invoice | `/api/quote/{id}/invoice`                    | POST    | fastapi          | `front/src/components/opportunity/components/pipeline/components/PipelineStageAccepted/PipelineStageAccepted.vue`, `front/src/components/opportunity/components/pipeline/components/StageManager.vue` | `back/src/api_fastapi/quote/router.py`       | migre                  |
-| contact/doc   | `/api/document/extract-rfp`                  | POST    | legacy           | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api/document/routes.py`            | migrer                 |
-| contact/doc   | `/api/document/update-content`               | POST    | legacy           | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api/document/routes.py`            | migrer                 |
-| contact/doc   | `/api/document/{id}`                         | DELETE  | legacy           | `front/src/components/opportunity/components/documents/DocumentsPage.vue`                                                                                                                             | `back/src/api/document/routes.py`            | migrer                 |
-| contact/doc   | `/api/chat/attachments`                      | POST    | legacy           | `front/src/components/chat/ChatPanel.ts`                                                                                                                                                              | `back/src/api/document/routes.py`            | migrer                 |
+| contact/doc   | `/api/document/extract-rfp`                  | POST    | fastapi          | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api_fastapi/document/router.py`    | migre                  |
+| contact/doc   | `/api/document/update-content`               | POST    | fastapi          | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api_fastapi/document/router.py`    | migre                  |
+| contact/doc   | `/api/document/{id}`                         | DELETE  | fastapi          | `front/src/components/opportunity/components/documents/DocumentsPage.vue`                                                                                                                             | `back/src/api_fastapi/document/router.py`    | migre                  |
+| contact/doc   | `/api/chat/attachments`                      | POST    | fastapi          | `front/src/components/chat/ChatPanel.ts`                                                                                                                                                              | `back/src/api_fastapi/document/router.py`    | migre                  |
 | vendor        | `/api/ddd/vendor`                            | GET     | fastapi          | `front/src/components/vendor/Edit.vue` (via `fetchDddJson`)                                                                                                                                           | `back/src/api_fastapi/vendor/router.py`      | migre                  |
 | product       | `/api/products`                              | POST    | legacy           | `front/src/components/products/edit.vue`                                                                                                                                                              | `back/src/api/product/routes.py`             | migrer                 |
 | product       | `/api/products/{id}`                         | GET/PUT | unknown          | `front/src/components/products/edit.vue`                                                                                                                                                              | non trouve tel quel dans routers             | migrer (a implementer) |
@@ -92,10 +92,10 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 
 ### lot C - document/contact flows
 
-1. migrer `/api/document/extract-rfp`
-2. migrer `/api/document/update-content`
-3. migrer `/api/document/{id}` (DELETE)
-4. migrer `/api/chat/attachments`
+1. fait: migrer `/api/document/extract-rfp`
+2. fait: migrer `/api/document/update-content`
+3. fait: migrer `/api/document/{id}` (DELETE)
+4. fait: migrer `/api/chat/attachments`
 
 ### lot D - product/vendor/brand/family/account/contact
 
@@ -110,7 +110,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 
 - domaines cibles: 10
 - domaines clotures: 2/10
-- endpoints HTTP legacy a migrer (dans ce scope): 3
+- endpoints HTTP legacy a migrer (dans ce scope): 1
 - endpoints HTTP unknown a implementer: 1
 - supabase-direct: hors scope immediat (10 domaines reportes)
 
@@ -122,7 +122,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 | rfq         | oui           | non                      | non     | migre      | routes opportunity/\*/rfq migrees        |
 | quote       | oui           | non                      | non     | migre      | endpoint quote/generate migre FastAPI    |
 | client      | non           | non                      | non     | a trancher | pas d'appel HTTP explicite detecte       |
-| contact     | non           | oui (document/chat lies) | non     | en cours   | definir perimetre api contact            |
+| contact     | oui           | non                      | non     | migre      | document/chat migres en FastAPI          |
 | account     | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
 | vendor      | oui (ddd get) | non                      | non     | en cours   | CRUD HTTP vendor a confirmer             |
 | brand       | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
@@ -144,6 +144,10 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | quote/invoice | /api/invoice/{id}/pdf | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
 - 2026-05-18 | quote/invoice | /api/invoice/{id}/send | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
 - 2026-05-18 | quote | /api/quote/{opportunity_id}/generate | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
+- 2026-05-18 | contact/doc | /api/document/extract-rfp | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
+- 2026-05-18 | contact/doc | /api/document/update-content | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
+- 2026-05-18 | contact/doc | /api/document/{id} | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
+- 2026-05-18 | contact/doc | /api/chat/attachments | decision=migrer | endpoint implemente dans back/src/api_fastapi/document/router.py
 
 ## criteres de done pour ce refactor.2
 

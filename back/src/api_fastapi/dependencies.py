@@ -6,6 +6,7 @@ from pathlib import Path
 from src.service.auth.auth_service import AuthService
 from src.service.auth.oauth_service import OAuthService
 from src.service.csv.file_service import CsvFileService
+from src.service.document.document_service import DocumentService
 from src.service.email.gmail_service import GmailService
 from src.service.email.quote_send_service import QuoteSendService
 from src.service.invoice.invoice_service import InvoiceService
@@ -82,3 +83,7 @@ def get_rfq_source_service() -> RfqSourceService:
 
 def get_rfq_handlers() -> RfqService:
     return RfqService()
+
+
+def get_document_service() -> DocumentService:
+    return DocumentService()
