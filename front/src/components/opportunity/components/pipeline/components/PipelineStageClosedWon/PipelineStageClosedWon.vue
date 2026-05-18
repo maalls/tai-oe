@@ -169,7 +169,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../../../../../lib/supabase';
+import { listOpportunityDocuments, type OpportunityDocument } from '../../../../../../api/document';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -181,27 +181,23 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const invoice = ref<any | null>(null);
+const invoice = ref<OpportunityDocument | null>(null);
 const { t } = useI18n();
 
 const loadInvoice = async () => {
    if (!props.opportunity?.id) return;
 
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('*')
-         .eq('opportunity_id', props.opportunity.id)
-         .eq('type', 'INVOICE')
-         .order('created_at', { ascending: false })
-         .limit(1);
+      const documents = await listOpportunityDocuments(props.opportunity.id);
+      const latestInvoice = documents
+         .filter((document) => document.type === 'INVOICE')
+         .sort((left, right) => {
+            const leftTime = left.created_at ? new Date(left.created_at).getTime() : 0;
+            const rightTime = right.created_at ? new Date(right.created_at).getTime() : 0;
+            return rightTime - leftTime;
+         })[0];
 
-      if (error) {
-         console.error('[PipelineStageClosedWon] Error loading invoice:', error);
-         return;
-      }
-
-      invoice.value = data && data.length > 0 ? data[0] : null;
+      invoice.value = latestInvoice ?? null;
    } catch (error) {
       console.error('[PipelineStageClosedWon] Unexpected error loading invoice:', error);
    }

@@ -12,7 +12,6 @@ src/components/opportunity/components/account/AccountPage.vue
 src/components/opportunity/components/actions/ActionsPage.vue
 src/components/opportunity/components/invoices/InvoiceDetailPage.vue
 src/components/opportunity/components/invoices/InvoicesPage.vue
-src/components/opportunity/components/pipeline/components/PipelineStageClosedWon/PipelineStageClosedWon.vue
 src/components/opportunity/components/quote/QuoteDocument.vue
 src/components/opportunity/components/settings/SettingsPage.vue
 src/components/products/DetailPage.vue
