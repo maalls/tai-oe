@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut      | Commit/Tag                                                                               |
-| --- | -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------- |
-| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                         |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                  |
-| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                       |
-| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a |
-| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                                                          |
-| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                          |
-| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                          |
-| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                          |
+| Lot | Description                            | Statut      | Commit/Tag                                                                                        |
+| --- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------- |
+| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                  |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                           |
+| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                |
+| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d |
+| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                                                                   |
+| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                   |
+| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                   |
+| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                   |
 
 # backend.refactor.3.plan
 
@@ -171,6 +171,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 1. fait: creer `account` list/detail/create/update/delete en FastAPI
 
 - fait: disparition de `supabase.from('account')` dans `front/src/**`
+- fait: tests unitaires backend ajoutes pour `account` router et `profile` router (`back/tests/unit/api/account/router/*`, `back/tests/unit/api/profile/router/*`)
 
 2. creer `contact` list/detail/update en FastAPI
 3. completer `vendor` pour couvrir liste/detail/CRUD et les agregats actuellement reconstruits cote frontend
