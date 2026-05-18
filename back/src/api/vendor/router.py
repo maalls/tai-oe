@@ -1,38 +1,122 @@
-"""FastAPI vendor router."""
+from typing import List
 
-from dataclasses import asdict
-from dataclasses import is_dataclass
+from fastapi import APIRouter, Depends, HTTPException
 
-from fastapi import APIRouter, Depends
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from .schemas import VendorCreate, VendorResponse, VendorUpdate
+from src.repository.database.repository import DatabaseRepository
 
-from src.api.dependencies import get_service_factory
-from src.api.vendor.schemas import VendorQuery
-from src.infrastructure.factory import ServiceFactory
-
-router = APIRouter(tags=["vendor"])
+router = APIRouter()
 
 
-def _serialize_vendor(vendor) -> dict:
-    if is_dataclass(vendor):
-        return jsonable_encoder(asdict(vendor))
-    if isinstance(vendor, dict):
-        return jsonable_encoder(vendor)
-    return jsonable_encoder(vars(vendor))
+def get_db():
+    return DatabaseRepository()
 
 
-@router.get("/api/vendor")
-def get_vendor(
-    query: VendorQuery = Depends(),
-    service_factory: ServiceFactory = Depends(get_service_factory),
-):
-    if not query.vendor_id:
-        return JSONResponse({"status": "error", "message": "Missing vendor_id"}, status_code=400)
+@router.get("/api/vendor", response_model=List[VendorResponse])
+def list_vendors(db=Depends(get_db)):
+    rows = db.execute_dict_query(
+        """
+        SELECT v.id, v.name, v.email, v.phone, v.website, v.created_at, v.updated_at,
+               COALESCE(COUNT(DISTINCT b.id), 0)::int AS brand_count,
+               COALESCE(COUNT(DISTINCT f.id), 0)::int AS family_count,
+               COALESCE(COUNT(DISTINCT pf.id), 0)::int AS product_count
+        FROM vendor v
+        LEFT JOIN brand b ON b.vendor_id = v.id
+        LEFT JOIN family f ON f.brand_id = b.id
+        LEFT JOIN product_family pf ON pf.family_id = f.id
+        GROUP BY v.id
+        ORDER BY v.created_at DESC
+        """
+    )
+    return rows
 
-    try:
-        service = service_factory.create_vendor_service()
-        vendor = service.get_vendor(query.vendor_id)
-        return JSONResponse({"status": "ok", "vendor": _serialize_vendor(vendor)}, status_code=200)
-    except Exception as exc:
-        return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
+
+@router.get("/api/vendor/{vendor_id}", response_model=VendorResponse)
+def get_vendor(vendor_id: str, db=Depends(get_db)):
+    rows = db.execute_dict_query(
+        """
+        SELECT v.id, v.name, v.email, v.phone, v.website, v.created_at, v.updated_at,
+               COALESCE(COUNT(DISTINCT b.id), 0)::int AS brand_count,
+               COALESCE(COUNT(DISTINCT f.id), 0)::int AS family_count,
+               COALESCE(COUNT(DISTINCT pf.id), 0)::int AS product_count
+        FROM vendor v
+        LEFT JOIN brand b ON b.vendor_id = v.id
+        LEFT JOIN family f ON f.brand_id = b.id
+        LEFT JOIN product_family pf ON pf.family_id = f.id
+        WHERE v.id = %s
+        GROUP BY v.id
+        """,
+        (vendor_id,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return rows[0]
+
+
+@router.post("/api/vendor", response_model=VendorResponse)
+def create_vendor(payload: VendorCreate, db=Depends(get_db)):
+    rows = db.execute_dict_query(
+        """
+        INSERT INTO vendor (name, email, phone, website)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id, name, email, phone, website, created_at, updated_at,
+                  0::int AS brand_count, 0::int AS family_count, 0::int AS product_count
+        """,
+        (payload.name, payload.email, payload.phone, payload.website),
+    )
+    return rows[0]
+
+
+@router.put("/api/vendor/{vendor_id}", response_model=VendorResponse)
+def update_vendor(vendor_id: str, payload: VendorUpdate, db=Depends(get_db)):
+    fields = []
+    values = []
+    for field in ["name", "email", "phone", "website"]:
+        value = getattr(payload, field)
+        if value is not None:
+            fields.append(f"{field} = %s")
+            values.append(value)
+
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    values.append(vendor_id)
+    rows = db.execute_dict_query(
+        f"""
+        UPDATE vendor
+        SET {', '.join(fields)}, updated_at = now()
+        WHERE id = %s
+        RETURNING id, name, email, phone, website, created_at, updated_at
+        """,
+        tuple(values),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    vendor = rows[0]
+    count_rows = db.execute_dict_query(
+        """
+        SELECT COALESCE(COUNT(DISTINCT b.id), 0)::int AS brand_count,
+               COALESCE(COUNT(DISTINCT f.id), 0)::int AS family_count,
+               COALESCE(COUNT(DISTINCT pf.id), 0)::int AS product_count
+        FROM vendor v
+        LEFT JOIN brand b ON b.vendor_id = v.id
+        LEFT JOIN family f ON f.brand_id = b.id
+        LEFT JOIN product_family pf ON pf.family_id = f.id
+        WHERE v.id = %s
+        """,
+        (vendor_id,),
+    )
+    counts = count_rows[0] if count_rows else {"brand_count": 0, "family_count": 0, "product_count": 0}
+    vendor["brand_count"] = counts["brand_count"]
+    vendor["family_count"] = counts["family_count"]
+    vendor["product_count"] = counts["product_count"]
+    return vendor
+
+
+@router.delete("/api/vendor/{vendor_id}")
+def delete_vendor(vendor_id: str, db=Depends(get_db)):
+    rows = db.execute_dict_query("DELETE FROM vendor WHERE id = %s RETURNING id", (vendor_id,))
+    if not rows:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return {"id": rows[0]["id"]}

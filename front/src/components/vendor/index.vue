@@ -104,34 +104,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../stores/auth';
+import { listVendors, type Vendor } from '../../api/vendor';
 import { useI18n } from '../../i18n/useI18n';
-
-interface Vendor {
-   id: string;
-   name: string;
-   email?: string | null;
-   phone?: string | null;
-   website?: string | null;
-   created_at?: string;
-   updated_at?: string;
-   brand_count?: number | null;
-   family_count?: number | null;
-   product_count?: number | null;
-}
-
-type VendorWithCounts = Vendor & {
-   brand?: Array<{
-      count: number;
-      family?: Array<{ count: number; product_family?: Array<{ count: number }> }>;
-   }> | null;
-};
 
 const vendors = ref<Vendor[]>([]);
 const isLoading = ref(false);
 const errorMessage = ref('');
-const { user } = useAuth();
 const { t } = useI18n();
 
 const formatDate = (dateString?: string) => {
@@ -165,105 +143,7 @@ const loadVendors = async () => {
    errorMessage.value = '';
 
    try {
-      if (!user.value?.id) {
-         errorMessage.value = t('vendors.errors.notAuthenticated');
-         return;
-      }
-
-      // Fetch vendors with brand count
-      const { data: vendorData, error: vendorError } = await supabase
-         .from('vendor')
-         .select('id, name, email, phone, website, created_at, brand(count)')
-         .order('created_at', { ascending: false });
-
-      if (vendorError) {
-         errorMessage.value = t('vendors.errors.loadFailed', { message: vendorError.message });
-         return;
-      }
-
-      // Fetch all brands to get vendor mapping
-      const { data: brandsData, error: brandsError } = await supabase
-         .from('brand')
-         .select('id, vendor_id');
-
-      if (brandsError) {
-         console.error('Failed to fetch brands:', brandsError);
-      }
-
-      // Build brand to vendor mapping
-      const brandToVendor: Record<string, string> = {};
-      if (brandsData) {
-         brandsData.forEach((brand: any) => {
-            if (brand.id && brand.vendor_id) {
-               brandToVendor[brand.id] = brand.vendor_id;
-            }
-         });
-      }
-
-      // Fetch all families with their brand_id
-      const { data: familiesData, error: familiesError } = await supabase
-         .from('family')
-         .select('id, brand_id');
-
-      if (familiesError) {
-         console.error('Failed to fetch families:', familiesError);
-      }
-
-      // Build family to brand mapping and count families per vendor
-      const familyToBrand: Record<string, string> = {};
-      const familyCountByVendor: Record<string, number> = {};
-
-      if (familiesData) {
-         familiesData.forEach((family: any) => {
-            if (family.id && family.brand_id) {
-               familyToBrand[family.id] = family.brand_id;
-               const vendorId = brandToVendor[family.brand_id];
-               if (vendorId) {
-                  familyCountByVendor[vendorId] = (familyCountByVendor[vendorId] || 0) + 1;
-               }
-            }
-         });
-      }
-
-      // Fetch all product_families with their family_id
-      const { data: productFamiliesData, error: productFamiliesError } = await supabase
-         .from('product_family')
-         .select('family_id');
-
-      if (productFamiliesError) {
-         console.error('Failed to fetch product families:', productFamiliesError);
-      }
-
-      // Count products per vendor
-      const productCountByVendor: Record<string, number> = {};
-
-      if (productFamiliesData) {
-         productFamiliesData.forEach((productFamily: any) => {
-            if (productFamily.family_id) {
-               const brandId = familyToBrand[productFamily.family_id];
-               if (brandId) {
-                  const vendorId = brandToVendor[brandId];
-                  if (vendorId) {
-                     productCountByVendor[vendorId] = (productCountByVendor[vendorId] || 0) + 1;
-                  }
-               }
-            }
-         });
-      }
-
-      vendors.value = ((vendorData as VendorWithCounts[]) || []).map((vendor) => {
-         const brandCount =
-            Array.isArray(vendor.brand) && vendor.brand[0]?.count != null
-               ? vendor.brand[0].count
-               : 0;
-
-         return {
-            ...vendor,
-            brand_count: brandCount,
-            family_count: familyCountByVendor[vendor.id] || 0,
-            product_count: productCountByVendor[vendor.id] || 0,
-         };
-      });
+      vendors.value = await listVendors();
    } catch (error) {
       errorMessage.value = t('vendors.errors.generic', {
          message: error instanceof Error ? error.message : t('vendors.errors.unknown'),

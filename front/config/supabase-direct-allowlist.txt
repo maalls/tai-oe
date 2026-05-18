@@ -37,7 +37,6 @@ src/components/products/IndexPage.vue
 src/components/products/cms/useCmsData.ts
 src/components/products/useBrandFamilyData.ts
 src/components/vendor/Edit.vue
-src/components/vendor/index.vue
 src/composables/useOpportunitySource.ts
 src/composables/useSuggestionSearch.ts
 src/stores/auth.ts

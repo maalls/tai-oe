@@ -157,7 +157,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 1. fait: geler la creation de nouveaux acces `supabase-direct` metier dans `front/src/**`
 2. fait: documenter la regle: `supabase.auth.*` autorise, `supabase.from(...)` metier interdit pour tout nouveau code
 3. fait: ajouter une verification outillee via `front/scripts/check-supabase-direct.mjs`
-4. fait: figer une baseline dans `front/config/supabase-direct-allowlist.txt` (40 fichiers)
+4. fait: figer une baseline dans `front/config/supabase-direct-allowlist.txt` (39 fichiers)
 5. fait: exposer la verification via `npm run check:supabase-direct` dans `front/package.json`
 
 ### lot 1 - auth/profil et garde de session
@@ -177,7 +177,11 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 - fait: tests unitaires backend ajoutes pour `contact` router (`back/tests/unit/api/contact/router/*`)
 
-3. completer `vendor` pour couvrir liste/detail/CRUD et les agregats actuellement reconstruits cote frontend
+3. fait: completer `vendor` pour couvrir liste/detail/CRUD et les agregats de comptage (brands/families/products) cote backend
+
+- fait: tests unitaires backend ajoutes pour `vendor` router (`back/tests/unit/api/vendor/router/*`)
+- fait: client frontend `front/src/api/vendor.ts` avec tests unitaires (`front/tests/unit/src/api/vendor/*`)
+
 4. en cours: migrer les pages `account/*`, `contact/*`, `vendor/*`
 
 - fait: `front/src/components/account/Edit.vue` -> `front/src/api/account.ts`
@@ -190,6 +194,8 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
   - fait: `front/src/components/opportunity/components/quote/Quote.vue` (chargement account detail) -> `front/src/api/account.ts`
   - fait: `front/src/components/contact/IndexPage.vue` (liste contacts) -> `front/src/api/contact.ts`
   - fait: `front/src/components/contact/DetailPage.vue` (detail/create/update/delete contact) -> `front/src/api/contact.ts`
+  - fait: `front/src/components/vendor/index.vue` (liste + compteurs) -> `front/src/api/vendor.ts`
+  - fait: `front/src/components/vendor/Edit.vue` (detail/create/update/delete vendor) -> `front/src/api/vendor.ts` (reste chargement marques associees)
 
 ### lot 3 - brand/family/catalogue
 

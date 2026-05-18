@@ -157,7 +157,12 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/useI18n';
-import { useApiQuery } from '../../composables/useApiQuery';
+import {
+   createVendor,
+   deleteVendor as deleteVendorApi,
+   getVendor,
+   updateVendor,
+} from '../../api/vendor';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
 
@@ -174,7 +179,6 @@ interface Brand {
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
-const { fetchApiJson } = useApiQuery();
 
 const isNewVendor = computed(() => route.params.id === 'new');
 const vendorId = computed(() => (isNewVendor.value ? null : (route.params.id as string)));
@@ -216,15 +220,7 @@ const loadVendor = async () => {
          return;
       }
 
-      const result = await fetchApiJson<{ status: string; vendor?: any }>('vendor', {
-         vendor_id: vendorId.value,
-      });
-
-      if (result?.status !== 'ok' || !result?.vendor) {
-         throw new Error('Failed loading vendor');
-      }
-
-      const vendor = result.vendor as any;
+      const vendor = await getVendor(vendorId.value);
       formData.value = {
          name: vendor.name || '',
          email: vendor.email || '',
@@ -313,37 +309,20 @@ const saveVendor = async () => {
          email: formData.value.email?.trim() || null,
          phone: formData.value.phone?.trim() || null,
          website: formData.value.website?.trim() || null,
-         updated_at: new Date().toISOString(),
       };
 
       if (isNewVendor.value) {
-         const { data, error } = await (supabase.from('vendor') as any).insert([payload]).select();
-
-         if (error) {
-            errorMessage.value = t('vendors.errors.createFailed', { message: error.message });
-            return;
-         }
-
-         const rows = (data as any[]) || [];
-         if (rows.length > 0) {
-            successMessage.value = t('vendors.messages.createSuccess');
-            setTimeout(() => {
-               router.push(`/vendors/${rows[0].id}`);
-            }, 800);
-         }
+         const created = await createVendor(payload);
+         successMessage.value = t('vendors.messages.createSuccess');
+         setTimeout(() => {
+            router.push(`/vendors/${created.id}`);
+         }, 800);
       } else {
          if (!vendorId.value) {
             errorMessage.value = t('vendors.errors.unknown');
             return;
          }
-         const { error } = await (supabase.from('vendor') as any)
-            .update(payload)
-            .eq('id', vendorId.value);
-
-         if (error) {
-            errorMessage.value = t('vendors.errors.updateFailed', { message: error.message });
-            return;
-         }
+         await updateVendor(vendorId.value, payload);
 
          successMessage.value = t('vendors.messages.updateSuccess');
          showForm.value = false;
@@ -368,12 +347,7 @@ const deleteVendor = async () => {
    successMessage.value = '';
 
    try {
-      const { error } = await supabase.from('vendor').delete().eq('id', vendorId.value);
-
-      if (error) {
-         errorMessage.value = t('vendors.errors.deleteFailed', { message: error.message });
-         return;
-      }
+      await deleteVendorApi(vendorId.value);
 
       successMessage.value = t('vendors.messages.deleteSuccess');
       setTimeout(() => {
