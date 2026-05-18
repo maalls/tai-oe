@@ -27,10 +27,6 @@ def test_dispatch_post_core_routes_unknown_path(monkeypatch):
         "src.api.routes.dispatchers.server_post_dispatch.dispatch_product_routes",
         lambda *_args, **_kwargs: False,
     )
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_post_dispatch.dispatch_file_routes",
-        lambda *_args, **_kwargs: False,
-    )
 
     handler = _HandlerStub()
 
