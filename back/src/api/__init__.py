@@ -1,4 +1,4 @@
-"""API layer package (migration target).
+"""Legacy API package kept for migration leftovers only.
 
-Runtime HTTP server now lives in src.api.server.
+Runtime HTTP serving now lives in src.api_fastapi.
 """

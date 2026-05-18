@@ -5,7 +5,6 @@ Hot-reload server: automatically restart when Python files or config changes.
 Usage:
     python -m src.command.dev_server               # Start with auto-reload (FastAPI default)
     python -m src.command.dev_server --no-watch    # Run without watching (FastAPI default)
-    python -m src.command.dev_server --legacy      # Run legacy transport
 
 Watches:
     - src/rag/*.py
@@ -104,7 +103,7 @@ def kill_port_process(port=8088):
                 cmd = cmd_result.stdout.strip()
                 
                 # Only kill if it's one of our API server modules.
-                if "src.api.server" in cmd or "src.api_fastapi.server" in cmd:
+                if "src.api_fastapi.server" in cmd:
                     os.kill(int(pid), signal.SIGTERM)  # SIGTERM (graceful) not SIGKILL
                     print(f"   Killed RAG process on port {port} (PID: {pid})")
                     time.sleep(0.2)
@@ -160,7 +159,7 @@ def get_server_port(default=8088):
     return default
 
 
-def run_server(server_port, use_fastapi=False):
+def run_server(server_port):
     """Start the RAG server."""
     print("\n" + "="*60)
     print("🚀 Starting RAG server...")
@@ -177,10 +176,8 @@ def run_server(server_port, use_fastapi=False):
     )
     env["PORT"] = str(server_port)
 
-    module_name = "src.api_fastapi.server" if use_fastapi else "src.api.server"
-
     process = subprocess.Popen(
-        [sys.executable, "-m", module_name],
+        [sys.executable, "-m", "src.api_fastapi.server"],
         cwd=str(back_dir),
         env=env,
     )
@@ -191,13 +188,6 @@ def run_server(server_port, use_fastapi=False):
 def main():
     """Main hot-reload loop."""
     no_watch = "--no-watch" in sys.argv
-    # FastAPI is the default transport. Use --legacy or USE_FASTAPI=0 to force legacy.
-    if "--legacy" in sys.argv:
-        use_fastapi = False
-    elif "--fastapi" in sys.argv:
-        use_fastapi = True
-    else:
-        use_fastapi = os.environ.get("USE_FASTAPI", "1") != "0"
     server_port = get_server_port()
     
     # Kill any existing process on configured server port
@@ -215,9 +205,8 @@ def main():
             else str(back_dir)
         )
         env["PORT"] = str(server_port)
-        module_name = "src.api_fastapi.server" if use_fastapi else "src.api.server"
         process = subprocess.run(
-            [sys.executable, "-m", module_name],
+            [sys.executable, "-m", "src.api_fastapi.server"],
             cwd=str(back_dir),
             env=env,
         )
@@ -248,7 +237,7 @@ def main():
     # Ensure port is available before starting
     wait_for_port_available(server_port, max_wait=5, interval=0.3)
     
-    process = run_server(server_port, use_fastapi=use_fastapi)
+    process = run_server(server_port)
     
     try:
         for changes in watch(*get_watched_paths()):
@@ -286,7 +275,7 @@ def main():
                 time.sleep(3.0)
             
             # Start new process
-            process = run_server(server_port, use_fastapi=use_fastapi)
+            process = run_server(server_port)
             last_restart_time = time.time()
     
     except KeyboardInterrupt:

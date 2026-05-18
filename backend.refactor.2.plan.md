@@ -167,6 +167,8 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | legacy-http | post/delete transport fallback | decision=supprimer | server.py retourne 404 directement en POST/DELETE, dispatchers et wrappers invoice legacy retires
 - 2026-05-18 | legacy-http | server runtime dead deps | decision=supprimer | server.py n'initialise plus AuthHandler ni RequestHandlers, reduit au prompt/static GET
 - 2026-05-18 | legacy-http | get transport wrapper | decision=supprimer | dispatch_get_request retire, prompt GET gere directement dans src.api.server avec test direct create_rag_handler
+- 2026-05-18 | legacy-http | runtime server module | decision=supprimer | src.api.server supprime, dev_server passe FastAPI-only et le prompt reste servi par src.api_fastapi.utils.router
+- 2026-05-18 | legacy-http | router facade module | decision=supprimer | src.api.router et ses tests de migration supprimes, aucun consommateur runtime restant
 
 ## criteres de done pour ce refactor.2
 
