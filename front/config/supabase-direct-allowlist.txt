@@ -9,7 +9,6 @@ src/components/mail/IndexPage.vue
 src/components/opportunity/IndexPage.vue
 src/components/opportunity/OpportunityHeader.vue
 src/components/opportunity/components/account/AccountPage.vue
-src/components/opportunity/components/actions/ActionsPage.vue
 src/components/opportunity/components/invoices/InvoiceDetailPage.vue
 src/components/opportunity/components/invoices/InvoicesPage.vue
 src/components/opportunity/components/quote/QuoteDocument.vue

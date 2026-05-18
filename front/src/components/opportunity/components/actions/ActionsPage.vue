@@ -196,7 +196,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
+import {
+   createAction,
+   deleteAction as deleteOpportunityAction,
+   executeAction as executeOpportunityAction,
+   getActionLogs,
+   listOpportunityActions,
+   pauseAction as pauseOpportunityAction,
+   resumeAction as resumeOpportunityAction,
+   updateAction,
+} from '../../../../api/action';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useAuth } from '../../../../stores/auth';
@@ -205,7 +214,7 @@ import ActionCard from './components/action/card.vue';
 const route = useRoute();
 const opportunityId = route.params.id as string;
 const { t, locale } = useI18n();
-const { getValidToken, user } = useAuth();
+const { getValidToken } = useAuth();
 
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -246,19 +255,18 @@ const closeModal = () => {
    resetForm();
 };
 
+const requireToken = async () => {
+   const token = await getValidToken();
+   if (!token) {
+      throw new Error(t('opportunities.errors.userNotAuthenticated'));
+   }
+   return token;
+};
+
 const loadActions = async () => {
    try {
-      const { data, error } = await supabase
-         .from('action')
-         .select('*')
-         .eq('opportunity_id', opportunityId)
-         .order('created_at', { ascending: false });
-
-      if (error) {
-         throw error;
-      }
-
-      actions.value = data || [];
+      const token = await requireToken();
+      actions.value = await listOpportunityActions(opportunityId, token);
    } catch (error: any) {
       errorMessage.value = error?.message || t('opportunities.failedToLoadActions');
       console.error('[ActionsPage] Error loading actions:', error);
@@ -279,6 +287,7 @@ const editAction = (action: any) => {
 
 const saveAction = async () => {
    try {
+      const token = await requireToken();
       const payload = {
          action_type: formData.value.action_type,
          schedule_type: formData.value.schedule_type,
@@ -286,36 +295,22 @@ const saveAction = async () => {
       };
 
       if (editingAction.value) {
-         const { error } = await (supabase.from('action') as any)
-            .update(payload)
-            .eq('id', editingAction.value.id);
-
-         if (error) throw error;
+         const updated = await updateAction(editingAction.value.id, payload, token);
 
          const index = actions.value.findIndex((a) => a.id === editingAction.value.id);
          if (index !== -1) {
-            actions.value[index] = { ...actions.value[index], ...payload };
+            actions.value[index] = updated;
          }
       } else {
-         if (!user.value?.id) {
-            throw new Error(t('opportunities.errors.userNotAuthenticated'));
-         }
-         const { data, error } = await (supabase.from('action') as any)
-            .insert([
-               {
-                  ...payload,
-                  opportunity_id: opportunityId,
-                  user_id: user.value.id,
-                  status: 'active',
-               },
-            ])
-            .select();
+         const created = await createAction(
+            {
+               ...payload,
+               opportunity_id: opportunityId,
+            },
+            token
+         );
 
-         if (error) throw error;
-
-         if (data && data.length > 0) {
-            actions.value.unshift(data[0]);
-         }
+         actions.value.unshift(created);
       }
 
       closeModal();
@@ -332,9 +327,8 @@ const deleteAction = (action: any) => {
 
 const confirmDeleteAction = async () => {
    try {
-      const { error } = await supabase.from('action').delete().eq('id', deletingAction.value.id);
-
-      if (error) throw error;
+      const token = await requireToken();
+      await deleteOpportunityAction(deletingAction.value.id, token);
 
       actions.value = actions.value.filter((a) => a.id !== deletingAction.value.id);
       showDeleteConfirm.value = false;
@@ -347,13 +341,9 @@ const confirmDeleteAction = async () => {
 
 const pauseAction = async (action: any) => {
    try {
-      const { error } = await (supabase.from('action') as any)
-         .update({ status: 'paused' })
-         .eq('id', action.id);
-
-      if (error) throw error;
-
-      action.status = 'paused';
+      const token = await requireToken();
+      const updated = await pauseOpportunityAction(action.id, token);
+      action.status = updated.status;
    } catch (error: any) {
       errorMessage.value = error?.message || t('opportunities.errors.failedToPauseAction');
       console.error('[ActionsPage] Error pausing action:', error);
@@ -362,13 +352,9 @@ const pauseAction = async (action: any) => {
 
 const resumeAction = async (action: any) => {
    try {
-      const { error } = await (supabase.from('action') as any)
-         .update({ status: 'active' })
-         .eq('id', action.id);
-
-      if (error) throw error;
-
-      action.status = 'active';
+      const token = await requireToken();
+      const updated = await resumeOpportunityAction(action.id, token);
+      action.status = updated.status;
    } catch (error: any) {
       errorMessage.value = error?.message || t('opportunities.errors.failedToResumeAction');
       console.error('[ActionsPage] Error resuming action:', error);
@@ -377,17 +363,8 @@ const resumeAction = async (action: any) => {
 
 const executeAction = async (action: any) => {
    try {
-      const token = await getValidToken();
-      const response = await fetch(`/api/action/${action.id}/execute`, {
-         method: 'POST',
-         headers: {
-            Authorization: `Bearer ${token}`,
-         },
-      });
-
-      if (!response.ok) {
-         throw new Error(t('opportunities.errors.failedToExecuteAction'));
-      }
+      const token = await requireToken();
+      await executeOpportunityAction(action.id, token);
 
       action.last_executed_at = new Date().toISOString();
    } catch (error: any) {
@@ -398,15 +375,8 @@ const executeAction = async (action: any) => {
 
 const viewLogs = async (action: any) => {
    try {
-      const { data, error } = await supabase
-         .from('action_execution_log')
-         .select('*')
-         .eq('action_id', action.id)
-         .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      actionLogs.value = data || [];
+      const token = await requireToken();
+      actionLogs.value = await getActionLogs(action.id, token);
       showLogsModal.value = true;
    } catch (error: any) {
       errorMessage.value = error?.message || t('opportunities.errors.failedToLoadLogs');
