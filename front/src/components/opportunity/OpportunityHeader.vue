@@ -227,6 +227,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { supabase } from '../../lib/supabase';
+import { createAccount, listAccounts } from '../../api/account';
 import { useI18n } from '../../i18n/useI18n';
 import { useApiQuery } from '../../composables/useApiQuery';
 
@@ -313,29 +314,17 @@ const createNewOpportunity = async () => {
       let accountId: string | null = null;
 
       // Try to find an existing "Default Account" for this user
-      const { data: existingAccount } = await supabase
-         .from('account')
-         .select('id')
-         .eq('name', 'Default Account')
-         .limit(1)
-         .maybeSingle();
+      const accounts = await listAccounts();
+      const existingAccount = accounts.find((account) => account.name === 'Default Account');
 
       if (existingAccount) {
-         accountId = (existingAccount as any).id;
+         accountId = existingAccount.id;
       } else {
          // Create a default account
-         const { data: newAccount, error: accountError } = await (supabase.from('account') as any)
-            .insert({
-               name: 'Default Account',
-            })
-            .select()
-            .single();
-
-         if (accountError) {
-            console.error('[OpportunityHeader] Error creating account:', accountError);
-            return;
-         }
-         accountId = (newAccount as any).id;
+         const newAccount = await createAccount({
+            name: 'Default Account',
+         });
+         accountId = newAccount.id;
       }
 
       // Create a new opportunity
