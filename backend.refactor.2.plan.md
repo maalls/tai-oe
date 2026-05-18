@@ -45,7 +45,7 @@ Hors scope immediat (mis de cote pour cette phase):
 | quote         | `/api/quote/{document_id}/pdf`               | POST    | fastapi          | `front/src/components/opportunity/components/quote/Quote.vue`, `front/src/components/opportunity/components/send/SendPage.vue`                                                                        | `back/src/api_fastapi/quote/router.py`       | migre                  |
 | quote         | `/api/quotes/download/{filename}`            | GET     | fastapi          | `front/src/components/opportunity/components/send/SendPage.vue`, `front/src/components/opportunity/components/preview/PreviewPage.vue`                                                                | `back/src/api_fastapi/quote/router.py`       | migre                  |
 | quote         | `/api/opportunity/{id}/send-quote`           | POST    | fastapi          | `front/src/components/opportunity/components/send/SendPage.vue`                                                                                                                                       | `back/src/api_fastapi/opportunity/router.py` | migre                  |
-| quote         | `/api/quote/{opportunity_id}/generate`       | POST    | unknown          | `front/src/components/opportunity/components/pipeline/components/PipelineStageRfp/PipelineStageRfp.vue`                                                                                               | non trouve tel quel                          | migrer (a implementer) |
+| quote         | `/api/quote/{opportunity_id}/generate`       | POST    | fastapi          | `front/src/components/opportunity/components/pipeline/components/PipelineStageRfp/PipelineStageRfp.vue`                                                                                               | `back/src/api_fastapi/quote/router.py`       | migre                  |
 | quote/invoice | `/api/quote/{id}/invoice`                    | POST    | fastapi          | `front/src/components/opportunity/components/pipeline/components/PipelineStageAccepted/PipelineStageAccepted.vue`, `front/src/components/opportunity/components/pipeline/components/StageManager.vue` | `back/src/api_fastapi/quote/router.py`       | migre                  |
 | contact/doc   | `/api/document/extract-rfp`                  | POST    | legacy           | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api/document/routes.py`            | migrer                 |
 | contact/doc   | `/api/document/update-content`               | POST    | legacy           | `front/src/components/opportunity/components/source/SourcePage.ts`                                                                                                                                    | `back/src/api/document/routes.py`            | migrer                 |
@@ -88,7 +88,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 2. fait: migrer `/api/quote/{id}/invoice`
 3. fait: migrer `/api/invoice/{id}/pdf`
 4. fait: migrer `/api/invoice/{id}/send`
-5. implementer `/api/quote/{opportunity_id}/generate` (ou aligner le frontend sur un endpoint FastAPI equivalent)
+5. fait: migrer `/api/quote/{opportunity_id}/generate`
 
 ### lot C - document/contact flows
 
@@ -111,7 +111,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - domaines cibles: 10
 - domaines clotures: 2/10
 - endpoints HTTP legacy a migrer (dans ce scope): 3
-- endpoints HTTP unknown a implementer: 2
+- endpoints HTTP unknown a implementer: 1
 - supabase-direct: hors scope immediat (10 domaines reportes)
 
 ### tableau de progression par domaine
@@ -120,7 +120,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 | ----------- | ------------- | ------------------------ | ------- | ---------- | ---------------------------------------- |
 | opportunity | oui           | non                      | non     | migre      | lot A migre en FastAPI                   |
 | rfq         | oui           | non                      | non     | migre      | routes opportunity/\*/rfq migrees        |
-| quote       | majoritaire   | oui                      | oui     | en cours   | quote/generate a clarifier               |
+| quote       | oui           | non                      | non     | migre      | endpoint quote/generate migre FastAPI    |
 | client      | non           | non                      | non     | a trancher | pas d'appel HTTP explicite detecte       |
 | contact     | non           | oui (document/chat lies) | non     | en cours   | definir perimetre api contact            |
 | account     | non           | non                      | non     | a trancher | principalement supabase-direct (reporte) |
@@ -143,6 +143,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | quote/invoice | /api/quote/{id}/invoice | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
 - 2026-05-18 | quote/invoice | /api/invoice/{id}/pdf | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
 - 2026-05-18 | quote/invoice | /api/invoice/{id}/send | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
+- 2026-05-18 | quote | /api/quote/{opportunity_id}/generate | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
 
 ## criteres de done pour ce refactor.2
 

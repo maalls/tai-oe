@@ -30,6 +30,9 @@ def _client(monkeypatch) -> TestClient:
         def handle_generate_quote_pdf(self, document_id: str, user_id: str | None = None):
             return {"status": "ok", "document_id": document_id, "user_id": user_id}
 
+        def handle_generate_quote_pdf_from_opportunity(self, opportunity_id: str, user_id: str | None = None):
+            return {"status": "ok", "opportunity_id": opportunity_id, "user_id": user_id}
+
         def handle_get_quote_file(self, filename: str):
             if filename == "missing.pdf":
                 raise FileNotFoundError("missing")
@@ -82,6 +85,23 @@ def test_quote_generate_pdf_route(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["document_id"] == "doc-2"
+
+
+def test_quote_generate_from_opportunity_requires_auth(monkeypatch):
+    client = _client(monkeypatch)
+
+    response = client.post("/api/quote/opp-1/generate")
+
+    assert response.status_code == 401
+
+
+def test_quote_generate_from_opportunity_route(monkeypatch):
+    client = _client(monkeypatch)
+
+    response = client.post("/api/quote/opp-1/generate", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["opportunity_id"] == "opp-1"
 
 
 def test_quote_download_route(monkeypatch):

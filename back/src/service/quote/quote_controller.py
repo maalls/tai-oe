@@ -217,6 +217,38 @@ class QuoteController:
                 "message": f"Error generating PDF: {str(exc)}",
             }
 
+    def handle_generate_quote_pdf_from_opportunity(self, opportunity_id: str, user_id: str = None) -> Dict:
+        _ = user_id
+        supabase = get_supabase_service()
+
+        try:
+            quote_resp = (
+                supabase.table("document")
+                .select("id")
+                .eq("opportunity_id", opportunity_id)
+                .eq("type", "QUOTE")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            if getattr(quote_resp, "error", None):
+                return {"status": "error", "message": f"Quote lookup failed: {quote_resp.error}"}
+
+            if not quote_resp.data:
+                return {"status": "error", "message": f"No quote found for opportunity {opportunity_id}"}
+
+            document_id = quote_resp.data[0].get("id")
+            if not document_id:
+                return {"status": "error", "message": "Invalid quote document id"}
+
+            return self.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": f"Error generating quote PDF from opportunity: {str(exc)}",
+            }
+
     @staticmethod
     def _normalize_account_address(account: Dict) -> Dict[str, str]:
         account = account or {}

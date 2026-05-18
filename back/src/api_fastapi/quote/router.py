@@ -90,6 +90,21 @@ def quote_generate_pdf(
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
+@router.post("/api/quote/{opportunity_id}/generate")
+def quote_generate_from_opportunity(
+    opportunity_id: str,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    quote_controller: QuoteController = Depends(get_quote_controller),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = quote_controller.handle_generate_quote_pdf_from_opportunity(opportunity_id=opportunity_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
 @router.post("/api/quote/{quote_id}/invoice")
 def quote_generate_invoice(
     quote_id: str,
