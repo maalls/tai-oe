@@ -240,7 +240,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
 import { listAccounts } from '../../api/account';
-import { supabase } from '../../lib/supabase';
 import { apiUrl } from '../../utils/api';
 
 const { t, te } = useI18n();
