@@ -5,11 +5,11 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api_fastapi.dependencies import get_email_handlers
+from src.api_fastapi.dependencies import get_auth_service, get_gmail_service
 from src.api_fastapi.main import create_app
 
 
-class _FakeEmailHandlers:
+class _FakeGmailService:
     def get_gmail_status(self, user_id: str | None = None) -> dict:
         return {"status": "ok", "authorized": True, "user_id": user_id}
 
@@ -25,10 +25,31 @@ class _FakeEmailHandlers:
     def get_gmail_profile(self, user_id: str | None = None) -> dict:
         return {"status": "ok", "email": "user@example.com", "user_id": user_id}
 
+    def oauth_callback(self, code: str, state: str | None = None) -> dict:
+        _ = (code, state)
+        return {"status": "ok", "redirect_url": "https://front/settings"}
+
+    def list_messages(self, user_id: str, max_results: int = 20, force: bool = False) -> dict:
+        return {"status": "ok", "messages": [], "user_id": user_id, "max_results": max_results, "force": force}
+
+    def classify_unclassified(self, user_id: str, limit: int = 200) -> dict:
+        return {"status": "ok", "classified": 1, "user_id": user_id, "limit": limit}
+
+    def get_message_body(self, message_id: str, user_id: str | None) -> dict:
+        return {"status": "ok", "message": "body", "message_id": message_id, "user_id": user_id}
+
+
+class _FakeAuthService:
+    def verify_token(self, auth_header: str):
+        if auth_header == "Bearer valid":
+            return True, {"id": "u-token"}
+        return False, None
+
 
 def _client() -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_email_handlers] = lambda: _FakeEmailHandlers()
+    app.dependency_overrides[get_gmail_service] = lambda: _FakeGmailService()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     return TestClient(app)
 
 
@@ -75,3 +96,48 @@ def test_gmail_profile_route_returns_profile_payload():
 
     assert response.status_code == 200
     assert response.json()["email"] == "user@example.com"
+
+
+def test_gmail_oauth_callback_redirects():
+    client = _client()
+
+    response = client.get("/api/gmail/oauth/callback?code=abc", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"] == "https://front/settings"
+
+
+def test_gmail_messages_uses_token_when_user_id_missing():
+    client = _client()
+
+    response = client.get("/api/gmail/messages?max_results=12&force=true", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["user_id"] == "u-token"
+
+
+def test_gmail_messages_returns_400_without_user_or_token():
+    client = _client()
+
+    response = client.get("/api/gmail/messages")
+
+    assert response.status_code == 400
+
+
+def test_gmail_classify_unclassified_resolves_user_from_token():
+    client = _client()
+
+    response = client.get("/api/gmail/classify-unclassified?limit=50", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["user_id"] == "u-token"
+
+
+def test_gmail_message_body_uses_token_user():
+    client = _client()
+
+    response = client.get("/api/gmail/message/m-1", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["message_id"] == "m-1"
+    assert response.json()["user_id"] == "u-token"

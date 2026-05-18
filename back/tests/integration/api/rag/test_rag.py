@@ -1,21 +1,12 @@
-import sys
-import types
 from pathlib import Path
 import pandas as pd
 
-import pytest
-
-# Provide a lightweight stub for the embeddings module so rag.rag imports cleanly during tests
-sys.modules.setdefault("embeddings", types.SimpleNamespace(EmbeddingGenerator=lambda: None))
-
-from src.api.server import make_handler
+from src.api.file.handler import FileHandler
+from src.lib.readers.csv import CSVReader
 
 
-def _build_handler(storage_dir: Path):
-    handler_cls = make_handler({"STORAGE_DIR": storage_dir})
-    handler = handler_cls.__new__(handler_cls)
-    handler.config = {"STORAGE_DIR": storage_dir}
-    return handler
+def _build_file_handler(storage_dir: Path) -> FileHandler:
+    return FileHandler(storage_dir=storage_dir, csv_reader=CSVReader())
 
 
 def test_get_sources_lists_excel_files(tmp_path: Path):
@@ -23,24 +14,22 @@ def test_get_sources_lists_excel_files(tmp_path: Path):
     (tmp_path / "a_file.xlsx").write_text("data")
     (tmp_path / "ignore.csv").write_text("data")
 
-    handler = _build_handler(tmp_path)
-    files = handler.get_request_handlers().handle_sources()
+    file_handler = _build_file_handler(tmp_path)
+    files = file_handler.list_sources()
 
     assert files == ["a_file.xlsx", "b_file.xls"]
 
 
 def test_get_sources_when_empty(tmp_path: Path):
-    handler = _build_handler(tmp_path)
-
-    files = handler.get_request_handlers().handle_sources()
+    file_handler = _build_file_handler(tmp_path)
+    files = file_handler.list_sources()
 
     assert files == []
 
 
 def test_file_upload_saves_file(tmp_path: Path):
     """Test that _parse_multipart correctly extracts filename and file data"""
-    handler = _build_handler(tmp_path)
-    file_handler = handler.get_request_handlers().file_handler
+    file_handler = _build_file_handler(tmp_path)
     
     # Create a valid multipart form data request
     boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
@@ -68,8 +57,7 @@ def test_file_upload_saves_file(tmp_path: Path):
 
 
 def test_uploaded_excel_is_converted_to_csv(tmp_path: Path):
-    handler = _build_handler(tmp_path)
-    file_handler = handler.get_request_handlers().file_handler
+    file_handler = _build_file_handler(tmp_path)
 
     # Build a simple Excel file with two sheets: hello and world
     xlsx_path = tmp_path / "sample.xlsx"

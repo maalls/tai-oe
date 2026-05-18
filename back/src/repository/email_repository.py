@@ -2093,14 +2093,12 @@ class EmailRepository:
             else:
                 print(f"[EmailRepository] Using email body (most products: {product_count})")
 
-            # Create opportunity using the same handlers as the UI orchestration.
-            from src.api.email.handler import EmailHandlers
+            # Create opportunity directly via repository/service layer.
             from src.repository.opportunity import OpportunityRepository
 
-            email_handlers = EmailHandlers()
             opportunity_repository = OpportunityRepository()
 
-            create_result = email_handlers.handle_create_opportunity_from_email(
+            create_result = self.create_opportunity_from_email(
                 message_id=email_id,
                 user_id=user_id,
             )
@@ -2281,8 +2279,8 @@ class EmailRepository:
         
         
         """Save a single email message to the database with authentication verification."""
-        from src.api.email.auth_parser import parse_email_auth
-        from src.api.email.auth_handler import EmailAuthHandler
+        from src.service.email.email_auth_parser import parse_email_auth
+        from src.service.email.email_auth_service import EmailAuthService
         
         # Check if email already exists to avoid duplicate attachments
         provider_message_id = message.get('id')
@@ -2358,7 +2356,7 @@ class EmailRepository:
         # Verify sender and update trust score
         if db_result.get('success'):
             try:
-                auth_handler = EmailAuthHandler()
+                auth_handler = EmailAuthService()
                 auth_handler.verify_sender(
                     user_id=user_id,
                     sender_email=from_email,

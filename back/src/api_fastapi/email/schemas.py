@@ -20,6 +20,22 @@ class GmailUserQuery(BaseModel):
     user_id: str | None = None
 
 
+class GmailMessagesQuery(BaseModel):
+    user_id: str | None = None
+    max_results: int = 20
+    force: bool = False
+
+
+class GmailClassifyQuery(BaseModel):
+    user_id: str | None = None
+    limit: int = 200
+
+
+class GmailOauthCallbackQuery(BaseModel):
+    code: str
+    state: str | None = None
+
+
 class GenericEmailResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 

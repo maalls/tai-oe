@@ -83,3 +83,16 @@ class AuthService:
             return {"error": str(exc), "status": 401}
         except Exception as exc:
             return {"error": str(exc), "status": 500}
+
+    def verify_token(self, auth_header: str) -> tuple[bool, dict[str, Any] | None]:
+        try:
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return False, None
+
+            token = auth_header.split(" ", 1)[1]
+            response = self.supabase.auth.get_user(token)
+            if response.user:
+                return True, response.user.model_dump()
+            return False, None
+        except Exception:
+            return False, None

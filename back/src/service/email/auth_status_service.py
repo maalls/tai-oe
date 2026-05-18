@@ -2,15 +2,15 @@
 
 from typing import Dict
 
-from src.api.email.auth_handler import EmailAuthHandler
+from src.service.email.email_auth_service import EmailAuthService
 
 
 class AuthStatusService:
     """Compose email repository and auth handler across domains."""
 
-    def __init__(self, repository, email_auth_handler: EmailAuthHandler = None):
+    def __init__(self, repository, email_auth_handler: EmailAuthService = None):
         self.repository = repository
-        self.email_auth_handler = email_auth_handler or EmailAuthHandler()
+        self.email_auth_handler = email_auth_handler or EmailAuthService()
 
     def get_email_auth_status(self, email_id: str, user_id: str) -> Dict:
         try:

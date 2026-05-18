@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api_fastapi.auth.router import router as auth_router
 from src.api_fastapi.email.router import router as email_router
+from src.api_fastapi.utils.router import router as utils_router
 
 
 def create_app() -> FastAPI:
@@ -20,6 +21,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(email_router)
+    app.include_router(utils_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
