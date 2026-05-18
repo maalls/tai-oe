@@ -177,10 +177,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useAuth } from '../../../../stores/auth';
+import { deleteOpportunityDocument, listOpportunityDocuments } from '../../../../api/document';
 
 const route = useRoute();
 const opportunityId = route.params.id as string;
@@ -200,19 +200,7 @@ const loadDocuments = async () => {
       return;
    }
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select(
-            'id, type, status, title, external_ref, currency, total_excl_tax, total_tax, total_incl_tax, storage_key, issued_at, received_at, created_at'
-         )
-         .eq('opportunity_id', opportunityId)
-         .order('created_at', { ascending: false });
-
-      if (error) {
-         throw error;
-      }
-
-      documents.value = data || [];
+      documents.value = await listOpportunityDocuments(opportunityId);
    } catch (error: any) {
       errorMessage.value = error?.message || t('opportunities.failedToLoadDocuments');
       console.error('[DocumentsPage] Error loading documents:', error);
@@ -308,18 +296,8 @@ const deleteDocument = async (doc: any) => {
 
    try {
       const token = await getValidToken();
-      const response = await fetch(`/api/document/${doc.id}`, {
-         method: 'DELETE',
-         headers: {
-            Authorization: `Bearer ${token}`,
-         },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-         throw new Error(result?.message || t('opportunities.errors.failedToDeleteDocument'));
-      }
+      if (!token) throw new Error('Unauthorized');
+      await deleteOpportunityDocument(doc.id, token);
 
       // Remove from list
       documents.value = documents.value.filter((d) => d.id !== doc.id);

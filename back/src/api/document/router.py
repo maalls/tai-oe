@@ -7,10 +7,15 @@ from fastapi.responses import JSONResponse
 
 from src.api.dependencies import get_auth_service, get_document_service
 from src.api.document.schemas import DocumentExtractRfpRequest, DocumentUpdateContentRequest
+from src.repository.database.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 from src.service.document.document_service import DocumentService
 
 router = APIRouter(tags=["document"])
+
+
+def get_db():
+    return DatabaseRepository()
 
 
 def _status_from_result(result: dict[str, Any], default_status: int = 200) -> int:
@@ -27,6 +32,70 @@ def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> st
     if not is_valid or not user_data:
         return None
     return user_data.get("id")
+
+
+@router.get("/api/document")
+def document_list(
+    opportunity_id: str | None = Query(default=None),
+    db=Depends(get_db),
+):
+    if not opportunity_id:
+        return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
+
+    rows = db.execute_dict_query(
+        """
+        SELECT id,
+               type,
+               status,
+               title,
+               external_ref,
+               currency,
+               total_excl_tax,
+               total_tax,
+               total_incl_tax,
+               storage_key,
+               issued_at,
+               received_at,
+               created_at
+        FROM document
+        WHERE opportunity_id = %s
+        ORDER BY created_at DESC
+        """,
+        (opportunity_id,),
+    )
+    return rows
+
+
+@router.get("/api/document/{document_id}")
+def document_get(
+    document_id: str,
+    opportunity_id: str | None = Query(default=None),
+    db=Depends(get_db),
+):
+    if not opportunity_id:
+        return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
+
+    rows = db.execute_dict_query(
+        """
+        SELECT id,
+               opportunity_id,
+               type,
+               status,
+               title,
+               external_ref,
+               currency,
+               total_incl_tax,
+               storage_key,
+               created_at
+        FROM document
+        WHERE id = %s
+          AND opportunity_id = %s
+        """,
+        (document_id, opportunity_id),
+    )
+    if not rows:
+        return JSONResponse({"error": "Document not found"}, status_code=404)
+    return rows[0]
 
 
 @router.post("/api/document/extract-rfp")

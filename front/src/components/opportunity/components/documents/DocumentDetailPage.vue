@@ -116,9 +116,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
+import { getOpportunityDocument } from '../../../../api/document';
 
 const { t } = useI18n();
 
@@ -131,7 +131,7 @@ const errorMessage = ref('');
 const document = ref<any | null>(null);
 
 const getDocumentUrl = (storageKey: string) => {
-   return `/api/documents/download/${storageKey}`;
+   return `/api/storage/${storageKey}`;
 };
 
 const extension = computed(() => {
@@ -167,17 +167,7 @@ const formatDate = (dateString: string) => {
 
 const loadDocument = async () => {
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select(
-            'id, opportunity_id, type, status, title, external_ref, currency, total_incl_tax, storage_key, created_at'
-         )
-         .eq('id', documentId)
-         .eq('opportunity_id', opportunityId)
-         .single();
-
-      if (error) throw error;
-      document.value = data;
+      document.value = await getOpportunityDocument(opportunityId, documentId);
    } catch (error: any) {
       errorMessage.value = error?.message || t('opportunities.failedToLoadDocument');
    } finally {
