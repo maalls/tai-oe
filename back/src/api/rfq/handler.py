@@ -33,7 +33,7 @@ class RfqHandlers:
         self.supabase = supabase or get_supabase_service()
 
     def _load_email_content(self, message_id: str) -> str:
-        """Load email content, preferring the DDD service and falling back to legacy preview data."""
+        """Load email content, preferring the service layer and falling back to legacy preview data."""
         email_service = self.service_factory.create_email_service()
         email = email_service.get_email(message_id)
         if email.body:
