@@ -11,6 +11,16 @@ from src.api.main import create_app
 
 class _FakeDb:
     def execute_dict_query(self, query, params=None):
+        if "FROM document_line" in query:
+            assert params == ("doc-1",)
+            return [
+                {
+                    "id": "line-1",
+                    "document_id": "doc-1",
+                    "position": 1,
+                    "description": "Line 1",
+                }
+            ]
         if params == ("doc-1", "opp-1"):
             return [
                 {
@@ -55,3 +65,4 @@ def test_document_get_returns_row():
 
     assert response.status_code == 200
     assert response.json()["id"] == "doc-1"
+    assert len(response.json()["document_line"]) == 1

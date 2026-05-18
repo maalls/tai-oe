@@ -99,7 +99,31 @@ def document_get(
     )
     if not rows:
         return JSONResponse({"error": "Document not found"}, status_code=404)
-    return rows[0]
+
+    document = rows[0]
+    line_rows = db.execute_dict_query(
+        """
+        SELECT id,
+               document_id,
+               position,
+               sku,
+               brand,
+               description,
+               quantity,
+               unit,
+               unit_price_excl_tax,
+               tax_rate,
+               discount_rate,
+               client_discount_rate,
+               line_total_excl_tax
+        FROM document_line
+        WHERE document_id = %s
+        ORDER BY position ASC
+        """,
+        (document_id,),
+    )
+    document["document_line"] = line_rows
+    return document
 
 
 @router.put("/api/document/{document_id}/storage-key")

@@ -243,8 +243,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import { getAccount } from '../../../../api/account';
+import { listContacts } from '../../../../api/contact';
+import { listOpportunityDocuments, getOpportunityDocument } from '../../../../api/document';
+import { getOpportunitySummary } from '../../../../api/opportunity';
 import { useI18n } from '../../../../i18n/useI18n';
 import { buildAuthHeaders } from '../../utils/auth';
 import SourceViewer from '../source/SourceViewer.vue';
@@ -376,19 +378,9 @@ const markFieldChanged = (key: string) => {
 const loadOpportunity = async () => {
    //console.log('[QuotePage] Loading opportunity stage for opportunity ID:', opportunityId);
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('*')
-         .eq('id', opportunityId)
-         .single();
-
-      if (error) {
-         throw new Error('[QuotePage] Error loading opportunity stage: ' + error.message);
-         return;
-      }
-
+      const data = await getOpportunitySummary(opportunityId);
       if (data) {
-         opportunity.value = data;
+         opportunity.value = data as any;
          watch(
             () => opportunity.value.stage,
             () => {
@@ -403,28 +395,25 @@ const loadOpportunity = async () => {
 
 const loadQuoteDocument = async () => {
    try {
-      // Load the most recent quote document
-      let query = supabase
-         .from('document')
-         .select(`*, document_line (*)`)
-         .eq('opportunity_id', opportunityId)
-         .eq('type', 'QUOTE');
+      const docs = await listOpportunityDocuments(opportunityId);
+      const quoteDocs = docs.filter((doc) => doc.type === 'QUOTE');
+      const allowedStatuses = stagesWithSentQuotes.has(opportunity.value?.stage)
+         ? new Set(['DRAFT', 'SENT'])
+         : new Set(['DRAFT']);
 
-      if (!stagesWithSentQuotes.has(opportunity.value.stage)) {
-         query = query.eq('status', 'DRAFT');
+      const selectedQuote =
+         quoteDocs.find((doc) => allowedStatuses.has(String(doc.status || ''))) || null;
+
+      if (!selectedQuote?.id) {
+         quoteDocument.value = null;
       } else {
-         query = query.in('status', ['DRAFT', 'SENT']);
+         const fullDocument = await getOpportunityDocument(opportunityId, selectedQuote.id);
+         quoteDocument.value = {
+            ...fullDocument,
+            pdf_filename: fullDocument.storage_key || null,
+            document_line: (fullDocument as any).document_line || [],
+         };
       }
-
-      const { data, error } = await query.order('created_at', { ascending: false }).limit(1);
-
-      if (error) {
-         console.error('[QuotePage] Error loading quote document:', error);
-         return;
-      }
-
-      //console.log('[QuotePage] Loaded quote document:', data[0]);
-      quoteDocument.value = data[0] || null;
 
       if (!quoteDocument.value) {
          window.dispatchEvent(
@@ -442,18 +431,7 @@ const loadQuoteDocument = async () => {
 
 const loadAccountAndContact = async () => {
    try {
-      const { data: oppData, error: oppError } = await supabase
-         .from('opportunity')
-         .select('account_id')
-         .eq('id', opportunityId)
-         .single();
-
-      if (oppError) {
-         console.error('[QuotePage] Error loading opportunity for account info:', oppError);
-         return;
-      }
-
-      const accountId = (oppData as any)?.account_id;
+      const accountId = opportunity.value?.account_id;
 
       if (accountId) {
          try {
@@ -471,28 +449,20 @@ const loadAccountAndContact = async () => {
          }
       }
 
-      const { data: buyerParticipants, error: participantError } = await supabase
-         .from('opportunity_participant')
-         .select('contact:contact_id(id, name, email, phone, role_title)')
-         .eq('opportunity_id', opportunityId)
-         .eq('role', 'BUYER')
-         .limit(1);
+      const buyerParticipant = (source.value?.participants || []).find(
+         (participant) => participant?.role === 'BUYER' && participant?.contact
+      );
 
-      if (!participantError && buyerParticipants && buyerParticipants.length > 0) {
-         contactInfo.value = (buyerParticipants[0] as any).contact || null;
+      if (buyerParticipant?.contact) {
+         contactInfo.value = buyerParticipant.contact;
          return;
       }
 
       if (accountId) {
-         const { data: accountContacts, error: contactError } = await supabase
-            .from('contact')
-            .select('id, name, email, phone, role_title')
-            .eq('account_id', accountId)
-            .order('created_at', { ascending: true })
-            .limit(1);
-
-         if (!contactError && accountContacts && accountContacts.length > 0) {
-            contactInfo.value = accountContacts[0] as any;
+         const contacts = await listContacts();
+         const firstContact = contacts.find((contact) => contact.account_id === accountId);
+         if (firstContact) {
+            contactInfo.value = firstContact as any;
          }
       }
    } catch (error) {
@@ -638,11 +608,8 @@ onMounted(async () => {
    try {
       // Load opportunity first, then quote document (which depends on stage)
       await loadOpportunity();
-      await Promise.all([
-         loadQuoteDocument(),
-         loadSourceFromOpportunity(),
-         loadAccountAndContact(),
-      ]);
+      await loadSourceFromOpportunity();
+      await Promise.all([loadQuoteDocument(), loadAccountAndContact()]);
    } finally {
       //console.log('[QuotePage] Finished loading data, setting isLoading to false');
       isLoading.value = false;

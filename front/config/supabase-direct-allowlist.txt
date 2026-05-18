@@ -19,7 +19,6 @@ src/components/opportunity/components/pipeline/components/PipelineStageInvoiced/
 src/components/opportunity/components/pipeline/components/PipelineStagePaid/PipelineStagePaid.vue
 src/components/opportunity/components/pipeline/components/PipelineStageRfp/PipelineStageRfp.vue
 src/components/opportunity/components/pipeline/components/StageManager.vue
-src/components/opportunity/components/quote/Quote.vue
 src/components/opportunity/components/quote/QuoteDocument.vue
 src/components/opportunity/components/send/SendPage.vue
 src/components/opportunity/components/settings/SettingsPage.vue
