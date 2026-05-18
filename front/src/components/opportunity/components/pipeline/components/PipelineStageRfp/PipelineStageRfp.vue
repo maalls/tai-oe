@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../../../../../lib/supabase';
+import { listOpportunityDocuments } from '../../../../../../api/document';
 import { useAuth } from '../../../../../../stores/auth';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
@@ -130,19 +130,8 @@ const checkExistingQuote = async () => {
    if (!props.opportunity?.id) return;
 
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('id')
-         .eq('opportunity_id', props.opportunity.id)
-         .eq('type', 'QUOTE')
-         .limit(1);
-
-      if (error) {
-         console.error('[PipelineStageRfp] Error checking quote:', error);
-         return;
-      }
-
-      hasExistingQuote.value = !!(data && data.length > 0);
+      const documents = await listOpportunityDocuments(props.opportunity.id);
+      hasExistingQuote.value = documents.some((document) => document.type === 'QUOTE');
    } catch (error) {
       console.error('[PipelineStageRfp] Unexpected error checking quote:', error);
    }
@@ -163,15 +152,12 @@ const generateQuotePdf = async () => {
 
    try {
       const token = await getValidToken();
-      const response = await fetch(
-         `/api/quote/${props.opportunity.id}/generate`,
-         {
-            method: 'POST',
-            headers: {
-               Authorization: `Bearer ${token}`,
-            },
-         }
-      );
+      const response = await fetch(`/api/quote/${props.opportunity.id}/generate`, {
+         method: 'POST',
+         headers: {
+            Authorization: `Bearer ${token}`,
+         },
+      });
 
       const result = await response.json();
       if (!response.ok) {

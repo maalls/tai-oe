@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut      | Commit/Tag                                                                                                                                                                                                    |
-| --- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                                                                                                                              |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                                                                                                                       |
-| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                                            |
-| 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                                      |
-| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30]                  |
-| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + tests + baseline 18] |
-| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                                                               |
-| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                                                               |
+| Lot | Description                            | Statut      | Commit/Tag                                                                                                                                                                                                                   |
+| --- | -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                                                                                                                                             |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                                                                                                                                      |
+| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                                                           |
+| 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                                                     |
+| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30]                                 |
+| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + tests + baseline 17] |
+| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                                                                              |
+| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                                                                              |
 
 # backend.refactor.3.plan
 
@@ -310,8 +310,14 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: tests unitaires backend/frontend ajoutes pour les nouveaux endpoints/helpers
 - fait: guardrail supabase-direct valide, baseline reduite a `18` fichiers
 
-11. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
-12. centraliser les agregats source/document/participant cote backend
+11. fait: migrer `PipelineStageRfp.vue` hors `supabase.from('document')`
+
+- fait: `front/src/components/opportunity/components/pipeline/components/PipelineStageRfp/PipelineStageRfp.vue` migre vers API backend `document`
+- fait: tests unitaires frontend executes sur le client API utilise
+- fait: guardrail supabase-direct valide, baseline reduite a `17` fichiers
+
+12. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
+13. centraliser les agregats source/document/participant cote backend
 
 ### lot 5 - invoices et quote read models
 
