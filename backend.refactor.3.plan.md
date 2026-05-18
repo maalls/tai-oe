@@ -6,7 +6,7 @@
 | 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                                                                                  |
 | 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                       |
 | 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38] |
-| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + tests + baseline 36]                                                                                          |
+| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + tests + baseline 35]                                                                     |
 | 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                                                                                          |
 | 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                          |
 | 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                          |
@@ -104,18 +104,18 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 ### D. brand, family, product catalogue CMS
 
-| surface frontend                                          | tables                                | mode actuel       | owner cible                            |
-| --------------------------------------------------------- | ------------------------------------- | ----------------- | -------------------------------------- |
-| `front/src/components/products/BrandEditPage.vue`         | `brand`, `family`                     | `supabase-direct` | nouveau router/service brand           |
-| `front/src/components/family/index.vue`                   | `family`, `product`, `product_family` | `supabase-direct` | nouveau router/service family          |
-| `front/src/components/family/show.vue`                    | `family` detail                       | `supabase-direct` | router family                          |
-| `front/src/components/products/FamilyDiscountPage.vue`    | `family`, `document`, `document_line` | `supabase-direct` | router family + quote/document service |
-| `front/src/components/products/useBrandFamilyData.ts`     | `vendor`, `brand`                     | `supabase-direct` | endpoints catalogue de reference       |
-| `front/src/components/products/cms/useCmsData.ts`         | `brand`, `family`                     | `supabase-direct` | endpoints catalogue de reference       |
-| `front/src/components/admin/components/cms/useCmsData.ts` | `brand`, `family`                     | `supabase-direct` | endpoints catalogue de reference       |
-| `front/src/composables/useSuggestionSearch.ts`            | `product` search                      | `supabase-direct` | etendre router product/search          |
-| `front/src/components/products/IndexPage.vue`             | produit/cms                           | mixte             | router product                         |
-| `front/src/components/products/DetailPage.vue`            | produit detail                        | `supabase-direct` | router product                         |
+| surface frontend                                          | tables                                                   | mode actuel       | owner cible                            |
+| --------------------------------------------------------- | -------------------------------------------------------- | ----------------- | -------------------------------------- |
+| `front/src/components/products/BrandEditPage.vue`         | `brand`, `family`                                        | `supabase-direct` | nouveau router/service brand           |
+| `front/src/components/family/index.vue`                   | `family`, `product`, `product_family`                    | `supabase-direct` | nouveau router/service family          |
+| `front/src/components/family/show.vue`                    | `family` detail                                          | `supabase-direct` | router family                          |
+| `front/src/components/products/FamilyDiscountPage.vue`    | `family`, `document`, `document_line`                    | `supabase-direct` | router family + quote/document service |
+| `front/src/components/products/useBrandFamilyData.ts`     | `vendor`, `brand`, `family`, `product_family`, `product` | `fastapi`         | endpoints catalogue de reference       |
+| `front/src/components/products/cms/useCmsData.ts`         | `brand`, `family`                                        | `fastapi`         | endpoints catalogue de reference       |
+| `front/src/components/admin/components/cms/useCmsData.ts` | `brand`, `family`                                        | `fastapi`         | endpoints catalogue de reference       |
+| `front/src/composables/useSuggestionSearch.ts`            | `product` search                                         | `supabase-direct` | etendre router product/search          |
+| `front/src/components/products/IndexPage.vue`             | produit/cms                                              | mixte             | router product                         |
+| `front/src/components/products/DetailPage.vue`            | produit detail                                           | `supabase-direct` | router product                         |
 
 ### E. opportunity, quote, invoice
 
@@ -215,9 +215,10 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 - fait: `front/src/components/products/cms/useCmsData.ts` migre vers `front/src/api/catalog.ts`
 - fait: `front/src/components/admin/components/cms/useCmsData.ts` migre vers `front/src/api/catalog.ts`
+- fait: `front/src/components/products/useBrandFamilyData.ts` migre vers `front/src/api/catalog.ts` + `front/src/api/vendor.ts`
 - fait: nouveau client API `front/src/api/catalog.ts`
-- fait: tests unitaires frontend ajoutes pour API catalog et composables `useCmsData`
-- fait: guardrail supabase-direct valide, baseline reduite a `36` fichiers
+- fait: tests unitaires frontend ajoutes pour API catalog et composables `useCmsData`/`useBrandFamilyData`
+- fait: guardrail supabase-direct valide, baseline reduite a `35` fichiers
 
 4. migrer `BrandEditPage`, `family/index`, `family/show`, `FamilyDiscountPage`
 
@@ -247,7 +248,7 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - `2026-05-18 | data metier | supabase.from(... ) dans front/src/** | decision=migrer vers backend | objectif central du plan.3`
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`
 - `2026-05-18 | lot 0 | guardrail supabase-direct | decision=actif | toute nouvelle surface frontend utilisant supabase direct hors allowlist echoue via npm run check:supabase-direct`
-- `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData migres, baseline guardrail 36`
+- `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData et useBrandFamilyData migres, baseline guardrail 35`
 
 ## criteres de done pour ce refactor.3
 

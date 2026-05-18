@@ -6,13 +6,30 @@ from src.api.main import create_app
 
 class _FakeDb:
     def execute_dict_query(self, query, params=None):
-        assert "FROM family" in query
+        assert "FROM family f" in query
+        assert "LEFT JOIN product_family" in query
         return [
             {
                 "id": "f-1",
                 "name": "Family A",
+                "code": "FAM-A",
                 "type": "standard",
                 "brand_id": "b-1",
+                "product_code": "SKU-1",
+                "quantity": 1,
+                "discount": 0,
+                "minimum_margin": 10,
+                "target_margin": 20,
+                "unit": "pcs",
+                "packing": "box",
+                "lead_time_week": 2,
+                "net_price": 12.3,
+                "product_family_count": 3,
+                "product_id": "p-1",
+                "product_sku": "SKU-1",
+                "product_name": "Product A",
+                "product_price": 45.0,
+                "product_brand_id": "b-1",
             }
         ]
 
@@ -26,3 +43,5 @@ def test_list_catalog_families_returns_rows():
 
     assert response.status_code == 200
     assert response.json()[0]["id"] == "f-1"
+    assert response.json()[0]["product_family_count"] == 3
+    assert response.json()[0]["product"]["id"] == "p-1"

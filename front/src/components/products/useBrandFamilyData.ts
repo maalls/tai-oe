@@ -1,5 +1,6 @@
 import { ref } from 'vue';
-import { supabase } from '../../lib/supabase';
+import { listCatalogBrands, listCatalogFamilies } from '../../api/catalog';
+import { listVendors } from '../../api/vendor';
 
 export interface Brand {
    id: string;
@@ -50,99 +51,26 @@ export const useBrandFamilyData = () => {
       errorMessage.value = '';
 
       try {
-         // Fetch all vendors
-         const { data: vendorData, error: vendorError } = await supabase
-            .from('vendor')
-            .select('id,name');
-         if (vendorError) throw new Error(`Vendors: ${vendorError.message}`);
+         const [vendorData, brandData, familyData] = await Promise.all([
+            listVendors(),
+            listCatalogBrands(),
+            listCatalogFamilies(),
+         ]);
+
          const vendorMap = (vendorData || []).reduce((acc: Record<string, string>, v: any) => {
             acc[v.id] = v.name;
             return acc;
          }, {});
 
-         // Fetch brands with vendor_id
-         const { data: brandData, error: brandError } = await supabase
-            .from('brand')
-            .select('*')
-            .order('name', { ascending: true });
-         if (brandError) throw new Error(`Brands: ${brandError.message}`);
-
          brands.value = (brandData || []).map((b: any) => ({
             ...b,
             vendor_name: b.vendor_id ? vendorMap[b.vendor_id] : null,
          }));
-
-         // Fetch families from the family table
-         const { data: familyData, error: familyError } = await supabase
-            .from('family')
-            .select('*, product_family(count)')
-            .order('name', { ascending: true });
-         if (familyError) throw new Error(`Families: ${familyError.message}`);
-
-         // Left-join semantics by SKU: product.sku = family.product_code
-         const productCodes = Array.from(
-            new Set(
-               (familyData || [])
-                  .map((f: any) =>
-                     typeof f.product_code === 'string' ? f.product_code.trim() : ''
-                  )
-                  .filter((code: string) => code.length > 0)
-            )
-         );
-
-         let productBySku: Record<
-            string,
-            {
-               id: string;
-               sku: string;
-               name: string | null;
-               price: number | null;
-               brand_id: string | null;
-            }
-         > = {};
-         if (productCodes.length > 0) {
-            const { data: productData, error: productError } = await supabase
-               .from('product')
-               .select('id,sku,price,name,brand_id')
-               .in('sku', productCodes);
-            if (productError) throw new Error(`Products: ${productError.message}`);
-
-            productBySku = (productData || []).reduce(
-               (
-                  acc: Record<
-                     string,
-                     {
-                        id: string;
-                        sku: string;
-                        name: string | null;
-                        price: number | null;
-                        brand_id: string | null;
-                     }
-                  >,
-                  p: any
-               ) => {
-                  acc[p.sku] = {
-                     id: p.id,
-                     sku: p.sku,
-                     price: p.price ?? null,
-                     name: p.name ?? null,
-                     brand_id: p.brand_id ?? null,
-                  };
-                  return acc;
-               },
-               {}
-            );
-         }
-
-         families.value = (familyData || []).map((f: any) => {
-            const sku = typeof f.product_code === 'string' ? f.product_code.trim() : '';
-            const matchedProduct = sku ? productBySku[sku] : undefined;
-            return {
-               ...f,
-               product_family_count: f.product_family?.[0]?.count ?? 0,
-               product: matchedProduct ?? null,
-            };
-         });
+         families.value = (familyData || []).map((f: any) => ({
+            ...f,
+            product_family_count: f.product_family_count ?? 0,
+            product: f.product ?? null,
+         }));
       } catch (error) {
          errorMessage.value = error instanceof Error ? error.message : 'Failed to load brand data.';
       } finally {
