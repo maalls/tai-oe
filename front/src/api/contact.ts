@@ -9,6 +9,13 @@ export interface Contact {
    account_name?: string | null;
 }
 
+export interface ContactOpportunity {
+   id: string;
+   name: string;
+   stage: string;
+   role: string;
+}
+
 export type ContactCreate = Omit<Contact, 'id' | 'created_at' | 'account_name'>;
 export type ContactUpdate = Partial<ContactCreate>;
 
@@ -21,6 +28,12 @@ export async function listContacts(): Promise<Contact[]> {
 export async function getContact(id: string): Promise<Contact> {
    const res = await fetch(`/api/contact/${id}`);
    if (!res.ok) throw new Error('Contact introuvable');
+   return await res.json();
+}
+
+export async function listContactOpportunities(contactId: string): Promise<ContactOpportunity[]> {
+   const res = await fetch(`/api/contact/${contactId}/opportunities`);
+   if (!res.ok) throw new Error('Erreur lors du chargement des opportunités liées');
    return await res.json();
 }
 

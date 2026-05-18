@@ -175,11 +175,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../lib/supabase';
 import {
    createContact,
    deleteContact as deleteContactApi,
    getContact,
+   listContactOpportunities,
    updateContact,
 } from '../../api/contact';
 import { listAccounts } from '../../api/account';
@@ -257,22 +257,7 @@ const loadAccounts = async () => {
 
 const loadRelatedOpportunities = async () => {
    try {
-      const { data, error } = await supabase
-         .from('opportunity_participant')
-         .select('role, opportunity:opportunity_id(id, name, stage)')
-         .eq('contact_id', contactId)
-         .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      relatedOpps.value = (data || [])
-         .filter((row: any) => row.opportunity)
-         .map((row: any) => ({
-            id: row.opportunity.id,
-            name: row.opportunity.name,
-            stage: row.opportunity.stage,
-            role: row.role,
-         }));
+      relatedOpps.value = await listContactOpportunities(contactId);
    } catch (error) {
       console.error('Failed to load related opportunities:', error);
    }

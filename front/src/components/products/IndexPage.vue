@@ -131,7 +131,7 @@ import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import Table from './components/table/index.vue';
 import { useBrandFamilyData } from './useBrandFamilyData';
-import { supabase } from '../../lib/supabase';
+import { searchProducts } from '../../api/product';
 import { useI18n } from '../../i18n/useI18n';
 
 interface Product {
@@ -147,8 +147,6 @@ interface Product {
 
 const PAGE_SIZE = 100;
 const SEARCH_LIMIT = 500;
-const FAMILY_LINK_BATCH_SIZE = 1000;
-
 const products = ref<Product[]>([]);
 const searchResults = ref<Product[]>([]);
 const loading = ref(false);
@@ -238,28 +236,6 @@ function matchesFamilyFilter(product: Product, familyFilter: string): boolean {
    return codes.some((code) => String(code).trim().toLowerCase() === normalizedFilter);
 }
 
-function mapSupabaseProduct(row: any): Product {
-   const brandFromJoin = row.brand || null;
-   const familyCodes = Array.isArray(row.product_family)
-      ? row.product_family
-           .map((pf: any) => pf?.family?.code)
-           .filter((code: unknown) => typeof code === 'string' && code.trim() !== '')
-      : Array.isArray(row.family_codes)
-        ? row.family_codes
-        : [];
-
-   return {
-      id: row.id,
-      marque: row.marque || brandFromJoin?.marque || brandFromJoin?.name || '',
-      refciale: row.refciale || row.sku || '',
-      libelle240: row.libelle240 || row.name || '',
-      tarif: row.tarif ?? row.price ?? '',
-      brand_id: row.brand_id || null,
-      brand_name: row.brand_name || brandFromJoin?.name || null,
-      family_codes: familyCodes,
-   };
-}
-
 function applyClientFilters(list: Product[]): Product[] {
    const normalizedSearch = searchQuery.value.trim().toLowerCase();
    const normalizedMarque = filterMarque.value.trim().toLowerCase();
@@ -324,24 +300,13 @@ async function loadProducts(page = 1) {
 
    try {
       const from = (currentPage.value - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      const {
-         data,
-         count,
-         error: queryError,
-      } = await supabase
-         .from('product')
-         .select('*, brand:brand_id(id,name,marque), product_family(family:family_id(code))', {
-            count: 'exact',
-         })
-         .order('sku', { ascending: true })
-         .range(from, to);
+      const result = await searchProducts({
+         limit: PAGE_SIZE,
+         offset: from,
+      });
 
-      if (queryError) throw queryError;
-
-      const mapped = (data || []).map(mapSupabaseProduct);
-      products.value = mapped;
-      totalCount.value = count || 0;
+      products.value = result.products as Product[];
+      totalCount.value = result.totalCount;
    } catch (e: any) {
       error.value = String(e?.message || e);
    } finally {
@@ -380,93 +345,18 @@ async function performSearch(options?: { preservePage?: boolean }) {
    searchResults.value = [];
 
    try {
-      let familyFilteredProducts: Product[] | null = null;
+      const result = await searchProducts({
+         query: searchQuery.value.trim().replace(/,/g, ' '),
+         marque: filterMarque.value.trim(),
+         refciale: filterRefciale.value.trim(),
+         tarif: filterTarif.value.trim(),
+         family: filterFamily.value.trim(),
+         exactMatch: exactMatch.value,
+         limit: SEARCH_LIMIT,
+         offset: 0,
+      });
 
-      if (filterFamily.value.trim()) {
-         const { data: matchingFamilies, error: familyError } = await supabase
-            .from('family')
-            .select('id')
-            .ilike('code', filterFamily.value.trim());
-
-         if (familyError) throw familyError;
-
-         const familyIds = (matchingFamilies || []).map((family: any) => family.id).filter(Boolean);
-         if (!familyIds.length) {
-            searchResults.value = [];
-            isUsingSearch.value = true;
-            return;
-         }
-
-         const deduped = new Map<string, Product>();
-         let from = 0;
-
-         while (true) {
-            const to = from + FAMILY_LINK_BATCH_SIZE - 1;
-            const { data: linkedRows, error: linkedRowsError } = await supabase
-               .from('product_family')
-               .select(
-                  'product:product_id(*, brand:brand_id(id,name,marque), product_family(family:family_id(code)))'
-               )
-               .in('family_id', familyIds)
-               .range(from, to);
-
-            if (linkedRowsError) throw linkedRowsError;
-
-            const batch = linkedRows || [];
-            for (const row of batch) {
-               const product = (row as any).product;
-               if (!product?.id) continue;
-               deduped.set(String(product.id), mapSupabaseProduct(product));
-            }
-
-            if (batch.length < FAMILY_LINK_BATCH_SIZE) {
-               break;
-            }
-
-            from += FAMILY_LINK_BATCH_SIZE;
-         }
-
-         familyFilteredProducts = Array.from(deduped.values());
-
-         if (!familyFilteredProducts.length) {
-            searchResults.value = [];
-            isUsingSearch.value = true;
-            return;
-         }
-      }
-
-      if (familyFilteredProducts) {
-         searchResults.value = applyClientFilters(familyFilteredProducts);
-         isUsingSearch.value = true;
-         if (options?.preservePage) {
-            currentPage.value = Math.min(Math.max(1, currentPage.value), totalPages.value || 1);
-         }
-         return;
-      }
-
-      let query = supabase
-         .from('product')
-         .select('*, brand:brand_id(id,name,marque), product_family(family:family_id(code))')
-         .order('sku', { ascending: true })
-         .range(0, SEARCH_LIMIT - 1);
-
-      if (filterRefciale.value.trim()) {
-         const refFilter = filterRefciale.value.trim();
-         query = exactMatch.value
-            ? query.ilike('sku', refFilter)
-            : query.ilike('sku', `%${refFilter}%`);
-      }
-
-      if (searchQuery.value.trim()) {
-         const q = searchQuery.value.trim().replace(/,/g, ' ');
-         query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`);
-      }
-
-      const { data, error: queryError } = await query;
-      if (queryError) throw queryError;
-
-      const mappedResults = (data || []).map(mapSupabaseProduct);
-      searchResults.value = applyClientFilters(mappedResults);
+      searchResults.value = applyClientFilters(result.products as Product[]);
       isUsingSearch.value = true;
       if (options?.preservePage) {
          currentPage.value = Math.min(Math.max(1, currentPage.value), totalPages.value || 1);

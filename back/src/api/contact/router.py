@@ -43,6 +43,23 @@ def get_contact(contact_id: str, db=Depends(get_db)):
     return rows[0]
 
 
+@router.get("/api/contact/{contact_id}/opportunities")
+def list_contact_opportunities(contact_id: str, db=Depends(get_db)):
+    return db.execute_dict_query(
+        """
+        SELECT op.role,
+               o.id,
+               o.name,
+               o.stage
+        FROM opportunity_participant op
+        JOIN opportunity o ON o.id = op.opportunity_id
+        WHERE op.contact_id = %s
+        ORDER BY op.created_at DESC
+        """,
+        (contact_id,),
+    )
+
+
 @router.post("/api/contact", response_model=ContactResponse)
 def create_contact(payload: ContactCreate, db=Depends(get_db)):
     rows = db.execute_dict_query(
