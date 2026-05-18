@@ -34,6 +34,10 @@ class OpportunityUpdateNameRequest(BaseModel):
     name: str
 
 
+class OpportunityUpdateAccountRequest(BaseModel):
+    account_id: str
+
+
 class OpportunityExtractAuthorContactRequest(BaseModel):
     from_email: str
     from_name: str | None = None

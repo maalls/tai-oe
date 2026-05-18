@@ -199,12 +199,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
 import { createAccount, getAccount, listAccounts, updateAccount } from '../../../../api/account';
+import { listContacts } from '../../../../api/contact';
+import { getOpportunitySummary, updateOpportunityAccount } from '../../../../api/opportunity';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
+import { useAuth } from '../../../../stores/auth';
 
 const { t } = useI18n();
+const { getValidToken } = useAuth();
 
 const route = useRoute();
 const opportunityId = route.params.id as string;
@@ -272,19 +275,10 @@ const loadAccountDetails = async (accountId: string) => {
 
 const loadAccountContacts = async (accountId: string) => {
    try {
-      const { data, error } = await supabase
-         .from('contact')
-         .select('id, name, email, phone, role_title')
-         .eq('account_id', accountId)
-         .order('name', { ascending: true });
-
-      if (error) {
-         console.error('[AccountPage] Error loading contacts:', error);
-         accountContacts.value = [];
-         return;
-      }
-
-      accountContacts.value = data || [];
+      const contacts = await listContacts();
+      accountContacts.value = contacts
+         .filter((contact) => contact.account_id === accountId)
+         .sort((left, right) => left.name.localeCompare(right.name));
    } catch (error) {
       console.error('[AccountPage] Unexpected error loading contacts:', error);
       accountContacts.value = [];
@@ -301,21 +295,8 @@ const loadOpportunity = async () => {
    }
 
    try {
-      const { data, error } = await supabase
-         .from('opportunity')
-         .select('account_id')
-         .eq('id', opportunityId)
-         .single();
-
-      if (error) {
-         errorMessage.value = t('opportunities.errorLoadingOpportunity', {
-            message: error.message,
-         });
-         return;
-      }
-
-      console.log('loaded opportunity data:', data);
-      const opportunityData = data as any;
+      const opportunityData = await getOpportunitySummary(opportunityId);
+      console.log('loaded opportunity data:', opportunityData);
       if (opportunityData && opportunityData.account_id) {
          await loadAccountDetails(opportunityData.account_id);
       }
@@ -388,13 +369,9 @@ const assignAccountToOpportunity = async (acct: { id: string; name: string }) =>
    successMessage.value = '';
 
    try {
-      const { error } = await (supabase.from('opportunity') as any)
-         .update({ account_id: acct.id })
-         .eq('id', opportunityId);
-
-      if (error) {
-         throw new Error(error.message);
-      }
+      const token = await getValidToken();
+      if (!token) throw new Error(t('opportunities.errors.userNotAuthenticated'));
+      await updateOpportunityAccount(opportunityId, acct.id, token);
 
       accountForm.value.name = acct.name;
       accountSearchResults.value = [];
@@ -420,14 +397,9 @@ const createAccountAndAssign = async () => {
 
    try {
       const newAccount = await createAccount({ name });
-
-      const { error: assignError } = await (supabase.from('opportunity') as any)
-         .update({ account_id: newAccount.id })
-         .eq('id', opportunityId);
-
-      if (assignError) {
-         throw new Error(assignError.message);
-      }
+      const token = await getValidToken();
+      if (!token) throw new Error(t('opportunities.errors.userNotAuthenticated'));
+      await updateOpportunityAccount(opportunityId, newAccount.id, token);
 
       accountForm.value.name = newAccount.name;
       accountSearchResults.value = [];

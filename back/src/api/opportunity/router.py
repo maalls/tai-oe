@@ -18,6 +18,7 @@ from src.api.dependencies import (
 from src.api.opportunity.schemas import (
     OpportunityAdvanceQuery,
     OpportunityAdvanceRequest,
+    OpportunityUpdateAccountRequest,
     OpportunityCreateFromEmailRequest,
     OpportunityExtractAuthorContactRequest,
     OpportunityCreateManualRequest,
@@ -333,6 +334,32 @@ def opportunity_update_name(
         RETURNING id, account_id, name
         """,
         (trimmed_name, opportunity_id),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    return rows[0]
+
+
+@router.put("/api/opportunity/{opportunity_id}/account")
+def opportunity_update_account(
+    opportunity_id: str,
+    payload: OpportunityUpdateAccountRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    rows = db.execute_dict_query(
+        """
+        UPDATE opportunity
+        SET account_id = %s, updated_at = now()
+        WHERE id = %s
+        RETURNING id, account_id, name
+        """,
+        (payload.account_id, opportunity_id),
     )
     if not rows:
         raise HTTPException(status_code=404, detail="Opportunity not found")

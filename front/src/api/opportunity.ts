@@ -80,6 +80,23 @@ export async function updateOpportunityName(
    return await res.json();
 }
 
+export async function updateOpportunityAccount(
+   opportunityId: string,
+   accountId: string,
+   token: string
+): Promise<OpportunitySummary> {
+   const res = await fetch(`/api/opportunity/${opportunityId}/account`, {
+      method: 'PUT',
+      headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ account_id: accountId }),
+   });
+   if (!res.ok) throw new Error('Erreur lors de la mise à jour du compte de l’opportunité');
+   return await res.json();
+}
+
 export async function extractOpportunityAuthorContact(
    opportunityId: string,
    fromEmail: string,

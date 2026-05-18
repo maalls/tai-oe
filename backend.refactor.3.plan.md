@@ -7,7 +7,7 @@
 | 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                                                                                                                                    |
 | 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                                                                                                                              |
 | 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30]                                                                                                          |
-| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + PipelineStageClosedWon + ActionsPage + SettingsPage + tests + baseline 14] |
+| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + PipelineStageClosedWon + ActionsPage + SettingsPage + AccountPage + tests + baseline 13] |
 | 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                                                                                                                                                                                                       |
 | 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                                                                                                                                                                                                       |
 
@@ -335,8 +335,16 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: suppression du reliquat `import { supabase }` inutile dans `front/src/components/opportunity/components/settings/SettingsPage.vue`
 - fait: guardrail supabase-direct valide, baseline reduite a `14` fichiers
 
-15. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
-16. centraliser les agregats source/document/participant cote backend
+15. fait: migrer `AccountPage.vue` hors `supabase.from('opportunity'|'contact')`
+
+- fait: ajout endpoint backend `PUT /api/opportunity/{id}/account`
+- fait: extension client frontend `front/src/api/opportunity.ts` (`updateOpportunityAccount`)
+- fait: `front/src/components/opportunity/components/account/AccountPage.vue` migre vers APIs backend `opportunity` et `contact`
+- fait: tests unitaires backend/frontend ajoutes pour la nouvelle route et le helper associe
+- fait: guardrail supabase-direct valide, baseline reduite a `13` fichiers
+
+16. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
+17. centraliser les agregats source/document/participant cote backend
 
 ### lot 5 - invoices et quote read models
 
