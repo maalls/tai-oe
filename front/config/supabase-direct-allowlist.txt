@@ -3,5 +3,4 @@
 
 src/components/login/ResetPasswordPage.vue
 src/components/mail/IndexPage.vue
-src/components/opportunity/components/quote/QuoteDocument.vue
 src/stores/auth.ts

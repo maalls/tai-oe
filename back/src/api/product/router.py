@@ -156,6 +156,119 @@ def products_search(
     )
 
 
+@router.get("/api/products/quote-context")
+def products_quote_context(
+    sku: list[str] = Query(default=[]),
+    db: DatabaseRepository = Depends(get_db),
+):
+    skus = [value.strip() for value in sku if value and value.strip()]
+    if not skus:
+        return JSONResponse({"products": [], "net_price_families": []}, status_code=200)
+
+    placeholders = ", ".join(["%s"] * len(skus))
+    product_rows = db.execute_dict_query(
+        f"""
+        SELECT p.id,
+               p.sku,
+               p.name,
+               p.price,
+               p.brand_id,
+               b.id AS brand_ref_id,
+               b.name AS brand_name,
+               b.marque AS brand_marque,
+               b.minimum_margin AS brand_minimum_margin,
+               b.target_margin AS brand_target_margin,
+               f.id AS family_id,
+               f.name AS family_name,
+               f.code AS family_code,
+               f.type AS family_type,
+               f.discount AS family_discount,
+               f.minimum_margin AS family_minimum_margin,
+               f.target_margin AS family_target_margin,
+               f.quantity AS family_quantity,
+               f.net_price AS family_net_price,
+               f.product_code AS family_product_code
+        FROM product p
+        LEFT JOIN brand b ON b.id = p.brand_id
+        LEFT JOIN product_family pf ON pf.product_id = p.id
+        LEFT JOIN family f ON f.id = pf.family_id
+        WHERE p.sku IN ({placeholders})
+        ORDER BY p.sku ASC
+        """,
+        tuple(skus),
+    )
+    net_price_rows = db.execute_dict_query(
+        f"""
+        SELECT id,
+               name,
+               code,
+               type,
+               product_code,
+               quantity,
+               discount,
+               minimum_margin,
+               target_margin,
+               net_price
+        FROM family
+        WHERE LOWER(type) = 'net_price'
+          AND product_code IN ({placeholders})
+        ORDER BY product_code ASC
+        """,
+        tuple(skus),
+    )
+
+    products_by_sku: dict[str, dict[str, Any]] = {}
+    for row in product_rows:
+        product_sku = row.get("sku")
+        if not product_sku:
+            continue
+
+        product = products_by_sku.setdefault(
+            product_sku,
+            {
+                "id": row.get("id"),
+                "sku": product_sku,
+                "name": row.get("name"),
+                "price": row.get("price"),
+                "brand_id": row.get("brand_id"),
+                "brand": {
+                    "id": row.get("brand_ref_id"),
+                    "name": row.get("brand_name"),
+                    "marque": row.get("brand_marque"),
+                    "minimum_margin": row.get("brand_minimum_margin"),
+                    "target_margin": row.get("brand_target_margin"),
+                },
+                "product_family": [],
+            },
+        )
+
+        if row.get("family_id"):
+            product["product_family"].append(
+                {
+                    "family": {
+                        "id": row.get("family_id"),
+                        "name": row.get("family_name"),
+                        "code": row.get("family_code"),
+                        "type": row.get("family_type"),
+                        "discount": row.get("family_discount"),
+                        "minimum_margin": row.get("family_minimum_margin"),
+                        "target_margin": row.get("family_target_margin"),
+                        "quantity": row.get("family_quantity"),
+                        "net_price": row.get("family_net_price"),
+                        "product_code": row.get("family_product_code"),
+                    }
+                }
+            )
+
+    return JSONResponse(
+        {
+            "products": list(products_by_sku.values()),
+            "net_price_families": net_price_rows,
+        },
+        status_code=200,
+    )
+
+
 @router.post("/api/products")
 def products_create(
     payload: ProductUpsertRequest,

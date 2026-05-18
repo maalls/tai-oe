@@ -34,7 +34,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
-import { supabase } from '../../../../lib/supabase';
+import { getQuoteProductsContext } from '../../../../api/product';
 import QuoteTableHead from './QuoteTableHead.vue';
 import QuoteTableBody from './QuoteTableBody.vue';
 import { formatNumber, priceWithoutTax } from './format.vue';
@@ -118,6 +118,24 @@ const updateAllLinePrices = () => {
    props.quoteDocument.document_line.forEach(updateLineUnitPrice);
 };
 
+const hydrateProductsContext = async (skus: string[]) => {
+   const { productsBySku, netPriceFamiliesBySku } = await getQuoteProductsContext(skus);
+
+   skus.forEach((sku) => {
+      if (productsBySku[sku]) {
+         productsRef.value[sku] = productsBySku[sku];
+      } else {
+         delete productsRef.value[sku];
+      }
+
+      if (netPriceFamiliesBySku[sku]) {
+         netPriceFamilyBySku.value[sku] = netPriceFamiliesBySku[sku];
+      } else {
+         delete netPriceFamilyBySku.value[sku];
+      }
+   });
+};
+
 const markFieldChanged = (idx: number | null, field: string) => {
    const key = fieldKey(idx, field);
    console.log(
@@ -136,35 +154,13 @@ const markFieldChanged = (idx: number | null, field: string) => {
       const line = props.quoteDocument?.document_line?.[idx];
       if (line) {
          if (field === 'sku' && line.sku) {
-            // Fetch product data for new SKU, then update price
-            Promise.all([
-               supabase
-                  .from('product')
-                  .select('*, brand(*), product_family(family(*))')
-                  .eq('sku', line.sku)
-                  .maybeSingle(),
-               supabase
-                  .from('family')
-                  .select('*')
-                  .eq('product_code', line.sku)
-                  .ilike('type', 'net_price')
-                  .limit(1)
-                  .maybeSingle(),
-            ]).then(([productResponse, netPriceFamilyResponse]) => {
-               const { data, error } = productResponse;
-               if (!error && data) {
-                  const product = data as any;
-                  productsRef.value[product.sku] = product;
-               }
-
-               if (!netPriceFamilyResponse.error && netPriceFamilyResponse.data) {
-                  netPriceFamilyBySku.value[line.sku] = netPriceFamilyResponse.data;
-               } else {
-                  delete netPriceFamilyBySku.value[line.sku];
-               }
-
-               updateLineUnitPrice(line);
-            });
+            hydrateProductsContext([String(line.sku).trim()])
+               .then(() => {
+                  updateLineUnitPrice(line);
+               })
+               .catch((error) => {
+                  console.error('Error fetching quote product context:', error);
+               });
          } else {
             updateLineUnitPrice(line);
          }
@@ -194,39 +190,10 @@ const initializeDisplays = async () => {
    // Keep existing cache entries and only fetch missing SKUs.
    const missingSkus = skus.filter((sku) => !productsRef.value[sku]);
    if (missingSkus.length > 0) {
-      const [productResponse, netPriceFamilyResponse] = await Promise.all([
-         supabase
-            .from('product')
-            .select('*, brand(*), product_family(family(*))')
-            .in('sku', missingSkus),
-         supabase
-            .from('family')
-            .select('*')
-            .in('product_code', missingSkus)
-            .ilike('type', 'net_price'),
-      ]);
-
-      const { data, error } = productResponse;
-
-      if (error) {
-         console.error('Error fetching product:', error);
-      } else {
-         (data as any[] | null)?.forEach((product: any) => {
-            if (product?.sku) {
-               productsRef.value[product.sku] = product;
-            }
-         });
-      }
-
-      if (netPriceFamilyResponse.error) {
-         console.error('Error fetching net_price families:', netPriceFamilyResponse.error);
-      } else {
-         (netPriceFamilyResponse.data as any[] | null)?.forEach((family: any) => {
-            const sku = String(family?.product_code || '').trim();
-            if (sku) {
-               netPriceFamilyBySku.value[sku] = family;
-            }
-         });
+      try {
+         await hydrateProductsContext(missingSkus);
+      } catch (error) {
+         console.error('Error fetching quote product context:', error);
       }
    }
 
