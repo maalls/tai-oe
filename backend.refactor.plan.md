@@ -55,17 +55,44 @@ route migration tracking
 - allowed status values: `legacy`, `dual`, `fastapi`, `retired`.
 - only mark `fastapi` when tests pass and frontend calls are confirmed against new endpoint behavior.
 
+progress snapshot
+
+- tracked route groups: `13`
+- fully migrated to FastAPI: `13/13` (`100%`)
+- still in dual mode: `0/13`
+- still legacy only: `0/13`
+- progress bar: `[#############] 13/13`
+- cleanup pass (`2026-05-18`): removed redundant POST legacy dispatch branches (opportunity/document/quote duplicates) and removed orphan DDD helper methods from `src/api/router.py`; dispatcher + fastapi/rag regression tests green.
+
+priority tracker
+
+| area               | state                          | note                                                                                      |
+| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| auth               | done for current backend scope | auth and oauth endpoints served by FastAPI; legacy auth routing removed                   |
+| settings + utility | mostly done                    | imap, fetch-loop, storage metadata/download, csv upload, fetch/curl/fs/prompt migrated    |
+| email              | mostly done                    | Gmail and IMAP are on FastAPI; attachment/classify/resync flows still legacy              |
+| quote              | done for current backend scope | submit, send, list, update, pdf, download migrated                                        |
+| client/opportunity | mostly done                    | DDD opportunity and RFP get/submit migrated; some broader opportunity routes still legacy |
+| vendor             | in progress                    | DDD vendor get migrated; broader vendor/client data access still to review                |
+| storage upload     | done for current backend scope | csv source upload migrated to FastAPI                                                     |
+
 current route matrix
 
-| route group                                                               | legacy owner                                   | fastapi owner                    | status    | parity tests                                                                                            |
-| ------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
-| `/api/auth/*`                                                             | `src/api/auth/*`                               | `src/api_fastapi/auth/*`         | `dual`    | `tests/unit/api_fastapi/auth/router/*`, `tests/integration/api/fastapi/test_app.py`                     |
-| `/api/gmail/*`                                                            | `src/api/email/*`                              | `src/api_fastapi/email/*`        | `dual`    | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`, `tests/integration/api/fastapi/test_app.py` |
-| `/api/imap/*` (settings)                                                  | retired from legacy dispatcher                 | `src/api_fastapi/email/*`        | `fastapi` | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`                                              |
-| `/api/email-fetch-loop/status`                                            | retired from legacy dispatcher                 | `src/api_fastapi/utils/*`        | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                              |
-| `storage upload flow`                                                     | `src/api/file/handler.py`                      | pending router migration         | `legacy`  | `tests/integration/api/file/test_upload_integration.py`                                                 |
-| rag upload processing flow                                                | legacy upload endpoint + service path          | service/component path validated | `dual`    | `tests/integration/api/rag/test_rag.py`                                                                 |
-| utility endpoints (`/api/fetch`, `/api/curl`, `/api/fs/*`, `/api/prompt`) | `fetch/curl/fs retired from legacy dispatcher` | `src/api_fastapi/utils/*`        | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                              |
+| route group                                                                                          | legacy owner                                   | fastapi owner                   | status    | parity tests                                                                                                    |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------- |
+| `/api/auth/*`                                                                                        | retired from legacy dispatcher                 | `src/api_fastapi/auth/*`        | `fastapi` | `tests/unit/api_fastapi/auth/router/*`, `tests/integration/api/fastapi/test_app.py`                             |
+| `/api/gmail/*`                                                                                       | retired from legacy dispatcher                 | `src/api_fastapi/email/*`       | `fastapi` | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`, `tests/integration/api/fastapi/test_app.py`         |
+| `/api/imap/*` (settings)                                                                             | retired from legacy dispatcher                 | `src/api_fastapi/email/*`       | `fastapi` | `tests/unit/api_fastapi/email/router/test_gmail_routes.py`                                                      |
+| `/api/email-fetch-loop/status`                                                                       | retired from legacy dispatcher                 | `src/api_fastapi/utils/*`       | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                                      |
+| `storage upload flow` (`/api/csv/source` POST)                                                       | retired from legacy CSV POST route             | `src/api_fastapi/csv/*`         | `fastapi` | `tests/unit/api_fastapi/csv/router/test_csv_routes.py`, `tests/integration/api/file/test_upload_integration.py` |
+| `storage metadata/download` (`/api/storage/*` GET/HEAD)                                              | retired from legacy dispatcher                 | `src/api_fastapi/utils/*`       | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                                      |
+| `quote submit/send/list` (`/api/quote`, `/api/quote/send`, `/api/quotes/list`)                       | retired from legacy dispatcher                 | `src/api_fastapi/quote/*`       | `fastapi` | `tests/unit/api_fastapi/quote/router/test_quote_routes.py`                                                      |
+| `quote doc update/pdf/download` (`/api/quote/{id}`, `/api/quote/{id}/pdf`, `/api/quotes/download/*`) | retired from legacy dispatcher                 | `src/api_fastapi/quote/*`       | `fastapi` | `tests/unit/api_fastapi/quote/router/test_quote_routes.py`                                                      |
+| `vendor ddd get` (`/api/ddd/vendor`)                                                                 | retired from legacy DDD route map              | `src/api_fastapi/vendor/*`      | `fastapi` | `tests/unit/api_fastapi/vendor/router/test_vendor_routes.py`                                                    |
+| `opportunity ddd get/advance` (`/api/ddd/opportunity`, `/api/ddd/opportunity/advance`)               | retired from legacy DDD route maps             | `src/api_fastapi/opportunity/*` | `fastapi` | `tests/unit/api_fastapi/opportunity/router/test_opportunity_routes.py`                                          |
+| `rfp ddd get/submit` (`/api/ddd/rfp`, `/api/ddd/rfp/submit`)                                         | retired from legacy DDD route maps             | `src/api_fastapi/rfp/*`         | `fastapi` | `tests/unit/api_fastapi/rfp/router/test_rfp_routes.py`                                                          |
+| rag upload processing flow (`/api/rfp` upload, `/api/rfq/generate`)                                  | retired from legacy RFQ POST dispatcher        | `src/api_fastapi/rfq/*`         | `fastapi` | `tests/unit/api_fastapi/rfq/router/test_rfq_routes.py`, `tests/integration/api/rag/test_rag.py`                 |
+| utility endpoints (`/api/fetch`, `/api/curl`, `/api/fs/*`, `/api/prompt`)                            | `fetch/curl/fs retired from legacy dispatcher` | `src/api_fastapi/utils/*`       | `fastapi` | `tests/unit/api_fastapi/utils/router/test_utils_routes.py`                                                      |
 
 migration order
 prioritize endpoints based on what the frontend actually needs, starting with the most visible and central flows.
@@ -88,6 +115,12 @@ migration approach
 4. route each endpoint to the existing handler or service layer.
 5. keep the old server working until the migrated endpoints are stable.
 6. remove the old transport only after the fastapi app covers the required contract.
+
+note on direct supabase calls
+
+- direct Supabase calls from the frontend will be reviewed and reduced last, after the backend FastAPI migration and legacy transport cleanup are complete.
+- until then, do not expand direct Supabase usage for new business workflows; prefer FastAPI for new backend-facing behavior.
+- once the backend refactor is finished, run a dedicated pass to classify remaining direct Supabase calls into `keep-direct`, `migrate-soon`, and `migrate-now`.
 
 cleanup protocol
 
