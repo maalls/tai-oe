@@ -176,6 +176,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../../lib/supabase';
+import { listAccounts } from '../../api/account';
 import AccountNavHeader from '../account/AccountNavHeader.vue';
 
 const route = useRoute();
@@ -248,13 +249,8 @@ const loadContact = async () => {
 
 const loadAccounts = async () => {
    try {
-      const { data, error } = await supabase
-         .from('account')
-         .select('id, name')
-         .order('name', { ascending: true });
-
-      if (error) throw error;
-      accounts.value = data || [];
+      const data = await listAccounts();
+      accounts.value = data.map((account) => ({ id: account.id, name: account.name }));
    } catch (error) {
       console.error('Failed to load accounts:', error);
    }
