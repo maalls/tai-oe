@@ -46,3 +46,22 @@ export async function deleteOpportunityDocument(documentId: string, token: strin
       throw new Error(payload?.message || 'Erreur lors de la suppression du document');
    }
 }
+
+export async function clearDocumentStorageKey(
+   documentId: string,
+   token: string
+): Promise<OpportunityDocument> {
+   const res = await fetch(`/api/document/${documentId}/storage-key`, {
+      method: 'PUT',
+      headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ storage_key: null }),
+   });
+   if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error(payload?.message || payload?.error || 'Erreur lors de la suppression du PDF');
+   }
+   return await res.json();
+}

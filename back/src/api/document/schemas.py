@@ -10,3 +10,7 @@ class DocumentExtractRfpRequest(BaseModel):
 class DocumentUpdateContentRequest(BaseModel):
     document_id: str
     content: str
+
+
+class DocumentUpdateStorageKeyRequest(BaseModel):
+    storage_key: str | None = None

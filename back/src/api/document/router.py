@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, File, Header, Query, UploadFile
 from fastapi.responses import JSONResponse
 
 from src.api.dependencies import get_auth_service, get_document_service
-from src.api.document.schemas import DocumentExtractRfpRequest, DocumentUpdateContentRequest
+from src.api.document.schemas import (
+    DocumentExtractRfpRequest,
+    DocumentUpdateContentRequest,
+    DocumentUpdateStorageKeyRequest,
+)
 from src.repository.database.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 from src.service.document.document_service import DocumentService
@@ -92,6 +96,33 @@ def document_get(
           AND opportunity_id = %s
         """,
         (document_id, opportunity_id),
+    )
+    if not rows:
+        return JSONResponse({"error": "Document not found"}, status_code=404)
+    return rows[0]
+
+
+@router.put("/api/document/{document_id}/storage-key")
+def document_update_storage_key(
+    document_id: str,
+    payload: DocumentUpdateStorageKeyRequest,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    db=Depends(get_db),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    rows = db.execute_dict_query(
+        """
+        UPDATE document
+        SET storage_key = %s,
+            updated_at = now()
+        WHERE id = %s
+        RETURNING id, opportunity_id, storage_key
+        """,
+        (payload.storage_key, document_id),
     )
     if not rows:
         return JSONResponse({"error": "Document not found"}, status_code=404)

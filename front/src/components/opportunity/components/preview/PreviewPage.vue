@@ -51,15 +51,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { supabase } from '../../../../lib/supabase';
+import { clearDocumentStorageKey, listOpportunityDocuments } from '../../../../api/document';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import PdfViewer from '../../../PdfViewer.vue';
 import { useI18n } from '../../../../i18n/useI18n';
+import { useAuth } from '../../../../stores/auth';
 
 const { t } = useI18n();
 const route = useRoute();
 const opportunityId = route.params.id as string;
 const router = useRouter();
+const { getValidToken } = useAuth();
 
 const isLoading = ref(true);
 const pdfFilename = ref<string | null>(null);
@@ -76,20 +78,10 @@ const loadQuotePdf = async () => {
    isLoading.value = true;
 
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('id, storage_key')
-         .eq('opportunity_id', opportunityId)
-         .eq('type', 'QUOTE')
-         .order('created_at', { ascending: false })
-         .limit(1);
-
-      if (error) {
-         console.error('[PreviewPage] Error loading quote PDF:', error);
-         return;
-      }
-
-      const latestDoc = data && data.length > 0 ? (data[0] as any) : null;
+      const docs = await listOpportunityDocuments(opportunityId);
+      const latestDoc =
+         docs.find((doc) => doc.type === 'QUOTE' && !!doc.storage_key) ||
+         docs.find((doc) => doc.type === 'QUOTE');
       if (latestDoc?.storage_key) {
          pdfFilename.value = latestDoc.storage_key;
          quoteDocumentId.value = latestDoc.id;
@@ -113,13 +105,9 @@ const deleteQuotePdf = async () => {
    successMessage.value = '';
 
    try {
-      const { error } = await (supabase.from('document') as any)
-         .update({ storage_key: null })
-         .eq('id', quoteDocumentId.value);
-
-      if (error) {
-         throw new Error(error.message || t('opportunities.errors.failedToDeletePdf'));
-      }
+      const token = await getValidToken();
+      if (!token) throw new Error('Unauthorized');
+      await clearDocumentStorageKey(quoteDocumentId.value, token);
 
       pdfFilename.value = null;
       successMessage.value = t('opportunities.quotePdfDeletedSuccess');
