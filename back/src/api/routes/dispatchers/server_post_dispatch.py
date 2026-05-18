@@ -1,18 +1,7 @@
 """POST route dispatch for legacy API server."""
 
 from src.api.action.routes import dispatch_action_routes
-from src.api.entity.routes import dispatch_entity_routes
 from src.api.invoice.routes import dispatch_invoice_routes
-
-
-def dispatch_post_domain_routes(handler, parsed) -> bool:
-    """Dispatch domain POST routes and return True when handled."""
-    request_handlers = handler.request_handlers
-
-    if dispatch_entity_routes(handler, "POST", parsed, {}, request_handlers):
-        return True
-
-    return False
 
 
 def dispatch_post_business_routes(handler, parsed) -> bool:
@@ -44,9 +33,6 @@ def dispatch_post_legacy_and_action_routes(handler, parsed_path: str) -> bool:
 
 def dispatch_post_request(handler, parsed) -> bool:
     """Dispatch POST routes and return True when handled."""
-    if dispatch_post_domain_routes(handler, parsed):
-        return True
-
     if dispatch_post_business_routes(handler, parsed):
         return True
 
