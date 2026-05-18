@@ -86,8 +86,8 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 
 1. fait: migrer `/api/opportunity/{id}/send-quote`
 2. fait: migrer `/api/quote/{id}/invoice`
-3. migrer `/api/invoice/{id}/pdf`
-4. migrer `/api/invoice/{id}/send`
+3. fait: migrer `/api/invoice/{id}/pdf`
+4. fait: migrer `/api/invoice/{id}/send`
 5. implementer `/api/quote/{opportunity_id}/generate` (ou aligner le frontend sur un endpoint FastAPI equivalent)
 
 ### lot C - document/contact flows
@@ -110,7 +110,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 
 - domaines cibles: 10
 - domaines clotures: 2/10
-- endpoints HTTP legacy a migrer (dans ce scope): 5
+- endpoints HTTP legacy a migrer (dans ce scope): 3
 - endpoints HTTP unknown a implementer: 2
 - supabase-direct: hors scope immediat (10 domaines reportes)
 
@@ -141,6 +141,8 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | rfq | /api/opportunity/{id}/rfq/create-from-text | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
 - 2026-05-18 | quote | /api/opportunity/{id}/send-quote | decision=migrer | endpoint implemente dans back/src/api_fastapi/opportunity/router.py
 - 2026-05-18 | quote/invoice | /api/quote/{id}/invoice | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
+- 2026-05-18 | quote/invoice | /api/invoice/{id}/pdf | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
+- 2026-05-18 | quote/invoice | /api/invoice/{id}/send | decision=migrer | endpoint implemente dans back/src/api_fastapi/quote/router.py
 
 ## criteres de done pour ce refactor.2
 

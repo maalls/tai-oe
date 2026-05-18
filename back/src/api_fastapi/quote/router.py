@@ -105,6 +105,37 @@ def quote_generate_invoice(
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
+@router.post("/api/invoice/{invoice_id}/pdf")
+def invoice_generate_pdf(
+    invoice_id: str,
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    invoice_handlers: InvoiceHandlers = Depends(get_invoice_handlers),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = invoice_handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.post("/api/invoice/{invoice_id}/send")
+def invoice_send(
+    invoice_id: str,
+    payload: dict[str, Any],
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    invoice_handlers: InvoiceHandlers = Depends(get_invoice_handlers),
+):
+    user_id = _resolve_user_id(authorization, auth_service)
+    if not user_id:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    result = invoice_handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
+    return JSONResponse(result, status_code=_status_from_result(result))
+
+
 @router.get("/api/quotes/download/{filename}")
 def quote_download(
     filename: str,

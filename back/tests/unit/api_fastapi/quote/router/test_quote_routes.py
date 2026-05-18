@@ -44,6 +44,12 @@ def _client(monkeypatch) -> TestClient:
         def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str | None = None):
             return {"status": "ok", "invoice_id": "inv-1", "quote_id": quote_id, "user_id": user_id}
 
+        def handle_generate_invoice_pdf(self, document_id: str, user_id: str | None = None):
+            return {"status": "ok", "document_id": document_id, "user_id": user_id}
+
+        def handle_send_invoice(self, invoice_id: str, payload: dict, user_id: str | None = None):
+            return {"status": "ok", "invoice_id": invoice_id, "payload": payload, "user_id": user_id}
+
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_quote_send_service] = lambda: _FakeQuoteSendService()
@@ -132,3 +138,25 @@ def test_quote_invoice_route(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["quote_id"] == "doc-9"
+
+
+def test_invoice_pdf_route(monkeypatch):
+    client = _client(monkeypatch)
+
+    response = client.post("/api/invoice/inv-9/pdf", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.json()["document_id"] == "inv-9"
+
+
+def test_invoice_send_route(monkeypatch):
+    client = _client(monkeypatch)
+
+    response = client.post(
+        "/api/invoice/inv-9/send",
+        headers={"Authorization": "Bearer valid"},
+        json={"to": ["x@y.com"], "subject": "Invoice", "body": "Hi"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["invoice_id"] == "inv-9"
