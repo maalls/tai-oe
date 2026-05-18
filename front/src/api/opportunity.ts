@@ -18,6 +18,12 @@ export interface SentEmailRecord {
    sent_at?: string | null;
 }
 
+export interface OpportunityAdvanceResult {
+   status: string;
+   opportunity?: OpportunitySummary;
+   message?: string;
+}
+
 export async function getOpportunitySummary(opportunityId: string): Promise<OpportunitySummary> {
    const res = await fetch(`/api/opportunity?opportunity_id=${encodeURIComponent(opportunityId)}`);
    if (!res.ok) throw new Error('Erreur lors du chargement de l’opportunité');
@@ -92,4 +98,22 @@ export async function getOpportunitySentEmail(
    if (!res.ok) throw new Error('Erreur lors du chargement de l’email envoyé');
    const payload = await res.json();
    return (payload?.sent_email as SentEmailRecord | null) || null;
+}
+
+export async function advanceOpportunityStage(
+   opportunityId: string,
+   stage: string
+): Promise<OpportunityAdvanceResult> {
+   const res = await fetch('/api/opportunity/advance', {
+      method: 'POST',
+      headers: {
+         'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ opportunity_id: opportunityId, stage }),
+   });
+   const payload = await res.json();
+   if (!res.ok || payload?.status === 'error') {
+      throw new Error(payload?.message || 'Erreur lors de la mise à jour du stage');
+   }
+   return payload as OpportunityAdvanceResult;
 }

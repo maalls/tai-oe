@@ -116,7 +116,8 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../../../../../../stores/auth';
-import { supabase } from '../../../../../../lib/supabase';
+import { listOpportunityDocuments } from '../../../../../../api/document';
+import { advanceOpportunityStage } from '../../../../../../api/opportunity';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -148,21 +149,12 @@ const loadExistingInvoice = async () => {
    }
 
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('id, status')
-         .eq('opportunity_id', props.opportunity.id)
-         .eq('type', 'INVOICE')
-         .limit(1);
+      const documents = await listOpportunityDocuments(props.opportunity.id);
+      const invoices = documents.filter((document) => document.type === 'INVOICE');
+      const invoice = invoices.length > 0 ? invoices[0] : null;
 
-      if (error) {
-         console.error('[PipelineStageAccepted] Error checking invoices:', error);
-         return;
-      }
-
-      hasExistingInvoice.value = !!(data && data.length > 0);
-      if (data && data.length > 0) {
-         const invoice = data[0] as any;
+      hasExistingInvoice.value = !!invoice;
+      if (invoice) {
          existingInvoiceId.value = invoice?.id || null;
          invoiceIsSent.value = invoice?.status === 'SENT';
       } else {
@@ -212,9 +204,7 @@ const generateInvoice = async () => {
       existingInvoiceId.value = result.invoice.id;
 
       // Update opportunity stage to INVOICED
-      await (supabase.from('opportunity') as any)
-         .update({ stage: 'INVOICED' })
-         .eq('id', props.opportunity.id);
+      await advanceOpportunityStage(props.opportunity.id, 'INVOICED');
 
       // Emit stage update event
       emit('stageUpdated', 'INVOICED', 'OPEN');
