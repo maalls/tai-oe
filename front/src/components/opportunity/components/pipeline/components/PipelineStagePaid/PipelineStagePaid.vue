@@ -149,8 +149,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { supabase } from '../../../../../../lib/supabase';
-import { useAuth } from '../../../../../../stores/auth';
+import { listOpportunityDocuments } from '../../../../../../api/document';
+import { advanceOpportunityStage } from '../../../../../../api/opportunity';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -165,7 +165,6 @@ const emit = defineEmits<{
    (e: 'stageUpdated', stage: string, status: string): void;
 }>();
 
-const { user } = useAuth();
 const router = useRouter();
 const { t } = useI18n();
 const isLoadingInvoice = ref(true);
@@ -182,20 +181,9 @@ const loadInvoice = async () => {
 
    try {
       isLoadingInvoice.value = true;
-      const { data, error } = await supabase
-         .from('document')
-         .select('*')
-         .eq('opportunity_id', props.opportunity.id)
-         .eq('type', 'INVOICE')
-         .order('created_at', { ascending: false })
-         .limit(1);
-
-      if (error) {
-         console.error('[PipelineStagePaid] Error loading invoice:', error);
-         return;
-      }
-
-      invoice.value = data && data.length > 0 ? data[0] : null;
+      const documents = await listOpportunityDocuments(props.opportunity.id);
+      const invoices = documents.filter((document) => document.type === 'INVOICE');
+      invoice.value = invoices.length > 0 ? (invoices[0] as any) : null;
    } catch (error) {
       console.error('[PipelineStagePaid] Unexpected error loading invoice:', error);
    } finally {
@@ -237,25 +225,7 @@ const closeAsWon = async () => {
    closeMessage.value = '';
 
    try {
-      // Update opportunity stage and status
-      const { error: updateError } = await (supabase.from('opportunity') as any)
-         .update({
-            stage: 'CLOSED_WON',
-            status: 'WON',
-            updated_at: new Date().toISOString(),
-         })
-         .eq('id', props.opportunity.id);
-
-      if (updateError) throw updateError;
-
-      // Record transition
-      await (supabase.from('opportunity_state_transition') as any).insert({
-         opportunity_id: props.opportunity.id,
-         from_stage: 'PAID',
-         to_stage: 'CLOSED_WON',
-         changed_by: user.value?.id,
-         changed_at: new Date().toISOString(),
-      });
+      await advanceOpportunityStage(props.opportunity.id, 'CLOSED_WON');
 
       closeMessage.value = t('opportunities.pipeline.messages.closedWonSuccess');
 
