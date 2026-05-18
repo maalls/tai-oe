@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut      | Commit/Tag                                                                                                          |
-| --- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------- |
-| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                                    |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346                                                                                                             |
-| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                  |
-| 2   | Migration account/contact/vendor       | 🔄 En cours | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300 |
-| 3   | Migration brand/family/catalogue       | ⏳ À faire  |                                                                                                                     |
-| 4   | Migration opportunity/source/documents | ⏳ À faire  |                                                                                                                     |
-| 5   | Migration invoices/quote read models   | ⏳ À faire  |                                                                                                                     |
-| 6   | Fermeture/realtime                     | ⏳ À faire  |                                                                                                                     |
+| Lot | Description                            | Statut     | Commit/Tag                                                                                                                                                               |
+| --- | -------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -1  | Renommage packages/tests API           | ✅ Fait    | edb3ce7, 30a1f49                                                                                                                                                         |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait    | 1238346                                                                                                                                                                  |
+| 1   | Migration du flux profile (auth)       | ✅ Fait    | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                       |
+| 2   | Migration account/contact/vendor       | ✅ Fait    | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38] |
+| 3   | Migration brand/family/catalogue       | ⏳ À faire |                                                                                                                                                                          |
+| 4   | Migration opportunity/source/documents | ⏳ À faire |                                                                                                                                                                          |
+| 5   | Migration invoices/quote read models   | ⏳ À faire |                                                                                                                                                                          |
+| 6   | Fermeture/realtime                     | ⏳ À faire |                                                                                                                                                                          |
 
 # backend.refactor.3.plan
 
@@ -182,20 +182,25 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: tests unitaires backend ajoutes pour `vendor` router (`back/tests/unit/api/vendor/router/*`)
 - fait: client frontend `front/src/api/vendor.ts` avec tests unitaires (`front/tests/unit/src/api/vendor/*`)
 
-4. en cours: migrer les pages `account/*`, `contact/*`, `vendor/*`
+4. fait: migration complète des pages `account/*`, `contact/*`, `vendor/*`
 
 - fait: `front/src/components/account/Edit.vue` -> `front/src/api/account.ts`
 - fait: `front/src/components/account/IndexPage.vue` -> `front/src/api/account.ts`
 - fait: `front/src/components/opportunity/OpportunityHeader.vue` (create/find account) -> `front/src/api/account.ts`
-  - fait: `front/src/components/opportunity/components/account/AccountPage.vue` (load/search/create/update account) -> `front/src/api/account.ts`
-  - fait: `front/src/components/opportunity/components/source/SourcePage.ts` (create/find account) -> `front/src/api/account.ts`
-  - fait: `front/src/components/contact/DetailPage.vue` (chargement liste account) -> `front/src/api/account.ts`
-  - fait: `front/src/components/opportunity/IndexPage.vue` (mapping account_id -> account_name) -> `front/src/api/account.ts`
-  - fait: `front/src/components/opportunity/components/quote/Quote.vue` (chargement account detail) -> `front/src/api/account.ts`
-  - fait: `front/src/components/contact/IndexPage.vue` (liste contacts) -> `front/src/api/contact.ts`
-  - fait: `front/src/components/contact/DetailPage.vue` (detail/create/update/delete contact) -> `front/src/api/contact.ts`
-  - fait: `front/src/components/vendor/index.vue` (liste + compteurs) -> `front/src/api/vendor.ts`
-  - fait: `front/src/components/vendor/Edit.vue` (detail/create/update/delete vendor) -> `front/src/api/vendor.ts` (reste chargement marques associees)
+- fait: `front/src/components/opportunity/components/account/AccountPage.vue` (load/search/create/update account) -> `front/src/api/account.ts`
+- fait: `front/src/components/opportunity/components/source/SourcePage.ts` (create/find account) -> `front/src/api/account.ts`
+- fait: `front/src/components/contact/DetailPage.vue` (chargement liste account) -> `front/src/api/account.ts`
+- fait: `front/src/components/opportunity/IndexPage.vue` (mapping account_id -> account_name) -> `front/src/api/account.ts`
+- fait: `front/src/components/opportunity/components/quote/Quote.vue` (chargement account detail) -> `front/src/api/account.ts`
+- fait: `front/src/components/contact/IndexPage.vue` (liste contacts) -> `front/src/api/contact.ts`
+- fait: `front/src/components/contact/DetailPage.vue` (detail/create/update/delete contact) -> `front/src/api/contact.ts`
+- fait: `front/src/components/vendor/index.vue` (liste + compteurs) -> `front/src/api/vendor.ts`
+- fait: `front/src/components/vendor/Edit.vue` (detail/create/update/delete vendor + chargement marques associées) -> `front/src/api/vendor.ts`
+- fait: extension backend/endpoint pour chargement des brands associés à un vendor
+- fait: extension client frontend + tests pour `listVendorBrands`
+- fait: migration Edit.vue terminée, plus d'accès direct Supabase
+- fait: baseline guardrail réduit à 38 fichiers
+- fait: tous les tests backend/frontend et guardrail passent
 
 ### lot 3 - brand/family/catalogue
 
