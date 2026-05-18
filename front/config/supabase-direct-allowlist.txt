@@ -2,7 +2,6 @@
 # Goal for refactor.3 is to shrink this list to zero (or auth/realtime-only exceptions).
 
 src/components/contact/DetailPage.vue
-src/components/invoices/InvoiceDetailPage.vue
 src/components/login/ResetPasswordPage.vue
 src/components/mail/IndexPage.vue
 src/components/opportunity/components/quote/QuoteDocument.vue

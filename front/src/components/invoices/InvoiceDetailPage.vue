@@ -254,7 +254,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { supabase } from '../../lib/supabase';
+import { listContacts } from '../../api/contact';
+import { getOpportunityDocument } from '../../api/document';
+import { getOpportunitySentEmail, getOpportunitySummary } from '../../api/opportunity';
 import PdfViewer from '../PdfViewer.vue';
 import OpportunityHeader from '../opportunity/OpportunityHeader.vue';
 import { useAuth } from '../../stores/auth';
@@ -305,55 +307,41 @@ const getDefaultEmailBody = () => {
 
 const loadInvoice = async () => {
    try {
-      const { data, error } = await supabase
-         .from('document')
-         .select('*')
-         .eq('id', invoiceId)
-         .eq('type', 'INVOICE')
-         .single();
+      const data = await getOpportunityDocument(opportunityId, invoiceId);
 
-      if (error || !data) {
+      if (!data || data.type !== 'INVOICE') {
          errorMessage.value = 'Invoice not found';
-         console.error('[InvoiceDetailPage] Error loading invoice:', error);
+         console.error('[InvoiceDetailPage] Error loading invoice: invalid invoice payload');
          return;
       }
 
       invoice.value = data;
-      pdfFilename.value = (data as any).storage_key || null;
+      pdfFilename.value = data.storage_key || null;
 
       // Load sent email data if invoice was sent
-      if ((data as any).status === 'SENT') {
+      if (data.status === 'SENT') {
          try {
             console.log('[InvoiceDetailPage] Loading sent email for invoice:', invoiceId);
-            const { data: sentEmailData, error: sentEmailError } = await supabase
-               .from('sent_email')
-               .select('*')
-               .eq('document_id', invoiceId)
-               .order('sent_at', { ascending: false })
-               .limit(1)
-               .single();
+            const sentEmailData = await getOpportunitySentEmail(opportunityId, invoiceId);
 
             console.log('[InvoiceDetailPage] Sent email query result:', {
                sentEmailData,
-               sentEmailError,
+               sentEmailError: null,
             });
 
-            if (!sentEmailError && sentEmailData) {
+            if (sentEmailData) {
                sentEmail.value = sentEmailData;
                console.log('[InvoiceDetailPage] Sent email loaded:', sentEmailData);
                // Populate email form with sent data for display
                emailForm.value = {
-                  to: (sentEmailData as any).to_emails?.join(', ') || '',
-                  cc: (sentEmailData as any).cc_emails?.join(', ') || '',
-                  subject: (sentEmailData as any).subject || '',
-                  body: (sentEmailData as any).body || '',
+                  to: sentEmailData.to_emails?.join(', ') || '',
+                  cc: sentEmailData.cc_emails?.join(', ') || '',
+                  subject: sentEmailData.subject || '',
+                  body: sentEmailData.body || '',
                };
                console.log('[InvoiceDetailPage] Email form populated:', emailForm.value);
             } else {
-               console.warn(
-                  '[InvoiceDetailPage] No sent email data found or error:',
-                  sentEmailError
-               );
+               console.warn('[InvoiceDetailPage] No sent email data found or error:', null);
             }
          } catch (error) {
             console.error('[InvoiceDetailPage] Error loading sent email data:', error);
@@ -361,7 +349,7 @@ const loadInvoice = async () => {
       }
 
       // If not sent, initialize email form with default values
-      if ((data as any).status !== 'SENT') {
+      if (data.status !== 'SENT') {
          // Initialize email form with default values
          emailForm.value = {
             to: '',
@@ -372,22 +360,16 @@ const loadInvoice = async () => {
 
          // Try to load contact email from opportunity account
          try {
-            const { data: oppData } = await supabase
-               .from('opportunity')
-               .select('account_id')
-               .eq('id', opportunityId)
-               .single();
+            const oppData = await getOpportunitySummary(opportunityId);
 
-            if (oppData && (oppData as any).account_id) {
-               const { data: contacts } = await supabase
-                  .from('contact')
-                  .select('email, name')
-                  .eq('account_id', (oppData as any).account_id)
-                  .order('created_at', { ascending: true })
-                  .limit(1);
+            if (oppData?.account_id) {
+               const contacts = await listContacts();
+               const firstContact = contacts
+                  .filter((contact) => contact.account_id === oppData.account_id)
+                  .sort((left, right) => left.created_at.localeCompare(right.created_at))[0];
 
-               if (contacts && contacts.length > 0 && (contacts[0] as any).email) {
-                  emailForm.value.to = (contacts[0] as any).email;
+               if (firstContact?.email) {
+                  emailForm.value.to = firstContact.email;
                }
             }
          } catch (error) {
