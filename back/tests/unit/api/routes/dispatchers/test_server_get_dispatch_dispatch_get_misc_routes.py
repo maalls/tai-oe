@@ -9,33 +9,7 @@ class _HandlerStub:
         self.config = {"STORAGE_DIR": "/tmp"}
         self.calls = []
 
-    def _handle_email_fetch_loop_status_get(self):
-        self.calls.append("email_fetch_loop_status")
-
-
-def test_dispatch_get_misc_routes_delegates_product_router(monkeypatch):
-    calls = []
-
-    def _fake(handler, method, parsed, qs, request_handlers):
-        calls.append((handler, method, parsed.path, qs, request_handlers))
-        return True
-
-    monkeypatch.setattr("src.api.routes.dispatchers.server_get_dispatch.dispatch_product_routes", _fake)
-
-    handler = _HandlerStub()
-    parsed = SimpleNamespace(path="/api/products")
-
-    handled = dispatch_get_misc_routes(handler, parsed, {"q": ["1"]})
-
-    assert handled is True
-    assert calls == [(handler, "GET", "/api/products", {"q": ["1"]}, handler.request_handlers)]
-
-
 def test_dispatch_get_misc_routes_delegates_google_oauth_callback(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.dispatchers.server_get_dispatch.dispatch_product_routes",
-        lambda *_args, **_kwargs: False,
-    )
     calls = []
 
     def _fake(handler, qs):

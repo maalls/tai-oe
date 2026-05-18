@@ -6,17 +6,11 @@ from src.api.document.routes import dispatch_document_routes
 from src.api.email.handler import handle_google_oauth_callback_get
 from src.api.email.routes import dispatch_email_routes
 from src.api.opportunity.routes import dispatch_opportunity_routes
-from src.api.product.routes import dispatch_product_routes
 from src.api.quote.routes import dispatch_quote_routes
 
 
 def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
     """Dispatch misc GET routes and return True when handled."""
-    request_handlers = handler.request_handlers
-
-    if dispatch_product_routes(handler, "GET", parsed, qs, request_handlers):
-        return True
-
     if parsed.path.startswith('/api/google/oauth/callback'):
         handle_google_oauth_callback_get(handler, qs)
         return True
