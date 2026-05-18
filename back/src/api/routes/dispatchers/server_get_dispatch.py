@@ -13,14 +13,6 @@ def dispatch_get_misc_routes(handler, parsed, qs) -> bool:
     return False
 
 
-def dispatch_get_mail_routes(handler, parsed, qs) -> bool:
-    """Legacy GET mail routes are disabled (served by FastAPI)."""
-    _ = handler
-    _ = parsed
-    _ = qs
-    return False
-
-
 def dispatch_get_data_routes(handler, parsed, qs) -> bool:
     """Dispatch csv GET routes and return True when handled."""
     if dispatch_csv_routes(handler, "GET", parsed, qs):
@@ -40,9 +32,6 @@ def dispatch_get_action_download_routes(handler, parsed, qs, request_handlers) -
 def dispatch_get_request(handler, parsed, qs) -> bool:
     """Dispatch GET routes and return True when handled."""
     if dispatch_get_misc_routes(handler, parsed, qs):
-        return True
-
-    if dispatch_get_mail_routes(handler, parsed, qs):
         return True
 
     if dispatch_get_data_routes(handler, parsed, qs):

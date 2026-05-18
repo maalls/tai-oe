@@ -18,12 +18,12 @@ def test_dispatch_get_request_short_circuits_on_misc(monkeypatch):
     assert handled is True
 
 
-def test_dispatch_get_request_uses_mail_group(monkeypatch):
+def test_dispatch_get_request_uses_data_group(monkeypatch):
     handler = _HandlerStub()
-    parsed = SimpleNamespace(path="/api/gmail/status")
+    parsed = SimpleNamespace(path="/api/csv/query")
 
     monkeypatch.setattr(server_get_dispatch, "dispatch_get_misc_routes", lambda h, p, q: False)
-    monkeypatch.setattr(server_get_dispatch, "dispatch_get_mail_routes", lambda h, p, q: True)
+    monkeypatch.setattr(server_get_dispatch, "dispatch_get_data_routes", lambda h, p, q: True)
 
     handled = server_get_dispatch.dispatch_get_request(handler, parsed, {})
 

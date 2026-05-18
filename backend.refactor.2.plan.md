@@ -154,6 +154,7 @@ Ces flux sont explicitement reportes apres la migration HTTP vers FastAPI.
 - 2026-05-18 | legacy-http | quote/opportunity/document route wrappers | decision=supprimer | suppression des wrappers routes.py, matching DELETE centralise dans server_delete_dispatch
 - 2026-05-18 | legacy-http | email classify/resync/delete/attachment-download | decision=supprimer | endpoints exposes en FastAPI, dispatch email retire des dispatchers legacy
 - 2026-05-18 | legacy-http | google oauth callback path | decision=supprimer | callback oauth unifie sur /api/gmail/oauth/callback, hook /api/google/oauth/callback retire
+- 2026-05-18 | legacy-http | get mail dispatch stage | decision=supprimer | suppression de dispatch_get_mail_routes (no-op) du flux GET legacy
 
 ## criteres de done pour ce refactor.2
 
