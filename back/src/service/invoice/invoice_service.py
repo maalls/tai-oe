@@ -242,7 +242,7 @@ class InvoiceService:
     def _generate_invoice_pdf(self, invoice_data: Dict) -> str:
         storage_dir = self._get_storage_dir("invoice")
         storage_dir.mkdir(parents=True, exist_ok=True)
-        templates_dir = Path(__file__).parent.parent.parent / "templates"
+        templates_dir = Path(__file__).resolve().parents[3] / "templates"
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         invoice_id_num = str(uuid.uuid4())[:8]

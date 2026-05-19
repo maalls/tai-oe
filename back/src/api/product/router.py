@@ -3,6 +3,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from src.api.dependencies import get_product_service
@@ -260,13 +261,13 @@ def products_quote_context(
                 }
             )
 
-    return JSONResponse(
-        {
-            "products": list(products_by_sku.values()),
-            "net_price_families": net_price_rows,
-        },
-        status_code=200,
-    )
+    payload = {
+        "products": list(products_by_sku.values()),
+        "net_price_families": net_price_rows,
+    }
+
+    # Some DB drivers return Decimal for numeric columns; encode before JSONResponse.
+    return JSONResponse(jsonable_encoder(payload), status_code=200)
 
 
 @router.post("/api/products")

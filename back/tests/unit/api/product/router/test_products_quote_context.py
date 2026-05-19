@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -130,3 +132,60 @@ def test_products_quote_context_returns_empty_payload_without_skus():
 
     assert response.status_code == 200
     assert response.json() == {"products": [], "net_price_families": []}
+
+
+def test_products_quote_context_serializes_decimal_values():
+    class _DecimalDb:
+        def execute_dict_query(self, query, params=None):
+            if "FROM product p" in query:
+                return [
+                    {
+                        "id": "p-2",
+                        "sku": "SKU-DEC",
+                        "name": "Produit Decimal",
+                        "price": Decimal("100.50"),
+                        "brand_id": "b-2",
+                        "brand_ref_id": "b-2",
+                        "brand_name": "Decimal Brand",
+                        "brand_marque": "DB",
+                        "brand_minimum_margin": Decimal("10.25"),
+                        "brand_target_margin": Decimal("15.75"),
+                        "family_id": None,
+                        "family_name": None,
+                        "family_code": None,
+                        "family_type": None,
+                        "family_discount": None,
+                        "family_minimum_margin": None,
+                        "family_target_margin": None,
+                        "family_quantity": None,
+                        "family_net_price": None,
+                        "family_product_code": None,
+                    }
+                ]
+
+            return [
+                {
+                    "id": "np-dec",
+                    "name": "Net Price Decimal",
+                    "code": "NPD",
+                    "type": "net_price",
+                    "product_code": "SKU-DEC",
+                    "quantity": 1,
+                    "discount": None,
+                    "minimum_margin": Decimal("5.50"),
+                    "target_margin": Decimal("8.25"),
+                    "net_price": Decimal("72.35"),
+                }
+            ]
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: _DecimalDb()
+    client = TestClient(app)
+
+    response = client.get("/api/products/quote-context", params=[("sku", "SKU-DEC")])
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["products"][0]["price"] == 100.5
+    assert body["products"][0]["brand"]["minimum_margin"] == 10.25
+    assert body["net_price_families"][0]["net_price"] == 72.35
