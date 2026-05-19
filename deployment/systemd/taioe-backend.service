@@ -1,5 +1,5 @@
 [Unit]
-Description=RAG Backend API
+Description=TaiOe Backend API
 After=network-online.target ollama.service
 Wants=network-online.target ollama.service
 
@@ -14,7 +14,7 @@ Environment=PORT=8088
 
 # Wait for Ollama API to be reachable before starting backend health check
 ExecStartPre=/bin/bash -lc 'for i in {1..90}; do /usr/bin/curl -fsS http://127.0.0.1:11434/api/tags >/dev/null && exit 0; sleep 2; done; echo "Ollama did not become ready in time"; exit 1'
-ExecStart=/home/malo/tai-oe/back/venv/bin/python -m src.controller.rag
+ExecStart=/home/malo/tai-oe/back/venv/bin/python -m src.command.dev_server
 
 Restart=always
 RestartSec=5
@@ -23,7 +23,7 @@ KillSignal=SIGTERM
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=rag-backend
+SyslogIdentifier=taioe-backend
 
 [Install]
 WantedBy=multi-user.target

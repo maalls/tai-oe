@@ -1,7 +1,7 @@
 [Unit]
-Description=RAG Frontend (Vite)
-After=network-online.target rag-backend.service
-Wants=network-online.target rag-backend.service
+Description=TaiOe Frontend (Vite)
+After=network-online.target taioe-backend.service
+Wants=network-online.target taioe-backend.service
 
 [Service]
 Type=simple
@@ -19,7 +19,7 @@ KillSignal=SIGTERM
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=rag-frontend
+SyslogIdentifier=taioe-frontend
 
 [Install]
 WantedBy=multi-user.target

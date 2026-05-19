@@ -4,6 +4,7 @@ Frontend : Vue 3 + TypeScript + Vite
 UI : Tailwind CSS
 Routing/i18n : Vue Router + vue-i18n
 Backend : Python (Flask + Flask-CORS)
+Entrypoint : src/command/dev_server.py (systemd, taioe-backend.service, taioe-frontend.service)
 Data : Supabase (Postgres + API JS/Python)
 IA/LLM : OpenAI SDK + sentence-transformers + transformers/torch (selon les modules)
 Traitement docs : pypdf, pdfplumber, openpyxl, pandas

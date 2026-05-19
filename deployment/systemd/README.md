@@ -2,17 +2,17 @@
 
 This folder contains systemd units to start backend and frontend at boot.
 
-- rag-backend.service: Python backend, starts after Ollama and waits for Ollama API readiness.
-- rag-frontend.service: Vite frontend dev server.
-- rag-stack.target: Convenience target to start both services together.
+- taioe-backend.service: Python backend (runs src/command/dev_server.py), starts after Ollama and waits for Ollama API readiness.
+- taioe-frontend.service: Vite frontend dev server.
+- taioe-stack.target: Convenience target to start both services together.
 
 ## Install units
 
 ```bash
 cd /home/malo/tai-oe
-sudo cp deployment/systemd/rag-backend.service /etc/systemd/system/
-sudo cp deployment/systemd/rag-frontend.service /etc/systemd/system/
-sudo cp deployment/systemd/rag-stack.target /etc/systemd/system/
+sudo cp deployment/systemd/taioe-backend.service /etc/systemd/system/
+sudo cp deployment/systemd/taioe-frontend.service /etc/systemd/system/
+sudo cp deployment/systemd/taioe-stack.target /etc/systemd/system/
 sudo systemctl daemon-reload
 ```
 
@@ -21,7 +21,7 @@ This unit is pinned to Node at:
 
 `/home/malo/.nvm/versions/node/v22.22.2/bin/npm`
 
-If your installed Node path differs, edit `rag-frontend.service` accordingly before copying.
+If your installed Node path differs, edit `taioe-frontend.service` accordingly before copying.
 
 ## Enable on boot
 
@@ -30,35 +30,35 @@ If your installed Node path differs, edit `rag-frontend.service` accordingly bef
 sudo systemctl enable ollama.service
 
 # Option A: enable both directly
-sudo systemctl enable rag-backend.service rag-frontend.service
+sudo systemctl enable taioe-backend.service taioe-frontend.service
 
 # Option B: enable the target
-sudo systemctl enable rag-stack.target
+sudo systemctl enable taioe-stack.target
 ```
 
 ## Start now
 
 ```bash
-sudo systemctl start rag-backend.service
-sudo systemctl start rag-frontend.service
+sudo systemctl start taioe-backend.service
+sudo systemctl start taioe-frontend.service
 # or
-sudo systemctl start rag-stack.target
+sudo systemctl start taioe-stack.target
 ```
 
 After changing a unit file already installed in `/etc/systemd/system`, run:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart rag-frontend.service
+sudo systemctl restart taioe-frontend.service
 ```
 
 ## Check status/logs
 
 ```bash
-systemctl status rag-backend.service
-systemctl status rag-frontend.service
-journalctl -u rag-backend.service -f
-journalctl -u rag-frontend.service -f
+systemctl status taioe-backend.service
+journalctl -u taioe-frontend.service -f
+journalctl -u taioe-backend.service -f
+journalctl -u taioe-frontend.service -f
 ```
 
 ## Notes

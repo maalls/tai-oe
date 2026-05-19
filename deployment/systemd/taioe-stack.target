@@ -1,0 +1,7 @@
+[Unit]
+Description=TaiOe Full Stack (Backend + Frontend)
+Wants=taioe-backend.service taioe-frontend.service
+After=taioe-backend.service taioe-frontend.service
+
+[Install]
+WantedBy=multi-user.target
