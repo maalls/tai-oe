@@ -228,7 +228,10 @@
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { createAccount, listAccounts } from '../../api/account';
 import { listOpportunityDocuments } from '../../api/document';
-import { createDraftOpportunity, searchOpportunities } from '../../api/opportunity';
+import {
+   createDraftOpportunity,
+   searchOpportunities as searchOpportunitiesApi,
+} from '../../api/opportunity';
 import { useI18n } from '../../i18n/useI18n';
 import { useApiQuery } from '../../composables/useApiQuery';
 import { useAuth } from '../../stores/auth';
@@ -393,7 +396,7 @@ const loadRecentOpportunities = async () => {
          recentOpportunities.value = [];
          return;
       }
-      const opportunities = await searchOpportunities(token);
+      const opportunities = await searchOpportunitiesApi(token);
       recentOpportunities.value = opportunities
          .filter((opportunity) => opportunity.stage !== 'CLOSED_WON')
          .sort((left, right) => {
@@ -422,7 +425,7 @@ const searchOpportunities = async (query: string) => {
          searchResults.value = [];
          return;
       }
-      const opportunities = await searchOpportunities(token, { name: query.trim() });
+      const opportunities = await searchOpportunitiesApi(token, { name: query.trim() });
       searchResults.value = opportunities
          .filter((opportunity) => opportunity.stage !== 'CLOSED_WON')
          .sort((left, right) => {
