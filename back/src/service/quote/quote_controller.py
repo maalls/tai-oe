@@ -73,6 +73,15 @@ class QuoteController:
     def _get_storage_path(source: str, filename: str) -> Path:
         return get_storage_path(source, filename)
 
+    @staticmethod
+    def _safe_float(value: object, default: float = 0.0) -> float:
+        try:
+            if value is None:
+                return default
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
     def handle_list_quotes(self) -> Dict:
         try:
             assets_dir = Path(__file__).parent.parent.parent / "var" / "assets"
@@ -155,14 +164,20 @@ class QuoteController:
             computed_subtotal = 0.0
             computed_tax = 0.0
             for line in lines:
-                quantity = float(line.get("quantity", 1) or 1)
-                unit_price_excl_tax = float(line.get("unit_price_excl_tax", 0) or 0)
-                client_discount_rate = float(line.get("client_discount_rate", 0) or 0)
+                quantity = self._safe_float(line.get("quantity", 1), default=1.0)
+                unit_price_excl_tax = self._safe_float(
+                    line.get("unit_price_excl_tax", line.get("unit_price", line.get("selling_price", line.get("price", 0)))),
+                    default=0.0,
+                )
+                client_discount_rate = self._safe_float(line.get("client_discount_rate", 0), default=0.0)
                 discounted_unit_price = unit_price_excl_tax * (1 - client_discount_rate / 100.0)
-                line_total_excl_tax = float(line.get("line_total_excl_tax", 0) or 0)
+                line_total_excl_tax = self._safe_float(
+                    line.get("line_total_excl_tax", line.get("total_excl_tax", 0)),
+                    default=0.0,
+                )
                 if line_total_excl_tax <= 0:
                     line_total_excl_tax = quantity * discounted_unit_price
-                tax_rate = float(line.get("tax_rate", 20) or 20)
+                tax_rate = self._safe_float(line.get("tax_rate", 20), default=20.0)
 
                 computed_subtotal += line_total_excl_tax
                 computed_tax += line_total_excl_tax * (tax_rate / 100.0)
@@ -175,10 +190,12 @@ class QuoteController:
                         "sku": line.get("sku"),
                         "description": line.get("description"),
                         "price": unit_price_excl_tax,
+                        "unit_price": discounted_unit_price,
                         "unit_price_excl_tax": unit_price_excl_tax,
                         "client_discount_rate": client_discount_rate,
                         "discounted_unit_price": discounted_unit_price,
                         "line_total_excl_tax": line_total_excl_tax,
+                        "line_total": line_total_excl_tax,
                         "tax_rate": tax_rate,
                         "unit": line.get("unit", "U"),
                     }
@@ -186,6 +203,9 @@ class QuoteController:
 
             computed_subtotal = round(computed_subtotal, 2)
             computed_tax = round(computed_tax, 2)
+            if computed_subtotal <= 0:
+                computed_subtotal = self._safe_float(document.get("total_excl_tax", 0), default=0.0)
+                computed_tax = self._safe_float(document.get("total_tax", 0), default=0.0)
             computed_total = round(computed_subtotal + computed_tax, 2)
             rfp_data["totals"] = {
                 "subtotal": computed_subtotal,
@@ -315,25 +335,19 @@ class QuoteController:
         }
 
         for product in rfp_data.get("products", []):
-            try:
-                quantity = float(product.get("quantity", 1) or 1)
-            except Exception:
-                quantity = 1.0
-
-            try:
-                unit_price_excl_tax = float(product.get("unit_price_excl_tax", product.get("price", 0)) or 0)
-            except Exception:
-                unit_price_excl_tax = 0.0
-
-            try:
-                client_discount_rate = float(product.get("client_discount_rate", 0) or 0)
-            except Exception:
-                client_discount_rate = 0.0
+            quantity = self._safe_float(product.get("quantity", 1), default=1.0)
+            unit_price_excl_tax = self._safe_float(
+                product.get("unit_price_excl_tax", product.get("unit_price", product.get("selling_price", product.get("price", 0)))),
+                default=0.0,
+            )
+            client_discount_rate = self._safe_float(product.get("client_discount_rate", 0), default=0.0)
 
             discounted_unit_price = unit_price_excl_tax * (1 - client_discount_rate / 100.0)
-            try:
-                line_total_excl_tax = float(product.get("line_total_excl_tax"))
-            except Exception:
+            line_total_excl_tax = self._safe_float(
+                product.get("line_total_excl_tax", product.get("line_total", 0)),
+                default=0.0,
+            )
+            if line_total_excl_tax <= 0:
                 line_total_excl_tax = quantity * discounted_unit_price
 
             template_data["products"].append(
@@ -344,10 +358,12 @@ class QuoteController:
                     "sku": product.get("sku", ""),
                     "description": product.get("description", ""),
                     "price": unit_price_excl_tax,
+                    "unit_price": discounted_unit_price,
                     "unit_price_excl_tax": unit_price_excl_tax,
                     "discounted_unit_price": discounted_unit_price,
                     "client_discount_rate": client_discount_rate,
                     "line_total_excl_tax": line_total_excl_tax,
+                    "line_total": line_total_excl_tax,
                     "selling_price": product.get("selling_price"),
                     "price_found": unit_price_excl_tax > 0,
                 }

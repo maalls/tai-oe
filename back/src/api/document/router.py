@@ -257,8 +257,7 @@ def document_update_storage_key(
     rows = db.execute_dict_query(
         """
         UPDATE document
-        SET storage_key = %s,
-            updated_at = now()
+        SET storage_key = %s
         WHERE id = %s
         RETURNING id, opportunity_id, storage_key
         """,
@@ -284,8 +283,7 @@ def document_update_status(
     rows = db.execute_dict_query(
         """
         UPDATE document
-        SET status = %s,
-            updated_at = now()
+        SET status = %s
         WHERE id = %s
         RETURNING id, opportunity_id, status
         """,

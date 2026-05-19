@@ -9,7 +9,8 @@ class _Template:
     def __init__(self, recorder):
         self.recorder = recorder
 
-    def render(self, **_kwargs):
+    def render(self, **kwargs):
+        self.recorder["render_kwargs"] = kwargs
         self.recorder["render_called"] = True
         return "<html><body>ok</body></html>"
 
@@ -71,3 +72,40 @@ def test_generate_quote_pdf_uses_back_templates_dir(monkeypatch, tmp_path):
     assert recorder["render_called"] is True
     assert Path(recorder["templates_path"]).resolve() == expected_templates_dir.resolve()
     assert (tmp_path / filename).exists()
+
+
+def test_generate_quote_pdf_computes_unit_price_and_line_total(monkeypatch, tmp_path):
+    recorder = {}
+
+    monkeypatch.setattr(QuoteController, "_get_storage_dir", staticmethod(lambda _source: tmp_path))
+    monkeypatch.setattr(
+        "src.service.quote.quote_controller.FileSystemLoader",
+        lambda path: _Loader(path, recorder),
+    )
+    monkeypatch.setattr(
+        "src.service.quote.quote_controller.Environment",
+        lambda loader: _Environment(loader, recorder),
+    )
+    monkeypatch.setattr("src.service.quote.quote_controller.HTML", _Html)
+
+    controller = QuoteController()
+    controller._generate_quote_pdf(
+        {
+            "quote_id": "Q-2",
+            "currency": "EUR",
+            "account": {},
+            "contact": {},
+            "products": [
+                {
+                    "quantity": 2,
+                    "unit_price": 15.0,
+                    "client_discount_rate": 10,
+                }
+            ],
+            "totals": {"subtotal": 27.0, "tax": 5.4, "total": 32.4},
+        }
+    )
+
+    products = recorder["render_kwargs"]["products"]
+    assert products[0]["unit_price"] == 13.5
+    assert products[0]["line_total"] == 27.0

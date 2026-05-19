@@ -244,14 +244,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for product in products %} {% set unit_price =
-          product.get('discounted_unit_price') if
-          product.get('discounted_unit_price') is not none else
-          (product.get('selling_price') if product.get('selling_price') is not
-          none else product.get('price', 0)) %} {% set line_total =
-          product.get('line_total_excl_tax') if
-          product.get('line_total_excl_tax') is not none else (product.quantity
-          * unit_price) %}
+          {% for product in products %}
           <tr>
             <td style="white-space: nowrap">
               {{ product.brand or product.manufacturer or '' }}
@@ -263,29 +256,32 @@
             </td>
             <td class="price-col">{{ product.quantity }}</td>
             <td class="price-col">
-              {{ unit_price|format_currency(currency) }} {{ currency }}
+              {{ product.unit_price|format_currency(currency) }} {{ currency }}
             </td>
             <td class="price-col">
-              {{ line_total|format_currency(currency) }} {{ currency }}
+              {{ product.line_total|format_currency(currency) }} {{ currency }}
             </td>
           </tr>
           {% endfor %}
           <tr>
             <td colspan="5" class="price-col"><strong>Subtotal</strong></td>
             <td class="price-col">
-              {{ totals.subtotal|format_currency(currency) }} {{ currency }}
+              {{ totals.get('subtotal', 0)|format_currency(currency) }} {{
+              currency }}
             </td>
           </tr>
           <tr>
             <td colspan="5" class="price-col"><strong>Tax</strong></td>
             <td class="price-col">
-              {{ totals.tax|format_currency(currency) }} {{ currency }}
+              {{ totals.get('tax', 0)|format_currency(currency) }} {{ currency
+              }}
             </td>
           </tr>
           <tr class="total-row">
             <td colspan="5" class="price-col"><strong>Total</strong></td>
             <td class="price-col">
-              {{ totals.total|format_currency(currency) }} {{ currency }}
+              {{ totals.get('total', 0)|format_currency(currency) }} {{ currency
+              }}
             </td>
           </tr>
         </tbody>
