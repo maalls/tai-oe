@@ -100,18 +100,29 @@ class OpportunityRepository:
             except Exception:
                 qty_val = 1.0
 
+            sku = str(product.get("sku") or "").strip()
+            product_meta = product_meta_by_sku.get(sku)
+
+            extracted_price = product.get("price", 0)
             try:
-                price_val = float(product.get("price", 0) or 0)
+                price_val = float(extracted_price or 0)
             except Exception:
                 price_val = 0.0
+
+            # Persist a concrete unit price at draft generation time.
+            # If extraction doesn't provide one, fallback to catalog product price now
+            # (instead of doing it later during save/pdf generation).
+            if price_val <= 0 and isinstance(product_meta, dict):
+                try:
+                    price_val = float(product_meta.get("price") or 0)
+                except Exception:
+                    price_val = 0.0
 
             try:
                 tax_rate = float(product.get("tax_rate", 20) or 20)
             except Exception:
                 tax_rate = 20.0
 
-            sku = str(product.get("sku") or "").strip()
-            product_meta = product_meta_by_sku.get(sku)
             client_discount_rate = self._compute_client_discount_rate(product_meta)
             discount_ratio = (client_discount_rate or 0.0) / 100.0
 

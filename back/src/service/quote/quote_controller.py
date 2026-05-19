@@ -163,6 +163,7 @@ class QuoteController:
 
             computed_subtotal = 0.0
             computed_tax = 0.0
+
             for line in lines:
                 quantity = self._safe_float(line.get("quantity", 1), default=1.0)
                 unit_price_excl_tax = self._safe_float(
@@ -203,9 +204,6 @@ class QuoteController:
 
             computed_subtotal = round(computed_subtotal, 2)
             computed_tax = round(computed_tax, 2)
-            if computed_subtotal <= 0:
-                computed_subtotal = self._safe_float(document.get("total_excl_tax", 0), default=0.0)
-                computed_tax = self._safe_float(document.get("total_tax", 0), default=0.0)
             computed_total = round(computed_subtotal + computed_tax, 2)
             rfp_data["totals"] = {
                 "subtotal": computed_subtotal,

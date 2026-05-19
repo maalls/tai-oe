@@ -45,6 +45,9 @@ class _Query:
         self.single_mode = True
         return self
 
+    def limit(self, _count):
+        return self
+
     def execute(self):
         if self.table == "document" and self.mode == "update":
             document_id = self.filters["id"]
@@ -70,6 +73,11 @@ class _Query:
             }
             return _Response(data)
 
+        if self.table == "product" and self.mode == "select":
+            sku = self.filters.get("sku")
+            product = self.db.products_by_sku.get(sku)
+            return _Response([product] if product else [])
+
         raise AssertionError(f"Unsupported query: {self.table} {self.mode}")
 
 
@@ -86,6 +94,7 @@ class _Supabase:
             }
         }
         self.document_lines = {"d-1": [{"id": "old-line", "document_id": "d-1"}]}
+        self.products_by_sku = {}
 
     def table(self, table_name):
         return _Query(self, table_name)
@@ -153,3 +162,5 @@ def test_update_raises_when_brand_is_not_string():
 
     with pytest.raises(ValueError, match="Brand must be a string"):
         service.update("d-1", payload)
+
+

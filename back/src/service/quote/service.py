@@ -14,6 +14,15 @@ class QuoteService:
         self.supabase = supabase or get_supabase_service()
         self.opportunity_repository = opportunity_repository or OpportunityRepository()
 
+    @staticmethod
+    def _as_float(value, default: float = 0.0) -> float:
+        try:
+            if value is None:
+                return default
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
     def update(self, document_id: str, payload: dict, user_id: str = None) -> Dict:
         del user_id
         try:
@@ -41,26 +50,41 @@ class QuoteService:
                     raise ValueError(f"Brand must be a string, got {type(brand)} for line {idx}")
 
                 client_discount_rate = self.safe_numeric(line.get("client_discount_rate"))
+                if client_discount_rate is None:
+                    client_discount_rate = 0.0
+
+                quantity = self._as_float(line.get("quantity"), default=0.0)
+                unit_price_excl_tax = self._as_float(
+                    line.get("unit_price_excl_tax", line.get("price")),
+                    default=0.0,
+                )
+
+                line_total_excl_tax = self._as_float(line.get("line_total_excl_tax"), default=0.0)
+                if line_total_excl_tax <= 0:
+                    line_total_excl_tax = quantity * unit_price_excl_tax * (1 - (client_discount_rate / 100.0))
+
+                line_total_excl_tax = round(line_total_excl_tax, 2)
 
                 new_lines.append({
                     "id": line.get("id") or str(uuid.uuid4()),
                     "document_id": document_id,
                     "position": idx + 1,
                     "description": line.get("description", ""),
-                    "quantity": line.get("quantity", 0),
-                    "unit_price_excl_tax": line.get("unit_price_excl_tax", 0),
+                    "quantity": quantity,
+                    "unit_price_excl_tax": unit_price_excl_tax,
                     "tax_rate": line.get("tax_rate", 0),
                     "sku": line.get("sku", ""),
                     "brand": brand or "",
                     "unit": line.get("unit", ""),
                     "discount_rate": self.safe_numeric(line.get("discount_rate")),
                     "client_discount_rate": client_discount_rate,
+                    "line_total_excl_tax": line_total_excl_tax,
                 })
 
             if new_lines:
                 self.supabase.table("document_line").insert(new_lines).execute()
 
-            totals = self._compute_document_totals(lines_payload)
+            totals = self._compute_document_totals(new_lines)
             print(f"[QuoteController][update] Computed totals: {totals}")
             self.supabase.table("document").update({
                 "total_excl_tax": totals["total_excl_tax"],
