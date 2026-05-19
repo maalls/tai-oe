@@ -1,15 +1,15 @@
 # Progress map (plan.3)
 
-| Lot | Description                            | Statut      | Commit/Tag                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| --- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| -1  | Renommage packages/tests API           | ✅ Fait     | edb3ce7, 30a1f49                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait     | 1238346, [MIG mail attachments + auth/realtime-only guardrail + baseline 0]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 1   | Migration du flux profile (auth)       | ✅ Fait     | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 2   | Migration account/contact/vendor       | ✅ Fait     | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                                                                                                                                                                                                                                                                                                                                                                                           |
-| 3   | Migration brand/family/catalogue       | 🔄 En cours | [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30]                                                                                                                                                                                                                                                                                                                                                                       |
-| 4   | Migration opportunity/source/documents | 🔄 En cours | [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + PipelineStageClosedWon + ActionsPage + SettingsPage + AccountPage + OpportunityHeader + OpportunityIndexPage + OpportunityInvoicesPage + OpportunityInvoiceDetailPage + GlobalInvoicesPage + GlobalInvoiceDetailPage + ProductDetailPage + ContactDetailPage + ProductIndexPage + QuoteDocument + MailAttachments + tests + baseline 0] |
-| 5   | Migration invoices/quote read models   | 🔄 En cours | [WIP invoice read-model list/view + migrations InvoicesPage/InvoiceDetailPage + tests]                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| 6   | Fermeture/realtime                     | 🔄 En cours | [MIG mail attachments + auth/realtime-only guardrail + baseline 0]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Lot | Description                            | Statut  | Commit/Tag                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --- | -------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -1  | Renommage packages/tests API           | ✅ Fait | edb3ce7, 30a1f49                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 0   | Garde-fou supabase-direct (baseline)   | ✅ Fait | 1238346, [MIG mail attachments + auth/realtime-only guardrail + baseline 0]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 1   | Migration du flux profile (auth)       | ✅ Fait | f0064c1, 352adad, b91e2b0, 08fa2c9                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2   | Migration account/contact/vendor       | ✅ Fait | 5b3d3bf, 06e25db, edf5468, 8661e6f, 0c1f33b, fb022fd, cf74c8d, ff6129a, 34c9736, dc8f51a, 0b2749d, 5bc7c91, 024954d, 65c6300, [MIG vendor brands, Edit.vue, baseline 38]                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 3   | Migration brand/family/catalogue       | ✅ Fait | 2b44841, 0e390c4, [MIG catalog brands/families + useCmsData products/admin + useBrandFamilyData + BrandEditPage + family/index + family/show + FamilyDiscountPage + useSuggestionSearch + tests + baseline 30]                                                                                                                                                                                                                                                                                                                                                              |
+| 4   | Migration opportunity/source/documents | ✅ Fait | 07abf75, [MIG useOpportunitySource + SourcePage + documents list/detail + PreviewPage + Quote.vue + SendPage + PipelinePage + PipelineStageAccepted + PipelineStageInvoiced + PipelineStagePaid + StageManager + PipelineStageRfp + PipelineStageClosedWon + ActionsPage + SettingsPage + AccountPage + OpportunityHeader + OpportunityIndexPage + OpportunityInvoicesPage + OpportunityInvoiceDetailPage + GlobalInvoicesPage + GlobalInvoiceDetailPage + ProductDetailPage + ContactDetailPage + ProductIndexPage + QuoteDocument + MailAttachments + tests + baseline 0] |
+| 5   | Migration invoices/quote read models   | ✅ Fait | c71a954, [MIG lot5 invoice read-model endpoints and frontend consumers]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 6   | Fermeture/realtime                     | ✅ Fait | [Decision auth/realtime + tests unitaires auth/realtime + guardrail baseline 0]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 # backend.refactor.3.plan
 
@@ -204,14 +204,16 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 
 ### lot 3 - brand/family/catalogue
 
-1. en cours: creer endpoints `brand` et `family` manquants
+1. fait: creer endpoints `brand` et `family` manquants
 
 - fait: ajout des endpoints de reference `GET /api/catalog/brands` et `GET /api/catalog/families`
 - fait: tests unitaires backend ajoutes (`back/tests/unit/api/catalog/router/test_list_catalog_brands.py`, `back/tests/unit/api/catalog/router/test_list_catalog_families.py`)
 
-2. traiter les operations sur `product_family` via backend
+2. fait: traiter les operations sur `product_family` via backend
 
-3. en cours: remplacer les composables catalogue partages (`useCmsData`, `useBrandFamilyData`, `useSuggestionSearch`)
+- fait: les flux `family/index`, `family/show`, `products/IndexPage`, `QuoteDocument` et `useBrandFamilyData` passent par des endpoints backend (`/api/family/*`, `/api/products/*`, `/api/catalog/*`) sans acces direct frontend
+
+3. fait: remplacer les composables catalogue partages (`useCmsData`, `useBrandFamilyData`, `useSuggestionSearch`)
 
 - fait: `front/src/components/products/cms/useCmsData.ts` migre vers `front/src/api/catalog.ts`
 - fait: `front/src/components/admin/components/cms/useCmsData.ts` migre vers `front/src/api/catalog.ts`
@@ -425,8 +427,13 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: `front/config/supabase-direct-allowlist.txt` est vide
 - fait: guardrail supabase-direct valide, baseline reduite a `0` fichier metier
 
-28. finir la migration des composants opportunity qui lisent encore `opportunity`, `email`, `participant` en direct
-29. centraliser les agregats source/document/participant cote backend
+28. fait: finir la migration des composants opportunity qui lisaient encore `opportunity`, `email`, `participant` en direct
+
+- fait: verification `grep` sur `front/src/**` sans match `supabase.from(` ni `supabase.rpc(`
+
+29. fait: centraliser les agregats source/document/participant cote backend
+
+- fait: agregats exposes via endpoints backend dedies (`/api/opportunity/{id}/source`, `/api/document/*`, `/api/opportunity/{id}/sent-email`, `/api/invoice/{id}/view`)
 
 ### lot 5 - invoices et quote read models
 
@@ -440,13 +447,44 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - fait: tests unitaires backend/frontend ajoutes pour les nouveaux endpoints/helpers
 
 2. couvrir les jointures `document + sent_email + opportunity + contact` cote backend au lieu du frontend
+
+- fait: les jointures sont portees par `GET /api/invoice/{id}/view` (invoice + sent_email + default_contact) et consommees par les deux ecrans de detail
+
 3. supprimer les lectures directes `document`, `sent_email`, `contact`, `opportunity` dans ces ecrans
+
+- fait: les vues `InvoicesPage`/`InvoiceDetailPage` (global + opportunity) passent par `front/src/api/invoice.ts` sans lecture directe des tables metier cote frontend
 
 ### lot 6 - realtime et fermeture
 
-1. trancher si le realtime email reste en `supabase-js` ou passe par une autre couche
-2. si conservation transitoire: restreindre explicitement `front/src/lib/supabase.ts` a `auth` + `realtime`
-3. verifier qu'il ne reste plus aucun acces direct metier dans `front/src/**`
+1. fait: decision auth
+
+- fait: conserver `supabase.auth.*` pour login/session/reset password
+- fait: interdire toute nouvelle logique metier en acces direct via SDK Supabase
+
+2. fait: decision realtime
+
+- fait: conserver provisoirement le realtime email via SDK Supabase
+- fait: borner explicitement le perimetere realtime au flux mail existant
+- fait: tout nouveau besoin realtime doit passer par une decision architecture explicite (backend push/SSE/WebSocket)
+
+3. fait: regle de fermeture
+
+- fait: `front/src/lib/supabase.ts` est reserve a `auth` + `realtime`
+- fait: `supabase.from(...)` et `supabase.rpc(...)` restent interdits pour le metier dans `front/src/**`
+- fait: verification outillee via `npm run check:supabase-direct` (baseline metier a 0)
+
+4. fait: durcir les tests lot 6
+
+- fait: tests unitaires frontend ajoutes pour abonnement/desabonnement realtime mail (`setupEmailRealtimeSubscription`, `cleanupEmailRealtimeSubscription`)
+- fait: tests unitaires frontend ajoutes pour non-regression auth (`getValidToken`, `signOut`)
+
+#### checklist de sortie lot 6
+
+- [x] decision auth formalisee (conserver Supabase Auth)
+- [x] decision realtime formalisee (conservation transitoire bornee)
+- [x] guardrail `check:supabase-direct` vert (0 fichier metier)
+- [x] tests complements lot 6 ajoutes (auth + realtime)
+- [x] lot 6 passe a `✅ Fait` apres ajout des tests complements
 
 ## decisions deja prises pour ce plan.3
 
@@ -456,8 +494,12 @@ Constat initial: environ `44` points d'entree frontend importent `front/src/lib/
 - `2026-05-18 | data metier | supabase.from(... ) dans front/src/** | decision=migrer vers backend | objectif central du plan.3`
 - `2026-05-18 | realtime | subscriptions email | decision=a trancher | peut rester provisoirement si le reste du metier sort du direct DB`
 - `2026-05-18 | lot 0 | guardrail supabase-direct | decision=actif | toute nouvelle surface frontend utilisant supabase direct hors allowlist echoue via npm run check:supabase-direct`
-- `2026-05-18 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=en cours | endpoints /api/catalog/* actifs, useCmsData/useBrandFamilyData/BrandEditPage/family/index/family/show/FamilyDiscountPage/useSuggestionSearch migres, baseline guardrail 30`
-- `2026-05-18 | lot 4 | source opportunity | decision=en cours | useOpportunitySource + SourcePage migres vers /api/opportunity/{id}/source et /api/opportunity/{id}/name, baseline guardrail 28`
+- `2026-05-19 | lot 3 | catalogue refs (brand/family) + composables CMS | decision=fait | endpoints /api/catalog/* actifs, pages/composables cibles migres, plus de lecture metier supabase directe sur ce lot`
+- `2026-05-19 | lot 4 | source/opportunity/documents | decision=fait | migrations listees executees; verification guardrail npm run check:supabase-direct = 0 fichier metier`
+- `2026-05-19 | lot 6 | auth | decision=conserver | Supabase Auth reste la couche d'authentification frontend pour cette phase`
+- `2026-05-19 | lot 6 | realtime mail | decision=conserver transitoirement | realtime borne au flux mail existant; tout nouveau flux doit etre arbitre`
+- `2026-05-19 | lot 6 | fermeture supabase-direct metier | decision=actif | check:supabase-direct reste bloquant avec baseline metier a 0`
+- `2026-05-19 | lot 6 | tests de fermeture | decision=fait | tests unitaires auth/realtime ajoutes et valides, guardrail supabase-direct toujours vert`
 
 ## criteres de done pour ce refactor.3
 

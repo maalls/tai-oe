@@ -103,6 +103,10 @@ import MailLoader from './MailLoader.vue';
 import MailList from './MailList.vue';
 import { useI18n } from '../../i18n/useI18n';
 import { apiUrl } from '../../utils/api';
+import {
+   setupEmailRealtimeSubscription,
+   cleanupEmailRealtimeSubscription,
+} from './realtimeSubscription';
 
 const { session } = useAuth();
 const { t } = useI18n();
@@ -460,87 +464,26 @@ const deleteEmail = async (emailId: string) => {
 };
 
 const setupRealtimeSubscription = async (userId: string) => {
-   if (!userId) {
-      console.log('[Realtime] No user ID, skipping subscription');
-      return;
-   }
-
-   console.log('[Realtime] Setting up subscription for user:', userId);
-   console.log('[Realtime] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-
-   try {
-      // Get the user's JWT token from session
-      const token = session.value?.access_token;
-      console.log('[Realtime] Token available:', !!token);
-
-      if (token) {
-         // Set auth on Supabase client for realtime
-         console.log('[Realtime] Setting auth session...');
-         await supabase.auth.setSession({
-            access_token: token,
-            refresh_token: session.value?.refresh_token || '',
-         });
-         console.log('[Realtime] Auth session set successfully');
-      }
-
-      // Subscribe to email updates for this user - use simpler channel name
-      const channelName = `emails:${userId}`;
-      console.log('[Realtime] Creating channel:', channelName);
-
-      emailSubscription = supabase
-         .channel(channelName)
-         .on(
-            'postgres_changes',
-            {
-               event: 'UPDATE',
-               schema: 'public',
-               table: 'emails',
-               filter: `user_id=eq.${userId}`,
-            },
-            (payload: any) => {
-               console.log('[Realtime] Email UPDATE received:', payload.new?.id);
-               if (payload.new?.id) {
-                  // Update existing email in the list
-                  const index = messages.value.findIndex((m) => m.id === payload.new.id);
-                  if (index !== -1) {
-                     // Update all fields from database
-                     messages.value[index] = {
-                        ...messages.value[index],
-                        ...payload.new,
-                     } as any;
-                  }
-               }
-            }
-         )
-         .subscribe((status: string, err?: any) => {
-            console.log('[Realtime] Subscription status changed:', status);
-            if (err) {
-               console.error('[Realtime] Subscription error:', err);
-            }
-            // Note: Browser extensions may trigger "listener indicated an asynchronous response"
-            // warning after SUBSCRIBED status - this is harmless and doesn't affect functionality
-         });
-   } catch (error) {
-      console.error('[Realtime] Error setting up subscription:', error);
-      console.error('[Realtime] Error type:', error instanceof Error ? error.name : typeof error);
-      console.error(
-         '[Realtime] Error message:',
-         error instanceof Error ? error.message : String(error)
-      );
-   }
+   emailSubscription = await setupEmailRealtimeSubscription({
+      userId,
+      accessToken: session.value?.access_token,
+      refreshToken: session.value?.refresh_token,
+      supabaseClient: supabase,
+      onEmailUpdate: (emailId: string, payload: any) => {
+         console.log('[Realtime] Email UPDATE received:', emailId);
+         const index = messages.value.findIndex((m) => m.id === emailId);
+         if (index !== -1) {
+            messages.value[index] = {
+               ...messages.value[index],
+               ...payload.new,
+            } as any;
+         }
+      },
+   });
 };
 
 const cleanupRealtimeSubscription = () => {
-   if (emailSubscription) {
-      console.log('[Realtime] Cleaning up subscription...');
-      try {
-         emailSubscription.unsubscribe();
-         console.log('[Realtime] Subscription unsubscribed successfully');
-      } catch (error) {
-         console.error('[Realtime] Error unsubscribing:', error);
-      }
-      emailSubscription = null;
-   }
+   emailSubscription = cleanupEmailRealtimeSubscription(emailSubscription);
 };
 
 const createOpportunity = async (messageId: string) => {
