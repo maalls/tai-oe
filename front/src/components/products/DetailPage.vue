@@ -1,20 +1,21 @@
 <template>
-   <ProductsSubHeader class="mb-6" />
-   <div class="p-6 max-w-4xl mx-auto">
-      <!--div class="flex items-center justify-between mb-6">
-         <div>
-            <div class="text-sm text-gray-500">{{ t('products.detail.title') }}</div>
-            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-               {{ product?.refciale || t('products.detail.fallbackTitle') }}
-            </h1>
-         </div>
+   <ProductsSubHeader class="mb-6">
+      <template #actions>
          <RouterLink
             to="/products"
-            class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            class="shrink-0 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
          >
             {{ t('products.detail.back') }}
          </RouterLink>
-      </div-->
+      </template>
+   </ProductsSubHeader>
+   <div class="p-6 max-w-4xl mx-auto">
+      <div class="mb-6">
+         <div class="text-sm text-gray-500">{{ t('products.detail.title') }}</div>
+         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            {{ product?.refciale || t('products.detail.fallbackTitle') }}
+         </h1>
+      </div>
 
       <div v-if="error" class="text-red-600 bg-red-50 p-4 rounded-lg mb-6">
          {{ error }}

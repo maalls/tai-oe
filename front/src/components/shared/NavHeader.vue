@@ -1,7 +1,7 @@
 <template>
    <div class="bg-slate-50 border-b border-slate-200 shadow-sm mb-4">
-      <div class="max-w-7xl mx-auto px-6 py-3">
-         <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="max-w-7xl mx-auto px-6 py-3 min-h-16">
+         <div class="flex flex-wrap items-center justify-between gap-3 min-h-10">
             <nav class="flex flex-wrap gap-2">
                <RouterLink
                   v-for="item in items"
@@ -17,7 +17,7 @@
                   {{ item.label }}
                </RouterLink>
             </nav>
-            <div v-if="$slots.actions" class="flex items-center gap-2">
+            <div v-if="$slots.actions" class="flex items-center gap-2 shrink-0">
                <slot name="actions" />
             </div>
          </div>
