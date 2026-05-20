@@ -133,6 +133,11 @@ import Table from './components/table/index.vue';
 import { useBrandFamilyData } from './useBrandFamilyData';
 import { searchProducts } from '../../api/product';
 import { useI18n } from '../../i18n/useI18n';
+import {
+   applyFamilyPricingToListPrice,
+   selectBestFamilyPricing,
+   type FamilyPricing,
+} from '../../utils/familyPricing';
 
 interface Product {
    id: string | number;
@@ -188,20 +193,53 @@ const brandNameByNormalized = computed(() => {
    );
 });
 
-const familyMetaByCode = computed(() => {
+const familiesByBrandAndCode = computed(() => {
    return families.value.reduce(
       (acc, family) => {
-         if (family.code) {
-            const code = family.code.toLowerCase();
-            acc[code] = {
-               name: family.name,
-               discount: family.discount ?? null,
-               hasDiscount: typeof family.discount === 'number' && family.discount > 0,
-            };
+         const code = String(family.code || '')
+            .trim()
+            .toLowerCase();
+         const brandId = String(family.brand_id || '')
+            .trim()
+            .toLowerCase();
+         if (!code || !brandId) {
+            return acc;
          }
+
+         const key = `${brandId}::${code}`;
+         const current = acc[key];
+         if (!current || Number(family.discount || 0) > Number(current.discount || 0)) {
+            acc[key] = family;
+         }
+
          return acc;
       },
-      {} as Record<string, { name: string; discount: number | null; hasDiscount: boolean }>
+      {} as Record<string, any>
+   );
+});
+
+const netPriceFamilyByBrandAndSku = computed(() => {
+   return families.value.reduce(
+      (acc, family) => {
+         const familyType = String(family.type || '').trim().toLowerCase();
+         if (familyType !== 'net_price') {
+            return acc;
+         }
+
+         const brandId = String(family.brand_id || '')
+            .trim()
+            .toLowerCase();
+         const sku = String(family.product_code || '')
+            .trim()
+            .toLowerCase();
+         if (!brandId || !sku) {
+            return acc;
+         }
+
+         acc[`${brandId}::${sku}`] = family;
+         return acc;
+      },
+      {} as Record<string, any>
    );
 });
 
@@ -421,54 +459,50 @@ function getBrandDisplay(product: Product): string {
 function getFamilyTags(
    product: Product
 ): { label: string; hasDiscount: boolean; isNetPrice: boolean; href: string }[] {
-   const skuLower = String(product.refciale || '')
+   const sku = String(product.refciale || '').trim();
+   const skuLower = sku.toLowerCase();
+   const brandIdLower = String(product.brand_id || '')
       .trim()
       .toLowerCase();
+
+   const codes = (product.family_codes || [])
+      .map((code) => String(code).trim())
+      .filter(Boolean);
+   const linkedFamilies = codes
+      .map((code) => familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`])
+      .filter(Boolean) as FamilyPricing[];
    const directNetPriceFamily = skuLower
-      ? (families.value.find(
-           (f) =>
-              String(f.product_code || '')
-                 .trim()
-                 .toLowerCase() === skuLower && (f.type || '').toLowerCase() === 'net_price'
-        ) ?? null)
+      ? netPriceFamilyByBrandAndSku.value[`${brandIdLower}::${skuLower}`] || null
       : null;
-
-   const codes = product.family_codes || [];
-   const discountsByCode = codes
-      .map((code) => {
-         const normalizedCode = String(code).trim().toLowerCase();
-         const discount = familyMetaByCode.value[normalizedCode]?.discount;
-         return typeof discount === 'number' && discount > 0 ? discount : null;
-      })
-      .filter((discount): discount is number => typeof discount === 'number');
-
-   const bestDiscount = discountsByCode.length ? Math.max(...discountsByCode) : null;
+   const bestFamily = selectBestFamilyPricing({ directNetPriceFamily, linkedFamilies });
+   const bestDiscount =
+      String(bestFamily?.type || '').toLowerCase() === 'discount'
+         ? Number(bestFamily?.discount || 0)
+         : 0;
 
    const tags: { label: string; hasDiscount: boolean; isNetPrice: boolean; href: string }[] = [];
 
-   if (directNetPriceFamily) {
-      const sku = String(product.refciale || '').trim();
+   if (String(bestFamily?.type || '').toLowerCase() === 'net_price') {
       const href = sku
          ? `/vendors/family?tab=all&sku=${encodeURIComponent(sku)}&exactMatch=true`
          : '/vendors/family?tab=all';
-      tags.push({ label: 'NET', hasDiscount: false, isNetPrice: true, href });
+      const netPrice = Number(bestFamily?.net_price);
+      const netLabel = Number.isFinite(netPrice) ? `NET (${formatPrice(netPrice)})` : 'NET';
+      tags.push({ label: netLabel, hasDiscount: false, isNetPrice: true, href });
    }
 
    tags.push(
-      ...codes
-         .map((code) => String(code).trim())
-         .filter(Boolean)
-         .map((code) => {
-            const meta = familyMetaByCode.value[code.toLowerCase()];
+      ...codes.map((code) => {
+            const family = familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`];
             const hasDiscount =
-               !directNetPriceFamily &&
-               typeof meta?.discount === 'number' &&
-               bestDiscount !== null &&
-               meta.discount === bestDiscount;
-            const nameLabel = meta?.name ? `${code} ${meta.name}` : code;
+               String(bestFamily?.type || '').toLowerCase() === 'discount' &&
+               bestDiscount > 0 &&
+               Number(family?.discount || 0) === bestDiscount;
+            const nameLabel = family?.name ? `${code} ${family.name}` : code;
             const discountLabel =
-               typeof meta?.discount === 'number' && meta.discount > 0
-                  ? ` (${meta.discount}%)`
+               String(family?.type || '').toLowerCase() === 'discount' &&
+               Number(family?.discount || 0) > 0
+                  ? ` (${Number(family?.discount)}%)`
                   : '';
             return {
                label: `${nameLabel}${discountLabel}`,
@@ -489,27 +523,31 @@ function getDiscountedPrice(product: Product): { original: number; discounted: n
    const skuLower = String(product.refciale || '')
       .trim()
       .toLowerCase();
-   const directNetPriceFamily = skuLower
-      ? (families.value.find(
-           (f) =>
-              String(f.product_code || '')
-                 .trim()
-                 .toLowerCase() === skuLower && (f.type || '').toLowerCase() === 'net_price'
-        ) ?? null)
-      : null;
+   const brandIdLower = String(product.brand_id || '')
+      .trim()
+      .toLowerCase();
+   const codes = (product.family_codes || [])
+      .map((code) => String(code).trim())
+      .filter(Boolean);
 
-   if (directNetPriceFamily && typeof directNetPriceFamily.net_price === 'number') {
-      return { original: price, discounted: directNetPriceFamily.net_price };
+   const linkedFamilies = codes
+      .map((code) => familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`])
+      .filter(Boolean) as FamilyPricing[];
+   const directNetPriceFamily = skuLower
+      ? netPriceFamilyByBrandAndSku.value[`${brandIdLower}::${skuLower}`] || null
+      : null;
+   const bestFamily = selectBestFamilyPricing({ directNetPriceFamily, linkedFamilies });
+
+   if (!bestFamily) return null;
+
+   const discounted = applyFamilyPricingToListPrice({
+      listPrice: price,
+      bestFamily,
+   });
+   if (!Number.isFinite(discounted) || discounted === price) {
+      return null;
    }
 
-   const discounts = (product.family_codes || [])
-      .map((code) => familyMetaByCode.value[String(code).toLowerCase()]?.discount)
-      .filter((value): value is number => typeof value === 'number' && value > 0);
-
-   if (!discounts.length) return null;
-
-   const maxDiscount = Math.max(...discounts);
-   const discounted = price * (1 - maxDiscount / 100);
    return { original: price, discounted };
 }
 

@@ -38,6 +38,7 @@ import { getQuoteProductsContext } from '../../../../api/product';
 import QuoteTableHead from './QuoteTableHead.vue';
 import QuoteTableBody from './QuoteTableBody.vue';
 import { formatNumber, priceWithoutTax } from './format.vue';
+import { selectBestFamilyPricing } from '../../../../utils/familyPricing';
 
 const props = defineProps<{
    quoteDocument: any | null;
@@ -73,35 +74,14 @@ const netPriceFamilyBySku = ref<Record<string, any>>({});
 const getLineDiscount = (product: { product_family?: any[] | null }) => {
    const sku = String((product as any)?.sku || '').trim();
    const directNetPriceFamily = sku ? netPriceFamilyBySku.value[sku] : null;
-   if (directNetPriceFamily) {
-      return directNetPriceFamily;
-   }
+   const linkedFamilies = (Array.isArray(product?.product_family) ? product.product_family : []).map(
+      (link) => link?.family
+   );
 
-   const links = Array.isArray(product?.product_family) ? product.product_family : [];
-   if (links.length === 0) return null;
-
-   let bestDiscountFamily: any | null = null;
-   for (const link of links) {
-      const family = link?.family;
-      if (!family) continue;
-
-      // Net price always wins over any discount family.
-      if ((family.type || '').toLowerCase() === 'net_price') {
-         return family;
-      }
-
-      if ((family.type || '').toLowerCase() !== 'discount') {
-         continue;
-      }
-
-      const currentDiscount = Number(family.discount ?? 0);
-      const bestDiscount = Number(bestDiscountFamily?.discount ?? -Infinity);
-      if (currentDiscount > bestDiscount) {
-         bestDiscountFamily = family;
-      }
-   }
-
-   return bestDiscountFamily;
+   return selectBestFamilyPricing({
+      directNetPriceFamily,
+      linkedFamilies,
+   });
 };
 const productsRef = ref<Record<string, any>>({});
 const fieldKey = (idx: number | null, field: string) =>
