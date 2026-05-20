@@ -40,14 +40,17 @@ class FabdisImporter:
 
 		imported_rows = []
 		product_created_count = 0
+		product_updated_count = 0
 		family_created_count = 0
 		product_family_created_count = 0
 
 		for row in self.commerce_rows:
 			brand_id = brand_ids_by_name[row["brand_name"].casefold()]
-			product_id, product_created = self._ensure_product(row, brand_id)
+			product_id, product_created, product_updated = self._ensure_product(row, brand_id)
 			if product_created:
 				product_created_count += 1
+			if product_updated:
+				product_updated_count += 1
 
 			family_ids = []
 			for family in self._extract_product_families(row):
@@ -76,6 +79,7 @@ class FabdisImporter:
 				"products_in_file": len(self.commerce_rows),
 				"products_created": product_created_count,
 				"products_existing": len(self.commerce_rows) - product_created_count,
+				"products_updated": product_updated_count,
 				"families_created": family_created_count,
 				"product_family_created": product_family_created_count,
 			}
@@ -412,15 +416,15 @@ class FabdisImporter:
 
 		return families
 
-	def _ensure_product(self, row: dict[str, object], brand_id: str) -> tuple[str, bool]:
+	def _ensure_product(self, row: dict[str, object], brand_id: str) -> tuple[str, bool, bool]:
 		product_key = (brand_id, row["sku"])
 		cached_product_id = self._product_cache.get(product_key)
 		if cached_product_id:
-			return cached_product_id, False
+			return cached_product_id, False, False
 
 		response = (
 			self.supabase_client.table("product")
-			.select("id")
+			.select("id,price")
 			.eq("brand_id", brand_id)
 			.eq("sku", row["sku"])
 			.limit(1)
@@ -438,8 +442,25 @@ class FabdisImporter:
 				raise RuntimeError(
 					f"Product '{row['sku']}' for brand '{row['brand_name']}' returned without id"
 				)
+
+			product_updated = False
+			new_price = row["price"]
+			existing_price = response.data[0].get("price")
+			if self._numbers_different(existing_price, new_price):
+				updated = (
+					self.supabase_client.table("product")
+					.update({"price": new_price})
+					.eq("id", product_id)
+					.execute()
+				)
+				if getattr(updated, "error", None):
+					raise RuntimeError(
+						f"Failed to update price for product '{row['sku']}' (id={product_id}): {updated.error}"
+					)
+				product_updated = True
+
 			self._product_cache[product_key] = product_id
-			return product_id, False
+			return product_id, False, product_updated
 
 		insert_data = {
 			"brand_id": brand_id,
@@ -466,7 +487,7 @@ class FabdisImporter:
 
 		product_id = created.data[0]["id"]
 		self._product_cache[product_key] = product_id
-		return product_id, True
+		return product_id, True, False
 
 	def _ensure_family(self, brand_id: str, family: dict[str, str]) -> tuple[str, bool]:
 		family_key = (brand_id, family["code"])
@@ -580,6 +601,18 @@ class FabdisImporter:
 			return float(text)
 
 		return float(value)
+
+	def _numbers_different(self, current: object, new_value: object) -> bool:
+		current_number = self._normalize_number(current)
+		new_number = self._normalize_number(new_value)
+
+		if current_number is None and new_number is None:
+			return False
+
+		if current_number is None or new_number is None:
+			return True
+
+		return abs(current_number - new_number) > 1e-9
 
 	def _validate_family_pair(self, row_index: int, level: int, code_value: object, name_value: object) -> None:
 		code = self._normalize_text(code_value)
