@@ -312,27 +312,36 @@
                            v-if="familyTypeTab === 'net_price' || familyTypeTab === 'all'"
                            class="px-4 py-2 text-gray-600 text-right"
                         >
-                           <template
-                              v-if="
-                                 family.type == 'net_price' &&
-                                 family.product?.price !== null &&
-                                 family.product?.price !== undefined
-                              "
-                           >
+                           <template v-if="family.type == 'net_price'">
                               <div class="pt-1" style="font-size: 14px">
                                  <RouterLink
-                                    v-if="family.product_code"
+                                    v-if="
+                                       family.product?.id &&
+                                       family.product?.price !== null &&
+                                       family.product?.price !== undefined
+                                    "
                                     :to="{
-                                       path: '/products',
-                                       query: { refciale: family.product_code },
+                                       name: 'product-detail',
+                                       params: { id: family.product.id },
                                     }"
                                     class="text-blue-600 hover:text-blue-800 hover:underline"
                                  >
                                     {{ formatListPrice(family.product?.price) }}
                                  </RouterLink>
-                                 <span v-else>
-                                    {{ formatListPrice(family.product?.price) }}
-                                 </span>
+                                 <RouterLink
+                                    v-else-if="family.product_code"
+                                    :to="{
+                                       name: 'product-new',
+                                       query: {
+                                          refciale: family.product_code,
+                                          brand_id: family.brand_id,
+                                       },
+                                    }"
+                                    class="text-blue-600 hover:text-blue-800 hover:underline"
+                                 >
+                                    create
+                                 </RouterLink>
+                                 <span v-else> - </span>
                               </div>
                            </template>
                            <span v-else class="text-gray-400">-</span>

@@ -153,6 +153,16 @@ onMounted(async () => {
          };
          familyCodesInput.value = form.value.family_codes.join(',');
       }
+   } else {
+      const queryRefciale = route.query.refciale;
+      if (typeof queryRefciale === 'string' && queryRefciale.trim().length > 0) {
+         form.value.refciale = queryRefciale.trim();
+      }
+
+      const queryBrandId = route.query.brand_id;
+      if (typeof queryBrandId === 'string' && queryBrandId.trim().length > 0) {
+         form.value.brand_id = queryBrandId.trim();
+      }
    }
 });
 
