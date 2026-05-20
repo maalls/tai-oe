@@ -19,6 +19,7 @@ class FakePandas:
 				"LIBELLE80",
 				"LIBELLE240",
 				"TARIF",
+				"QT",
 				"TVA",
 				"FAM1",
 				"FAM1L",
@@ -91,7 +92,9 @@ class FakeSupabaseClient:
 	def __init__(self):
 		self.vendor_rows = {"ABB": "vendor-1"}
 		self.brand_rows = {("vendor-1", "ABB"): "brand-1"}
-		self.product_rows = {("brand-1", "ABB-SKU"): "product-1"}
+		self.product_rows = {
+			("brand-1", "ABB-SKU"): {"id": "product-1", "price": 10.5, "batch": None}
+		}
 		self.product_prices = {"product-1": 10.5}
 		self.family_rows = {("brand-1", None, "R"): "family-1"}
 		self.product_family_rows = {("product-1", "family-1")}
@@ -146,15 +149,32 @@ class FakeSupabaseClient:
 
 		if query.table_name == "product" and query.operation == "select":
 			filters = dict(query.filters)
-			product_id = self.product_rows.get((filters.get("brand_id"), filters.get("sku")))
+			product_record = self.product_rows.get((filters.get("brand_id"), filters.get("sku")))
+			if product_record is None:
+				return FakeResponse([])
+			if isinstance(product_record, dict):
+				return FakeResponse(
+					[
+						{
+							"id": product_record.get("id"),
+							"price": product_record.get("price"),
+							"batch": product_record.get("batch"),
+						}
+					]
+				)
+			product_id = product_record
 			if product_id is None:
 				return FakeResponse([])
-			return FakeResponse([{"id": product_id, "price": self.product_prices.get(product_id)}])
+			return FakeResponse([{"id": product_id, "price": self.product_prices.get(product_id), "batch": None}])
 
 		if query.table_name == "product" and query.operation == "insert":
 			product_id = f"product-{len(self.product_rows) + 1}"
 			key = (query.payload["brand_id"], query.payload["sku"])
-			self.product_rows[key] = product_id
+			self.product_rows[key] = {
+				"id": product_id,
+				"price": query.payload.get("price"),
+				"batch": query.payload.get("batch"),
+			}
 			self.product_prices[product_id] = query.payload.get("price")
 			self.inserted_products.append(query.payload)
 			return FakeResponse([{"id": product_id}])
@@ -166,6 +186,12 @@ class FakeSupabaseClient:
 				return FakeResponse([])
 			if "price" in query.payload:
 				self.product_prices[product_id] = query.payload["price"]
+			if "batch" in query.payload:
+				for key, value in self.product_rows.items():
+					if isinstance(value, dict) and value.get("id") == product_id:
+						value["batch"] = query.payload["batch"]
+						if "price" in query.payload:
+							value["price"] = query.payload["price"]
 			self.updated_products.append({"id": product_id, **query.payload})
 			return FakeResponse([{"id": product_id}])
 
@@ -610,6 +636,7 @@ def test_import_products_computes_unit_price_from_tarif_and_qt():
 			"sku": "ABB-SKU-UNIT",
 			"name": "Produit conditionne",
 			"price": 25.0,
+			"batch": 4,
 			"default_tax_rate": 20.0,
 		}
 	]
@@ -640,6 +667,7 @@ def test_import_products_updates_existing_price_when_different():
 	)
 
 	supabase_client = FakeSupabaseClient()
+	supabase_client.product_rows[("brand-1", "ABB-SKU")]["batch"] = 2
 	importer = FabdisImporter(fake_pandas, supabase_client)
 	importer.workbook = workbook
 
@@ -650,4 +678,44 @@ def test_import_products_updates_existing_price_when_different():
 	assert supabase_client.updated_products == [{"id": "product-1", "price": 11.0}]
 	assert supabase_client.product_prices["product-1"] == 11.0
 	assert importer.last_summary["products_created"] == 0
+	assert importer.last_summary["products_updated"] == 1
+
+
+def test_import_products_updates_existing_batch_when_different():
+	workbook = object()
+	fake_pandas = FakePandas(workbook)
+	fake_pandas.commerce_df = pd.DataFrame(
+		[
+			{
+				"MARQUE": "ABB",
+				"REFCIALE": "ABB-SKU",
+				"LIBELLE40": "Existing Product",
+				"LIBELLE80": None,
+				"LIBELLE240": None,
+				"TARIF": 21.0,
+				"QT": 3,
+				"TVA": 20,
+				"FAM1": "R",
+				"FAM1L": "Raccordement",
+				"FAM2": None,
+				"FAM2L": None,
+				"FAM3": None,
+				"FAM3L": None,
+			}
+		]
+	)
+
+	supabase_client = FakeSupabaseClient()
+	supabase_client.product_prices["product-1"] = 7.0
+	supabase_client.product_rows[("brand-1", "ABB-SKU")]["price"] = 7.0
+	supabase_client.product_rows[("brand-1", "ABB-SKU")]["batch"] = 2
+	importer = FabdisImporter(fake_pandas, supabase_client)
+	importer.workbook = workbook
+
+	rows = importer.import_products()
+
+	assert len(rows) == 1
+	assert rows[0]["product_id"] == "product-1"
+	assert supabase_client.updated_products == [{"id": "product-1", "batch": 3}]
+	assert supabase_client.product_rows[("brand-1", "ABB-SKU")]["batch"] == 3
 	assert importer.last_summary["products_updated"] == 1

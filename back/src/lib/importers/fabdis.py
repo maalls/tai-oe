@@ -242,6 +242,8 @@ class FabdisImporter:
 			if qt is not None and qt <= 0:
 				raise ValueError(f"B01_COMMERCE row {index}: QT must be > 0 when provided")
 
+			batch = self._normalize_batch(qt)
+
 			unit_price = tarif
 			if tarif is not None and qt not in (None, 0):
 				unit_price = tarif / qt
@@ -264,6 +266,7 @@ class FabdisImporter:
 					"sku": sku,
 					"name": name,
 					"price": unit_price,
+					"batch": batch,
 					"tax_rate": self._normalize_number(row.get("TVA")),
 					"fam1_code": self._normalize_text(row.get("FAM1")),
 					"fam1_name": self._normalize_text(row.get("FAM1L")),
@@ -424,7 +427,7 @@ class FabdisImporter:
 
 		response = (
 			self.supabase_client.table("product")
-			.select("id,price")
+			.select("id,price,batch")
 			.eq("brand_id", brand_id)
 			.eq("sku", row["sku"])
 			.limit(1)
@@ -445,17 +448,25 @@ class FabdisImporter:
 
 			product_updated = False
 			new_price = row["price"]
+			new_batch = row["batch"]
 			existing_price = response.data[0].get("price")
+			existing_batch = response.data[0].get("batch")
+			updates = {}
 			if self._numbers_different(existing_price, new_price):
+				updates["price"] = new_price
+			if existing_batch != new_batch:
+				updates["batch"] = new_batch
+
+			if updates:
 				updated = (
 					self.supabase_client.table("product")
-					.update({"price": new_price})
+					.update(updates)
 					.eq("id", product_id)
 					.execute()
 				)
 				if getattr(updated, "error", None):
 					raise RuntimeError(
-						f"Failed to update price for product '{row['sku']}' (id={product_id}): {updated.error}"
+						f"Failed to update product '{row['sku']}' (id={product_id}): {updated.error}"
 					)
 				product_updated = True
 
@@ -470,6 +481,9 @@ class FabdisImporter:
 
 		if row["price"] is not None:
 			insert_data["price"] = row["price"]
+
+		if row["batch"] is not None:
+			insert_data["batch"] = row["batch"]
 
 		if row["tax_rate"] is not None:
 			insert_data["default_tax_rate"] = row["tax_rate"]
@@ -601,6 +615,22 @@ class FabdisImporter:
 			return float(text)
 
 		return float(value)
+
+	def _normalize_batch(self, value: object) -> int | None:
+		if value is None:
+			return None
+
+		if self.pd.isna(value):
+			return None
+
+		batch_value = self._normalize_number(value)
+		if batch_value is None:
+			return None
+
+		if abs(batch_value - round(batch_value)) > 1e-9:
+			raise ValueError(f"QT must be an integer value, got {value!r}")
+
+		return int(round(batch_value))
 
 	def _numbers_different(self, current: object, new_value: object) -> bool:
 		current_number = self._normalize_number(current)
