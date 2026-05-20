@@ -139,14 +139,17 @@ class FabdisImporter:
 		if self.workbook is None:
 			raise RuntimeError("Workbook not loaded")
 
-		cartouche_df = self.pd.read_excel(self.workbook, sheet_name="B00_CARTOUCHE")
+		cartouche_columns = ["FABRICANT", "CARMARQUE", "CARMARQUEURLT", "CAREMAIL"]
+		cartouche_df = self.pd.read_excel(
+			self.workbook,
+			sheet_name="B00_CARTOUCHE",
+			usecols=cartouche_columns,
+		)
 		cartouche_rows = []
 		seen_pairs = set()
 
 		for index, row in enumerate(
-			cartouche_df[
-			["FABRICANT", "CARMARQUE", "CARMARQUEURLT", "CAREMAIL"]
-			].to_dict("records"),
+			cartouche_df.to_dict("records"),
 			start=2,
 		):
 			vendor_name = self._normalize_text(row.get("FABRICANT"))
@@ -183,28 +186,31 @@ class FabdisImporter:
 		if self.workbook is None:
 			raise RuntimeError("Workbook not loaded")
 
-		commerce_df = self.pd.read_excel(self.workbook, sheet_name="B01_COMMERCE")
+		commerce_columns = [
+			"MARQUE",
+			"REFCIALE",
+			"LIBELLE40",
+			"LIBELLE80",
+			"LIBELLE240",
+			"TARIF",
+			"TVA",
+			"FAM1",
+			"FAM1L",
+			"FAM2",
+			"FAM2L",
+			"FAM3",
+			"FAM3L",
+		]
+		commerce_df = self.pd.read_excel(
+			self.workbook,
+			sheet_name="B01_COMMERCE",
+			usecols=commerce_columns,
+		)
 		commerce_rows = []
 		seen_products = set()
 
 		for index, row in enumerate(
-			commerce_df[
-				[
-					"MARQUE",
-					"REFCIALE",
-					"LIBELLE40",
-					"LIBELLE80",
-					"LIBELLE240",
-					"TARIF",
-					"TVA",
-					"FAM1",
-					"FAM1L",
-					"FAM2",
-					"FAM2L",
-					"FAM3",
-					"FAM3L",
-				]
-			].to_dict("records"),
+			commerce_df.to_dict("records"),
 			start=2,
 		):
 			brand_name = self._normalize_text(row.get("MARQUE"))

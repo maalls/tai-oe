@@ -33,8 +33,8 @@ class FakePandas:
 		self.called_with = fabdis_file
 		return self.workbook
 
-	def read_excel(self, workbook: object, sheet_name: str):
-		self.read_excel_called_with = (workbook, sheet_name)
+	def read_excel(self, workbook: object, sheet_name: str, **kwargs):
+		self.read_excel_called_with = (workbook, sheet_name, kwargs)
 		if sheet_name == "B00_CARTOUCHE":
 			return self.cartouche_df
 		if sheet_name == "B01_COMMERCE":
@@ -225,7 +225,11 @@ def test_load_cartouche_returns_deduplicated_vendor_brand_rows():
 
 	rows = importer.load_cartouche()
 
-	assert fake_pandas.read_excel_called_with == (workbook, "B00_CARTOUCHE")
+	assert fake_pandas.read_excel_called_with == (
+		workbook,
+		"B00_CARTOUCHE",
+		{"usecols": ["FABRICANT", "CARMARQUE", "CARMARQUEURLT", "CAREMAIL"]},
+	)
 	assert rows == [
 		{
 			"vendor_name": "ABB",
