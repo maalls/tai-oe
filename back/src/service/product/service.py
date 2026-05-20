@@ -30,7 +30,7 @@ class ProductService:
         result = (
             self.supabase
             .from_("product")
-            .select("*,brand(*),product_family(*,family(*))")
+            .select("*,brand(*),product_family(*,family(*)),product_media(*)")
             .eq("id", product_id)
             .maybe_single()
             .execute()

@@ -210,6 +210,8 @@ export default {
          gamme: 'Gamme',
          quantity: 'Quantité',
          batch: 'Lot',
+         images: 'Photos',
+         noImage: 'Aucune photo disponible',
          rawPayload: 'Données brutes',
          missingId: 'Identifiant du produit manquant.',
          loadFailed: 'Échec du chargement du produit',

@@ -8,7 +8,17 @@ export interface ProductDetail {
    brand_id?: string | null;
    brand_name?: string | null;
    family_codes?: string[];
+   media?: ProductMedia[];
    vector_text?: string;
+}
+
+export interface ProductMedia {
+   id?: string;
+   url: string;
+   type?: string | null;
+   source?: string | null;
+   position?: number | null;
+   created_at?: string | null;
 }
 
 export interface SearchProductsParams {

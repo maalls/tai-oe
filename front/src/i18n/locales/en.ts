@@ -195,6 +195,8 @@ export default {
             gamme: 'Gamme',
             quantity: 'Quantity',
             batch: 'Batch',
+            images: 'Images',
+            noImage: 'No image available',
             rawPayload: 'Raw Payload',
             missingId: 'Missing product id.',
             loadFailed: 'Failed to load product',

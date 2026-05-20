@@ -32,12 +32,22 @@ def _to_front_product(product: dict[str, Any]) -> dict[str, Any]:
     brand_id = product.get("brand_id") or brand.get("id")
     brand_name = brand.get("name") or brand.get("marque") or ""
     family_links = product.get("product_family") or []
+    media_rows = product.get("product_media") or []
     family_codes = []
     for link in family_links:
         family = (link or {}).get("family") or {}
         code = family.get("code")
         if code:
             family_codes.append(code)
+
+    media = sorted(
+        [row for row in media_rows if isinstance(row, dict) and row.get("url")],
+        key=lambda row: (
+            row.get("position") is None,
+            row.get("position") or 0,
+            str(row.get("created_at") or ""),
+        ),
+    )
 
     return {
         "id": product.get("id"),
@@ -49,6 +59,17 @@ def _to_front_product(product: dict[str, Any]) -> dict[str, Any]:
         "tarif": product.get("price") or 0,
         "batch": product.get("batch"),
         "family_codes": family_codes,
+        "media": [
+            {
+                "id": row.get("id"),
+                "url": row.get("url"),
+                "type": row.get("type"),
+                "source": row.get("source"),
+                "position": row.get("position"),
+                "created_at": row.get("created_at"),
+            }
+            for row in media
+        ],
         "vector_text": product.get("vector_text") or "",
     }
 

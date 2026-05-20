@@ -23,6 +23,15 @@ class _FakeProductService:
             "vector_text": "vec",
             "brand": {"id": "b-1", "name": "Brand"},
             "product_family": [{"family": {"code": "A"}}, {"family": {"code": "B"}}],
+            "product_media": [
+                {
+                    "id": "m-1",
+                    "url": "https://example.com/image.png",
+                    "type": "PHOTO",
+                    "source": "fabdis",
+                    "position": 0,
+                }
+            ],
         }
 
 
@@ -44,6 +53,7 @@ def test_product_get_returns_front_shape():
     assert response.json()["refciale"] == "SKU-1"
     assert response.json()["batch"] == 4
     assert response.json()["family_codes"] == ["A", "B"]
+    assert response.json()["media"][0]["url"] == "https://example.com/image.png"
 
 
 def test_product_get_not_found():
