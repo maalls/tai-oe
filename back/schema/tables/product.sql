@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS product (
   sku               text NOT NULL,
   name              text NOT NULL,
   price             numeric(12,4),
+  batch             integer,
   fabdis_appli_date date,
   fabdis_edited_date date,
   brand_id          uuid NOT NULL REFERENCES brand(id) ON DELETE RESTRICT,
