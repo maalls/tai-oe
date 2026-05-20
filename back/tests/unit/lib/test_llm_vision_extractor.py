@@ -26,6 +26,15 @@ class FakeCompletions:
         return FakeVisionResponse(self.payload)
 
 
+class ExplodingCompletions:
+    def __init__(self):
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        raise ConnectionError("Connection error")
+
+
 class FakeChat:
     def __init__(self, completions: FakeCompletions):
         self.completions = completions
@@ -41,6 +50,13 @@ class FakeLLMClient:
         completions = FakeCompletions(payload=payload, fail_once=fail_once)
         self.client = FakeClientWrapper(completions)
         self.model = "fake-vision-model"
+
+
+class FakeBrokenLLMClient:
+    def __init__(self):
+        self.client = FakeClientWrapper(ExplodingCompletions())
+        self.model = "fake-vision-model"
+        self.timeout = 42
 
 
 class FakeLLMClientWithExtractor(FakeLLMClient):
@@ -122,3 +138,25 @@ def test_extract_from_pdf_with_vision_retries_without_response_format(monkeypatc
     assert "response_format" in calls[0]
     assert "response_format" not in calls[1]
     assert result["families"] == []
+
+
+def test_extract_from_pdf_with_vision_surfaces_detailed_connection_error(monkeypatch, fake_pdf: Path) -> None:
+    monkeypatch.setattr(
+        "src.lib.llm_vision_extractor._render_pdf_to_image_data_urls",
+        lambda *_args, **_kwargs: ["data:image/jpeg;base64,abc"],
+    )
+
+    broken_client = FakeBrokenLLMClient()
+
+    with pytest.raises(RuntimeError, match="Vision LLM request failed") as exc_info:
+        extract_from_pdf_with_vision(
+            fake_pdf,
+            broken_client,
+            system_prompt="system",
+            user_prompt="extract this",
+            json_response=True,
+        )
+
+    error_text = str(exc_info.value)
+    assert "model=fake-vision-model" in error_text
+    assert "ConnectionError: Connection error" in error_text

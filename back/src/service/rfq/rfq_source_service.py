@@ -190,7 +190,15 @@ class RfqSourceService:
             )
 
         picker_text = "" if message_is_placeholder else message_text
-        selection = pick_best_rfp_source(picker_text, pdf_candidates)
+        try:
+            selection = pick_best_rfp_source(picker_text, pdf_candidates)
+        except Exception as exc:
+            print(f"[RfqSourceService] RFQ source selection failed: {exc}")
+            return {
+                "status": "error",
+                "message": "RFQ extraction failed during source selection",
+                "details": str(exc),
+            }
         selected_content = selection.get("content") or ("" if message_is_placeholder else message_text)
         pre_extracted = selection.get("extracted_data")
         if pre_extracted is None and (rfp_data.get("products") or rfp_data.get("contact") or rfp_data.get("title")):

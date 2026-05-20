@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 
 
@@ -71,3 +73,23 @@ def test_pick_best_rfp_source_falls_back_to_text_mode_on_invalid_env(monkeypatch
     assert result["product_count"] == 1
     assert calls["vision"] == 0
     assert calls["text"] == 1  # body is empty, only pdf text path
+
+
+def test_pick_best_rfp_source_raises_on_vision_pdf_error(monkeypatch, tmp_path: Path):
+    pdf_path = tmp_path / "rfq.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n%fake")
+
+    monkeypatch.setenv("QUOTE_EXTRACTION_MODE", "vision")
+    monkeypatch.setattr(
+        "src.lib.extractors.rfp_source_picker.extract_rfp_from_pdf_vision",
+        lambda _path, timeout_seconds=None: (_ for _ in ()).throw(RuntimeError("Connection error")),
+    )
+    monkeypatch.setattr("src.lib.extractors.rfp_source_picker.extract_text", lambda _path: "pdf text")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        pick_best_rfp_source(
+            body_text="",
+            pdf_candidates=[{"id": "att-1", "filename": "rfq.pdf", "path": pdf_path}],
+        )
+    assert "vision PDF extraction failed" in str(exc_info.value)
+    assert "Connection error" in str(exc_info.value)

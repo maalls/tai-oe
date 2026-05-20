@@ -92,14 +92,10 @@ def _extract_pdf_with_mode(path: Path, mode: str) -> Tuple[int, Optional[Dict]]:
     timeout_seconds = int(os.getenv("QUOTE_LLM_TIMEOUT", os.getenv("RFQ_LLM_TIMEOUT", "600")))
 
     if mode == "vision":
-        try:
-            rfp_data = extract_rfp_from_pdf_vision(path, timeout_seconds=timeout_seconds)
-            normalized = _normalize_rfp_data(rfp_data)
-            product_count = len(normalized.get("products", []) or [])
-            return product_count, normalized
-        except Exception as e:
-            print(f"[RFPSourcePicker] Warning: vision PDF extraction failed: {e}")
-            return 0, None
+        rfp_data = extract_rfp_from_pdf_vision(path, timeout_seconds=timeout_seconds)
+        normalized = _normalize_rfp_data(rfp_data)
+        product_count = len(normalized.get("products", []) or [])
+        return product_count, normalized
 
     pdf_text = extract_text(path)
     return _extract_with_cache(pdf_text)
@@ -161,6 +157,11 @@ def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
                 print(f"[RFPSourcePicker] Selected PDF (products: {pdf_count} > {best_count-pdf_count})")
         except Exception as e:
             print(f"[RFPSourcePicker] Warning: could not extract PDF: {e}")
+            if effective_mode == "vision":
+                filename = candidate.get("filename") or str(path)
+                raise RuntimeError(
+                    f"vision PDF extraction failed for '{filename}': {e}"
+                ) from e
             continue
 
     print(
