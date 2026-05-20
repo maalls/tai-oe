@@ -4,7 +4,7 @@ import os
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
-from src.lib.extractors.text_reader import extract_rfp_from_text
+from src.lib.extractors.text_reader import extract_rfp_from_pdf_vision, extract_rfp_from_text
 from src.lib.extractors.pdf import extract_text
 
 
@@ -82,6 +82,29 @@ def _extract_with_cache(text: str) -> Tuple[int, Optional[Dict]]:
         return 0, None
 
 
+def _resolve_quote_extraction_mode() -> tuple[str, str]:
+    configured = (os.getenv("QUOTE_EXTRACTION_MODE", "text") or "text").strip().lower()
+    effective = configured if configured in {"text", "vision"} else "text"
+    return configured, effective
+
+
+def _extract_pdf_with_mode(path: Path, mode: str) -> Tuple[int, Optional[Dict]]:
+    timeout_seconds = int(os.getenv("QUOTE_LLM_TIMEOUT", os.getenv("RFQ_LLM_TIMEOUT", "600")))
+
+    if mode == "vision":
+        try:
+            rfp_data = extract_rfp_from_pdf_vision(path, timeout_seconds=timeout_seconds)
+            normalized = _normalize_rfp_data(rfp_data)
+            product_count = len(normalized.get("products", []) or [])
+            return product_count, normalized
+        except Exception as e:
+            print(f"[RFPSourcePicker] Warning: vision PDF extraction failed: {e}")
+            return 0, None
+
+    pdf_text = extract_text(path)
+    return _extract_with_cache(pdf_text)
+
+
 def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
     """Pick the best RFP source between body text and PDF attachments.
     
@@ -107,7 +130,14 @@ def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
             "extracted_data": Dict | None,  # Cached extraction to avoid re-extraction
         }
     """
+    configured_mode, effective_mode = _resolve_quote_extraction_mode()
+    print(
+        "[RFPSourcePicker] Quote extraction mode "
+        f"configured='{configured_mode}' effective='{effective_mode}'"
+    )
+
     best_source = "text"
+    best_source_mode = "text"
     best_content = body_text or ""
     best_count, best_extracted_data = _extract_with_cache(best_content)
     best_pdf_id: Optional[str] = None
@@ -118,11 +148,12 @@ def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
             continue
 
         try:
+            pdf_count, pdf_extracted_data = _extract_pdf_with_mode(path, effective_mode)
             pdf_text = extract_text(path)
-            pdf_count, pdf_extracted_data = _extract_with_cache(pdf_text)
             
             if pdf_count > best_count:
                 best_source = "pdf"
+                best_source_mode = effective_mode
                 best_content = pdf_text
                 best_count = pdf_count
                 best_extracted_data = pdf_extracted_data
@@ -131,6 +162,11 @@ def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
         except Exception as e:
             print(f"[RFPSourcePicker] Warning: could not extract PDF: {e}")
             continue
+
+    print(
+        "[RFPSourcePicker] Quote extraction used "
+        f"source='{best_source}' mode='{best_source_mode}' products={best_count}"
+    )
     
     return {
         "source": best_source,

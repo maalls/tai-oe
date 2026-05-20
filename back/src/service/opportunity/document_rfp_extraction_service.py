@@ -45,11 +45,13 @@ class DocumentRfpExtractionService:
             if not file_path.exists():
                 return {"status": "error", "message": "Document file not found in storage"}
 
-            extraction_mode = (os.getenv("QUOTE_EXTRACTION_MODE", "text") or "text").strip().lower()
+            configured_extraction_mode = (os.getenv("QUOTE_EXTRACTION_MODE", "text") or "text").strip().lower()
+            extraction_mode = configured_extraction_mode
             if extraction_mode not in {"text", "vision"}:
                 extraction_mode = "text"
 
             file_ext = file_path.suffix.lower()
+            used_extraction_mode = "text"
             rfp_data = None
             if file_ext == ".pdf":
                 try:
@@ -67,6 +69,7 @@ class DocumentRfpExtractionService:
 
                 if extraction_mode == "vision":
                     try:
+                        used_extraction_mode = "vision"
                         vision_extractor = self.extract_rfp_pdf_vision
                         if vision_extractor is None:
                             from src.lib.extractors.text_reader import extract_rfp_from_pdf_vision
@@ -85,6 +88,12 @@ class DocumentRfpExtractionService:
                 except Exception as exc:
                     print(f"[DocumentRfpExtractionService] Error reading text file: {exc}")
                     return {"status": "error", "message": f"Failed to read file: {str(exc)}"}
+
+            print(
+                "[DocumentRfpExtractionService] Quote extraction mode "
+                f"configured='{configured_extraction_mode}' effective='{extraction_mode}' used='{used_extraction_mode}' "
+                f"file_ext='{file_ext}' document_id='{document_id}'"
+            )
 
             if not content or not content.strip():
                 return {"status": "error", "message": "Document is empty"}
