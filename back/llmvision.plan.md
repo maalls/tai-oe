@@ -52,16 +52,16 @@ Unifier la logique d'extraction de données métier (devis, discounts, etc.) dep
 
 ## Checklist de progression
 
-- [ ] Recenser tous les usages actuels de l'extraction PDF via LLM vision (devis, discounts, etc.)
-- [ ] Lister les points communs et les différences
-- [ ] Créer le module utilitaire `lib/llm_vision_extractor.py`
-- [ ] Implémenter la fonction générique `extract_from_pdf_with_vision`
-- [ ] Permettre le passage de prompts métier personnalisés
-- [ ] Adapter le flag `.env` pour chaque usage (QUOTE_EXTRACTION_MODE, DISCOUNT_EXTRACTION_MODE)
-- [ ] Refactorer l'extraction vision dans le module devis
-- [ ] Refactorer l'extraction vision dans le module discounts
-- [ ] Gérer le parsing métier du résultat dans chaque module
-- [ ] Ajouter des tests unitaires pour la fonction générique
+- [x] Recenser tous les usages actuels de l'extraction PDF via LLM vision (devis, discounts, etc.)
+- [x] Lister les points communs et les différences
+- [x] Créer le module utilitaire `lib/llm_vision_extractor.py`
+- [x] Implémenter la fonction générique `extract_from_pdf_with_vision`
+- [x] Permettre le passage de prompts métier personnalisés
+- [x] Adapter le flag `.env` pour chaque usage (QUOTE_EXTRACTION_MODE, DISCOUNT_EXTRACTION_MODE)
+- [x] Refactorer l'extraction vision dans le module devis
+- [x] Refactorer l'extraction vision dans le module discounts
+- [x] Gérer le parsing métier du résultat dans chaque module
+- [x] Ajouter des tests unitaires pour la fonction générique
 - [ ] Ajouter des tests d'intégration pour chaque usage métier
 - [ ] Documenter la fonction utilitaire et les exemples de prompts
 - [ ] Expliquer comment ajouter un nouveau cas métier

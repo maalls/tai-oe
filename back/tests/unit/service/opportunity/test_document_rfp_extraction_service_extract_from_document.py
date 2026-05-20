@@ -91,3 +91,45 @@ def test_extract_from_document_returns_error_when_document_missing():
     result = service.extract_from_document("missing")
 
     assert result == {"status": "error", "message": "Document not found"}
+
+
+def test_extract_from_document_pdf_uses_vision_mode_when_env_enabled(monkeypatch):
+    supabase = _SupabaseStub(
+        {
+            "doc-pdf": {
+                "id": "doc-pdf",
+                "storage_key": "doc-pdf.pdf",
+            }
+        }
+    )
+
+    called = {"text": 0, "vision": 0}
+
+    service = DocumentRfpExtractionService(
+        supabase=supabase,
+        storage_path_resolver=lambda _source, _filename: _PathStub(".pdf", True, "pdf text content"),
+        clean_email_body=lambda text: f"clean:{text}",
+        extract_rfp=lambda clean: {"products": [{"sku": "TEXT"}], "contact": {}, "source": clean},
+        extract_company=lambda _clean: {"company": "ACME"},
+        enrich_rfp=lambda _clean, pre: {**pre, "enriched": True},
+        extract_pdf_text=lambda _path: "pdf text content",
+        extract_rfp_pdf_vision=lambda _path: called.__setitem__("vision", called["vision"] + 1) or {
+            "products": [{"sku": "VISION"}],
+            "contact": {},
+        },
+    )
+
+    def _extract_rfp_should_not_run(_clean):
+        called["text"] += 1
+        return {"products": [{"sku": "TEXT"}], "contact": {}}
+
+    service.extract_rfp = _extract_rfp_should_not_run
+    monkeypatch.setenv("QUOTE_EXTRACTION_MODE", "vision")
+
+    result = service.extract_from_document("doc-pdf")
+
+    assert result["status"] == "ok"
+    assert result["data"]["products"][0]["sku"] == "VISION"
+    assert result["data"]["enriched"] is True
+    assert called["vision"] == 1
+    assert called["text"] == 0

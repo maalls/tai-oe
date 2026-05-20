@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 
 from src.infrastructure.clients.llm import LLMClient, extract_json_from_text
 from src.infrastructure.llm_factory import LLMClientFactory
+from src.lib.llm_vision_extractor import extract_from_pdf_with_vision
 
 
 def _get_back_root() -> Path:
@@ -77,6 +78,70 @@ def extract_company_from_text(content: str) -> Dict[str, Any]:
 
     return resp
 
+
+def _normalize_rfp_payload(rfp_data: Any) -> Dict[str, Any]:
+    if isinstance(rfp_data, list):
+        print("[TextReader] RFP data is a list, wrapping as products")
+        return {"products": rfp_data, "contact": {}}
+
+    if isinstance(rfp_data, str):
+        print("[TextReader] RFP data is a string, attempting to parse")
+        try:
+            parsed = json.loads(rfp_data)
+            if isinstance(parsed, dict):
+                return parsed
+            if isinstance(parsed, list):
+                return {"products": parsed, "contact": {}}
+            return {"contact": {}}
+        except Exception:
+            return {"contact": {}}
+
+    if not isinstance(rfp_data, dict):
+        print(f"[TextReader] RFP data is not a dict: {type(rfp_data)}")
+        return {"contact": {}}
+
+    return rfp_data
+
+
+def _resolve_llm_runtime(timeout_seconds: Optional[int] = None) -> tuple[int | None, int, LLMClient]:
+    if timeout_seconds is None:
+        llm_timeout = int(os.getenv("LLM_TIMEOUT", "45"))
+    else:
+        llm_timeout = int(timeout_seconds)
+    if llm_timeout <= 0:
+        llm_timeout = None
+    llm_max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1200"))
+    client = LLMClientFactory().create_client(timeout=llm_timeout)
+    return llm_timeout, llm_max_tokens, client
+
+
+def extract_rfp_from_pdf_vision(pdf_path: str | Path, timeout_seconds: Optional[int] = None) -> Dict[str, Any]:
+    prompt_file = _resolve_prompt_file("prompt.md")
+    system_prompt = prompt_file.read_text(encoding="utf-8").strip()
+    user_prompt = "Extract the requested product lines from this RFQ/RFP PDF."
+
+    llm_timeout, llm_max_tokens, client = _resolve_llm_runtime(timeout_seconds=timeout_seconds)
+
+    started_at = time.time()
+    try:
+        raw_payload = extract_from_pdf_with_vision(
+            pdf_path,
+            client,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            max_tokens=llm_max_tokens,
+        )
+    except Exception as e:
+        elapsed = time.time() - started_at
+        timeout_label = "none" if llm_timeout is None else f"{llm_timeout}s"
+        raise RuntimeError(
+            f"Vision extraction failed after {elapsed:.1f}s (timeout={timeout_label}): {e}"
+        ) from e
+
+    elapsed = time.time() - started_at
+    print(f"[TextReader] Raw vision RFP data extracted in {elapsed:.1f}s: {raw_payload}")
+    return _normalize_rfp_payload(raw_payload)
+
 def extract_rfp_from_text(content: str, timeout_seconds: Optional[int] = None) -> Dict[str, Any]:
     # Truncate content to fit within LLM context window (4096 tokens)
     # Roughly 1 token ≈ 4 characters, so ~1500 chars ≈ 375 tokens max (leaves headroom)
@@ -93,14 +158,7 @@ def extract_rfp_from_text(content: str, timeout_seconds: Optional[int] = None) -
     print(f"[TextReader] Extracting RFP data using LLM with text {content}")
     # Use reusable LLM client
     # Normalize llm_url for OpenAI SDK: it expects base_url ending with /v1
-    if timeout_seconds is None:
-        llm_timeout = int(os.getenv("LLM_TIMEOUT", "45"))
-    else:
-        llm_timeout = int(timeout_seconds)
-    if llm_timeout <= 0:
-        llm_timeout = None
-    llm_max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1200"))
-    client = LLMClientFactory().create_client(timeout=llm_timeout)
+    llm_timeout, llm_max_tokens, client = _resolve_llm_runtime(timeout_seconds=timeout_seconds)
 
     started_at = time.time()
     try:
@@ -118,24 +176,7 @@ def extract_rfp_from_text(content: str, timeout_seconds: Optional[int] = None) -
 
     elapsed = time.time() - started_at
     print(f"[TextReader] Raw RFP data extracted in {elapsed:.1f}s: {rfp_data}")
-    if isinstance(rfp_data, list):
-        print(f"[TextReader] RFP data is a list, wrapping as products")
-        rfp_data = {"products": rfp_data, "contact": {}}
-    elif isinstance(rfp_data, str):
-        print(f"[TextReader] RFP data is a string, attempting to parse")
-        try:
-            parsed = json.loads(rfp_data)
-            if isinstance(parsed, dict):
-                rfp_data = parsed
-            elif isinstance(parsed, list):
-                rfp_data = {"products": parsed, "contact": {}}
-            else:
-                rfp_data = {"contact": {}}
-        except Exception:
-            rfp_data = {"contact": {}}
-    elif not isinstance(rfp_data, dict):
-        print(f"[TextReader] RFP data is not a dict: {type(rfp_data)}")
-        rfp_data = {"contact": {}}
+    rfp_data = _normalize_rfp_payload(rfp_data)
 
     _cache_llm_extraction(content=content, payload=rfp_data, elapsed=elapsed)
 

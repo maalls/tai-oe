@@ -2,15 +2,13 @@
 Discount Importer for updating family discount entries from PDF files using LLM extraction.
 """
 
-import base64
-import json
-from io import BytesIO
+import os
 from pathlib import Path
 from typing import Any
 
 from pypdf import PdfReader
 
-from src.infrastructure.clients.llm import extract_json_from_text
+from src.lib.llm_vision_extractor import extract_from_pdf_with_vision
 
 
 class DiscountImporter:
@@ -115,74 +113,18 @@ class DiscountImporter:
     def parseDiscountsUsingVision(self, pdf_path: str | Path | None = None) -> list[dict[str, Any]]:
         """Extract family discount rows directly from PDF pages using a vision-capable LLM."""
         path = Path(pdf_path if pdf_path is not None else self.pdf_path)
-        if not path.exists() or not path.is_file():
-            raise FileNotFoundError(f"PDF file not found: {path}")
-
-        if not hasattr(self.llm_client, "client") or not hasattr(self.llm_client, "model"):
-            raise RuntimeError("LLM client does not support vision calls")
-
-        try:
-            import pypdfium2 as pdfium
-        except Exception as exc:
-            raise RuntimeError(f"Failed to import pypdfium2 for vision parsing: {exc}")
-
-        pdf_doc = pdfium.PdfDocument(str(path))
-        if len(pdf_doc) == 0:
-            raise ValueError(f"Empty PDF document: {path}")
-
-        user_blocks: list[dict[str, Any]] = [{"type": "text", "text": self.DISCOUNT_EXTRACTION_RULES}]
-        for page_index in range(len(pdf_doc)):
-            page = pdf_doc[page_index]
-            image = page.render(scale=2.0).to_pil()
-            buf = BytesIO()
-            image.save(buf, format="JPEG", quality=90)
-            encoded = base64.b64encode(buf.getvalue()).decode("ascii")
-            user_blocks.append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{encoded}"},
-                }
-            )
-
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": self.DISCOUNT_SYSTEM_PROMPT},
-            {"role": "user", "content": user_blocks},
-        ]
-        params: dict[str, Any] = {
-            "model": self.llm_client.model,
-            "messages": messages,
-            "temperature": 0.0,
-            "max_tokens": 12000,
-            "response_format": {"type": "json_object"},
-        }
-
-        try:
-            resp = self.llm_client.client.chat.completions.create(**params)
-        except Exception:
-            params.pop("response_format", None)
-            resp = self.llm_client.client.chat.completions.create(**params)
-
-        data = resp.model_dump() if hasattr(resp, "model_dump") else resp
-
-        content = None
-        if hasattr(self.llm_client, "get_content_text"):
-            content = self.llm_client.get_content_text(data)
-        if not isinstance(content, str):
-            choices = data.get("choices") if isinstance(data, dict) else None
-            if isinstance(choices, list) and choices:
-                msg = choices[0].get("message") if isinstance(choices[0], dict) else None
-                if isinstance(msg, dict) and isinstance(msg.get("content"), str):
-                    content = msg.get("content")
-
-        if not isinstance(content, str):
-            raise RuntimeError("Vision model response has no text content")
-
-        parsed = extract_json_from_text(content)
-        if not isinstance(parsed, dict):
-            try:
-                parsed = json.loads(content)
-            except Exception as exc:
-                raise RuntimeError(f"Vision model did not return valid JSON: {exc}")
+        parsed = extract_from_pdf_with_vision(
+            path,
+            self.llm_client,
+            system_prompt=self.DISCOUNT_SYSTEM_PROMPT,
+            user_prompt=self.DISCOUNT_EXTRACTION_RULES,
+            temperature=0.0,
+            max_tokens=12000,
+            image_scale=2.0,
+            image_format="JPEG",
+            image_quality=90,
+            json_response=True,
+        )
 
         families = parsed.get("families")
         if not isinstance(families, list):
@@ -363,7 +305,11 @@ class DiscountImporter:
         if self.pdf_path is None or self.pdf_text is None:
             raise RuntimeError("PDF is not loaded. Call load_pdf() first.")
 
-        parsed_rows = self.parseDiscountsUsingVision()
+        extraction_mode = (os.getenv("DISCOUNT_EXTRACTION_MODE", "vision") or "vision").strip().lower()
+        if extraction_mode == "text":
+            parsed_rows = self.parseDiscounts()
+        else:
+            parsed_rows = self.parseDiscountsUsingVision()
         upsert_summary = self.upsertDiscount(parsed_rows, skip_missing=skip_missing)
 
         return {

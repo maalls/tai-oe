@@ -290,3 +290,39 @@ def test_run_parses_and_updates_discounts(monkeypatch) -> None:
     assert summary["skipped"] == 0
     assert client.families[0]["quantity"] == 3.0
     assert client.families[0]["discount"] == 77.0
+
+
+def test_run_uses_text_mode_when_env_set(monkeypatch) -> None:
+    client = FakeSupabaseClient()
+    client.families = [
+        {"id": "f-1", "brand_id": "brand-1", "code": "A10", "name": "Family A10", "quantity": 1.0, "discount": 2.0}
+    ]
+
+    importer = DiscountImporter(client, llm_client=object())
+    importer.brand = {"id": "brand-1", "name": "ABB"}
+    importer.pdf_path = Path("dummy.pdf")
+    importer.pdf_text = "sample extracted text"
+
+    monkeypatch.setenv("DISCOUNT_EXTRACTION_MODE", "text")
+    monkeypatch.setattr(importer, "parseDiscounts", lambda source_text=None: [
+        {
+            "family_code": "A10",
+            "description": "Family A10",
+            "quantity": 4,
+            "discount": 55,
+        }
+    ])
+    monkeypatch.setattr(importer, "parseDiscountsUsingVision", lambda pdf_path=None: [
+        {
+            "family_code": "A10",
+            "description": "Family A10",
+            "quantity": 999,
+            "discount": 999,
+        }
+    ])
+
+    summary = importer.run()
+
+    assert summary["parsed_rows"] == 1
+    assert client.families[0]["quantity"] == 4.0
+    assert client.families[0]["discount"] == 55.0

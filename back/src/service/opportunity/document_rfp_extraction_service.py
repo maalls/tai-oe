@@ -1,5 +1,6 @@
 """Service for extracting RFP data from stored documents."""
 
+import os
 from typing import Callable, Dict
 
 from src.infrastructure.clients.supabase import get_supabase_service
@@ -17,6 +18,7 @@ class DocumentRfpExtractionService:
         extract_company: Callable[[str], Dict] = None,
         enrich_rfp: Callable[[str, Dict], Dict] = None,
         extract_pdf_text: Callable[[object], str] = None,
+        extract_rfp_pdf_vision: Callable[[object], Dict] = None,
     ):
         self.supabase = supabase or get_supabase_service()
         self.storage_path_resolver = storage_path_resolver
@@ -25,6 +27,7 @@ class DocumentRfpExtractionService:
         self.extract_company = extract_company
         self.enrich_rfp = enrich_rfp
         self.extract_pdf_text = extract_pdf_text
+        self.extract_rfp_pdf_vision = extract_rfp_pdf_vision
 
     def extract_from_document(self, document_id: str) -> Dict:
         try:
@@ -42,7 +45,12 @@ class DocumentRfpExtractionService:
             if not file_path.exists():
                 return {"status": "error", "message": "Document file not found in storage"}
 
+            extraction_mode = (os.getenv("QUOTE_EXTRACTION_MODE", "text") or "text").strip().lower()
+            if extraction_mode not in {"text", "vision"}:
+                extraction_mode = "text"
+
             file_ext = file_path.suffix.lower()
+            rfp_data = None
             if file_ext == ".pdf":
                 try:
                     extractor = self.extract_pdf_text
@@ -56,6 +64,21 @@ class DocumentRfpExtractionService:
                 except Exception as exc:
                     print(f"[DocumentRfpExtractionService] Error extracting PDF: {exc}")
                     return {"status": "error", "message": f"Failed to extract PDF: {str(exc)}"}
+
+                if extraction_mode == "vision":
+                    try:
+                        vision_extractor = self.extract_rfp_pdf_vision
+                        if vision_extractor is None:
+                            from src.lib.extractors.text_reader import extract_rfp_from_pdf_vision
+
+                            vision_extractor = extract_rfp_from_pdf_vision
+                        rfp_data = vision_extractor(file_path)
+                    except Exception as exc:
+                        print(f"[DocumentRfpExtractionService] Error extracting RFP with vision: {exc}")
+                        return {
+                            "status": "error",
+                            "message": f"Failed to extract RFP data with vision: {str(exc)}",
+                        }
             else:
                 try:
                     content = file_path.read_text(encoding="utf-8")
@@ -69,7 +92,8 @@ class DocumentRfpExtractionService:
             message_clean = self.clean_email_body(content)
 
             try:
-                rfp_data = self.extract_rfp(message_clean)
+                if not isinstance(rfp_data, dict):
+                    rfp_data = self.extract_rfp(message_clean)
                 if not isinstance(rfp_data, dict):
                     rfp_data = {"products": [], "contact": {}}
 
