@@ -193,6 +193,7 @@ class FabdisImporter:
 			"LIBELLE80",
 			"LIBELLE240",
 			"TARIF",
+			"QT",
 			"TVA",
 			"FAM1",
 			"FAM1L",
@@ -232,6 +233,15 @@ class FabdisImporter:
 					f"B01_COMMERCE row {index}: one of LIBELLE80/LIBELLE40/LIBELLE240 is required"
 				)
 
+			tarif = self._normalize_number(row.get("TARIF"))
+			qt = self._normalize_number(row.get("QT"))
+			if qt is not None and qt <= 0:
+				raise ValueError(f"B01_COMMERCE row {index}: QT must be > 0 when provided")
+
+			unit_price = tarif
+			if tarif is not None and qt not in (None, 0):
+				unit_price = tarif / qt
+
 			product_key = (brand_name.casefold(), sku.casefold())
 			if product_key in seen_products:
 				raise ValueError(
@@ -249,7 +259,7 @@ class FabdisImporter:
 					"brand_name": brand_name,
 					"sku": sku,
 					"name": name,
-					"price": self._normalize_number(row.get("TARIF")),
+					"price": unit_price,
 					"tax_rate": self._normalize_number(row.get("TVA")),
 					"fam1_code": self._normalize_text(row.get("FAM1")),
 					"fam1_name": self._normalize_text(row.get("FAM1L")),

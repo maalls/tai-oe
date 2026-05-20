@@ -547,3 +547,46 @@ def test_import_products_reuses_existing_null_type_family_with_is_null_filter():
 	assert rows[0]["family_ids"] == ["family-1"]
 	assert supabase_client.inserted_families == []
 	assert importer.last_summary["families_created"] == 0
+
+
+def test_import_products_computes_unit_price_from_tarif_and_qt():
+	workbook = object()
+	fake_pandas = FakePandas(workbook)
+	fake_pandas.commerce_df = pd.DataFrame(
+		[
+			{
+				"MARQUE": "ABB",
+				"REFCIALE": "ABB-SKU-UNIT",
+				"LIBELLE40": "Produit conditionne",
+				"LIBELLE80": None,
+				"LIBELLE240": None,
+				"TARIF": 100.0,
+				"QT": 4,
+				"TVA": 20,
+				"FAM1": None,
+				"FAM1L": None,
+				"FAM2": None,
+				"FAM2L": None,
+				"FAM3": None,
+				"FAM3L": None,
+			}
+		]
+	)
+
+	supabase_client = FakeSupabaseClient()
+	importer = FabdisImporter(fake_pandas, supabase_client)
+	importer.workbook = workbook
+
+	rows = importer.import_products()
+
+	assert len(rows) == 1
+	assert rows[0]["price"] == 25.0
+	assert supabase_client.inserted_products == [
+		{
+			"brand_id": "brand-1",
+			"sku": "ABB-SKU-UNIT",
+			"name": "Produit conditionne",
+			"price": 25.0,
+			"default_tax_rate": 20.0,
+		}
+	]
