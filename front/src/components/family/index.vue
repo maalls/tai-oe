@@ -246,7 +246,7 @@
                                  @focus="
                                     openProductCodeSuggestions(family.id, family.product_code || '')
                                  "
-                                 @blur="closeProductCode(family.id)"
+                                 @blur="closeProductCode(family.id, $event)"
                               />
                               <!-- Product code search dropdown -->
                               <div
@@ -270,8 +270,11 @@
                                        v-for="product in productCodeSuggestions[family.id] || []"
                                        :key="product.id"
                                        type="button"
+                                       data-product-suggestion="true"
                                        class="block w-full text-left px-3 py-2 text-sm hover:bg-blue-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                       @click="selectProductCodeSuggestion(family.id, product)"
+                                       @mousedown.prevent="
+                                          selectProductCodeSuggestion(family.id, product)
+                                       "
                                     >
                                        <div class="font-medium">{{ product.sku }}</div>
                                        <div class="text-xs text-gray-600">{{ product.name }}</div>
@@ -506,7 +509,7 @@ import PaginationControls from '../products/components/table/PaginationControls.
 import { useBrandFamilyData } from '../products/useBrandFamilyData';
 import { searchProductBySku } from '../../composables/useSuggestionSearch';
 import { useI18n } from '../../i18n/useI18n';
-import { createFamily, deleteFamily, updateFamily } from '../../api/family';
+import { createFamily, deleteFamily as deleteFamilyApi, updateFamily } from '../../api/family';
 
 const router = useRouter();
 const route = useRoute();
@@ -909,9 +912,20 @@ const openProductCodeSuggestions = (familyId: string, currentQuery: string) => {
    performProductCodeSearch(familyId, currentQuery);
 };
 
-const closeProductCode = (familyId: string) => {
+const closeProductCode = (familyId: string, event?: FocusEvent) => {
+   const nextTarget = event?.relatedTarget as HTMLElement | null;
+   if (nextTarget?.dataset?.productSuggestion === 'true') {
+      return;
+   }
+
    closeProductCodeSuggestions(familyId);
-   saveFamily(families.value.find((f) => f.id === familyId) as (typeof families.value)[number]);
+
+   const family = families.value.find((f) => f.id === familyId);
+   if (!family) {
+      return;
+   }
+
+   saveFamily(family);
 };
 
 const closeProductCodeSuggestions = (familyId: string) => {
@@ -949,9 +963,29 @@ const saveFamily = async (family: (typeof families.value)[number]) => {
          net_price: family.net_price,
       };
 
-      await updateFamily(family.id, payload);
+      const updatedFamily = await updateFamily(family.id, payload);
       await syncNetPriceFamilyProductLink(family);
-      await loadData();
+      const familyIndex = families.value.findIndex((row) => row.id === family.id);
+      if (familyIndex !== -1) {
+         const previous = families.value[familyIndex];
+         const resolvedProduct = previous.product;
+         if (
+            previous.type === 'net_price' &&
+            previous.product_code &&
+            resolvedProduct?.sku === previous.product_code
+         ) {
+            families.value[familyIndex] = {
+               ...previous,
+               ...updatedFamily,
+               product: resolvedProduct,
+            };
+         } else {
+            families.value[familyIndex] = {
+               ...previous,
+               ...updatedFamily,
+            };
+         }
+      }
       triggerSavedFlash(family.id);
    } catch (error) {
       console.error('[FamilyPage] Failed to save family fields:', error);
@@ -968,7 +1002,7 @@ const deleteFamily = async (family: (typeof families.value)[number]) => {
    errorMessage.value = '';
 
    try {
-      await deleteFamily(family.id);
+      await deleteFamilyApi(family.id);
       await loadData();
 
       if (activeProductCodeFamilyId.value === family.id) {
