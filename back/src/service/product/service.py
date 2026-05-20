@@ -26,6 +26,20 @@ class ProductService:
         self.upsert_family(product, payload)
         return product
 
+    def _resolve_brand(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        brand_id = payload.get("brand_id")
+        if brand_id:
+            brands = self.supabase.from_("brand").select("*").eq("id", brand_id).execute()
+            if brands.data:
+                return brands.data[0]
+
+        brands = self.supabase.from_("brand").select("*").eq("marque", payload["marque"]).execute()
+        if not brands.data:
+            brands = self.supabase.from_("brand").select("*").eq("name", payload["marque"]).execute()
+        if not brands.data:
+            raise ValueError(f"Brand '{payload['marque']}' not found in database")
+        return brands.data[0]
+
     def get_product_by_id(self, product_id: str) -> Optional[Dict[str, Any]]:
         result = (
             self.supabase
@@ -43,12 +57,7 @@ class ProductService:
             if field not in payload:
                 raise ValueError(f"Missing product field: {field}")
 
-        brands = self.supabase.from_("brand").select("*").eq("marque", payload["marque"]).execute()
-        if not brands.data:
-            brands = self.supabase.from_("brand").select("*").eq("name", payload["marque"]).execute()
-        if not brands.data:
-            raise ValueError(f"Brand '{payload['marque']}' not found in database")
-        brand = brands.data[0]
+        brand = self._resolve_brand(payload)
 
         update_data = {
             "sku": payload["refciale"],
@@ -85,13 +94,16 @@ class ProductService:
         )
         families = db_families.data or []
         existing_codes = {family["code"] for family in families}
+        missing_codes = [code for code in family_codes if code not in existing_codes]
+
+        if missing_codes:
+            missing_codes_text = ", ".join(sorted(missing_codes))
+            raise ValueError(
+                f"Unknown family code(s) for brand '{brand_id}': {missing_codes_text}"
+            )
 
         for code in family_codes:
-            if code not in existing_codes:
-                family = self.create_family(code, brand_id)
-                families.append(family)
-            else:
-                family = next(f for f in families if f["code"] == code)
+            family = next(f for f in families if f["code"] == code)
 
             result = self.supabase.from_("product_family").upsert(
                 {"product_id": product["id"], "family_id": family["id"]}
@@ -102,23 +114,13 @@ class ProductService:
         product["families"] = families
         return product
 
-    def create_family(self, code: str, brand_id: str) -> Dict[str, Any]:
-        data = {"brand_id": brand_id, "code": code, "type": "NET_PRICE", "name": code}
-        result = self.supabase.from_("family").insert(data).execute()
-        if result.data is None:
-            raise RuntimeError("Failed to create family code in database")
-        return result.data[0]
-
     def upsert_product(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         fields = ["family_codes", "libelle240", "marque", "refciale", "tarif", "vector_text"]
         for field in fields:
             if field not in payload:
                 raise ValueError(f"Missing product field: {field}")
 
-        brands = self.supabase.from_("brand").select("*").eq("marque", payload["marque"]).execute()
-        if not brands.data:
-            raise ValueError(f"Brand '{payload['marque']}' not found in database")
-        brand = brands.data[0]
+        brand = self._resolve_brand(payload)
 
         products = self.supabase.from_("product").select("*").eq("sku", payload["refciale"]).execute()
         if products.data:

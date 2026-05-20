@@ -1,5 +1,7 @@
 """Tests for ProductService.upsert_family."""
 
+import pytest
+
 from service.product.service import ProductService
 
 
@@ -41,9 +43,7 @@ class _FamilyInsertQuery:
         return self
 
     def execute(self):
-        created = {"id": f"f-{len(self.db.families)+1}", **self.payload}
-        self.db.families.append(created)
-        return _Response([created])
+        raise AssertionError("Family insert should not be called")
 
 
 class _ProductFamilyUpsertQuery:
@@ -89,8 +89,18 @@ class _FamilyTable:
         return self._inserter.insert(payload)
 
 
-def test_upsert_family_links_existing_and_creates_missing():
+def test_upsert_family_rejects_unknown_family_codes():
     supabase = _Supabase()
+    service = ProductService(supabase=supabase)
+    product = {"id": "p-1", "brand_id": "b-1"}
+
+    with pytest.raises(ValueError, match="Unknown family code"):
+        service.upsert_family(product, {"family_codes": ["A", "B"]})
+
+
+def test_upsert_family_links_existing_codes_only():
+    supabase = _Supabase()
+    supabase.families.append({"id": "f-2", "brand_id": "b-1", "code": "B", "name": "B", "type": "NET_PRICE"})
     service = ProductService(supabase=supabase)
     product = {"id": "p-1", "brand_id": "b-1"}
 

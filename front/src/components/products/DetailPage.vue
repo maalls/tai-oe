@@ -2,6 +2,12 @@
    <ProductsSubHeader class="mb-6">
       <template #actions>
          <RouterLink
+            :to="`/products/${route.params.id}/edit`"
+            class="shrink-0 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+         >
+            Edit
+         </RouterLink>
+         <RouterLink
             to="/products"
             class="shrink-0 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
          >

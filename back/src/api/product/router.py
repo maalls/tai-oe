@@ -313,6 +313,9 @@ def products_create(
     try:
         product = product_service.post_product(payload.model_dump())
         return JSONResponse({"status": "ok", "product": product}, status_code=201)
+    except ValueError as exc:
+        result = {"status": "error", "message": str(exc)}
+        return JSONResponse(result, status_code=400)
     except Exception as exc:
         result = {"status": "error", "message": str(exc)}
         return JSONResponse(result, status_code=_status_from_result(result))
@@ -345,3 +348,22 @@ def product_update(
     except Exception as exc:
         result = {"status": "error", "message": str(exc)}
         return JSONResponse(result, status_code=_status_from_result(result))
+
+
+@router.delete("/api/products/{product_id}")
+def product_delete(
+    product_id: str,
+    db: DatabaseRepository = Depends(get_db),
+):
+    rows = db.execute_dict_query(
+        "DELETE FROM product_family WHERE product_id = %s",
+        (product_id,),
+    )
+    _ = rows
+    rows = db.execute_dict_query(
+        "DELETE FROM product WHERE id = %s RETURNING id",
+        (product_id,),
+    )
+    if not rows:
+        return JSONResponse({"status": "error", "message": "Product not found"}, status_code=404)
+    return JSONResponse({"status": "ok", "id": rows[0]["id"]}, status_code=200)

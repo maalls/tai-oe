@@ -231,12 +231,13 @@ class DatabaseHandler:
         with self.get_cursor(cursor_factory=cursor_factory) as cur:
             cur.execute(query, params or ())
             
+            if cur.description is None:
+                return []
+            
             if _pg_driver == "psycopg2":
                 return [dict(row) for row in cur.fetchall()]
             else:
                 # For pg8000, manually create dicts from column names
-                if cur.description is None:
-                    return []
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
     

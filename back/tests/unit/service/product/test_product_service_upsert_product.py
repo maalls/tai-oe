@@ -31,8 +31,14 @@ class _Query:
     def execute(self):
         filters = dict(self.filters)
         if self.table == "brand":
+            brand_id = filters.get("id")
+            if brand_id:
+                return _Response([row for row in self.db.brands if row.get("id") == brand_id])
             marque = filters.get("marque")
-            return _Response([row for row in self.db.brands if row.get("marque") == marque])
+            if marque is not None:
+                return _Response([row for row in self.db.brands if row.get("marque") == marque])
+            name = filters.get("name")
+            return _Response([row for row in self.db.brands if row.get("name") == name])
         if self.table == "product" and self.insert_payload is None:
             sku = filters.get("sku")
             return _Response([row for row in self.db.products if row.get("sku") == sku])
@@ -84,4 +90,23 @@ def test_upsert_product_inserts_and_attaches_brand():
 
     assert result["id"] == "p-new"
     assert result["sku"] == "SKU-1"
+    assert result["brand"]["id"] == "b-1"
+
+
+def test_upsert_product_prefers_brand_id_when_provided():
+    supabase = _Supabase()
+    service = ProductService(supabase=supabase)
+
+    result = service.upsert_product(
+        {
+            "brand_id": "b-1",
+            "family_codes": [],
+            "libelle240": "Name",
+            "marque": "Wrong label",
+            "refciale": "SKU-2",
+            "tarif": 12.5,
+            "vector_text": "Name",
+        }
+    )
+
     assert result["brand"]["id"] == "b-1"
