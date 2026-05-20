@@ -385,6 +385,18 @@ export default {
       reauthorizeGmail: 'Réautoriser Gmail',
       disconnect: 'Déconnecter',
       gmailTokenHint: 'Utilise le token.pickle côté serveur pour accéder à Gmail.',
+      errorDetails: 'Détails techniques',
+      gmailStatusLoadFailed: 'Impossible de charger le statut Gmail.',
+      gmailMissingUserId: 'Identifiant utilisateur manquant.',
+      gmailAuthorizeFailed: "Échec de l'autorisation Gmail.",
+      gmailDisconnectFailed: 'Échec de la déconnexion Gmail.',
+      gmailAuthFailed: "L'authentification Gmail a échoué.",
+      gmailAuthExpired: 'Session Gmail expirée ou révoquée. Réautorisez votre compte Gmail.',
+      gmailAuthDenied: "Accès Gmail refusé. Merci d'autoriser l'accès pour continuer.",
+      gmailAuthClientConfigError:
+         'Configuration OAuth Gmail invalide côté serveur (client_id/client_secret).',
+      gmailAuthNetworkError:
+         "Impossible de contacter Gmail pour l'authentification. Vérifiez la connexion réseau.",
       imapTitle: 'IMAP',
       imapConfigured: 'Configuré',
       imapNotConfigured: 'Non configuré',

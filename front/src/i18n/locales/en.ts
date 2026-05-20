@@ -370,6 +370,19 @@ export default {
          reauthorizeGmail: 'Re-authorize Gmail',
          disconnect: 'Disconnect',
          gmailTokenHint: 'Uses the server-side token.pickle to access Gmail.',
+         errorDetails: 'Technical details',
+         gmailStatusLoadFailed: 'Failed to load Gmail status.',
+         gmailMissingUserId: 'Missing user id.',
+         gmailAuthorizeFailed: 'Failed to authorize Gmail.',
+         gmailDisconnectFailed: 'Failed to disconnect Gmail.',
+         gmailAuthFailed: 'Gmail authentication failed.',
+         gmailAuthExpired:
+            'Gmail session expired or revoked. Please re-authorize your Gmail account.',
+         gmailAuthDenied: 'Gmail access was denied. Please grant access to continue.',
+         gmailAuthClientConfigError:
+            'Invalid server-side Gmail OAuth client configuration (client_id/client_secret).',
+         gmailAuthNetworkError:
+            'Unable to reach Gmail for authentication. Please check network connectivity.',
          imapTitle: 'IMAP',
          imapConfigured: 'Configured',
          imapNotConfigured: 'Not configured',

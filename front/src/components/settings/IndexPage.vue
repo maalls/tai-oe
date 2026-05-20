@@ -77,12 +77,25 @@
                            : t('settings.notConnected')
                      }}
                   </span>
-                  <span v-else class="text-gray-500">{{ t('common.loading') }}</span>
+                  <span v-else-if="!gmailError" class="text-gray-500">{{
+                     t('common.loading')
+                  }}</span>
+                  <span v-if="gmailError" class="text-red-600 text-xs">
+                     {{ gmailError }}
+                  </span>
                </div>
 
-               <div v-if="gmailError" class="text-red-600 text-xs">
-                  {{ gmailError }}
-               </div>
+               <details
+                  v-if="gmailErrorDetails && gmailErrorDetails !== gmailError"
+                  class="text-xs text-gray-600"
+               >
+                  <summary class="cursor-pointer select-none">
+                     {{ t('settings.errorDetails') }}
+                  </summary>
+                  <pre class="mt-1 whitespace-pre-wrap wrap-break-word">{{
+                     gmailErrorDetails
+                  }}</pre>
+               </details>
 
                <div v-if="gmailProfile" class="space-y-2">
                   <div class="text-gray-700">
@@ -352,6 +365,7 @@ const gmailStatus = ref<{ status: string; authorized: boolean; message: string }
 const gmailProfile = ref<{ profile: any; permissions: string[] } | null>(null);
 const gmailLoading = ref(false);
 const gmailError = ref('');
+const gmailErrorDetails = ref('');
 const isGmailAuthorized = computed(() => !!gmailStatus.value?.authorized);
 type ImapConfig = {
    host: string;
@@ -504,6 +518,7 @@ async function getAuthHeaders(includeJson = false): Promise<Record<string, strin
 
 async function loadGmailStatus() {
    gmailError.value = '';
+   gmailErrorDetails.value = '';
    try {
       const userId = user.value?.id;
       const url = new URL(apiUrl('gmail/status'), window.location.origin);
@@ -511,19 +526,22 @@ async function loadGmailStatus() {
       const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok) {
-         gmailError.value = data?.message || 'Failed to load Gmail status.';
+         setGmailError(data?.message, t('settings.gmailStatusLoadFailed'));
          gmailStatus.value = null;
          gmailProfile.value = null;
          return;
       }
       gmailStatus.value = data;
+      if (data?.status === 'error' || (data?.authorized === false && data?.message)) {
+         setGmailError(data?.message, t('settings.gmailAuthFailed'));
+      }
       if (data?.authorized) {
          await loadGmailProfile();
       } else {
          gmailProfile.value = null;
       }
    } catch (error) {
-      gmailError.value = 'Failed to load Gmail status.';
+      setGmailError(String(error), t('settings.gmailStatusLoadFailed'));
       gmailStatus.value = null;
       gmailProfile.value = null;
    }
@@ -549,9 +567,10 @@ async function loadGmailProfile() {
 async function handleGmailAuthorize() {
    gmailLoading.value = true;
    gmailError.value = '';
+   gmailErrorDetails.value = '';
    try {
       if (!user.value?.id) {
-         gmailError.value = 'Missing user id.';
+         setGmailError('', t('settings.gmailMissingUserId'));
          return;
       }
       const redirect_url = window.location.href;
@@ -561,12 +580,12 @@ async function handleGmailAuthorize() {
       const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok' || !data?.auth_url) {
-         gmailError.value = data?.message || 'Failed to authorize Gmail.';
+         setGmailError(data?.message, t('settings.gmailAuthorizeFailed'));
          return;
       }
       window.location.href = data.auth_url;
    } catch (error) {
-      gmailError.value = 'Failed to authorize Gmail.';
+      setGmailError(String(error), t('settings.gmailAuthorizeFailed'));
    } finally {
       gmailLoading.value = false;
    }
@@ -575,6 +594,7 @@ async function handleGmailAuthorize() {
 async function handleGmailRevoke() {
    gmailLoading.value = true;
    gmailError.value = '';
+   gmailErrorDetails.value = '';
    try {
       const userId = user.value?.id;
       const url = new URL(apiUrl('gmail/revoke'), window.location.origin);
@@ -582,15 +602,52 @@ async function handleGmailRevoke() {
       const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
-         gmailError.value = data?.message || 'Failed to disconnect Gmail.';
+         setGmailError(data?.message, t('settings.gmailDisconnectFailed'));
          return;
       }
       await loadGmailStatus();
    } catch (error) {
-      gmailError.value = 'Failed to disconnect Gmail.';
+      setGmailError(String(error), t('settings.gmailDisconnectFailed'));
    } finally {
       gmailLoading.value = false;
    }
+}
+
+function setGmailError(rawMessage: unknown, fallback: string) {
+   const raw = typeof rawMessage === 'string' ? rawMessage : '';
+   const message = raw.trim();
+   const lower = message.toLowerCase();
+
+   gmailErrorDetails.value = message;
+
+   if (!message) {
+      gmailError.value = fallback;
+      return;
+   }
+
+   if (lower.includes('invalid_grant') || lower.includes('expired or revoked')) {
+      gmailError.value = t('settings.gmailAuthExpired');
+      return;
+   }
+   if (lower.includes('access_denied')) {
+      gmailError.value = t('settings.gmailAuthDenied');
+      return;
+   }
+   if (lower.includes('invalid_client')) {
+      gmailError.value = t('settings.gmailAuthClientConfigError');
+      return;
+   }
+   if (lower.includes('connection error') || lower.includes('network')) {
+      gmailError.value = t('settings.gmailAuthNetworkError');
+      return;
+   }
+
+   if (lower.includes('gmail_auth_error') || lower.includes('failed to authenticate')) {
+      gmailError.value = t('settings.gmailAuthFailed');
+      return;
+   }
+
+   gmailError.value = fallback;
 }
 
 async function loadImapConfig() {

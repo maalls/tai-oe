@@ -91,6 +91,7 @@ def gmail_profile(
 
 
 @router.get("/api/gmail/oauth/callback")
+@router.get("/api/google/oauth/callback")
 def gmail_oauth_callback(
     query: GmailOauthCallbackQuery = Depends(),
     gmail_service: GmailService = Depends(get_gmail_service),
