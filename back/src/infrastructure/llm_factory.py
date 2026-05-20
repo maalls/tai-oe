@@ -10,6 +10,7 @@ from src.infrastructure.clients.llm import LLMClient
 # FIXME: refactor to use src/llm get_llm_service which is configured with the back/.env environment.
 DEFAULT_LLM_URL = os.environ.get("LLM_URL", "http://127.0.0.1:1234/v1/chat/completions")
 DEFAULT_LLM_MODEL = os.environ.get("LLM_MODEL", "Qwen2.5-7B-Instruct")
+DEFAULT_LLM_API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
 
 
 def _normalize_base_url(llm_url: str) -> str:
@@ -43,9 +44,10 @@ def _normalize_base_url(llm_url: str) -> str:
 class LLMSettings:
     """Lightweight settings holder for LLM configuration."""
 
-    def __init__(self, url: str, model: str):
+    def __init__(self, url: str, model: str, api_key: Optional[str] = None):
         self.url = url
         self.model = model
+        self.api_key = api_key
 
     @property
     def base_url(self) -> str:
@@ -88,11 +90,16 @@ class LLMClientFactory:
 
         env_url = os.environ.get("LLM_URL")
         env_model = os.environ.get("LLM_MODEL")
+        env_api_key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
 
         url = llm_url or env_url or cfg_llm.get("url") or DEFAULT_LLM_URL
         mdl = model or env_model or cfg_llm.get("model") or DEFAULT_LLM_MODEL
+        key = env_api_key or cfg_llm.get("api_key") or DEFAULT_LLM_API_KEY
 
-        return LLMSettings(url=url, model=mdl)
+        if isinstance(key, str) and not key.strip():
+            key = None
+
+        return LLMSettings(url=url, model=mdl, api_key=key)
 
     def create_client(
         self,
@@ -107,5 +114,11 @@ class LLMClientFactory:
         if klass is None:  # pragma: no cover - requires real dependency
             raise ImportError("LLMClient dependency is missing; ensure back/script is on sys.path")
 
-        return klass(base_url=settings.base_url, model=settings.model, api_key=api_key, timeout=timeout)
+        resolved_api_key = api_key if api_key is not None else settings.api_key
+        return klass(
+            base_url=settings.base_url,
+            model=settings.model,
+            api_key=resolved_api_key,
+            timeout=timeout,
+        )
 

@@ -148,8 +148,15 @@
                </button>
             </div>
             <div v-else class="overflow-x-auto">
-               <div class="px-4 py-2 text-sm text-gray-600 border-b border-gray-100">
-                  {{ filteredFamilies.length }} result{{ filteredFamilies.length > 1 ? 's' : '' }}
+               <div
+                  class="px-4 py-2 text-sm text-gray-600 border-b border-gray-100 flex items-center justify-between gap-3"
+               >
+                  <span>{{ shownResultsText }}</span>
+                  <PaginationControls
+                     :currentPage="currentPage"
+                     :totalPages="totalPages"
+                     :goToPage="goToPage"
+                  />
                </div>
                <table class="w-full text-sm">
                   <thead class="bg-gray-100 text-gray-700">
@@ -204,7 +211,7 @@
                   </thead>
                   <tbody class="divide-y divide-gray-200">
                      <tr
-                        v-for="family in filteredFamilies"
+                        v-for="family in paginatedFamilies"
                         :key="family.id"
                         class="hover:bg-gray-50"
                      >
@@ -455,6 +462,16 @@
                      </tr>
                   </tbody>
                </table>
+               <div
+                  class="px-4 py-3 text-sm text-gray-600 border-t border-gray-100 flex items-center justify-between gap-3"
+               >
+                  <span>{{ shownResultsText }}</span>
+                  <PaginationControls
+                     :currentPage="currentPage"
+                     :totalPages="totalPages"
+                     :goToPage="goToPage"
+                  />
+               </div>
             </div>
          </div>
       </div>
@@ -485,6 +502,7 @@ input[type='number'] {
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ProductsSubHeader from './../products/ProductsSubHeader.vue';
+import PaginationControls from '../products/components/table/PaginationControls.vue';
 import { useBrandFamilyData } from '../products/useBrandFamilyData';
 import { searchProductBySku } from '../../composables/useSuggestionSearch';
 import { useI18n } from '../../i18n/useI18n';
@@ -493,6 +511,7 @@ import { createFamily, deleteFamily, updateFamily } from '../../api/family';
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
+const PAGE_SIZE = 100;
 const { brands, families, isLoading, errorMessage, loadData } = useBrandFamilyData();
 const codeQuery = ref('');
 const typeQuery = ref('');
@@ -505,6 +524,7 @@ const isSavingById = ref<Record<string, boolean>>({});
 const isDeletingById = ref<Record<string, boolean>>({});
 const savedFlashById = ref<Record<string, boolean>>({});
 const isCreatingFamily = ref(false);
+const currentPage = ref(1);
 
 // Product code search state
 const productCodeSuggestions = ref<Record<string, any[]>>({});
@@ -614,6 +634,29 @@ const filteredFamilies = computed(() => {
       });
 });
 
+const totalPages = computed(() => {
+   const total = filteredFamilies.value.length;
+   if (total === 0) return 0;
+   return Math.ceil(total / PAGE_SIZE);
+});
+
+const paginatedFamilies = computed(() => {
+   const start = (currentPage.value - 1) * PAGE_SIZE;
+   const end = start + PAGE_SIZE;
+   return filteredFamilies.value.slice(start, end);
+});
+
+const shownResultsText = computed(() => {
+   const shown = paginatedFamilies.value.length;
+   const total = filteredFamilies.value.length;
+   return t('products.table.showing', { count: shown, total });
+});
+
+const goToPage = (page: number) => {
+   if (page < 1 || page > totalPages.value) return;
+   currentPage.value = page;
+};
+
 const syncUrlWithFilters = async () => {
    const query: Record<string, string> = {};
 
@@ -717,9 +760,21 @@ onMounted(() => {
 watch(
    [familyTypeTab, codeQuery, typeQuery, skuQuery, exactMatch, showDiscountOnly, brandIdFilter],
    () => {
+      currentPage.value = 1;
       syncUrlWithFilters();
    }
 );
+
+watch(filteredFamilies, () => {
+   if (totalPages.value === 0) {
+      currentPage.value = 1;
+      return;
+   }
+
+   if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+   }
+});
 
 const clearFilters = () => {
    familyTypeTab.value = 'discount';
@@ -729,6 +784,7 @@ const clearFilters = () => {
    brandIdFilter.value = null;
    exactMatch.value = true;
    showDiscountOnly.value = true;
+   currentPage.value = 1;
 };
 
 const addFamily = async () => {
