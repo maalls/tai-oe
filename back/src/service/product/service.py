@@ -40,6 +40,12 @@ class ProductService:
             raise ValueError(f"Brand '{payload['marque']}' not found in database")
         return brands.data[0]
 
+    def _resolve_batch(self, payload: Dict[str, Any]) -> int:
+        batch = int(payload.get("batch") or 1)
+        if batch < 1:
+            raise ValueError("Batch must be greater than or equal to 1")
+        return batch
+
     def get_product_by_id(self, product_id: str) -> Optional[Dict[str, Any]]:
         result = (
             self.supabase
@@ -64,6 +70,7 @@ class ProductService:
             "name": payload["libelle240"],
             "brand_id": brand["id"],
             "price": payload["tarif"],
+            "batch": self._resolve_batch(payload),
         }
 
         update_result = self.supabase.from_("product").update(update_data).eq("id", product_id).execute()
@@ -131,6 +138,7 @@ class ProductService:
                 "name": payload["libelle240"],
                 "brand_id": brand["id"],
                 "price": payload["tarif"],
+                "batch": self._resolve_batch(payload),
             }
             insert_result = self.supabase.from_("product").insert(data).execute()
             if insert_result.data:

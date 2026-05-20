@@ -48,6 +48,17 @@
             />
          </div>
          <div class="mb-4">
+            <label class="block mb-1 font-medium">Batch</label>
+            <input
+               v-model.number="form.batch"
+               type="number"
+               min="1"
+               step="1"
+               class="w-full border rounded px-3 py-2"
+               required
+            />
+         </div>
+         <div class="mb-4">
             <label class="block mb-1 font-medium">Family Codes (comma separated)</label>
             <input
                v-model="familyCodesInput"
@@ -111,6 +122,7 @@ const form = ref({
    refciale: '',
    libelle240: '',
    tarif: 0,
+   batch: 1,
    family_codes: [],
    vector_text: '',
 });
@@ -135,6 +147,7 @@ onMounted(async () => {
             refciale: data.refciale || '',
             libelle240: data.libelle240 || '',
             tarif: data.tarif || 0,
+            batch: Number.isFinite(Number(data.batch)) ? Number(data.batch) : 1,
             family_codes: Array.isArray(data.family_codes) ? data.family_codes : [],
             vector_text: data.vector_text || '',
          };

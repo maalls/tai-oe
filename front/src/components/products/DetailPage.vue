@@ -7,14 +7,9 @@
          >
             Edit
          </RouterLink>
-         <RouterLink
-            to="/products"
-            class="shrink-0 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-         >
-            {{ t('products.detail.back') }}
-         </RouterLink>
       </template>
    </ProductsSubHeader>
+
    <div class="p-6 max-w-4xl mx-auto">
       <div v-if="error" class="text-red-600 bg-red-50 p-4 rounded-lg mb-6">
          {{ error }}
@@ -33,11 +28,8 @@
             class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] gap-6 lg:gap-8 items-start"
          >
             <div>
-               <div v-if="mediaImages.length" class="space-y-3">
+               <div class="space-y-3">
                   <div class="flex items-center justify-between">
-                     <!--div class="text-sm font-medium text-gray-500">
-                        {{ t('products.detail.images') }}
-                     </div-->
                      <div v-if="mediaImages.length > 1" class="text-xs text-gray-400">
                         {{ activeMediaIndex + 1 }}/{{ mediaImages.length }}
                      </div>
@@ -58,9 +50,12 @@
                               "
                               class="h-full w-full object-contain p-3 md:p-4"
                            />
-                           <div v-else class="text-sm text-gray-400">
-                              {{ t('products.detail.noImage') }}
-                           </div>
+                           <img
+                              v-else
+                              :src="placeholderImageUrl"
+                              :alt="t('products.detail.noImage')"
+                              class="h-full w-full object-contain p-3 md:p-4"
+                           />
                         </div>
 
                         <button
@@ -218,13 +213,6 @@
 
                   <div>
                      <div class="text-xs font-medium uppercase tracking-[0.16em] text-gray-400">
-                        {{ t('products.detail.gamme') }}
-                     </div>
-                     <div class="mt-1 text-base text-gray-900">{{ product.gamme || '-' }}</div>
-                  </div>
-
-                  <div>
-                     <div class="text-xs font-medium uppercase tracking-[0.16em] text-gray-400">
                         {{ t('products.detail.batch') }}
                      </div>
                      <div class="mt-1 text-base text-gray-900">{{ product.batch ?? '-' }}</div>
@@ -267,7 +255,6 @@ interface Product {
    batch?: string | number | null;
    family_codes?: string[] | null;
    media?: ProductMedia[];
-   gamme?: string;
 }
 
 interface ProductMedia {
@@ -287,6 +274,7 @@ const loading = ref(false);
 const error = ref('');
 const rawPayload = ref('');
 const activeMediaIndex = ref(0);
+const placeholderImageUrl = '/images/product-placeholder.svg';
 
 const mediaImages = computed(() => {
    const media = Array.isArray(product.value?.media) ? product.value?.media : [];
@@ -598,7 +586,6 @@ async function loadProduct() {
          batch: data.batch ?? null,
          family_codes: Array.isArray(data.family_codes) ? data.family_codes : [],
          media: Array.isArray(data.media) ? data.media : [],
-         gamme: '',
       };
 
       activeMediaIndex.value = 0;

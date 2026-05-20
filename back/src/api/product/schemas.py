@@ -1,6 +1,6 @@
 """Pydantic schemas for product FastAPI routes."""
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ProductUpsertRequest(BaseModel):
@@ -9,6 +9,7 @@ class ProductUpsertRequest(BaseModel):
     refciale: str
     libelle240: str
     tarif: float
+    batch: int = Field(default=1, ge=1)
     family_codes: list[str] | str
     vector_text: str = ""
 

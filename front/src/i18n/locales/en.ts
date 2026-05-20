@@ -155,7 +155,6 @@ export default {
             products: 'Products',
          },
          list: {
-            title: 'Products',
             new: '+ New Product',
             searchPlaceholder: 'e.g., transformateur, switch, cable...',
             searching: 'Searching...',

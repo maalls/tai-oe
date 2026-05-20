@@ -79,6 +79,7 @@ def test_upsert_product_inserts_and_attaches_brand():
 
     result = service.upsert_product(
         {
+            "batch": 3,
             "family_codes": ["NET_PRICE"],
             "libelle240": "Name",
             "marque": "ABB",
@@ -91,6 +92,7 @@ def test_upsert_product_inserts_and_attaches_brand():
     assert result["id"] == "p-new"
     assert result["sku"] == "SKU-1"
     assert result["brand"]["id"] == "b-1"
+    assert result["batch"] == 3
 
 
 def test_upsert_product_prefers_brand_id_when_provided():
@@ -110,3 +112,21 @@ def test_upsert_product_prefers_brand_id_when_provided():
     )
 
     assert result["brand"]["id"] == "b-1"
+
+
+def test_upsert_product_defaults_batch_to_one_when_missing():
+    supabase = _Supabase()
+    service = ProductService(supabase=supabase)
+
+    result = service.upsert_product(
+        {
+            "family_codes": [],
+            "libelle240": "Name",
+            "marque": "ABB",
+            "refciale": "SKU-3",
+            "tarif": 12.5,
+            "vector_text": "Name",
+        }
+    )
+
+    assert result["batch"] == 1

@@ -207,7 +207,6 @@ export default {
          brand: 'Marque',
          description: 'Description',
          tarif: 'Tarif',
-         gamme: 'Gamme',
          quantity: 'Quantité',
          batch: 'Lot',
          images: 'Photos',
