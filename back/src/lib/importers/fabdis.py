@@ -13,6 +13,11 @@ class FabdisImporter:
 		self.imported_cartouche_rows = []
 		self.imported_product_rows = []
 		self.last_summary = {}
+		self._vendor_cache = {}
+		self._brand_cache = {}
+		self._product_cache = {}
+		self._family_cache = {}
+		self._product_family_cache = set()
 
 	def run(self) -> list[dict[str, str | None]]:
 		self.load_cartouche()
@@ -26,6 +31,10 @@ class FabdisImporter:
 
 		if not self.commerce_rows:
 			self.load_commerce()
+
+		self._product_cache = {}
+		self._family_cache = {}
+		self._product_family_cache = set()
 
 		brand_ids_by_name = self._resolve_brand_ids_for_products()
 
@@ -80,6 +89,9 @@ class FabdisImporter:
 
 		if not self.cartouche_rows:
 			self.load_cartouche()
+
+		self._vendor_cache = {}
+		self._brand_cache = {}
 
 		imported_rows = []
 		vendor_created_count = 0
@@ -250,6 +262,11 @@ class FabdisImporter:
 			print(sheet_name)
 
 	def _ensure_vendor(self, vendor_name: str) -> tuple[str, bool]:
+		vendor_key = vendor_name.casefold()
+		cached_vendor_id = self._vendor_cache.get(vendor_key)
+		if cached_vendor_id:
+			return cached_vendor_id, False
+
 		response = (
 			self.supabase_client.table("vendor")
 			.select("id")
@@ -265,6 +282,7 @@ class FabdisImporter:
 			vendor_id = response.data[0].get("id")
 			if not vendor_id:
 				raise RuntimeError(f"Vendor '{vendor_name}' returned without id")
+			self._vendor_cache[vendor_key] = vendor_id
 			return vendor_id, False
 
 		created = self.supabase_client.table("vendor").insert({"name": vendor_name}).execute()
@@ -274,10 +292,17 @@ class FabdisImporter:
 		if not created.data or not created.data[0].get("id"):
 			raise RuntimeError(f"Vendor '{vendor_name}' insert returned no id")
 
-		return created.data[0]["id"], True
+		vendor_id = created.data[0]["id"]
+		self._vendor_cache[vendor_key] = vendor_id
+		return vendor_id, True
 
 	def _ensure_brand(self, row: dict[str, str | None], vendor_id: str) -> tuple[str, bool]:
 		brand_name = row["brand_name"]
+		brand_key = (vendor_id, brand_name.casefold())
+		cached_brand_id = self._brand_cache.get(brand_key)
+		if cached_brand_id:
+			return cached_brand_id, False
+
 		response = (
 			self.supabase_client.table("brand")
 			.select("id")
@@ -298,6 +323,7 @@ class FabdisImporter:
 				raise RuntimeError(
 					f"Brand '{brand_name}' for vendor '{row['vendor_name']}' returned without id"
 				)
+			self._brand_cache[brand_key] = brand_id
 			return brand_id, False
 
 		insert_data = {
@@ -318,7 +344,9 @@ class FabdisImporter:
 				f"Brand '{brand_name}' for vendor '{row['vendor_name']}' insert returned no id"
 			)
 
-		return created.data[0]["id"], True
+		brand_id = created.data[0]["id"]
+		self._brand_cache[brand_key] = brand_id
+		return brand_id, True
 
 	def _resolve_brand_ids_for_products(self) -> dict[str, str]:
 		brand_ids = {}
@@ -369,6 +397,11 @@ class FabdisImporter:
 		return families
 
 	def _ensure_product(self, row: dict[str, object], brand_id: str) -> tuple[str, bool]:
+		product_key = (brand_id, row["sku"])
+		cached_product_id = self._product_cache.get(product_key)
+		if cached_product_id:
+			return cached_product_id, False
+
 		response = (
 			self.supabase_client.table("product")
 			.select("id")
@@ -389,6 +422,7 @@ class FabdisImporter:
 				raise RuntimeError(
 					f"Product '{row['sku']}' for brand '{row['brand_name']}' returned without id"
 				)
+			self._product_cache[product_key] = product_id
 			return product_id, False
 
 		insert_data = {
@@ -414,21 +448,22 @@ class FabdisImporter:
 				f"Product '{row['sku']}' for brand '{row['brand_name']}' insert returned no id"
 			)
 
-		return created.data[0]["id"], True
+		product_id = created.data[0]["id"]
+		self._product_cache[product_key] = product_id
+		return product_id, True
 
 	def _ensure_family(self, brand_id: str, family: dict[str, str]) -> tuple[str, bool]:
+		family_key = (brand_id, family["code"])
+		cached_family_id = self._family_cache.get(family_key)
+		if cached_family_id:
+			return cached_family_id, False
+
 		query = (
 			self.supabase_client.table("family")
-			.select("id")
+			.select("id,type")
 			.eq("brand_id", brand_id)
 			.eq("code", family["code"])
 		)
-
-		if family["type"] is None:
-			query = query.is_("type", "null")
-		else:
-			query = query.eq("type", family["type"])
-
 		response = query.limit(1).execute()
 
 		if getattr(response, "error", None):
@@ -442,11 +477,12 @@ class FabdisImporter:
 				raise RuntimeError(
 					f"Family '{family['type']}:{family['code']}' returned without id"
 				)
+			self._family_cache[family_key] = family_id
 			return family_id, False
 
 		insert_data = {
 			"brand_id": brand_id,
-			"type": family["type"],
+			"type": None,
 			"code": family["code"],
 			"name": family["name"],
 		}
@@ -461,9 +497,15 @@ class FabdisImporter:
 				f"Family '{family['type']}:{family['code']}' insert returned no id"
 			)
 
-		return created.data[0]["id"], True
+		family_id = created.data[0]["id"]
+		self._family_cache[family_key] = family_id
+		return family_id, True
 
 	def _ensure_product_family(self, product_id: str, family_id: str) -> tuple[str, bool]:
+		pair = (product_id, family_id)
+		if pair in self._product_family_cache:
+			return f"{product_id}:{family_id}", False
+
 		response = (
 			self.supabase_client.table("product_family")
 			.select("product_id")
@@ -479,6 +521,7 @@ class FabdisImporter:
 			)
 
 		if response.data:
+			self._product_family_cache.add(pair)
 			return f"{product_id}:{family_id}", False
 
 		created = (
@@ -491,6 +534,7 @@ class FabdisImporter:
 				f"Failed to create product_family '{product_id}->{family_id}': {created.error}"
 			)
 
+		self._product_family_cache.add(pair)
 		return f"{product_id}:{family_id}", True
 
 	def _normalize_text(self, value: object) -> str | None:
