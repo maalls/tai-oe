@@ -10,13 +10,6 @@
       </template>
    </ProductsSubHeader>
    <div class="p-6 max-w-4xl mx-auto">
-      <div class="mb-6">
-         <div class="text-sm text-gray-500">{{ t('products.detail.title') }}</div>
-         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            {{ product?.refciale || t('products.detail.fallbackTitle') }}
-         </h1>
-      </div>
-
       <div v-if="error" class="text-red-600 bg-red-50 p-4 rounded-lg mb-6">
          {{ error }}
       </div>
@@ -107,6 +100,41 @@
                            />
                         </button>
                      </div>
+                  </div>
+
+                  <div
+                     v-if="otherMediaLinksByType.length"
+                     class="rounded-xl border border-gray-200 bg-gray-50/70 p-3"
+                  >
+                     <div class="text-xs font-medium uppercase tracking-[0.12em] text-gray-500">
+                        {{ t('products.detail.otherMedia') }}
+                     </div>
+                     <ul class="mt-2 space-y-2">
+                        <li
+                           v-for="group in otherMediaLinksByType"
+                           :key="group.type"
+                           class="flex items-start gap-2"
+                        >
+                           <span
+                              class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold"
+                              :class="group.badgeClass"
+                           >
+                              {{ group.badgeText }}
+                           </span>
+                           <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <a
+                                 v-for="link in group.links"
+                                 :key="link.key"
+                                 :href="link.url"
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 class="text-sm text-blue-700 hover:text-blue-800 hover:underline"
+                              >
+                                 {{ link.label }}
+                              </a>
+                           </div>
+                        </li>
+                     </ul>
                   </div>
                </div>
             </div>
@@ -282,6 +310,89 @@ const mediaImages = computed(() => {
 const activeMedia = computed(
    () => mediaImages.value[activeMediaIndex.value] || mediaImages.value[0] || null
 );
+
+const otherMediaLinksByType = computed(() => {
+   const media = Array.isArray(product.value?.media) ? product.value.media : [];
+   const grouped = [...media]
+      .filter((item) => {
+         const mediaType = String(item?.type || '')
+            .trim()
+            .toLowerCase();
+         return mediaType !== '' && mediaType !== 'photo' && mediaType !== 'image';
+      })
+      .sort((left, right) => {
+         const leftPosition = Number.isFinite(Number(left?.position))
+            ? Number(left?.position)
+            : Number.MAX_SAFE_INTEGER;
+         const rightPosition = Number.isFinite(Number(right?.position))
+            ? Number(right?.position)
+            : Number.MAX_SAFE_INTEGER;
+
+         if (leftPosition !== rightPosition) {
+            return leftPosition - rightPosition;
+         }
+
+         return String(left?.created_at || '').localeCompare(String(right?.created_at || ''));
+      })
+      .reduce(
+         (acc, item, index) => {
+            const type = String(item.type || '')
+               .trim()
+               .toUpperCase();
+            if (!type) {
+               return acc;
+            }
+
+            const current = acc[type] || {
+               type,
+               badgeText: mediaBadge(type).badgeText,
+               badgeClass: mediaBadge(type).badgeClass,
+               links: [] as Array<{ key: string; url: string; label: string }>,
+            };
+
+            const position = current.links.length + 1;
+            const baseLabel = mediaBaseLabel(type);
+            current.links.push({
+               key: item.id || `${item.url}-${index}`,
+               url: item.url,
+               label: position > 1 ? `${baseLabel} ${position}` : baseLabel,
+            });
+            acc[type] = current;
+            return acc;
+         },
+         {} as Record<
+            string,
+            {
+               type: string;
+               badgeText: string;
+               badgeClass: string;
+               links: Array<{ key: string; url: string; label: string }>;
+            }
+         >
+      );
+
+   return Object.values(grouped);
+});
+
+function mediaBaseLabel(type: string): string {
+   if (type === 'FICHE') return t('products.detail.mediaFiche');
+   if (type === 'NOTICE') return t('products.detail.mediaNotice');
+   if (type === 'SCHEMA') return t('products.detail.mediaSchema');
+   return type || t('products.detail.mediaGeneric');
+}
+
+function mediaBadge(type: string): { badgeText: string; badgeClass: string } {
+   if (type === 'FICHE') {
+      return { badgeText: 'F', badgeClass: 'bg-indigo-100 text-indigo-700' };
+   }
+   if (type === 'NOTICE') {
+      return { badgeText: 'N', badgeClass: 'bg-emerald-100 text-emerald-700' };
+   }
+   if (type === 'SCHEMA') {
+      return { badgeText: 'S', badgeClass: 'bg-amber-100 text-amber-700' };
+   }
+   return { badgeText: 'L', badgeClass: 'bg-slate-200 text-slate-700' };
+}
 
 const familiesByBrandAndCode = computed(() => {
    return families.value.reduce(
