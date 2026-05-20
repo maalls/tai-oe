@@ -62,8 +62,8 @@ Unifier la logique d'extraction de données métier (devis, discounts, etc.) dep
 - [x] Refactorer l'extraction vision dans le module discounts
 - [x] Gérer le parsing métier du résultat dans chaque module
 - [x] Ajouter des tests unitaires pour la fonction générique
-- [ ] Ajouter des tests d'intégration pour chaque usage métier
-- [ ] Documenter la fonction utilitaire et les exemples de prompts
-- [ ] Expliquer comment ajouter un nouveau cas métier
+- [x] Ajouter des tests d'intégration pour chaque usage métier
+- [x] Documenter la fonction utilitaire et les exemples de prompts
+- [x] Expliquer comment ajouter un nouveau cas métier
 
 **Ce plan garantit une extraction PDF via LLM vision DRY, maintenable et facilement extensible à d'autres cas métier.**
