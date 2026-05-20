@@ -22,6 +22,10 @@ CREATE INDEX IF NOT EXISTS idx_family_code ON family (code);
 CREATE INDEX IF NOT EXISTS idx_family_type ON family (type);
 CREATE INDEX IF NOT EXISTS idx_family_brand ON family (brand_id);
 
+ALTER TABLE family
+ADD CONSTRAINT family_brand_code_product_code_unique
+UNIQUE (brand_id, code, product_code);
+
 -- Product to family mapping (many-to-many)
 CREATE TABLE IF NOT EXISTS product_family (
   product_id  uuid NOT NULL REFERENCES product(id) ON DELETE CASCADE,
