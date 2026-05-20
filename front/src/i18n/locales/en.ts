@@ -227,6 +227,7 @@ export default {
                defaultMargin: 'Default Margin',
                families: 'Families',
                discounts: 'Discounts',
+               netPrices: 'Net Prices',
                created: 'Created',
                minimumMargin: 'Minimum Margin',
                targetMargin: 'Target Margin',

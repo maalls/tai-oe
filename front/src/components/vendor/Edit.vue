@@ -88,65 +88,22 @@
                </h2>
             </div>
 
-            <div v-if="isBrandsLoading" class="text-sm text-gray-500">
-               {{ t('vendors.relatedBrands.loading') }}
+            <div v-if="isBrandDataLoading" class="text-sm text-gray-500">
+               {{ t('products.brand.loading') }}
             </div>
-            <div v-else-if="brandsErrorMessage" class="text-sm text-red-600">
-               {{ brandsErrorMessage }}
+            <div v-else-if="brandDataErrorMessage" class="text-sm text-red-600">
+               {{ brandDataErrorMessage }}
             </div>
-            <div v-else-if="relatedBrands.length === 0" class="text-sm text-gray-500">
-               {{ t('vendors.relatedBrands.empty') }}
+            <div v-else-if="vendorBrands.length === 0" class="text-sm text-gray-500">
+               {{ t('products.brand.noBrands') }}
             </div>
-            <div v-else class="list-card">
-               <div class="list-table-wrap">
-                  <table class="list-table">
-                     <thead>
-                        <tr>
-                           <th>{{ t('vendors.relatedBrands.columns.name') }}</th>
-                           <th>{{ t('vendors.relatedBrands.columns.marque') }}</th>
-                           <th class="list-table-right">
-                              {{ t('products.brand.columns.minimumMargin') }}
-                           </th>
-                           <th class="list-table-right">
-                              {{ t('products.brand.columns.targetMargin') }}
-                           </th>
-                           <th class="list-table-right">
-                              {{ t('products.brand.columns.products') }}
-                           </th>
-                        </tr>
-                     </thead>
-                     <tbody>
-                        <tr v-for="brand in relatedBrands" :key="brand.id">
-                           <td class="font-medium text-gray-900">
-                              <router-link
-                                 :to="`/vendors/brand/${brand.id}`"
-                                 class="list-table-link"
-                              >
-                                 {{ brand.name || brand.marque || '-' }}
-                              </router-link>
-                           </td>
-                           <td class="list-table-muted">
-                              <router-link
-                                 :to="`/vendors/brand/${brand.id}`"
-                                 class="list-table-link"
-                              >
-                                 {{ brand.marque || '-' }}
-                              </router-link>
-                           </td>
-                           <td class="list-table-muted list-table-right">
-                              {{ brand.minimum_margin }}%
-                           </td>
-                           <td class="list-table-muted list-table-right">
-                              {{ brand.target_margin }}%
-                           </td>
-                           <td class="list-table-muted list-table-right">
-                              {{ brand.product_count?.toLocaleString(locale) ?? '0' }}
-                           </td>
-                        </tr>
-                     </tbody>
-                  </table>
-               </div>
-            </div>
+            <BrandListTable
+               v-else
+               :brands="vendorBrands"
+               :families="vendorFamilies"
+               :isLoading="isBrandDataLoading"
+               :errorMessage="brandDataErrorMessage"
+            />
          </div>
       </div>
    </div>
@@ -160,16 +117,16 @@ import {
    createVendor,
    deleteVendor as deleteVendorApi,
    getVendor,
-   listVendorBrands,
-   type VendorBrand,
    updateVendor,
 } from '../../api/vendor';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
+import { useBrandFamilyData } from '../products/useBrandFamilyData';
+import BrandListTable from '../products/components/BrandListTable.vue';
 
 const route = useRoute();
 const router = useRouter();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 const isNewVendor = computed(() => route.params.id === 'new');
 const vendorId = computed(() => (isNewVendor.value ? null : (route.params.id as string)));
@@ -179,10 +136,28 @@ const isSaving = ref(false);
 const isDeleting = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
-const brandsErrorMessage = ref('');
-const isBrandsLoading = ref(false);
-const relatedBrands = ref<VendorBrand[]>([]);
 const showForm = ref(false);
+
+const {
+   brands,
+   families,
+   isLoading: isBrandDataLoading,
+   errorMessage: brandDataErrorMessage,
+   loadData: loadBrandFamilyData,
+} = useBrandFamilyData();
+
+const vendorBrands = computed(() => {
+   if (!vendorId.value) return [];
+   return brands.value.filter((brand) => brand.vendor_id === vendorId.value);
+});
+
+const vendorBrandIdSet = computed(() => {
+   return new Set(vendorBrands.value.map((brand) => brand.id));
+});
+
+const vendorFamilies = computed(() => {
+   return families.value.filter((family) => vendorBrandIdSet.value.has(family.brand_id));
+});
 
 const formData = ref({
    name: '',
@@ -224,27 +199,6 @@ const loadVendor = async () => {
       });
    } finally {
       isLoading.value = false;
-   }
-};
-
-const loadRelatedBrands = async () => {
-   if (isNewVendor.value || !vendorId.value) {
-      relatedBrands.value = [];
-      return;
-   }
-
-   isBrandsLoading.value = true;
-   brandsErrorMessage.value = '';
-
-   try {
-      relatedBrands.value = await listVendorBrands(vendorId.value);
-   } catch (error) {
-      brandsErrorMessage.value = t('vendors.relatedBrands.loadFailed', {
-         message: error instanceof Error ? error.message : t('vendors.errors.unknown'),
-      });
-      relatedBrands.value = [];
-   } finally {
-      isBrandsLoading.value = false;
    }
 };
 
@@ -335,6 +289,6 @@ const deleteVendor = async () => {
 
 onMounted(() => {
    loadVendor();
-   loadRelatedBrands();
+   loadBrandFamilyData();
 });
 </script>

@@ -242,6 +242,7 @@ export default {
             defaultMargin: 'Marge par défaut',
             families: 'Familles',
             discounts: 'Remises',
+            netPrices: 'Prix nets',
             created: 'Créé',
             minimumMargin: 'Marge minimum',
             targetMargin: 'Marge cible',
