@@ -177,6 +177,7 @@ export default {
                refciale: 'Ref. Ciale',
                brand: 'Brand',
                description: 'Description',
+               batch: 'Batch',
                families: 'Families',
                price: 'Price',
             },

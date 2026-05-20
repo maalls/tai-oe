@@ -192,6 +192,7 @@ export default {
             refciale: 'Ref. Ciale',
             brand: 'Marque',
             description: 'Description',
+            batch: 'Lot',
             families: 'Familles',
             price: 'Prix',
          },

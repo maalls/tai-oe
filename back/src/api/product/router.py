@@ -120,6 +120,7 @@ def products_search(
                    COALESCE(p.sku, '') AS refciale,
                    COALESCE(p.name, '') AS libelle240,
                    COALESCE(p.price, 0) AS tarif,
+                 p.batch,
                    p.brand_id,
                    b.name AS brand_name,
                    COALESCE(array_remove(array_agg(DISTINCT f.code), NULL), ARRAY[]::text[]) AS family_codes
@@ -135,6 +136,7 @@ def products_search(
                refciale,
                libelle240,
                tarif,
+             batch,
                brand_id,
                brand_name,
                family_codes,
@@ -155,6 +157,7 @@ def products_search(
                 "refciale": row["refciale"],
                 "libelle240": row["libelle240"],
                 "tarif": row["tarif"],
+                "batch": row.get("batch"),
                 "brand_id": row.get("brand_id"),
                 "brand_name": row.get("brand_name"),
                 "family_codes": row.get("family_codes") or [],

@@ -4,6 +4,7 @@ export interface ProductDetail {
    refciale?: string;
    libelle240?: string;
    tarif?: string | number;
+   batch?: string | number | null;
    brand_id?: string | null;
    brand_name?: string | null;
    family_codes?: string[];

@@ -42,6 +42,9 @@
                      {{ t('products.table.columns.description') }}
                   </th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                     {{ t('products.table.columns.batch') }}
+                  </th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                      {{ t('products.table.columns.families') }}
                   </th>
                   <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">
@@ -65,6 +68,7 @@
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-700">{{ getBrandDisplay(product) }}</td>
                   <td class="px-6 py-4 text-sm text-gray-600">{{ product.libelle240 }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-700">{{ product.batch ?? '-' }}</td>
                   <td class="px-6 py-4 text-sm text-gray-600">
                      <div v-if="getFamilyTags(product).length" class="flex flex-wrap gap-2">
                         <a
