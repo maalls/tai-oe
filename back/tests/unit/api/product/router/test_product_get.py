@@ -15,11 +15,12 @@ class _FakeProductService:
             return None
         return {
             "id": product_id,
+            "brand_id": "b-1",
             "sku": "SKU-1",
             "name": "Prod",
             "price": 10,
             "vector_text": "vec",
-            "brand": {"name": "Brand"},
+            "brand": {"id": "b-1", "name": "Brand"},
             "product_family": [{"family": {"code": "A"}}, {"family": {"code": "B"}}],
         }
 
@@ -37,6 +38,8 @@ def test_product_get_returns_front_shape():
 
     assert response.status_code == 200
     assert response.json()["marque"] == "Brand"
+    assert response.json()["brand_id"] == "b-1"
+    assert response.json()["brand_name"] == "Brand"
     assert response.json()["refciale"] == "SKU-1"
     assert response.json()["family_codes"] == ["A", "B"]
 

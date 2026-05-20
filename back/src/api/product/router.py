@@ -29,6 +29,8 @@ def _status_from_result(result: dict[str, Any], default_status: int = 200) -> in
 
 def _to_front_product(product: dict[str, Any]) -> dict[str, Any]:
     brand = product.get("brand") or {}
+    brand_id = product.get("brand_id") or brand.get("id")
+    brand_name = brand.get("name") or brand.get("marque") or ""
     family_links = product.get("product_family") or []
     family_codes = []
     for link in family_links:
@@ -40,6 +42,8 @@ def _to_front_product(product: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": product.get("id"),
         "marque": brand.get("name") or brand.get("marque") or "",
+        "brand_id": brand_id,
+        "brand_name": brand_name,
         "refciale": product.get("sku") or "",
         "libelle240": product.get("name") or "",
         "tarif": product.get("price") or 0,
