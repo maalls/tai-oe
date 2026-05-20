@@ -185,6 +185,7 @@ def products_quote_context(
                p.sku,
                p.name,
                p.price,
+               p.batch,
                p.brand_id,
                b.id AS brand_ref_id,
                b.name AS brand_name,
@@ -243,6 +244,7 @@ def products_quote_context(
                 "sku": product_sku,
                 "name": row.get("name"),
                 "price": row.get("price"),
+                "batch": row.get("batch"),
                 "brand_id": row.get("brand_id"),
                 "brand": {
                     "id": row.get("brand_ref_id"),

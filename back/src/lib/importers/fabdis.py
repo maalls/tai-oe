@@ -18,11 +18,14 @@ class FabdisImporter:
 		self._product_cache = {}
 		self._family_cache = {}
 		self._product_family_cache = set()
+		self.media_rows = []
 
 	def run(self) -> list[dict[str, str | None]]:
 		self.load_cartouche()
 		self.imported_cartouche_rows = self.import_cartouche()
 		self.import_products()
+		self.load_media()
+		self.import_media()
 		return self.imported_cartouche_rows
 
 	def import_products(self) -> list[dict[str, object]]:
@@ -279,6 +282,116 @@ class FabdisImporter:
 
 		self.commerce_rows = commerce_rows
 		return commerce_rows
+
+	def load_media(self) -> list[dict[str, object]]:
+		if self.workbook is None:
+			raise RuntimeError("Workbook not loaded")
+
+		media_columns = ["MARQUE", "REFCIALE", "MTYP", "MNUM", "MURL"]
+		media_df = self.pd.read_excel(
+			self.workbook,
+			sheet_name="B03_MEDIA",
+			usecols=media_columns,
+		)
+		media_rows = []
+		for row in media_df.to_dict("records"):
+			brand_name = self._normalize_text(row.get("MARQUE"))
+			sku = self._normalize_text(row.get("REFCIALE"))
+			media_type = self._normalize_text(row.get("MTYP"))
+			url = self._normalize_text(row.get("MURL"))
+
+			if not brand_name or not sku or not url:
+				continue
+
+			position_raw = self._normalize_number(row.get("MNUM"))
+			position = int(round(position_raw)) if position_raw is not None else 0
+
+			media_rows.append(
+				{
+					"brand_name": brand_name,
+					"sku": sku,
+					"type": (media_type or "PHOTO").upper(),
+					"url": url,
+					"position": position,
+				}
+			)
+
+		self.media_rows = media_rows
+		return media_rows
+
+	def import_media(self) -> None:
+		if self.supabase_client is None:
+			raise RuntimeError("Supabase client not configured")
+
+		if not self.media_rows:
+			self.load_media()
+
+		# Build product_id lookup from cache populated during import_products
+		# For rows whose product wasn't imported (unknown SKU), we skip.
+		skipped = 0
+		upserted = 0
+
+		for row in self.media_rows:
+			brand_name = row["brand_name"]
+			sku = row["sku"]
+
+			# Resolve brand_id then product_id
+			brand_key = brand_name.casefold()
+			brand_id = next(
+				(v for (_, bname), v in self._brand_cache.items() if bname == brand_key),
+				None,
+			)
+			if not brand_id:
+				# Try resolving directly from DB
+				resp = (
+					self.supabase_client.table("brand")
+					.select("id")
+					.ilike("name", brand_name)
+					.limit(1)
+					.execute()
+				)
+				if not resp.data:
+					skipped += 1
+					continue
+				brand_id = resp.data[0]["id"]
+
+			product_key = (brand_id, sku)
+			product_id = self._product_cache.get(product_key)
+			if not product_id:
+				resp = (
+					self.supabase_client.table("product")
+					.select("id")
+					.eq("brand_id", brand_id)
+					.eq("sku", sku)
+					.limit(1)
+					.execute()
+				)
+				if not resp.data:
+					skipped += 1
+					continue
+				product_id = resp.data[0]["id"]
+				self._product_cache[product_key] = product_id
+
+			upsert_data = {
+				"product_id": product_id,
+				"url": row["url"],
+				"type": row["type"],
+				"source": "fabdis",
+				"position": row["position"],
+			}
+			result = (
+				self.supabase_client.table("product_media")
+				.upsert(upsert_data, on_conflict="product_id,type,url")
+				.execute()
+			)
+			if getattr(result, "error", None):
+				raise RuntimeError(
+					f"Failed to upsert media for product '{sku}': {result.error}"
+				)
+			upserted += 1
+
+		self.last_summary["media_upserted"] = upserted
+		self.last_summary["media_skipped"] = skipped
 
 	def print_sheet_names(self) -> None:
 		for sheet_name in self.workbook.sheet_names:

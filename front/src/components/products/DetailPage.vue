@@ -316,7 +316,7 @@ async function loadProduct() {
          refciale: data.refciale || '',
          libelle240: data.libelle240 || '',
          tarif: data.tarif ?? '',
-            batch: data.batch ?? null,
+         batch: data.batch ?? null,
          family_codes: Array.isArray(data.family_codes) ? data.family_codes : [],
          gamme: '',
          qt: '',

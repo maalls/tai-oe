@@ -144,7 +144,7 @@ export const grandTotalMargin = (lines: any) => {
 };
 
 export const minQuantity = (item: any) => {
-   return item.best_family?.quantity || 1;
+   return item.best_family?.quantity || item.product?.batch || 1;
 };
 
 export const minMargin = (item: any) => {

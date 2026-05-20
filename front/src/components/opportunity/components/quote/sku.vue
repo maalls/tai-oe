@@ -26,7 +26,11 @@
       >
          <a
             class="cursor-pointer hover:underline"
-            :href="`/products?refciale=${encodeURIComponent(props.item.line.sku)}&exactMatch=true`"
+            :href="
+               props.item.product?.id
+                  ? `/products/${props.item.product.id}`
+                  : `/products?refciale=${encodeURIComponent(props.item.line.sku)}&exactMatch=true`
+            "
          >
             {{ t('opportunities.quoteTable.show') }}
          </a>
