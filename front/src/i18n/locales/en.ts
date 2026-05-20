@@ -193,6 +193,7 @@ export default {
             tarif: 'Tarif',
             gamme: 'Gamme',
             quantity: 'Quantity',
+            batch: 'Batch',
             rawPayload: 'Raw Payload',
             missingId: 'Missing product id.',
             loadFailed: 'Failed to load product',

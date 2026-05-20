@@ -86,6 +86,10 @@
                <div class="text-sm text-gray-500">{{ t('products.detail.quantity') }}</div>
                <div class="text-gray-900">{{ product.qt ?? '-' }}</div>
             </div>
+            <div>
+               <div class="text-sm text-gray-500">{{ t('products.detail.batch') }}</div>
+               <div class="text-gray-900">{{ product.batch ?? '-' }}</div>
+            </div>
          </div>
 
          <div v-if="rawPayload" class="mt-6">
@@ -118,6 +122,7 @@ interface Product {
    refciale?: string;
    libelle240?: string;
    tarif?: string | number;
+   batch?: string | number | null;
    family_codes?: string[] | null;
    gamme?: string;
    qt?: string | number;
@@ -311,6 +316,7 @@ async function loadProduct() {
          refciale: data.refciale || '',
          libelle240: data.libelle240 || '',
          tarif: data.tarif ?? '',
+            batch: data.batch ?? null,
          family_codes: Array.isArray(data.family_codes) ? data.family_codes : [],
          gamme: '',
          qt: '',

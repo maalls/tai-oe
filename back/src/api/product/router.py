@@ -47,6 +47,7 @@ def _to_front_product(product: dict[str, Any]) -> dict[str, Any]:
         "refciale": product.get("sku") or "",
         "libelle240": product.get("name") or "",
         "tarif": product.get("price") or 0,
+        "batch": product.get("batch"),
         "family_codes": family_codes,
         "vector_text": product.get("vector_text") or "",
     }

@@ -19,6 +19,7 @@ class _FakeProductService:
             "sku": "SKU-1",
             "name": "Prod",
             "price": 10,
+            "batch": 4,
             "vector_text": "vec",
             "brand": {"id": "b-1", "name": "Brand"},
             "product_family": [{"family": {"code": "A"}}, {"family": {"code": "B"}}],
@@ -41,6 +42,7 @@ def test_product_get_returns_front_shape():
     assert response.json()["brand_id"] == "b-1"
     assert response.json()["brand_name"] == "Brand"
     assert response.json()["refciale"] == "SKU-1"
+    assert response.json()["batch"] == 4
     assert response.json()["family_codes"] == ["A", "B"]
 
 

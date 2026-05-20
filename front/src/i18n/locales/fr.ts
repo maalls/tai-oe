@@ -208,6 +208,7 @@ export default {
          tarif: 'Tarif',
          gamme: 'Gamme',
          quantity: 'Quantité',
+         batch: 'Lot',
          rawPayload: 'Données brutes',
          missingId: 'Identifiant du produit manquant.',
          loadFailed: 'Échec du chargement du produit',
