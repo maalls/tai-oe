@@ -35,15 +35,46 @@
             </div>
             <div>
                <div class="text-sm text-gray-500">{{ t('products.detail.brand') }}</div>
-               <div class="text-lg text-gray-900">{{ product.marque || '-' }}</div>
+               <div class="text-lg text-gray-900">
+                  {{ product.brand_name || product.marque || '-' }}
+               </div>
             </div>
             <div class="md:col-span-2">
                <div class="text-sm text-gray-500">{{ t('products.detail.description') }}</div>
                <div class="text-gray-900">{{ product.libelle240 || '-' }}</div>
             </div>
+            <div class="md:col-span-2">
+               <div class="text-sm text-gray-500">{{ t('products.table.columns.families') }}</div>
+               <div v-if="familyTags.length" class="mt-1 flex flex-wrap gap-2">
+                  <a
+                     v-for="tag in familyTags"
+                     :key="tag.label"
+                     :href="tag.href"
+                     class="rounded-full px-2 py-0.5 text-xs cursor-pointer hover:opacity-80"
+                     :class="
+                        tag.isNetPrice
+                           ? 'bg-green-100 text-emerald-700'
+                           : tag.hasDiscount
+                             ? 'bg-amber-100 text-amber-800'
+                             : 'bg-gray-100 text-gray-700'
+                     "
+                  >
+                     {{ tag.label }}
+                  </a>
+               </div>
+               <div v-else class="text-gray-500">-</div>
+            </div>
             <div>
                <div class="text-sm text-gray-500">{{ t('products.detail.tarif') }}</div>
-               <div class="text-lg font-semibold text-gray-900">
+               <div v-if="discountedPrice" class="text-lg">
+                  <div class="text-gray-500 line-through">
+                     {{ formatPrice(discountedPrice.original) }}
+                  </div>
+                  <div class="font-semibold text-gray-900">
+                     {{ formatPrice(discountedPrice.discounted) }}
+                  </div>
+               </div>
+               <div v-else class="text-lg font-semibold text-gray-900">
                   {{ formatPrice(product.tarif) }}
                </div>
             </div>
@@ -68,27 +99,190 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { getProduct } from '../../api/product';
 import { useI18n } from '../../i18n/useI18n';
+import { useBrandFamilyData } from './useBrandFamilyData';
+import {
+   applyFamilyPricingToListPrice,
+   selectBestFamilyPricing,
+   type FamilyPricing,
+} from '../../utils/familyPricing';
 
 interface Product {
    id: string | number;
    marque?: string;
+   brand_name?: string | null;
+   brand_id?: string | null;
    refciale?: string;
    libelle240?: string;
    tarif?: string | number;
+   family_codes?: string[] | null;
    gamme?: string;
    qt?: string | number;
 }
 
 const route = useRoute();
 const { t } = useI18n();
+const { families, loadData: loadBrandData } = useBrandFamilyData();
 const product = ref<Product | null>(null);
 const loading = ref(false);
 const error = ref('');
 const rawPayload = ref('');
+
+const familiesByBrandAndCode = computed(() => {
+   return families.value.reduce(
+      (acc, family) => {
+         const code = String(family.code || '')
+            .trim()
+            .toLowerCase();
+         const brandId = String(family.brand_id || '')
+            .trim()
+            .toLowerCase();
+         if (!code || !brandId) {
+            return acc;
+         }
+
+         const key = `${brandId}::${code}`;
+         const current = acc[key];
+         if (!current || Number(family.discount || 0) > Number(current.discount || 0)) {
+            acc[key] = family;
+         }
+
+         return acc;
+      },
+      {} as Record<string, any>
+   );
+});
+
+const netPriceFamilyByBrandAndSku = computed(() => {
+   return families.value.reduce(
+      (acc, family) => {
+         const familyType = String(family.type || '')
+            .trim()
+            .toLowerCase();
+         if (familyType !== 'net_price') {
+            return acc;
+         }
+
+         const brandId = String(family.brand_id || '')
+            .trim()
+            .toLowerCase();
+         const sku = String(family.product_code || '')
+            .trim()
+            .toLowerCase();
+         if (!brandId || !sku) {
+            return acc;
+         }
+
+         acc[`${brandId}::${sku}`] = family;
+         return acc;
+      },
+      {} as Record<string, any>
+   );
+});
+
+const bestFamilyForProduct = computed(() => {
+   if (!product.value) return null;
+
+   const skuLower = String(product.value.refciale || '')
+      .trim()
+      .toLowerCase();
+   const brandIdLower = String(product.value.brand_id || '')
+      .trim()
+      .toLowerCase();
+   const codes = (product.value.family_codes || [])
+      .map((code) => String(code).trim())
+      .filter(Boolean);
+
+   const linkedFamilies = codes
+      .map((code) => familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`])
+      .filter(Boolean) as FamilyPricing[];
+   const directNetPriceFamily = skuLower
+      ? netPriceFamilyByBrandAndSku.value[`${brandIdLower}::${skuLower}`] || null
+      : null;
+
+   return selectBestFamilyPricing({
+      directNetPriceFamily,
+      linkedFamilies,
+   });
+});
+
+const familyTags = computed(() => {
+   if (!product.value) return [];
+
+   const sku = String(product.value.refciale || '').trim();
+   const brandIdLower = String(product.value.brand_id || '')
+      .trim()
+      .toLowerCase();
+   const bestFamily = bestFamilyForProduct.value;
+   const bestDiscount =
+      String(bestFamily?.type || '').toLowerCase() === 'discount'
+         ? Number(bestFamily?.discount || 0)
+         : 0;
+
+   const tags: { label: string; hasDiscount: boolean; isNetPrice: boolean; href: string }[] = [];
+
+   if (String(bestFamily?.type || '').toLowerCase() === 'net_price') {
+      const href = sku
+         ? `/vendors/family?tab=all&sku=${encodeURIComponent(sku)}&exactMatch=true`
+         : '/vendors/family?tab=all';
+      const netPrice = Number(bestFamily?.net_price);
+      const netLabel = Number.isFinite(netPrice) ? `NET (${formatPrice(netPrice)})` : 'NET';
+      tags.push({ label: netLabel, hasDiscount: false, isNetPrice: true, href });
+   }
+
+   const codes = (product.value.family_codes || [])
+      .map((code) => String(code).trim())
+      .filter(Boolean);
+
+   tags.push(
+      ...codes.map((code) => {
+         const family = familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`];
+         const hasDiscount =
+            String(bestFamily?.type || '').toLowerCase() === 'discount' &&
+            bestDiscount > 0 &&
+            Number(family?.discount || 0) === bestDiscount;
+         const nameLabel = family?.name ? `${code} ${family.name}` : code;
+         const discountLabel =
+            String(family?.type || '').toLowerCase() === 'discount' &&
+            Number(family?.discount || 0) > 0
+               ? ` (${Number(family?.discount)}%)`
+               : '';
+         return {
+            label: `${nameLabel}${discountLabel}`,
+            hasDiscount,
+            isNetPrice: false,
+            href: `/vendors/family?tab=all&code=${encodeURIComponent(code)}`,
+         };
+      })
+   );
+
+   return tags;
+});
+
+const discountedPrice = computed(() => {
+   if (!product.value) return null;
+   const price =
+      typeof product.value.tarif === 'string'
+         ? parseFloat(product.value.tarif)
+         : product.value.tarif;
+   if (!Number.isFinite(price)) return null;
+
+   const bestFamily = bestFamilyForProduct.value;
+   if (!bestFamily) return null;
+
+   const discounted = applyFamilyPricingToListPrice({
+      listPrice: price,
+      bestFamily,
+   });
+   if (!Number.isFinite(discounted) || discounted === price) {
+      return null;
+   }
+
+   return { original: price, discounted };
+});
 
 async function loadProduct() {
    const routeId = route.params.id;
@@ -112,9 +306,12 @@ async function loadProduct() {
       product.value = {
          id: data.id,
          marque: data.marque || '',
+         brand_name: data.brand_name || null,
+         brand_id: data.brand_id || null,
          refciale: data.refciale || '',
          libelle240: data.libelle240 || '',
          tarif: data.tarif ?? '',
+         family_codes: Array.isArray(data.family_codes) ? data.family_codes : [],
          gamme: '',
          qt: '',
       };
@@ -137,6 +334,7 @@ function formatPrice(price: string | number | undefined): string {
 }
 
 onMounted(() => {
+   loadBrandData();
    loadProduct();
 });
 </script>

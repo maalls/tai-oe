@@ -14,7 +14,7 @@ class ProductService:
     def list_products(self, qs: dict) -> List[Dict[str, Any]]:
         sku = qs.get("sku", [None])[0]
         limit = int(qs.get("limit", [10])[0])
-        query = self.supabase.from_("product").select("*,product_family(*,family(*))")
+        query = self.supabase.from_("product").select("*,brand(*),product_family(*,family(*))")
         if sku:
             query = query.ilike("sku", f"{sku}")
         query = query.limit(limit)

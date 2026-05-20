@@ -221,7 +221,9 @@ const familiesByBrandAndCode = computed(() => {
 const netPriceFamilyByBrandAndSku = computed(() => {
    return families.value.reduce(
       (acc, family) => {
-         const familyType = String(family.type || '').trim().toLowerCase();
+         const familyType = String(family.type || '')
+            .trim()
+            .toLowerCase();
          if (familyType !== 'net_price') {
             return acc;
          }
@@ -465,9 +467,7 @@ function getFamilyTags(
       .trim()
       .toLowerCase();
 
-   const codes = (product.family_codes || [])
-      .map((code) => String(code).trim())
-      .filter(Boolean);
+   const codes = (product.family_codes || []).map((code) => String(code).trim()).filter(Boolean);
    const linkedFamilies = codes
       .map((code) => familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`])
       .filter(Boolean) as FamilyPricing[];
@@ -493,24 +493,24 @@ function getFamilyTags(
 
    tags.push(
       ...codes.map((code) => {
-            const family = familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`];
-            const hasDiscount =
-               String(bestFamily?.type || '').toLowerCase() === 'discount' &&
-               bestDiscount > 0 &&
-               Number(family?.discount || 0) === bestDiscount;
-            const nameLabel = family?.name ? `${code} ${family.name}` : code;
-            const discountLabel =
-               String(family?.type || '').toLowerCase() === 'discount' &&
-               Number(family?.discount || 0) > 0
-                  ? ` (${Number(family?.discount)}%)`
-                  : '';
-            return {
-               label: `${nameLabel}${discountLabel}`,
-               hasDiscount,
-               isNetPrice: false,
-               href: `/vendors/family?tab=all&code=${encodeURIComponent(code)}`,
-            };
-         })
+         const family = familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`];
+         const hasDiscount =
+            String(bestFamily?.type || '').toLowerCase() === 'discount' &&
+            bestDiscount > 0 &&
+            Number(family?.discount || 0) === bestDiscount;
+         const nameLabel = family?.name ? `${code} ${family.name}` : code;
+         const discountLabel =
+            String(family?.type || '').toLowerCase() === 'discount' &&
+            Number(family?.discount || 0) > 0
+               ? ` (${Number(family?.discount)}%)`
+               : '';
+         return {
+            label: `${nameLabel}${discountLabel}`,
+            hasDiscount,
+            isNetPrice: false,
+            href: `/vendors/family?tab=all&code=${encodeURIComponent(code)}`,
+         };
+      })
    );
 
    return tags;
@@ -526,9 +526,7 @@ function getDiscountedPrice(product: Product): { original: number; discounted: n
    const brandIdLower = String(product.brand_id || '')
       .trim()
       .toLowerCase();
-   const codes = (product.family_codes || [])
-      .map((code) => String(code).trim())
-      .filter(Boolean);
+   const codes = (product.family_codes || []).map((code) => String(code).trim()).filter(Boolean);
 
    const linkedFamilies = codes
       .map((code) => familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`])

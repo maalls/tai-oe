@@ -11,10 +11,12 @@ class _Response:
 class _Query:
     def __init__(self, rows):
         self.rows = rows
+        self.select_fields = None
         self.ilike_calls = []
         self.limit_value = None
 
-    def select(self, _fields):
+    def select(self, fields):
+        self.select_fields = fields
         return self
 
     def ilike(self, field, pattern):
@@ -47,5 +49,6 @@ def test_list_products_applies_sku_filter_and_limit():
     result = service.list_products({"sku": ["ABC"], "limit": ["5"]})
 
     assert result == [{"sku": "ABC"}]
+    assert supabase.last_query.select_fields == "*,brand(*),product_family(*,family(*))"
     assert supabase.last_query.ilike_calls == [("sku", "ABC")]
     assert supabase.last_query.limit_value == 5

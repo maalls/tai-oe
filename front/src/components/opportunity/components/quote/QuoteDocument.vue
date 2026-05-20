@@ -74,9 +74,9 @@ const netPriceFamilyBySku = ref<Record<string, any>>({});
 const getLineDiscount = (product: { product_family?: any[] | null }) => {
    const sku = String((product as any)?.sku || '').trim();
    const directNetPriceFamily = sku ? netPriceFamilyBySku.value[sku] : null;
-   const linkedFamilies = (Array.isArray(product?.product_family) ? product.product_family : []).map(
-      (link) => link?.family
-   );
+   const linkedFamilies = (
+      Array.isArray(product?.product_family) ? product.product_family : []
+   ).map((link) => link?.family);
 
    return selectBestFamilyPricing({
       directNetPriceFamily,

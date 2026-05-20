@@ -56,7 +56,13 @@ def products_list(
 ):
     qs = {"sku": [sku], "limit": [str(limit)]}
     products = product_service.list_products(qs)
-    return JSONResponse({"products": products}, status_code=200)
+    normalized_products = []
+    for product in products:
+        if isinstance(product, dict):
+            normalized_products.append({**product, "brand": product.get("brand") or {}})
+        else:
+            normalized_products.append(product)
+    return JSONResponse({"products": normalized_products}, status_code=200)
 
 
 @router.get("/api/products/search")
@@ -136,25 +142,23 @@ def products_search(
     )
 
     total_count = rows[0]["total_count"] if rows else 0
-    return JSONResponse(
-        {
-            "products": [
-                {
-                    "id": row["id"],
-                    "marque": row["marque"],
-                    "refciale": row["refciale"],
-                    "libelle240": row["libelle240"],
-                    "tarif": row["tarif"],
-                    "brand_id": row.get("brand_id"),
-                    "brand_name": row.get("brand_name"),
-                    "family_codes": row.get("family_codes") or [],
-                }
-                for row in rows
-            ],
-            "total_count": total_count,
-        },
-        status_code=200,
-    )
+    payload = {
+        "products": [
+            {
+                "id": row["id"],
+                "marque": row["marque"],
+                "refciale": row["refciale"],
+                "libelle240": row["libelle240"],
+                "tarif": row["tarif"],
+                "brand_id": row.get("brand_id"),
+                "brand_name": row.get("brand_name"),
+                "family_codes": row.get("family_codes") or [],
+            }
+            for row in rows
+        ],
+        "total_count": total_count,
+    }
+    return JSONResponse(jsonable_encoder(payload), status_code=200)
 
 
 @router.get("/api/products/quote-context")

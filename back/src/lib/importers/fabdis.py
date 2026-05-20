@@ -417,15 +417,19 @@ class FabdisImporter:
 		return created.data[0]["id"], True
 
 	def _ensure_family(self, brand_id: str, family: dict[str, str]) -> tuple[str, bool]:
-		response = (
+		query = (
 			self.supabase_client.table("family")
 			.select("id")
 			.eq("brand_id", brand_id)
-			.eq("type", family["type"])
 			.eq("code", family["code"])
-			.limit(1)
-			.execute()
 		)
+
+		if family["type"] is None:
+			query = query.is_("type", "null")
+		else:
+			query = query.eq("type", family["type"])
+
+		response = query.limit(1).execute()
 
 		if getattr(response, "error", None):
 			raise RuntimeError(

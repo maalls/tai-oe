@@ -5,7 +5,9 @@ export type FamilyPricing = {
 };
 
 const normalizeFamilyType = (family: FamilyPricing | null | undefined) =>
-   String(family?.type || '').trim().toLowerCase();
+   String(family?.type || '')
+      .trim()
+      .toLowerCase();
 
 const isNetPriceFamily = (family: FamilyPricing | null | undefined) =>
    normalizeFamilyType(family) === 'net_price' && Number.isFinite(Number(family?.net_price));

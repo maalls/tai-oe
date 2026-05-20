@@ -801,7 +801,7 @@ export default {
          sku: 'SKU',
          show: 'Voir',
          description: 'Description',
-         listPrice: 'Prix liste',
+         listPrice: 'Prix listé',
          supplierDiscount: 'Remise Achat',
          purchasedPrice: 'Prix achat',
          margin: 'Marge',

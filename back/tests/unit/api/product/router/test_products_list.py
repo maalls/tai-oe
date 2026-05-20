@@ -28,3 +28,4 @@ def test_products_list_returns_payload():
     assert response.status_code == 200
     assert response.json()["products"][0]["id"] == "p-1"
     assert response.json()["products"][0]["qs"]["sku"] == ["ABC"]
+    assert response.json()["products"][0]["brand"] == {}

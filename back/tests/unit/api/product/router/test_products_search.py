@@ -1,4 +1,5 @@
 import pytest
+from decimal import Decimal
 
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
@@ -95,3 +96,38 @@ def test_products_search_returns_empty_payload_when_no_rows():
 
     assert response.status_code == 200
     assert response.json() == {"products": [], "total_count": 0}
+
+
+def test_products_search_serializes_decimal_tarif_values():
+    class _DecimalDb:
+        def execute_dict_query(self, query, params=None):
+            return [
+                {
+                    "id": "p-dec",
+                    "marque": "ACME",
+                    "refciale": "EXS07MSC3K",
+                    "libelle240": "Produit Decimal",
+                    "tarif": Decimal("42.50"),
+                    "brand_id": "b-1",
+                    "brand_name": "Acme",
+                    "family_codes": [],
+                    "total_count": 1,
+                }
+            ]
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: _DecimalDb()
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/products/search",
+        params={
+            "refciale": "EXS07MSC3K",
+            "exact_match": "true",
+            "limit": 500,
+            "offset": 0,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["products"][0]["tarif"] == 42.5

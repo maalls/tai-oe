@@ -65,6 +65,10 @@ class FakeQuery:
 		self.filters.append((column, value))
 		return self
 
+	def is_(self, column: str, value: object):
+		self.filters.append((f"{column}__is", value))
+		return self
+
 	def limit(self, value: int):
 		return self
 
@@ -485,3 +489,57 @@ def test_import_products_creates_product_and_families_from_commerce_rows():
 		"families_created": 1,
 		"product_family_created": 2,
 	}
+
+
+def test_import_products_reuses_existing_null_type_family_with_is_null_filter():
+	class _StrictNullFamilyClient(FakeSupabaseClient):
+		def execute(self, query: FakeQuery):
+			if query.table_name == "family" and query.payload is None:
+				filters = dict(query.filters)
+				brand_id = filters.get("brand_id")
+				code = filters.get("code")
+				if "type__is" in filters and str(filters.get("type__is")).lower() == "null":
+					family_id = self.family_rows.get((brand_id, None, code))
+					if family_id is None:
+						return FakeResponse([])
+					return FakeResponse([{"id": family_id}])
+
+				# Simulate PostgREST behavior: eq(type, None) does not match SQL NULL rows.
+				if "type" in filters and filters.get("type") is None:
+					return FakeResponse([])
+
+			return super().execute(query)
+
+	workbook = object()
+	fake_pandas = FakePandas(workbook)
+	fake_pandas.commerce_df = pd.DataFrame(
+		[
+			{
+				"MARQUE": "ABB",
+				"REFCIALE": "ABB-SKU",
+				"LIBELLE40": "Existing Product",
+				"LIBELLE80": None,
+				"LIBELLE240": None,
+				"TARIF": 10.5,
+				"TVA": 20,
+				"FAM1": "R",
+				"FAM1L": "Raccordement",
+				"FAM2": None,
+				"FAM2L": None,
+				"FAM3": None,
+				"FAM3L": None,
+			}
+		]
+	)
+
+	supabase_client = _StrictNullFamilyClient()
+	importer = FabdisImporter(fake_pandas, supabase_client)
+	importer.workbook = workbook
+
+	rows = importer.import_products()
+
+	assert len(rows) == 1
+	assert rows[0]["product_id"] == "product-1"
+	assert rows[0]["family_ids"] == ["family-1"]
+	assert supabase_client.inserted_families == []
+	assert importer.last_summary["families_created"] == 0
