@@ -9,6 +9,7 @@ from src.service.auth.oauth_service import OAuthService
 from src.service.csv.file_service import CsvFileService
 from src.service.document.document_service import DocumentService
 from src.service.email.gmail_service import GmailService
+from src.service.email.outlook_service import OutlookService
 from src.service.email.quote_send_service import QuoteSendService
 from src.service.invoice.invoice_service import InvoiceService
 from src.service.product.service import ProductService
@@ -38,6 +39,10 @@ def get_oauth_service() -> OAuthService:
 
 def get_gmail_service() -> GmailService:
     return GmailService()
+
+
+def get_outlook_service() -> OutlookService:
+    return OutlookService()
 
 
 def get_utility_service() -> UtilityService:

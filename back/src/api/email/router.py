@@ -5,7 +5,7 @@ from typing import Any, Callable
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from src.api.dependencies import get_auth_service, get_gmail_service
+from src.api.dependencies import get_auth_service, get_gmail_service, get_outlook_service
 from src.api.email.schemas import (
     GmailAuthorizeQuery,
     GmailClassifyQuery,
@@ -69,7 +69,7 @@ def make_email_provider_router(
         result = service.get_oauth_url(query.redirect_url, user_id=query.user_id)
         return JSONResponse(result, status_code=_status_from_result(result))
 
-    @provider_router.get(f"/api/{prefix}/revoke")
+    @provider_router.api_route(f"/api/{prefix}/revoke", methods=["GET", "POST"])
     def revoke(
         query: ProviderUserQuery = Depends(),
         service: EmailProviderService = Depends(get_service),
@@ -121,6 +121,7 @@ def make_email_provider_router(
 
 
 router.include_router(make_email_provider_router("gmail", get_gmail_service, callback_aliases=["google"]))
+router.include_router(make_email_provider_router("outlook", get_outlook_service))
 
 
 @router.get("/api/gmail/authorize")

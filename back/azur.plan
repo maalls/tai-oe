@@ -22,7 +22,7 @@
 - [x] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`
 - [x] 4 — Ajouter méthodes Outlook dans `OutlookProviderRepository`
 - [x] 5 — Créer `back/src/service/email/outlook_service.py`
-- [ ] 6 — Ajouter `get_outlook_service` dans `dependencies.py` + instancier `outlook_router`
+- [x] 6 — Ajouter `get_outlook_service` dans `dependencies.py` + instancier `outlook_router`
 - [ ] 7 — Frontend Settings : section Outlook dans `SettingsPage.vue`
 - [ ] 8 — Validation finale: tests backend/frontend + garde-fous OAuth
 
