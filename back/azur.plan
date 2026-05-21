@@ -11,8 +11,8 @@
 - [x] B — Faire pointer les méthodes Gmail existantes vers ces génériques
 - [x] C — Créer `back/src/service/email/base.py` (ABC `EmailProviderService`)
 - [x] C — Faire implémenter `EmailProviderService` à `GmailService`
-- [ ] D — Créer `make_email_provider_router()` dans le routeur email
-- [ ] D — Remplacer les 6 routes Gmail existantes par la fabrique
+- [x] D — Créer `make_email_provider_router()` dans le routeur email
+- [x] D — Remplacer les 6 routes Gmail existantes par la fabrique
 
 ### Outlook
 - [ ] 0 — Remplacer le flux login Azure existant (`azure_client.py`) par le flux Microsoft OAuth unifié

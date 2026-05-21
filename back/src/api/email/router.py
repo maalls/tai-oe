@@ -1,6 +1,6 @@
-"""FastAPI email router delegating to service layer Gmail service."""
+"""FastAPI email router delegating to provider services."""
 
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -9,15 +9,16 @@ from src.api.dependencies import get_auth_service, get_gmail_service
 from src.api.email.schemas import (
     GmailAuthorizeQuery,
     GmailClassifyQuery,
-    GmailMessagesQuery,
-    GmailOauthCallbackQuery,
-    GmailOauthStartQuery,
-    GmailStatusQuery,
-    GmailUserQuery,
     EmailResyncRequest,
     ImapConfigRequest,
+    ProviderMessagesQuery,
+    ProviderOauthCallbackQuery,
+    ProviderOauthStartQuery,
+    ProviderStatusQuery,
+    ProviderUserQuery,
 )
 from src.service.auth.auth_service import AuthService
+from src.service.email.base import EmailProviderService
 from src.service.email.gmail_service import GmailService
 
 router = APIRouter(tags=["email"])
@@ -45,13 +46,81 @@ def _resolve_user_id(
     return user_data.get("id")
 
 
-@router.get("/api/gmail/status")
-def gmail_status(
-    query: GmailStatusQuery = Depends(),
-    gmail_service: GmailService = Depends(get_gmail_service),
-):
-    result = gmail_service.get_status(user_id=query.user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
+def make_email_provider_router(
+    prefix: str,
+    get_service: Callable[[], EmailProviderService],
+    callback_aliases: list[str] | None = None,
+) -> APIRouter:
+    provider_router = APIRouter(tags=["email"])
+
+    @provider_router.get(f"/api/{prefix}/status")
+    def status(
+        query: ProviderStatusQuery = Depends(),
+        service: EmailProviderService = Depends(get_service),
+    ):
+        result = service.get_status(user_id=query.user_id)
+        return JSONResponse(result, status_code=_status_from_result(result))
+
+    @provider_router.get(f"/api/{prefix}/oauth/start")
+    def oauth_start(
+        query: ProviderOauthStartQuery = Depends(),
+        service: EmailProviderService = Depends(get_service),
+    ):
+        result = service.get_oauth_url(query.redirect_url, user_id=query.user_id)
+        return JSONResponse(result, status_code=_status_from_result(result))
+
+    @provider_router.get(f"/api/{prefix}/revoke")
+    def revoke(
+        query: ProviderUserQuery = Depends(),
+        service: EmailProviderService = Depends(get_service),
+    ):
+        result = service.revoke(user_id=query.user_id)
+        return JSONResponse(result, status_code=_status_from_result(result))
+
+    @provider_router.get(f"/api/{prefix}/profile")
+    def profile(
+        query: ProviderUserQuery = Depends(),
+        service: EmailProviderService = Depends(get_service),
+    ):
+        result = service.get_profile(user_id=query.user_id)
+        return JSONResponse(result, status_code=_status_from_result(result))
+
+    @provider_router.get(f"/api/{prefix}/oauth/callback")
+    def oauth_callback(
+        query: ProviderOauthCallbackQuery = Depends(),
+        service: EmailProviderService = Depends(get_service),
+    ):
+        result = service.oauth_callback(code=query.code, state=query.state)
+        if result.get("status") == "ok":
+            redirect_url = result.get("redirect_url") or "http://localhost:5173/settings"
+            return RedirectResponse(url=redirect_url, status_code=302)
+        return JSONResponse(result, status_code=500)
+
+    @provider_router.get(f"/api/{prefix}/messages")
+    def messages(
+        query: ProviderMessagesQuery = Depends(),
+        authorization: str | None = Header(default=None),
+        service: EmailProviderService = Depends(get_service),
+        auth_service: AuthService = Depends(get_auth_service),
+    ):
+        user_id = _resolve_user_id(query.user_id, authorization, auth_service)
+        if not user_id:
+            return JSONResponse({"status": "error", "message": "Missing user_id"}, status_code=400)
+
+        result = service.list_messages(user_id=user_id, max_results=query.max_results, force=query.force)
+        return JSONResponse(result, status_code=_status_from_result(result))
+
+    for alias in callback_aliases or []:
+        provider_router.add_api_route(
+            f"/api/{alias}/oauth/callback",
+            oauth_callback,
+            methods=["GET"],
+        )
+
+    return provider_router
+
+
+router.include_router(make_email_provider_router("gmail", get_gmail_service, callback_aliases=["google"]))
 
 
 @router.get("/api/gmail/authorize")
@@ -60,61 +129,6 @@ def gmail_authorize(
     gmail_service: GmailService = Depends(get_gmail_service),
 ):
     result = gmail_service.authorize(redirect_url=query.redirect_url)
-    return JSONResponse(result, status_code=_status_from_result(result))
-
-
-@router.get("/api/gmail/oauth/start")
-def gmail_oauth_start(
-    query: GmailOauthStartQuery = Depends(),
-    gmail_service: GmailService = Depends(get_gmail_service),
-):
-    result = gmail_service.get_oauth_url(query.redirect_url, user_id=query.user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
-
-
-@router.get("/api/gmail/revoke")
-def gmail_revoke(
-    query: GmailUserQuery = Depends(),
-    gmail_service: GmailService = Depends(get_gmail_service),
-):
-    result = gmail_service.revoke(user_id=query.user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
-
-
-@router.get("/api/gmail/profile")
-def gmail_profile(
-    query: GmailUserQuery = Depends(),
-    gmail_service: GmailService = Depends(get_gmail_service),
-):
-    result = gmail_service.get_profile(user_id=query.user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
-
-
-@router.get("/api/gmail/oauth/callback")
-@router.get("/api/google/oauth/callback")
-def gmail_oauth_callback(
-    query: GmailOauthCallbackQuery = Depends(),
-    gmail_service: GmailService = Depends(get_gmail_service),
-):
-    result = gmail_service.oauth_callback(code=query.code, state=query.state)
-    if result.get("status") == "ok":
-        redirect_url = result.get("redirect_url") or "http://localhost:5173/settings"
-        return RedirectResponse(url=redirect_url, status_code=302)
-    return JSONResponse(result, status_code=500)
-
-
-@router.get("/api/gmail/messages")
-def gmail_messages(
-    query: GmailMessagesQuery = Depends(),
-    authorization: str | None = Header(default=None),
-    gmail_service: GmailService = Depends(get_gmail_service),
-    auth_service: AuthService = Depends(get_auth_service),
-):
-    user_id = _resolve_user_id(query.user_id, authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"status": "error", "message": "Missing user_id"}, status_code=400)
-
-    result = gmail_service.list_messages(user_id=user_id, max_results=query.max_results, force=query.force)
     return JSONResponse(result, status_code=_status_from_result(result))
 
 
