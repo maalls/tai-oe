@@ -3,7 +3,7 @@
       <nav class="flex gap-2 px-6 py-4 items-center">
          <RouterLink to="/chat" class="flex items-center gap-3 mr-6" title="Chat">
             <img src="../../assets/logo-white.png" alt="Acme Logo" class="h-8 w-8" />
-            <span class="text-xl font-semibold text-white">Acme</span>
+            <span class="text-xl font-semibold text-white">GME</span>
          </RouterLink>
          <router-link
             v-for="page in pages"
