@@ -5,8 +5,8 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_db
 from src.api.main import create_app
+from src.api.product.router import get_db
 
 
 class _FakeDB:

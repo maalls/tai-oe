@@ -14,9 +14,9 @@
                <h1 class="text-3xl font-bold text-gray-900">Family</h1>
                <p class="text-sm text-gray-500">Manage the details for this family.</p>
             </div>
-            <button type="button" class="text-sm text-gray-600 hover:text-gray-900" @click="goBack">
+            <ActionButton type="button" variant="neutral" size="xs" @click="goBack">
                Back to Families
-            </button>
+            </ActionButton>
          </div>
          <div v-if="errorMessage" class="rounded-lg bg-red-50 text-red-700 p-4">
             {{ errorMessage }}
@@ -54,6 +54,7 @@
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
+import ActionButton from '../common/ActionButton.vue';
 import { getFamily } from '../../api/family';
 
 interface FamilyRecord {

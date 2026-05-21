@@ -36,9 +36,14 @@
                         {{ t('opportunities.deleteOpportunityDescription') }}
                      </p>
                   </div>
-                  <button @click="showDeleteConfirmation = true" class="btn btn-danger ml-4">
+                  <ActionButton
+                     type="button"
+                     variant="danger"
+                     class="ml-4"
+                     @click="showDeleteConfirmation = true"
+                  >
                      {{ t('opportunities.deleteOpportunity') }}
-                  </button>
+                  </ActionButton>
                </div>
             </div>
          </div>
@@ -63,14 +68,23 @@
                <li>{{ t('opportunities.deleteListItemRelatedData') }}</li>
             </ul>
             <div class="flex gap-3 justify-end">
-               <button @click="showDeleteConfirmation = false" class="btn btn-secondary">
+               <ActionButton
+                  type="button"
+                  variant="neutral"
+                  @click="showDeleteConfirmation = false"
+               >
                   {{ t('common.cancel') }}
-               </button>
-               <button @click="deleteOpportunity" :disabled="isDeleting" class="btn btn-danger">
+               </ActionButton>
+               <ActionButton
+                  type="button"
+                  variant="danger"
+                  :disabled="isDeleting"
+                  @click="deleteOpportunity"
+               >
                   {{
                      isDeleting ? t('opportunities.deleting') : t('opportunities.deleteOpportunity')
                   }}
-               </button>
+               </ActionButton>
             </div>
          </div>
       </div>
@@ -84,6 +98,7 @@ import { useAuth } from '../../../../stores/auth';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useApiQuery } from '../../../../composables/useApiQuery';
+import ActionButton from '../../../common/ActionButton.vue';
 
 const route = useRoute();
 const router = useRouter();

@@ -18,13 +18,14 @@
                </div>
             </div>
             <div class="flex gap-2">
-               <button
+               <ActionButton
                   v-if="!isNewBrand"
+                  type="button"
+                  :variant="showForm ? 'neutral' : 'primary'"
                   @click="showForm = !showForm"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700"
                >
                   {{ showForm ? t('products.brand.cancelButton') : t('products.brand.editButton') }}
-               </button>
+               </ActionButton>
             </div>
          </div>
 
@@ -123,11 +124,7 @@
                </div>
 
                <div class="flex gap-2 pt-2">
-                  <button
-                     type="submit"
-                     :disabled="isSaving"
-                     class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 disabled:bg-gray-400"
-                  >
+                  <ActionButton type="submit" :disabled="isSaving" variant="primary">
                      {{
                         isSaving
                            ? t('common.saving')
@@ -135,14 +132,10 @@
                              ? t('common.create')
                              : t('common.edit')
                      }}
-                  </button>
-                  <button
-                     type="button"
-                     @click="resetForm"
-                     class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium text-sm hover:bg-gray-300"
-                  >
+                  </ActionButton>
+                  <ActionButton type="button" variant="neutral" @click="resetForm">
                      {{ t('products.brand.reset') }}
-                  </button>
+                  </ActionButton>
                </div>
             </form>
          </div>
@@ -152,22 +145,17 @@
                <h2 class="text-xl font-bold text-gray-900">
                   {{ t('products.brand.familiesTitle', { count: filteredFamilies.length }) }}
                </h2>
-               <button
+               <ActionButton
                   type="button"
+                  :variant="showDiscountOnly ? 'primary' : 'neutral'"
                   @click="showDiscountOnly = !showDiscountOnly"
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-                  :class="
-                     showDiscountOnly
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  "
                >
                   {{
                      showDiscountOnly
                         ? t('products.brand.showingDiscountsOnly')
                         : t('products.brand.showingAllFamilies')
                   }}
-               </button>
+               </ActionButton>
             </div>
             <div class="bg-white border border-gray-200 rounded-lg shadow overflow-hidden">
                <table class="w-full">
@@ -253,6 +241,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
+import ActionButton from '../common/ActionButton.vue';
 import { useI18n } from '../../i18n/useI18n';
 import {
    createBrand,

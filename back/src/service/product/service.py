@@ -16,10 +16,21 @@ class ProductService:
         limit = int(qs.get("limit", [10])[0])
         query = self.supabase.from_("product").select("*,brand(*),product_family(*,family(*))")
         if sku:
-            query = query.ilike("sku", f"{sku}")
+            query = query.ilike("sku", f"{str(sku).strip()}%")
         query = query.limit(limit)
         result = query.execute()
         return result.data if result and result.data else []
+
+    def create_family(self, family_code: str, brand_id: str) -> Dict[str, Any]:
+        payload = {
+            "brand_id": brand_id,
+            "code": family_code,
+            "type": family_code,
+        }
+        result = self.supabase.from_("family").insert(payload).execute()
+        if not result.data:
+            raise RuntimeError("Failed to insert family")
+        return result.data[0]
 
     def post_product(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         product = self.upsert_product(payload)

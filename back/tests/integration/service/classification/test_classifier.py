@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -6,7 +7,13 @@ import pytest
 from src.service.classification.service import EmailClassifier
 
 
+def _require_live_llm_tests() -> None:
+    if os.getenv("RUN_LLM_TESTS", "").lower() not in {"1", "true", "yes"}:
+        pytest.skip("Live LLM tests disabled. Set RUN_LLM_TESTS=1 to enable.")
+
+
 def test_classify_returns_normalized_category():
+    _require_live_llm_tests()
     classifier = EmailClassifier()
 
     result = classifier.classify("Request for quotation", "Please send your prices.")
@@ -17,6 +24,7 @@ def test_classify_returns_normalized_category():
 
 
 def test_classify_newsletter():
+    _require_live_llm_tests()
     classifier = EmailClassifier()
 
     result = classifier.classify(
@@ -30,6 +38,7 @@ def test_classify_newsletter():
 
 
 def test_classify_other():
+    _require_live_llm_tests()
     classifier = EmailClassifier()
 
     result = classifier.classify(
@@ -48,6 +57,7 @@ def test_classifier_on_sample_emails():
     
     This test makes real LLM calls and is slow. Run with: pytest -m slow
     """
+    _require_live_llm_tests()
     classifier = EmailClassifier()
     
     # Load sample emails

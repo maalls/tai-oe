@@ -2,10 +2,15 @@
    <div>
       <AccountNavHeader>
          <template #actions>
-            <button @click="loadContacts" :disabled="isLoading" class="btn btn-neutral">
+            <ActionButton
+               type="button"
+               variant="neutral"
+               :disabled="isLoading"
+               @click="loadContacts"
+            >
                🔄 Refresh
-            </button>
-            <router-link to="/contacts/new" class="btn btn-primary"> + Add Contact </router-link>
+            </ActionButton>
+            <ActionButton to="/contacts/new" variant="primary"> + Add Contact </ActionButton>
          </template>
       </AccountNavHeader>
       <div class="p-6">
@@ -92,6 +97,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { listContacts, type Contact } from '../../api/contact';
 import AccountNavHeader from '../account/AccountNavHeader.vue';
+import ActionButton from '../common/ActionButton.vue';
 
 const contacts = ref<Contact[]>([]);
 const isLoading = ref(false);

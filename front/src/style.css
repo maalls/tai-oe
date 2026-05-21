@@ -1,5 +1,14 @@
 @import 'tailwindcss';
 
+@layer base {
+   button {
+      appearance: none;
+      border: 0;
+      margin: 0;
+      line-height: 1;
+   }
+}
+
 .opportunity-page {
    padding: 1rem;
    border: 0px solid blue;

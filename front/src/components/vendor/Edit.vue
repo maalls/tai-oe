@@ -56,7 +56,7 @@
                </div>
 
                <div class="flex gap-2 pt-2">
-                  <button type="submit" :disabled="isSaving" class="btn btn-primary">
+                  <ActionButton type="submit" :disabled="isSaving" variant="primary">
                      {{
                         isSaving
                            ? t('vendors.actions.saving')
@@ -64,19 +64,19 @@
                              ? t('vendors.actions.create')
                              : t('vendors.actions.update')
                      }}
-                  </button>
-                  <button type="button" @click="resetForm" class="btn btn-secondary">
+                  </ActionButton>
+                  <ActionButton type="button" variant="neutral" @click="resetForm">
                      {{ t('vendors.actions.reset') }}
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                      v-if="!isNewVendor"
                      type="button"
+                     variant="danger"
                      @click="deleteVendor"
                      :disabled="isDeleting"
-                     class="btn btn-danger"
                   >
                      {{ isDeleting ? t('vendors.actions.deleting') : t('vendors.actions.delete') }}
-                  </button>
+                  </ActionButton>
                </div>
             </form>
          </div>
@@ -121,6 +121,7 @@ import {
 } from '../../api/vendor';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import Breadcrumb from '../common/Breadcrumb.vue';
+import ActionButton from '../common/ActionButton.vue';
 import { useBrandFamilyData } from '../products/useBrandFamilyData';
 import BrandListTable from '../products/components/BrandListTable.vue';
 

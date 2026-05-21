@@ -1,12 +1,19 @@
 from pathlib import Path
+import os
 import pytest
 
 from src.lib.extractors.text_reader import extract_company_from_text
+
+
+def _require_live_llm_tests() -> None:
+	if os.getenv("RUN_LLM_TESTS", "").lower() not in {"1", "true", "yes"}:
+		pytest.skip("Live LLM tests disabled. Set RUN_LLM_TESTS=1 to enable.")
 
 @pytest.mark.slow
 @pytest.mark.timeout(180)
 
 def test_extract_company_from_text():
+	_require_live_llm_tests()
 
 	sample_path = Path(__file__).parent / "sample" / "rfp.txt"
 	assert sample_path.exists(), f"Sample text not found: {sample_path}"
