@@ -37,10 +37,20 @@ function parseEnvFile(filePath: string): Record<string, string> {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
    const localEnv = loadEnv(mode, process.cwd(), '');
-   const apiUrl = localEnv.VITE_API_URL || process.env.VITE_API_URL || 'http://127.0.0.1:8088';
+   const apiUrl = localEnv.VITE_API_URL || process.env.VITE_API_URL;
+   if (!apiUrl) {
+      throw new Error(
+         'Missing required VITE_API_URL. Define it in your .env/.env.local or environment before starting Vite.'
+      );
+   }
    
-   // Determine proxy target: if apiUrl is relative path (like /api), use localhost:8080, otherwise use apiUrl
-   const apiProxyTarget = apiUrl.startsWith('http') ? apiUrl : 'http://localhost:8080';
+   const apiProxyTargetEnv = localEnv.VITE_API_PROXY_TARGET || process.env.VITE_API_PROXY_TARGET;
+   const apiProxyTarget = apiUrl.startsWith('http') ? apiUrl : apiProxyTargetEnv;
+   if (!apiProxyTarget) {
+      throw new Error(
+         'Missing required VITE_API_PROXY_TARGET when VITE_API_URL is relative. Define it in your .env/.env.local or environment.'
+      );
+   }
    
    const sharedEnvRel = localEnv.SUPABASE_ENV_FILE || '../supabase/.env.prod';
    const sharedEnvPath = path.isAbsolute(sharedEnvRel)
