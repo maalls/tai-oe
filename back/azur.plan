@@ -20,11 +20,11 @@
 - [ ] 1 — Azure AD : App Registration + scopes + redirect URI (portail Azure)
 - [x] 2 — Migration `044_add_outlook_token.sql` (table `oauth_tokens`) + màj schéma SQL
 - [x] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`
-- [ ] 4 — Ajouter méthodes Outlook dans `EmailRepository`
+- [ ] 4 — Ajouter méthodes Outlook dans `OutlookProviderRepository`
 - [ ] 5 — Créer `back/src/service/email/outlook_service.py`
 - [ ] 6 — Ajouter `get_outlook_service` dans `dependencies.py` + instancier `outlook_router`
 - [ ] 7 — Frontend Settings : section Outlook dans `SettingsPage.vue`
-- [ ] 8 — Tests manquants / couverture finale (audit `pytest --co -q`)
+- [ ] 8 — Validation finale: tests backend/frontend + garde-fous OAuth
 
 ---
 
@@ -134,13 +134,16 @@ service/email/gmail_service.py
 
 service/email/outlook_service.py                    ← nouveau
     ├→ service/email/base.py
-    └→ repository/email_repository.py
+    ├→ repository/email_repository.py
+    └→ repository/outlook_provider_repository.py      ← nouveau
 
 repository/email_repository.py
-    ├→ infrastructure/clients/gmail_client.py
-    ├→ infrastructure/clients/outlook_client.py        ← nouveau
-    ├→ infrastructure/clients/oauth/state.py           ← nouveau
     └→ infrastructure/clients/supabase.py
+
+repository/outlook_provider_repository.py            ← nouveau
+    ├→ infrastructure/clients/outlook_client.py
+    ├→ infrastructure/clients/oauth/state.py
+    └→ repository/oauth/token_repository.py
 
 infrastructure/clients/oauth/state.py               ← nouveau (pur, zéro dep interne)
 infrastructure/clients/outlook_client.py            ← nouveau (requests + env vars uniquement)
@@ -157,24 +160,24 @@ infrastructure/clients/oauth/azure_client.py        ← màj pour utiliser state
 
 `dependencies.py` instancie directement `EmailRepository()` pour `QuoteSendService` et `InvoiceService` (contourne la couche service). **Ne pas reproduire ce pattern** : `OutlookService` doit toujours passer par `get_outlook_service`, jamais par `EmailRepository` directement depuis le router.
 
-### 2 — Incohérence dans l'Étape 3 : méthodes Outlook dans `EmailRepository`
+### 2 — State OAuth: éviter le payload non signé
 
-La table de l'Étape 3 liste `_save_outlook_token`, `_get_outlook_token` comme méthodes dédiées. Après l'abstraction **B**, ces wrappers n'ont plus lieu d'être — l'implémentation appelle directement :
-```python
-self.oauth_token_repository.set_token_json(user_id, "microsoft", "mail", json.dumps(token_dict))
-self.oauth_token_repository.get_token_json(user_id, "microsoft", "mail")
-```
-La table de l'Étape 3 est indicative ; c'est l'abstraction B qui fait foi.
+Le state OAuth ne doit pas être un JSON base64 nu. Il doit être signé (HMAC), avec durée de vie courte, et idéalement un `nonce` anti-rejeu.
 
-### 3 — `OutlookService` n'a pas besoin de `ServiceFactory`
+### 3 — Validation stricte du `redirect_url`
+
+Le callback OAuth ne doit rediriger que vers une URL autorisée (allowlist backend), sinon fallback vers une URL sûre du frontend.
+
+### 4 — `OutlookService` n'a pas besoin de `ServiceFactory`
 
 `GmailService` dépend de `ServiceFactory` pour le workflow de classification. `OutlookService` n'a pas de classify — **ne pas importer `ServiceFactory`**. L'ABC `EmailProviderService` ne doit pas déclarer `classify_unclassified` comme méthode abstraite.
 
-### 4 — `state.py` partagé entre `repository/` et `infrastructure/`
+### 5 — Verbes HTTP et routes sans ambiguïté
 
-`email_repository.py` (couche `repository/`) importera `state.py` (couche `infrastructure/`). Direction `repository → infrastructure` : correct. `azure_client.py` (même couche `infrastructure/`) l'importe aussi : même niveau, correct. Pas de cycle.
+- Utiliser `POST` pour `revoke` (action non idempotente qui modifie l'état).
+- Éviter les collisions de routes: la fabrique gère les routes OAuth communes, les routes `messages` restent spécifiques par provider.
 
-### 5 — Remplacement direct du login Azure (et non dépréciation longue)
+### 6 — Remplacement direct du login Azure (et non dépréciation longue)
 
 Le frontend actuel ne consomme pas le flux login Azure legacy. Un remplacement direct est donc possible.
 
@@ -186,144 +189,31 @@ Le frontend actuel ne consomme pas le flux login Azure legacy. Un remplacement d
 
 ## Abstractions pour éviter la duplication
 
-L'analyse du code Gmail révèle 4 patterns dupliqués si on créait Outlook naïvement :
+Conserver uniquement ces 4 abstractions :
 
-### A — Encode/decode du state OAuth (utilitaire pur)
+### A — Module OAuth state partagé
 
-Le même base64-JSON state apparaît dans `get_gmail_oauth_url`, `handle_gmail_oauth_callback`, et dans `azure_client.py`. Extraire en module partagé.
+- Fichier: `back/src/infrastructure/clients/oauth/state.py`
+- Règle: state signé (HMAC), expiré rapidement, nonce anti-rejeu.
+- Usage: remplacer les encodages inline dans `email_repository.py` et `azure_client.py`.
 
-**Fichier à créer :** `back/src/infrastructure/clients/oauth/state.py`
+### B — Helpers génériques de colonnes profile
 
-```python
-def encode_oauth_state(payload: dict) -> str:
-    return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+- Garder dans `EmailRepository` uniquement des helpers `_get/_set/_clear_profile_column`.
+- Les wrappers Gmail restent minces.
+- Outlook ne stocke pas dans `profile`: utiliser `oauth_tokens` via le repository provider.
 
-def decode_oauth_state(state: str) -> dict:
-    try:
-        return json.loads(base64.urlsafe_b64decode(state.encode()).decode())
-    except Exception:
-        return {}
-```
+### C — Contrat service provider unique
 
-Remplacer les encodages inline dans `email_repository.py` et `azure_client.py` par ces fonctions.
+- Fichier: `back/src/service/email/base.py`
+- Interface commune: `get_status`, `get_oauth_url`, `oauth_callback`, `get_profile`, `revoke`, `list_messages`.
+- Implémentations: `GmailService` et `OutlookService`.
 
----
+### D — Fabrique de routes OAuth
 
-### B — Accès colonne token dans `profile` (repository)
-
-`_get_profile_token_b64`, `_save_profile_token`, `_clear_profile_token` font exactement la même chose — lire/écrire/effacer une colonne texte dans `profile`. Seul le nom de colonne change.
-
-**Refactorer dans `EmailRepository`** en 3 méthodes génériques :
-
-```python
-def _get_profile_column(self, user_id: str, column: str) -> str | None:
-    # SELECT {column} FROM profile WHERE id = user_id
-
-def _set_profile_column(self, user_id: str, column: str, value: str | None) -> bool:
-    # UPDATE profile SET {column} = value WHERE id = user_id
-
-def _clear_profile_column(self, user_id: str, column: str) -> bool:
-    return self._set_profile_column(user_id, column, None)
-```
-
-Les méthodes Gmail existantes deviennent des wrappers d'une ligne :
-```python
-def _get_profile_token_b64(self, user_id): 
-    return self._get_profile_column(user_id, "google_token_pickle")
-
-def _save_profile_token(self, user_id, creds):
-    return self._set_profile_column(user_id, "google_token_pickle", 
-                                    base64.b64encode(pickle.dumps(creds)).decode())
-
-def _clear_profile_token(self, user_id):
-    return self._clear_profile_column(user_id, "google_token_pickle")
-```
-
-Outlook utilise le repository dédié OAuth (`oauth_tokens`) avec la clé composée `(user_id, provider, service)`.
-
----
-
-### C — Interface partagée des services email (ABC)
-
-`GmailService` et `OutlookService` ont exactement la même surface API. Extraire une interface.
-
-**Fichier à créer :** `back/src/service/email/base.py`
-
-```python
-from abc import ABC, abstractmethod
-
-class EmailProviderService(ABC):
-    @abstractmethod
-    def get_status(self, user_id: str | None) -> dict: ...
-    @abstractmethod
-    def get_oauth_url(self, redirect_url: str | None, user_id: str | None) -> dict: ...
-    @abstractmethod
-    def oauth_callback(self, code: str, state: str | None) -> dict: ...
-    @abstractmethod
-    def get_profile(self, user_id: str | None) -> dict: ...
-    @abstractmethod
-    def revoke(self, user_id: str | None) -> dict: ...
-    @abstractmethod
-    def list_messages(self, user_id: str, max_results: int, force: bool) -> dict: ...
-```
-
-`GmailService(EmailProviderService)` et `OutlookService(EmailProviderService)` implémentent cette interface.
-
----
-
-### D — Fabrique de routeur OAuth email
-
-Les 6 routes Gmail ont une structure identique (même query params, même pattern de réponse). Créer une fabrique plutôt que de dupliquer 6 routes.
-
-**Dans `back/src/api/email/router.py`** (ou un fichier `provider_router.py`) :
-
-```python
-from fastapi import APIRouter, Depends
-from src.service.email.base import EmailProviderService
-
-def make_email_provider_router(prefix: str, get_service) -> APIRouter:
-    router = APIRouter(tags=[prefix])
-
-    @router.get(f"/api/{prefix}/status")
-    def status(query=Depends(ProviderStatusQuery), svc: EmailProviderService = Depends(get_service)):
-        result = svc.get_status(user_id=query.user_id)
-        return JSONResponse(result, status_code=_status_from_result(result))
-
-    @router.get(f"/api/{prefix}/oauth/start")
-    def oauth_start(query=Depends(ProviderOauthStartQuery), svc: EmailProviderService = Depends(get_service)):
-        result = svc.get_oauth_url(query.redirect_url, user_id=query.user_id)
-        return JSONResponse(result, status_code=_status_from_result(result))
-
-    @router.get(f"/api/{prefix}/oauth/callback")
-    def oauth_callback(query=Depends(ProviderOauthCallbackQuery), svc: EmailProviderService = Depends(get_service)):
-        result = svc.oauth_callback(code=query.code, state=query.state)
-        if result.get("status") == "ok":
-            return RedirectResponse(result["redirect_url"])
-        return JSONResponse(result, status_code=400)
-
-    @router.get(f"/api/{prefix}/revoke")
-    def revoke(query=Depends(ProviderUserQuery), svc: EmailProviderService = Depends(get_service)):
-        result = svc.revoke(user_id=query.user_id)
-        return JSONResponse(result, status_code=_status_from_result(result))
-
-    @router.get(f"/api/{prefix}/profile")
-    def profile(query=Depends(ProviderUserQuery), svc: EmailProviderService = Depends(get_service)):
-        result = svc.get_profile(user_id=query.user_id)
-        return JSONResponse(result, status_code=_status_from_result(result))
-
-    @router.get(f"/api/{prefix}/messages")
-    def messages(query=Depends(ProviderMessagesQuery), svc: EmailProviderService = Depends(get_service)):
-        result = svc.list_messages(query.user_id, query.max_results, query.force)
-        return JSONResponse(result, status_code=_status_from_result(result))
-
-    return router
-
-# Instanciation
-gmail_router = make_email_provider_router("gmail", get_gmail_service)
-outlook_router = make_email_provider_router("outlook", get_outlook_service)
-```
-
-Les routes spécifiques à Gmail (alias `/api/google/oauth/callback`, `/api/gmail/authorize` legacy, messages avec classify) restent dans le routeur Gmail dédié.
+- Centraliser les routes communes: `status`, `oauth/start`, `oauth/callback`, `revoke` (POST), `profile`.
+- Ne pas inclure `messages` dans la fabrique (pour éviter collision Gmail classify).
+- Garder dans Gmail les routes spécifiques: authorize legacy, alias callback Google, messages avec `classify`.
 
 ---
 
@@ -331,7 +221,7 @@ Les routes spécifiques à Gmail (alias `/api/google/oauth/callback`, `/api/gmai
 
 ### Étape 1 — Migration DB
 
-Ajouter la colonne token Outlook dans la table `profile`.
+Créer une table dédiée `oauth_tokens` (pas de nouvelle colonne dans `profile`).
 
 **Fichier :** `back/migrations/044_add_outlook_token.sql`
 
@@ -380,20 +270,20 @@ Fonctions utilitaires (niveau module, miroir de `azure_client.py`) :
 ```python
 def get_outlook_oauth_url(redirect_url=None, user_id=None) -> dict:
     # Scopes email : Mail.Read Mail.Send offline_access
-    # State : base64 JSON {redirect_url, user_id}
+    # State signé (HMAC) + expiration courte + nonce
     # Retourne {status: "ok", auth_url: "https://login.microsoftonline.com/..."}
 
 def handle_outlook_oauth_callback(code, state=None) -> dict:
     # Échange code → tokens (POST token endpoint)
-    # Décode state → user_id, redirect_url
+    # Décode/valide state → user_id, redirect_url
     # Retourne {status: "ok", tokens: {...}, user_id, redirect_url}
 ```
 
 ---
 
-### Étape 3 — Méthodes dans EmailRepository
+### Étape 4 — Méthodes Outlook dans OutlookProviderRepository
 
-**Fichier :** `back/src/repository/email_repository.py`
+**Fichier :** `back/src/repository/outlook_provider_repository.py`
 
 Ajouter (à côté des méthodes Gmail équivalentes) :
 
@@ -411,7 +301,7 @@ Ajouter (à côté des méthodes Gmail équivalentes) :
 
 ---
 
-### Étape 4 — Service Outlook
+### Étape 5 — Service Outlook
 
 **Fichier :** `back/src/service/email/outlook_service.py`
 
@@ -419,7 +309,7 @@ Classe `OutlookService` (miroir de `GmailService`) qui délègue à `EmailReposi
 
 ```python
 class OutlookService:
-    def __init__(self, email_repository): ...
+    def __init__(self, email_repository, provider_repository): ...
     def get_status(self, user_id) -> dict: ...
     def get_oauth_url(self, redirect_url, user_id) -> dict: ...
     def oauth_callback(self, code, state) -> dict: ...
@@ -430,7 +320,7 @@ class OutlookService:
 
 ---
 
-### Étape 5 — Routes API
+### Étape 6 — Routes API
 
 **Fichier :** `back/src/api/email/router.py` — ajouter les routes suivantes (ou dans un fichier `outlook_router.py` séparé) :
 
@@ -439,24 +329,24 @@ class OutlookService:
 | `/api/outlook/status` | GET | `user_id?` | `outlook_status()` |
 | `/api/outlook/oauth/start` | GET | `redirect_url?, user_id?` | `outlook_oauth_start()` |
 | `/api/outlook/oauth/callback` | GET | `code, state?` | `outlook_oauth_callback()` |
-| `/api/outlook/revoke` | GET | `user_id?` | `outlook_revoke()` |
+| `/api/outlook/revoke` | POST | `user_id?` | `outlook_revoke()` |
 | `/api/outlook/profile` | GET | `user_id?` | `outlook_profile()` |
 | `/api/outlook/messages` | GET | `user_id?, max_results?, force?` | `outlook_messages()` |
 
-La route callback redirige vers `redirect_url` (extrait du state) exactement comme `/api/gmail/oauth/callback`.
+La route callback redirige vers un `redirect_url` validé par allowlist backend (sinon fallback sûr).
 
 Ajouter `get_outlook_service` dans `back/src/api/dependencies.py` (miroir de `get_gmail_service`).
 
 ---
 
-### Étape 5b — Refactoring du routeur Gmail existant
+### Étape 6b — Refactoring du routeur Gmail existant
 
-Remplacer les 6 routes répétitives de `router.py` par `make_email_provider_router("gmail", get_gmail_service)`. Garder uniquement les routes spécifiques :
+Remplacer les routes OAuth répétitives de `router.py` par `make_email_provider_router("gmail", get_gmail_service)`. Garder uniquement les routes spécifiques :
 - `GET /api/gmail/authorize` (legacy, appel sans `user_id`)
 - `GET /api/google/oauth/callback` (alias Google)
 - `GET /api/gmail/messages` avec le paramètre `classify`
 
-### Étape 6 — Frontend Settings
+### Étape 7 — Frontend Settings
 
 **Fichier :** `front/src/components/settings/IndexPage.vue`
 
@@ -468,13 +358,13 @@ Ajouter une section "Outlook / Microsoft" sous la section Gmail existante (copie
   - `loadOutlookStatus()` → `GET /api/outlook/status?user_id=...`
   - `loadOutlookProfile()` → `GET /api/outlook/profile?user_id=...`
   - `handleOutlookAuthorize()` → `GET /api/outlook/oauth/start?...` puis `window.location.href = auth_url`
-  - `handleOutlookRevoke()` → `GET /api/outlook/revoke?user_id=...`
+    - `handleOutlookRevoke()` → `POST /api/outlook/revoke?user_id=...`
 - Template : badge statut + bouton "Autoriser Outlook" / "Déconnecter" + affichage email connecté
 - Appel `loadOutlookStatus()` dans `onMounted`
 
 ---
 
-### Étape 7 — (Optionnel) Intégration dans la page Mail
+### Optionnel — Intégration dans la page Mail
 
 **Fichier :** `front/src/components/mail/IndexPage.vue`
 
@@ -525,10 +415,13 @@ back/src/service/email/outlook_service.py
   → back/tests/unit/service/email/test_outlook_service_oauth_flow.py
   → back/tests/unit/service/email/test_outlook_service_revoke.py
 
-back/src/repository/email_repository.py  (méthodes génériques)
-  → back/tests/unit/repository/email/test_get_profile_column.py
-  → back/tests/unit/repository/email/test_set_profile_column.py
-  → back/tests/unit/repository/email/test_outlook_oauth_callback.py
+back/src/repository/email_repository.py  (métier email uniquement)
+    → back/tests/unit/repository/email/test_get_profile_column.py
+    → back/tests/unit/repository/email/test_set_profile_column.py
+
+back/src/repository/outlook_provider_repository.py
+    → back/tests/unit/repository/outlook_provider/test_outlook_oauth_callback.py
+    → back/tests/unit/repository/outlook_provider/test_get_outlook_status.py
 ```
 
 | # | Étape | Tests à ajouter | Commit message |
@@ -542,10 +435,11 @@ back/src/repository/email_repository.py  (méthodes génériques)
 | 1 | Azure AD : App Registration (portail Azure, hors code) | — | — |
 | 2 | Migration `044_add_outlook_token.sql` + schema `oauth_tokens` | — | `feat(db): add oauth_tokens table for provider tokens` |
 | 3 | `outlook_client.py` | `test_outlook_client_get_profile.py`, `test_outlook_client_list_messages.py`, `test_outlook_client_refresh.py` | `feat(outlook): Microsoft Graph client` |
-| 4 | Méthodes Outlook dans `EmailRepository` | `test_outlook_oauth_callback.py`, `test_get_outlook_status.py` | `feat(outlook): email repository methods` |
+| 4 | `outlook_provider_repository.py` | `test_outlook_oauth_callback.py`, `test_get_outlook_status.py` | `feat(outlook): provider repository methods` |
 | 5 | `outlook_service.py` | `test_outlook_service_get_status.py`, `test_outlook_service_oauth_flow.py`, `test_outlook_service_revoke.py` | `feat(outlook): OutlookService` |
 | 6 | `dependencies.py` + `outlook_router` | Tester les routes via `TestClient` FastAPI | `feat(outlook): API routes` |
 | 7 | Frontend Settings section Outlook | Tests Vitest miroir du composant | `feat(settings): Outlook OAuth connect/disconnect` |
+| 8 | Validation finale backend/frontend + sécurité OAuth | `pytest -q`, tests API OAuth, tests Vitest ciblés | `test(outlook): finalize coverage and oauth safety checks` |
 
 ### Détails de l'étape 0 (remplacement/unification)
 
