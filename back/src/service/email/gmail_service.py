@@ -4,15 +4,34 @@ from typing import Any
 
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
+from src.service.email.email_auth_service import EmailAuthService
 from src.service.classification.handler_service import ClassifyService
 
 
 class GmailService:
     """Expose Gmail-oriented operations for transport layers."""
 
-    def __init__(self, repository: EmailRepository | None = None, service_factory: ServiceFactory | None = None):
+    def __init__(
+        self,
+        repository: EmailRepository | None = None,
+        service_factory: ServiceFactory | None = None,
+        auth_service: EmailAuthService | None = None,
+    ):
         self.repository = repository or EmailRepository()
         self.service_factory = service_factory or ServiceFactory()
+        self.auth_service = auth_service or EmailAuthService()
+
+    def _verify_sender(self, **kwargs: Any) -> None:
+        self.auth_service.verify_sender(
+            user_id=kwargs["user_id"],
+            sender_email=kwargs["sender_email"],
+            sender_name=kwargs["sender_name"],
+            auth_score=kwargs["auth_score"],
+            is_verified=kwargs["is_verified"],
+            spf_status=kwargs["spf_status"],
+            dkim_status=kwargs["dkim_status"],
+            dmarc_status=kwargs["dmarc_status"],
+        )
 
     def get_status(self, user_id: str | None = None) -> dict[str, Any]:
         return self.repository.get_gmail_status(user_id=user_id)
@@ -35,7 +54,12 @@ class GmailService:
     def list_messages(self, user_id: str, max_results: int = 20, force: bool = False) -> dict[str, Any]:
         if not user_id:
             return {"status": "error", "message": "Missing user_id"}
-        return self.repository.fetch_emails(user_id=user_id, max_results=max_results, force=force)
+        return self.repository.fetch_emails(
+            user_id=user_id,
+            max_results=max_results,
+            force=force,
+            verify_sender_callback=self._verify_sender,
+        )
 
     def classify_unclassified(self, user_id: str, limit: int = 200) -> dict[str, Any]:
         if not user_id:
@@ -99,6 +123,7 @@ class GmailService:
             email_id=email_id,
             provider_message_id=provider_message_id,
             user_id=user_id,
+            verify_sender_callback=self._verify_sender,
         )
 
     def delete_email(self, email_id: str, user_id: str) -> dict[str, Any]:

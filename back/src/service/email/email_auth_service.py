@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Dict, List
 
 from src.infrastructure.clients.supabase import get_supabase_service
-from src.service.email.email_auth_parser import EmailAuthParser
+from src.lib.email.auth_parser import EmailAuthParser
 
 
 class EmailAuthService:

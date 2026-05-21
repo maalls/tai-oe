@@ -3,7 +3,7 @@
 import email
 import imaplib
 from html.parser import HTMLParser
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 from pathlib import Path
 from datetime import datetime, timezone
 import re
@@ -16,7 +16,7 @@ from email.utils import parsedate_to_datetime
 from email.header import decode_header
 from cryptography.fernet import Fernet, InvalidToken
 
-from src.service.classification.service import EmailClassifier
+from src.lib.classification.email_classifier import EmailClassifier
 from src.infrastructure.clients.gmail_client import GmailClient
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_rfp_from_text
@@ -1467,7 +1467,14 @@ class EmailRepository:
             }
         }
     
-    def fetch_emails(self, user_id: str, max_results: int = 20, force: bool = False, classify: bool = True) -> Dict:
+    def fetch_emails(
+        self,
+        user_id: str,
+        max_results: int = 20,
+        force: bool = False,
+        classify: bool = True,
+        verify_sender_callback: Optional[Callable[..., None]] = None,
+    ) -> Dict:
         """List messages from Gmail inbox and optionally save to database.
         Only fetches from Gmail if force=True. Otherwise, displays cached results from database.
         
@@ -1498,13 +1505,21 @@ class EmailRepository:
             if force:
                 if classify:
                     print(f"[EmailRepository] → Fetching via {provider}, classifying, and linking contacts (full refresh)")
-                    processing_summary = self.fetch_and_process_emails(user_id, max_results=max_results)
+                    processing_summary = self.fetch_and_process_emails(
+                        user_id,
+                        max_results=max_results,
+                        verify_sender_callback=verify_sender_callback,
+                    )
                 else:
                     print(f"[EmailRepository] → Fetching emails from {provider.upper()} (force refresh)")
                     if provider == "imap":
                         self.fetch_from_imap_and_save(user_id, max_results=max_results)
                     else:
-                        self.fetch_from_gmail_and_save(user_id, max_results=max_results)
+                        self.fetch_from_gmail_and_save(
+                            user_id,
+                            max_results=max_results,
+                            verify_sender_callback=verify_sender_callback,
+                        )
             else:
                 print(f"[EmailRepository] ✓ Using existing emails from DATABASE (no refresh)")
             
@@ -1582,7 +1597,8 @@ class EmailRepository:
         max_results: int = 50, 
         classify_limit: int = 200,
         after_date: str = None,
-        auto_resolve_date: bool = False
+        auto_resolve_date: bool = False,
+        verify_sender_callback: Optional[Callable[..., None]] = None,
     ) -> Dict:
         """Comprehensive email processing: fetch, classify, create contacts/accounts.
         
@@ -1646,6 +1662,7 @@ class EmailRepository:
                     user_id=user_id,
                     max_results=max_results,
                     before_date=after_date,
+                    verify_sender_callback=verify_sender_callback,
                 )
             
             if not fetch_result.get("success"):
@@ -2155,7 +2172,13 @@ class EmailRepository:
             }
     
     
-    def fetch_from_gmail_and_save(self, user_id: str, max_results: int = 20, before_date: str = None) -> Dict:
+    def fetch_from_gmail_and_save(
+        self,
+        user_id: str,
+        max_results: int = 20,
+        before_date: str = None,
+        verify_sender_callback: Optional[Callable[..., None]] = None,
+    ) -> Dict:
         """Fetch emails from Gmail and save to database.
         
         Fetches all new emails until reaching the last fetched email ID.
@@ -2233,7 +2256,12 @@ class EmailRepository:
 
                     inspected_count += 1
                     
-                    db_result = self._save_email_to_database(gmail_client, message, user_id)
+                    db_result = self._save_email_to_database(
+                        gmail_client,
+                        message,
+                        user_id,
+                        verify_sender_callback=verify_sender_callback,
+                    )
                     
                     if db_result.get('success'):
                         if db_result.get('skipped'):
@@ -2275,12 +2303,17 @@ class EmailRepository:
                     "message": f"Permission error: {error_msg}"
                 }
     
-    def _save_email_to_database(self, gmail_client: GmailClient, message: Dict, user_id: str) -> Dict:
+    def _save_email_to_database(
+        self,
+        gmail_client: GmailClient,
+        message: Dict,
+        user_id: str,
+        verify_sender_callback: Optional[Callable[..., None]] = None,
+    ) -> Dict:
         
         
         """Save a single email message to the database with authentication verification."""
-        from src.service.email.email_auth_parser import parse_email_auth
-        from src.service.email.email_auth_service import EmailAuthService
+        from src.lib.email.auth_parser import parse_email_auth
         
         # Check if email already exists to avoid duplicate attachments
         provider_message_id = message.get('id')
@@ -2353,22 +2386,22 @@ class EmailRepository:
             auth_headers=auth_headers,
         )
         
-        # Verify sender and update trust score
+        # Sender verification is orchestrated by service layer via callback.
         if db_result.get('success'):
-            try:
-                auth_handler = EmailAuthService()
-                auth_handler.verify_sender(
-                    user_id=user_id,
-                    sender_email=from_email,
-                    sender_name=from_name or from_email,
-                    auth_score=auth_score,
-                    is_verified=is_verified,
-                    spf_status=spf_status,
-                    dkim_status=dkim_status,
-                    dmarc_status=dmarc_status
-                )
-            except Exception as e:
-                print(f"[EmailRepository] Warning: Failed to verify sender: {e}")
+            if verify_sender_callback:
+                try:
+                    verify_sender_callback(
+                        user_id=user_id,
+                        sender_email=from_email,
+                        sender_name=from_name or from_email,
+                        auth_score=auth_score,
+                        is_verified=is_verified,
+                        spf_status=spf_status,
+                        dkim_status=dkim_status,
+                        dmarc_status=dmarc_status,
+                    )
+                except Exception as e:
+                    print(f"[EmailRepository] Warning: Failed to verify sender: {e}")
         
         # Save email labels if email was successfully stored
         if db_result.get('success'):
@@ -2785,7 +2818,13 @@ class EmailRepository:
             traceback.print_exc()
             return {"status": "error", "message": str(e)}
 
-    def resync_email_from_gmail(self, email_id: str, provider_message_id: str, user_id: str) -> Dict:
+    def resync_email_from_gmail(
+        self,
+        email_id: str,
+        provider_message_id: str,
+        user_id: str,
+        verify_sender_callback: Optional[Callable[..., None]] = None,
+    ) -> Dict:
         """Delete an email and re-fetch it from Gmail API with full processing.
         
         This method:
@@ -2865,7 +2904,12 @@ class EmailRepository:
             
             # Step 4: Save the email to database (same as fetch workflow)
             print(f"[EmailRepository] Saving email to database...")
-            save_result = self._save_email_to_database(gmail_client, message, user_id)
+            save_result = self._save_email_to_database(
+                gmail_client,
+                message,
+                user_id,
+                verify_sender_callback=verify_sender_callback,
+            )
             
             if not save_result.get('success'):
                 return {
