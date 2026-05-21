@@ -319,17 +319,16 @@ class FabdisImporter:
 		self.media_rows = media_rows
 		return media_rows
 
-	def import_media(self) -> None:
+	def import_media(self, return_stats: bool = False) -> dict | None:
 		if self.supabase_client is None:
 			raise RuntimeError("Supabase client not configured")
 
 		if not self.media_rows:
 			self.load_media()
 
-		# Build product_id lookup from cache populated during import_products
-		# For rows whose product wasn't imported (unknown SKU), we skip.
 		skipped = 0
 		upserted = 0
+		existing = 0
 
 		for row in self.media_rows:
 			brand_name = row["brand_name"]
@@ -372,6 +371,20 @@ class FabdisImporter:
 				product_id = resp.data[0]["id"]
 				self._product_cache[product_key] = product_id
 
+			# Check if media already exists for this product/type/url
+			exists_resp = (
+				self.supabase_client.table("product_media")
+				.select("id")
+				.eq("product_id", product_id)
+				.eq("type", row["type"])
+				.eq("url", row["url"])
+				.limit(1)
+				.execute()
+			)
+			if exists_resp.data:
+				existing += 1
+				continue
+
 			upsert_data = {
 				"product_id": product_id,
 				"url": row["url"],
@@ -391,7 +404,11 @@ class FabdisImporter:
 			upserted += 1
 
 		self.last_summary["media_upserted"] = upserted
+		self.last_summary["media_existing"] = existing
 		self.last_summary["media_skipped"] = skipped
+		if return_stats:
+			return {"created": upserted, "existing": existing, "skipped": skipped}
+		return None
 
 	def print_sheet_names(self) -> None:
 		for sheet_name in self.workbook.sheet_names:

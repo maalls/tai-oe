@@ -1,3 +1,80 @@
+import pytest
+from unittest.mock import MagicMock
+from src.lib.importers.fabdis import FabdisImporter
+
+# Media import test from parent folder
+class DummyPandas:
+	def read_excel(self, *args, **kwargs):
+		class DummyDF:
+			def to_dict(self, orient):
+				return [
+					{"MARQUE": "BrandA", "REFCIALE": "SKU1", "MTYP": "PHOTO", "MNUM": 1, "MURL": "http://img/1.jpg"},
+					{"MARQUE": "BrandB", "REFCIALE": "SKU2", "MTYP": "PHOTO", "MNUM": 2, "MURL": "http://img/2.jpg"},
+					{"MARQUE": "BrandC", "REFCIALE": "SKU3", "MTYP": "PHOTO", "MNUM": 3, "MURL": "http://img/3.jpg"},
+				]
+		return DummyDF()
+
+	def isna(self, value):
+		return value is None
+
+@pytest.fixture
+def mock_supabase():
+	client = MagicMock()
+
+	class ChainMock:
+		def __init__(self, data=None, error=None):
+			self.data = data
+			self.error = error
+			self._chain = self
+			self._brand = None
+			self._product = None
+			self._media = None
+			self._select_type = None
+			self._ilike_val = None
+			self._eq_vals = {}
+		def select(self, *args, **kwargs):
+			self._select_type = args[0] if args else None
+			return self
+		def ilike(self, field, value):
+			self._ilike_val = value
+			return self
+		def eq(self, field, value):
+			self._eq_vals[field] = value
+			return self
+		def limit(self, n):
+			return self
+		def execute(self):
+			if self._select_type == "id" and self._ilike_val:
+				if self._ilike_val == "BrandA":
+					return ChainMock(data=[{"id": "brandA_id"}])
+				if self._ilike_val == "BrandB":
+					return ChainMock(data=[{"id": "brandB_id"}])
+				return ChainMock(data=[])
+			if self._select_type == "id" and "brand_id" in self._eq_vals and "sku" in self._eq_vals:
+				if self._eq_vals["brand_id"] == "brandA_id" and self._eq_vals["sku"] == "SKU1":
+					return ChainMock(data=[{"id": "prodA_id"}])
+				if self._eq_vals["brand_id"] == "brandB_id" and self._eq_vals["sku"] == "SKU2":
+					return ChainMock(data=[{"id": "prodB_id"}])
+				return ChainMock(data=[])
+			if self._select_type == "id" and "product_id" in self._eq_vals:
+				return ChainMock(data=[])
+			return ChainMock(data=[])
+		def upsert(self, *args, **kwargs):
+			return self
+	table = MagicMock()
+	table.select.side_effect = lambda *a, **k: ChainMock().select(*a, **k)
+	table.upsert.side_effect = lambda *a, **k: ChainMock()
+	client.table.return_value = table
+	return client
+
+def test_import_media_stats(mock_supabase):
+	importer = FabdisImporter(DummyPandas(), mock_supabase)
+	importer.workbook = object()  # Dummy workbook
+	importer.load_media()
+	stats = importer.import_media(return_stats=True)
+	assert stats["created"] == 2  # BrandA and BrandB
+	assert stats["skipped"] == 1  # BrandC (brand not found)
+	assert stats["existing"] == 0
 from pathlib import Path
 
 import pandas as pd
