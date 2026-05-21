@@ -76,25 +76,21 @@
             ></textarea>
          </div>
          <div class="flex gap-2">
-            <button
-               type="submit"
-               :disabled="isSaving"
-               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
+            <ActionButton type="submit" :disabled="isSaving" variant="primary">
                {{ isSaving ? 'Saving...' : isEdit ? 'Update' : 'Create' }}
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
                v-if="isEdit"
                type="button"
                :disabled="isDeleting"
-               class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+               variant="danger"
                @click="handleDelete"
             >
                {{ isDeleting ? 'Deleting...' : 'Delete' }}
-            </button>
+            </ActionButton>
             <router-link
                to="/products"
-               class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+               class="inline-flex h-8 items-center justify-center bg-gray-300 text-gray-800 px-3 text-sm leading-none rounded hover:bg-gray-400"
                >Cancel</router-link
             >
          </div>
@@ -104,6 +100,7 @@
 
 <script setup>
 import ProductsSubHeader from './ProductsSubHeader.vue';
+import ActionButton from '../common/ActionButton.vue';
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBrandFamilyData } from './useBrandFamilyData';
