@@ -3,6 +3,7 @@
 import uuid
 from typing import Dict
 
+from src.infrastructure.clients.database import DatabaseHandler
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.repository.opportunity import OpportunityRepository
 
@@ -10,9 +11,10 @@ from src.repository.opportunity import OpportunityRepository
 class QuoteService:
     """Service that encapsulates quote business operations."""
 
-    def __init__(self, supabase=None, opportunity_repository=None):
+    def __init__(self, supabase=None, opportunity_repository=None, db_handler=None):
         self.supabase = supabase or get_supabase_service()
         self.opportunity_repository = opportunity_repository or OpportunityRepository()
+        self.db_handler = db_handler
 
     @staticmethod
     def _as_float(value, default: float = 0.0) -> float:
@@ -29,17 +31,8 @@ class QuoteService:
             print(f"[QuoteController][update] Updating document {document_id}", payload)
 
             doc_fields = payload.copy()
-
-            self.supabase.table("document").update({
-                "title": doc_fields.get("title"),
-                "currency": doc_fields.get("currency"),
-            }).eq("id", document_id).execute()
-
-            print(f"[QuoteController][update] Deleting existing document lines for document_id: {document_id}")
-            self.supabase.table("document_line").delete().eq("document_id", document_id).execute()
-
             lines_payload = payload.get("document_line", [])
-            print(f"[QuoteController][update] Inserting {len(lines_payload)} lines")
+            print(f"[QuoteController][update] Processing {len(lines_payload)} lines")
 
             new_lines = []
             for idx, line in enumerate(lines_payload):
@@ -50,9 +43,6 @@ class QuoteService:
                     raise ValueError(f"Brand must be a string, got {type(brand)} for line {idx}")
 
                 client_discount_rate = self.safe_numeric(line.get("client_discount_rate"))
-                if client_discount_rate is None:
-                    client_discount_rate = 0.0
-
                 quantity = self._as_float(line.get("quantity"), default=0.0)
                 unit_price_excl_tax = self._as_float(
                     line.get("unit_price_excl_tax", line.get("price")),
@@ -81,16 +71,16 @@ class QuoteService:
                     "line_total_excl_tax": line_total_excl_tax,
                 })
 
-            if new_lines:
-                self.supabase.table("document_line").insert(new_lines).execute()
-
             totals = self._compute_document_totals(new_lines)
             print(f"[QuoteController][update] Computed totals: {totals}")
-            self.supabase.table("document").update({
-                "total_excl_tax": totals["total_excl_tax"],
-                "total_tax": totals["total_tax"],
-                "total_incl_tax": totals["total_incl_tax"],
-            }).eq("id", document_id).execute()
+
+            self._replace_document_lines_atomic(
+                document_id=document_id,
+                title=doc_fields.get("title"),
+                currency=doc_fields.get("currency"),
+                new_lines=new_lines,
+                totals=totals,
+            )
 
             document = (
                 self.supabase.table("document")
@@ -104,6 +94,82 @@ class QuoteService:
         except Exception as e:
             print(f"[QuoteController][update] Error updating quote: {e}")
             raise e
+
+    def _replace_document_lines_atomic(
+        self,
+        document_id: str,
+        title: str,
+        currency: str,
+        new_lines: list,
+        totals: Dict[str, float],
+    ) -> None:
+        db_handler = self.db_handler or DatabaseHandler()
+
+        with db_handler.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE document
+                    SET title = %s,
+                        currency = %s,
+                        total_excl_tax = %s,
+                        total_tax = %s,
+                        total_incl_tax = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        title,
+                        currency,
+                        totals["total_excl_tax"],
+                        totals["total_tax"],
+                        totals["total_incl_tax"],
+                        document_id,
+                    ),
+                )
+
+                cur.execute("DELETE FROM document_line WHERE document_id = %s", (document_id,))
+
+                if not new_lines:
+                    return
+
+                cur.executemany(
+                    """
+                    INSERT INTO document_line (
+                        id,
+                        document_id,
+                        position,
+                        description,
+                        quantity,
+                        unit_price_excl_tax,
+                        tax_rate,
+                        sku,
+                        brand,
+                        unit,
+                        discount_rate,
+                        client_discount_rate,
+                        line_total_excl_tax
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    [
+                        (
+                            line["id"],
+                            document_id,
+                            line.get("position"),
+                            line.get("description", ""),
+                            line.get("quantity", 0),
+                            line.get("unit_price_excl_tax", 0),
+                            line.get("tax_rate", 0),
+                            line.get("sku", ""),
+                            line.get("brand", ""),
+                            line.get("unit", "U"),
+                            line.get("discount_rate", 0),
+                            line.get("client_discount_rate", 0),
+                            line.get("line_total_excl_tax", 0),
+                        )
+                        for line in new_lines
+                    ],
+                )
 
     def safe_numeric(self, value, default=0):
         try:
