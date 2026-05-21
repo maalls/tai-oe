@@ -13,6 +13,7 @@
 - [x] C — Faire implémenter `EmailProviderService` à `GmailService`
 - [x] D — Créer `make_email_provider_router()` dans le routeur email
 - [x] D — Remplacer les 6 routes Gmail existantes par la fabrique
+- [x] E — Découpler Gmail provider de `EmailRepository` (repo dédié)
 
 ### Outlook
 - [x] 0 — Remplacer le flux login Azure existant (`azure_client.py`) par le flux Microsoft OAuth unifié
@@ -94,12 +95,18 @@ api/email/router.py
 
 service/email/gmail_service.py
     ├→ repository/email_repository.py
+    ├→ repository/gmail_provider_repository.py          ← nouveau
     └→ infrastructure/factory.py  (ServiceFactory pour classify)
 
 repository/email_repository.py          ← ⚠ déjà trop gros : viole la séparation couches
     ├→ service/classification/service.py  ← ⚠ repo→service (dette technique existante, ne pas aggraver)
     ├→ service/email/email_auth_service.py← ⚠ repo→service (dette technique existante)
     ├→ infrastructure/clients/gmail_client.py
+    └→ infrastructure/clients/supabase.py
+
+repository/gmail_provider_repository.py               ← nouveau
+    ├→ infrastructure/clients/gmail_client.py
+    ├→ infrastructure/clients/oauth/state.py
     └→ infrastructure/clients/supabase.py
 
 infrastructure/clients/gmail_client.py
@@ -122,6 +129,7 @@ service/email/base.py                               ← nouveau (ABC pur, zéro 
 service/email/gmail_service.py
     ├→ service/email/base.py                           ← nouveau (implements)
     ├→ repository/email_repository.py
+    ├→ repository/gmail_provider_repository.py         ← nouveau
     └→ infrastructure/factory.py  (ServiceFactory, classify only)
 
 service/email/outlook_service.py                    ← nouveau
@@ -530,6 +538,7 @@ back/src/repository/email_repository.py  (méthodes génériques)
 | B | Refactorer `_get/set/clear_profile_column` dans `EmailRepository` | `test_get_profile_column.py`, `test_set_profile_column.py` | `refactor(email): generic profile column accessors` |
 | C | Créer `base.py` ABC + faire implémenter à `GmailService` | — (interface pure) | `refactor(email): EmailProviderService interface` |
 | D | Créer `make_email_provider_router` + remplacer routes Gmail | Vérifier que les tests de routes Gmail existants passent toujours | `refactor(email): generic email provider router factory` |
+| E | Découpler Gmail provider dans un repository dédié | `test_gmail_service_get_status.py`, `test_gmail_service_get_oauth_url.py` | `refactor(email): split gmail provider repository` |
 | 1 | Azure AD : App Registration (portail Azure, hors code) | — | — |
 | 2 | Migration `044_add_outlook_token.sql` + schema `oauth_tokens` | — | `feat(db): add oauth_tokens table for provider tokens` |
 | 3 | `outlook_client.py` | `test_outlook_client_get_profile.py`, `test_outlook_client_list_messages.py`, `test_outlook_client_refresh.py` | `feat(outlook): Microsoft Graph client` |

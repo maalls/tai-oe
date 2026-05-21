@@ -4,6 +4,7 @@ from typing import Any
 
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
+from src.repository.gmail_provider_repository import GmailProviderRepository
 from src.service.email.base import EmailProviderService
 from src.service.email.email_auth_service import EmailAuthService
 from src.service.classification.handler_service import ClassifyService
@@ -15,10 +16,12 @@ class GmailService(EmailProviderService):
     def __init__(
         self,
         repository: EmailRepository | None = None,
+        provider_repository: GmailProviderRepository | None = None,
         service_factory: ServiceFactory | None = None,
         auth_service: EmailAuthService | None = None,
     ):
         self.repository = repository or EmailRepository()
+        self.provider_repository = provider_repository or GmailProviderRepository()
         self.service_factory = service_factory or ServiceFactory()
         self.auth_service = auth_service or EmailAuthService()
 
@@ -35,22 +38,22 @@ class GmailService(EmailProviderService):
         )
 
     def get_status(self, user_id: str | None = None) -> dict[str, Any]:
-        return self.repository.get_gmail_status(user_id=user_id)
+        return self.provider_repository.get_gmail_status(user_id=user_id)
 
     def authorize(self, redirect_url: str | None = None) -> dict[str, Any]:
-        return self.repository.authorize_gmail(redirect_url)
+        return self.provider_repository.authorize_gmail(redirect_url)
 
     def get_oauth_url(self, redirect_url: str | None = None, user_id: str | None = None) -> dict[str, Any]:
-        return self.repository.get_gmail_oauth_url(redirect_url, user_id=user_id)
+        return self.provider_repository.get_gmail_oauth_url(redirect_url, user_id=user_id)
 
     def revoke(self, user_id: str | None = None) -> dict[str, Any]:
-        return self.repository.revoke_gmail(user_id=user_id)
+        return self.provider_repository.revoke_gmail(user_id=user_id)
 
     def get_profile(self, user_id: str | None = None) -> dict[str, Any]:
-        return self.repository.get_gmail_profile(user_id=user_id)
+        return self.provider_repository.get_gmail_profile(user_id=user_id)
 
     def oauth_callback(self, code: str, state: str | None = None) -> dict[str, Any]:
-        return self.repository.handle_gmail_oauth_callback(code=code, state=state)
+        return self.provider_repository.handle_gmail_oauth_callback(code=code, state=state)
 
     def list_messages(self, user_id: str, max_results: int = 20, force: bool = False) -> dict[str, Any]:
         if not user_id:
