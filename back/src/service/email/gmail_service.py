@@ -4,11 +4,12 @@ from typing import Any
 
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
+from src.service.email.base import EmailProviderService
 from src.service.email.email_auth_service import EmailAuthService
 from src.service.classification.handler_service import ClassifyService
 
 
-class GmailService:
+class GmailService(EmailProviderService):
     """Expose Gmail-oriented operations for transport layers."""
 
     def __init__(
