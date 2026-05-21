@@ -142,6 +142,74 @@
 
          <div class="border-t border-gray-200"></div>
 
+         <!-- Outlook Settings -->
+         <div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Outlook / Microsoft</h2>
+            <div class="space-y-3 text-sm">
+               <div class="flex items-center gap-2">
+                  <span class="text-gray-600">{{ t('settings.status') }}</span>
+                  <span
+                     v-if="outlookStatus"
+                     class="px-2 py-0.5 rounded text-xs"
+                     :class="
+                        outlookStatus.authorized
+                           ? 'bg-green-100 text-green-800'
+                           : 'bg-gray-100 text-gray-700'
+                     "
+                  >
+                     {{
+                        outlookStatus.authorized
+                           ? t('settings.connected')
+                           : t('settings.notConnected')
+                     }}
+                  </span>
+                  <span v-else-if="!outlookError" class="text-gray-500">{{
+                     t('common.loading')
+                  }}</span>
+                  <span v-if="outlookError" class="text-red-600 text-xs">
+                     {{ outlookError }}
+                  </span>
+               </div>
+
+               <div v-if="outlookProfile" class="space-y-2">
+                  <div class="text-gray-700">
+                     <span class="text-gray-600">{{ t('settings.emailLabel') }}</span>
+                     <span class="ml-2 text-gray-900">{{
+                        outlookProfile.profile?.mail || outlookProfile.profile?.userPrincipalName
+                     }}</span>
+                  </div>
+                  <div class="text-gray-700">
+                     <span class="text-gray-600">{{ t('settings.permissions') }}</span>
+                     <ul class="mt-1 list-disc list-inside text-gray-900">
+                        <li v-for="item in outlookPermissionItems" :key="item">{{ item }}</li>
+                        <li v-if="!outlookPermissionItems.length" class="text-gray-500">
+                           {{ t('settings.none') }}
+                        </li>
+                     </ul>
+                  </div>
+               </div>
+
+               <div class="flex items-center gap-3">
+                  <button
+                     @click="handleOutlookAuthorize"
+                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                     :disabled="outlookLoading"
+                  >
+                     {{ isOutlookAuthorized ? 'Reconnecter Outlook' : 'Autoriser Outlook' }}
+                  </button>
+                  <button
+                     @click="handleOutlookRevoke"
+                     class="px-4 py-2 bg-gray-200 text-gray-900 rounded-md hover:bg-gray-300 transition"
+                     :disabled="outlookLoading || !isOutlookAuthorized"
+                  >
+                     {{ t('settings.disconnect') }}
+                  </button>
+               </div>
+            </div>
+         </div>
+
+         <div class="border-t border-gray-200"></div>
+
          <!-- IMAP Settings -->
          <div>
             <h2 class="text-lg font-semibold text-gray-900 mb-4">
@@ -354,6 +422,12 @@ import LocaleSwitcher from '../LocaleSwitcher.vue';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
 import { API_BASE_URL, apiUrl } from '../../utils/api';
+import {
+   getOutlookProfile,
+   getOutlookStatus,
+   revokeOutlook,
+   startOutlookOAuth,
+} from '../../api/outlook';
 
 const router = useRouter();
 const { user, signOut, getValidToken, updateDisplayName } = useAuth();
@@ -367,6 +441,11 @@ const gmailLoading = ref(false);
 const gmailError = ref('');
 const gmailErrorDetails = ref('');
 const isGmailAuthorized = computed(() => !!gmailStatus.value?.authorized);
+const outlookStatus = ref<{ status: string; authorized: boolean; message: string } | null>(null);
+const outlookProfile = ref<{ profile: any; permissions: string[] } | null>(null);
+const outlookLoading = ref(false);
+const outlookError = ref('');
+const isOutlookAuthorized = computed(() => !!outlookStatus.value?.authorized);
 type ImapConfig = {
    host: string;
    port: number;
@@ -448,6 +527,12 @@ const permissionItems = computed(() => {
    if (hasOther) items.push('Other');
 
    return items;
+});
+
+const outlookPermissionItems = computed(() => {
+   const scopes = outlookProfile.value?.permissions || [];
+   if (!scopes.length) return [];
+   return scopes;
 });
 
 async function handleSignOut() {
@@ -610,6 +695,65 @@ async function handleGmailRevoke() {
       setGmailError(String(error), t('settings.gmailDisconnectFailed'));
    } finally {
       gmailLoading.value = false;
+   }
+}
+
+async function loadOutlookStatus() {
+   outlookError.value = '';
+   try {
+      const userId = user.value?.id || '';
+      const data = await getOutlookStatus(userId);
+      outlookStatus.value = data;
+      if (data?.authorized) {
+         await loadOutlookProfile();
+      } else {
+         outlookProfile.value = null;
+      }
+   } catch (error) {
+      outlookError.value = (error as Error)?.message || 'Failed to load Outlook status.';
+      outlookStatus.value = null;
+      outlookProfile.value = null;
+   }
+}
+
+async function loadOutlookProfile() {
+   try {
+      const userId = user.value?.id || '';
+      const data = await getOutlookProfile(userId);
+      outlookProfile.value = data;
+   } catch (error) {
+      outlookProfile.value = null;
+   }
+}
+
+async function handleOutlookAuthorize() {
+   outlookLoading.value = true;
+   outlookError.value = '';
+   try {
+      if (!user.value?.id) {
+         outlookError.value = 'Missing user_id';
+         return;
+      }
+      const authUrl = await startOutlookOAuth(window.location.href, user.value.id);
+      window.location.href = authUrl;
+   } catch (error) {
+      outlookError.value = (error as Error)?.message || 'Outlook authorization failed.';
+   } finally {
+      outlookLoading.value = false;
+   }
+}
+
+async function handleOutlookRevoke() {
+   outlookLoading.value = true;
+   outlookError.value = '';
+   try {
+      const userId = user.value?.id || '';
+      await revokeOutlook(userId);
+      await loadOutlookStatus();
+   } catch (error) {
+      outlookError.value = (error as Error)?.message || 'Outlook disconnect failed.';
+   } finally {
+      outlookLoading.value = false;
    }
 }
 
@@ -793,6 +937,7 @@ onMounted(() => {
    senderName.value = initialSenderName;
    lastSavedSenderName.value = initialSenderName;
    loadGmailStatus();
+   loadOutlookStatus();
    loadImapConfig();
    loadImapStatus();
    loadFetchLoopStatus();

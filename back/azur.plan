@@ -23,7 +23,7 @@
 - [x] 4 — Ajouter méthodes Outlook dans `OutlookProviderRepository`
 - [x] 5 — Créer `back/src/service/email/outlook_service.py`
 - [x] 6 — Ajouter `get_outlook_service` dans `dependencies.py` + instancier `outlook_router`
-- [ ] 7 — Frontend Settings : section Outlook dans `SettingsPage.vue`
+- [x] 7 — Frontend Settings : section Outlook dans `SettingsPage.vue`
 - [ ] 8 — Validation finale: tests backend/frontend + garde-fous OAuth
 
 ---
@@ -438,7 +438,7 @@ back/src/repository/outlook_provider_repository.py
 | 4 | `outlook_provider_repository.py` | `test_outlook_oauth_callback.py`, `test_get_outlook_status.py` | `feat(outlook): provider repository methods` |
 | 5 | `outlook_service.py` | `test_outlook_service_get_status.py`, `test_outlook_service_oauth_callback.py`, `test_outlook_service_revoke.py` | `feat(outlook): OutlookService` |
 | 6 | `dependencies.py` + `outlook_router` | Tester les routes via `TestClient` FastAPI | `feat(outlook): API routes` |
-| 7 | Frontend Settings section Outlook | Tests Vitest miroir du composant | `feat(settings): Outlook OAuth connect/disconnect` |
+| 7 | Frontend Settings section Outlook | Tests Vitest des helpers API Outlook (`front/tests/unit/src/api/outlook/*`) | `feat(settings): Outlook OAuth connect/disconnect` |
 | 8 | Validation finale backend/frontend + sécurité OAuth | `pytest -q`, tests API OAuth, tests Vitest ciblés | `test(outlook): finalize coverage and oauth safety checks` |
 
 ### Détails de l'étape 0 (remplacement/unification)
