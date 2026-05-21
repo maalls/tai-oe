@@ -20,7 +20,7 @@
 - [ ] 1 — Azure AD : App Registration + scopes + redirect URI (portail Azure)
 - [x] 2 — Migration `044_add_outlook_token.sql` (table `oauth_tokens`) + màj schéma SQL
 - [x] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`
-- [ ] 4 — Ajouter méthodes Outlook dans `OutlookProviderRepository`
+- [x] 4 — Ajouter méthodes Outlook dans `OutlookProviderRepository`
 - [ ] 5 — Créer `back/src/service/email/outlook_service.py`
 - [ ] 6 — Ajouter `get_outlook_service` dans `dependencies.py` + instancier `outlook_router`
 - [ ] 7 — Frontend Settings : section Outlook dans `SettingsPage.vue`
