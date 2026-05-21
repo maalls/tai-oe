@@ -60,9 +60,17 @@
          :class="[
             message.type == 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700',
          ]"
-         class="p-2"
+         class="p-2 flex items-center justify-between gap-4"
       >
-         {{ message.content }}
+         <span>{{ message.content }}</span>
+         <button
+            v-if="message.type === 'error'"
+            type="button"
+            class="shrink-0 text-current opacity-60 hover:opacity-100 leading-none"
+            @click="message = null"
+         >
+            ✕
+         </button>
       </div>
    </div>
    <!--div v-if="errorMessage" class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
@@ -125,7 +133,9 @@ function scheduleMessageClear() {
 function onHeaderNotification(event: any) {
    // handle event.detail or event payload
    message.value = event.detail;
-   scheduleMessageClear();
+   if (event.detail?.type !== 'error') {
+      scheduleMessageClear();
+   }
 }
 
 const isRouteActive = (pagePath: string) => {
