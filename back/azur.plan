@@ -15,7 +15,7 @@
 - [x] D — Remplacer les 6 routes Gmail existantes par la fabrique
 
 ### Outlook
-- [ ] 0 — Remplacer le flux login Azure existant (`azure_client.py`) par le flux Microsoft OAuth unifié
+- [x] 0 — Remplacer le flux login Azure existant (`azure_client.py`) par le flux Microsoft OAuth unifié
 - [ ] 1 — Azure AD : App Registration + scopes + redirect URI (portail Azure)
 - [ ] 2 — Migration `044_add_outlook_token.sql` + màj `schema/tables/profile.sql`
 - [ ] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`

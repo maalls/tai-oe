@@ -1,63 +1,90 @@
 import os
 import requests
+from urllib.parse import urlencode
 
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
 
 
+MICROSOFT_OAUTH_SCOPE = "Mail.Read Mail.Send offline_access"
+
+
+def _oauth_settings() -> dict:
+    return {
+        "client_id": os.getenv("AZUR_CLIENT_ID"),
+        "client_secret": os.getenv("AZUR_CLIENT_SECRET"),
+        "redirect_uri": os.getenv("AZUR_REDIRECT_URI"),
+        "tenant": os.getenv("AZUR_TENANT_ID", "common"),
+    }
+
+
 def get_azure_oauth_url(redirect_url=None):
-    """Generate Azure OAuth2 login URL."""
-    client_id = os.getenv('AZURE_SECRET_ID')
-    client_secret = os.getenv('AZURE_VALUE')
-    default_redirect_uri = os.getenv('AZURE_REDIRECT_URI')
-    tenant = os.getenv('AZURE_TENANT_ID', 'common')
-    
-    # State can include redirect_url, user_id, etc.
+    """Generate Microsoft OAuth2 URL (legacy function name kept for compatibility)."""
+    settings = _oauth_settings()
+    client_id = settings["client_id"]
+    default_redirect_uri = settings["redirect_uri"]
+    tenant = settings["tenant"]
+
+    if not client_id or not default_redirect_uri:
+        return {
+            "status": "error",
+            "message": "Missing AZUR_CLIENT_ID or AZUR_REDIRECT_URI",
+        }
+
     state_payload = {
-        'redirect_url': redirect_url or default_redirect_uri,
+        "redirect_url": redirect_url or default_redirect_uri,
     }
     state = encode_oauth_state(state_payload)
 
-    authorize_url = (
-        f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize?"
-        f"client_id={client_id}"
-        f"&response_type=code"
-        f"&redirect_uri={default_redirect_uri}"
-        f"&response_mode=query"
-        f"&scope=openid%20email%20profile%20offline_access%20User.Read"
-        f"&state={state}"
+    query = urlencode(
+        {
+            "client_id": client_id,
+            "response_type": "code",
+            "redirect_uri": default_redirect_uri,
+            "response_mode": "query",
+            "scope": MICROSOFT_OAUTH_SCOPE,
+            "state": state,
+        }
     )
-    return {'status': 'ok', 'auth_url': authorize_url}
+
+    authorize_url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize?{query}"
+    return {"status": "ok", "auth_url": authorize_url}
 
 def handle_azure_oauth_callback(code, state=None):
-    """Exchange code for tokens and return redirect URL."""
-    client_id = os.getenv('AZURE_SECRET_ID')
-    client_secret = os.getenv('AZURE_VALUE')
-    redirect_uri = os.getenv('AZURE_REDIRECT_URI')
-    tenant = os.getenv('AZURE_TENANT_ID', 'common')
+    """Exchange callback code for Microsoft OAuth tokens."""
+    settings = _oauth_settings()
+    client_id = settings["client_id"]
+    client_secret = settings["client_secret"]
+    redirect_uri = settings["redirect_uri"]
+    tenant = settings["tenant"]
+
+    if not client_id or not client_secret or not redirect_uri:
+        return {
+            "status": "error",
+            "message": "Missing AZUR_CLIENT_ID, AZUR_CLIENT_SECRET, or AZUR_REDIRECT_URI",
+        }
+
     token_url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
 
-    # Decode state
     redirect_url = redirect_uri
     if state:
         try:
             payload = decode_oauth_state(state)
-            redirect_url = payload.get('redirect_url') or redirect_uri
+            redirect_url = payload.get("redirect_url") or redirect_uri
         except Exception:
             pass
 
     data = {
-        'client_id': client_id,
-        'scope': 'openid email profile offline_access User.Read',
-        'code': code,
-        'redirect_uri': redirect_uri,
-        'grant_type': 'authorization_code',
-        'client_secret': client_secret,
+        "client_id": client_id,
+        "scope": MICROSOFT_OAUTH_SCOPE,
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "grant_type": "authorization_code",
+        "client_secret": client_secret,
     }
     try:
-        resp = requests.post(token_url, data=data)
+        resp = requests.post(token_url, data=data, timeout=15)
         resp.raise_for_status()
         tokens = resp.json()
-        # TODO: Use id_token/access_token to identify user, create session, etc.
-        return {'status': 'ok', 'redirect_url': redirect_url, 'tokens': tokens}
+        return {"status": "ok", "redirect_url": redirect_url, "tokens": tokens}
     except Exception as e:
-        return {'status': 'error', 'message': f'Azure OAuth failed: {e}'}
+        return {"status": "error", "message": f"Microsoft OAuth failed: {e}"}
