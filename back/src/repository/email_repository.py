@@ -1042,50 +1042,52 @@ class EmailRepository:
                 "message": f"Error during authorization: {str(e)}"
             }
 
-    def _get_profile_token_b64(self, user_id: str) -> Optional[str]:
+    def _get_profile_column(self, user_id: str, column: str) -> Optional[str]:
         try:
             supabase = get_supabase_service()
             response = (
                 supabase.table("profile")
-                .select("google_token_pickle")
+                .select(column)
                 .eq("id", user_id)
                 .limit(1)
                 .execute()
             )
             if response.data:
-                return response.data[0].get("google_token_pickle")
+                return response.data[0].get(column)
         except Exception as e:
-            print(f"[EmailRepository] Error reading profile token: {e}")
+            print(f"[EmailRepository] Error reading profile column '{column}': {e}")
         return None
 
-    def _save_profile_token(self, user_id: str, creds) -> bool:
+    def _set_profile_column(self, user_id: str, column: str, value: Optional[str]) -> bool:
         try:
-            token_b64 = base64.b64encode(pickle.dumps(creds)).decode("utf-8")
             supabase = get_supabase_service()
             response = (
                 supabase.table("profile")
-                .update({"google_token_pickle": token_b64})
+                .update({column: value})
                 .eq("id", user_id)
                 .execute()
             )
             return bool(response.data)
+        except Exception as e:
+            print(f"[EmailRepository] Error setting profile column '{column}': {e}")
+            return False
+
+    def _clear_profile_column(self, user_id: str, column: str) -> bool:
+        return self._set_profile_column(user_id, column, None)
+
+    def _get_profile_token_b64(self, user_id: str) -> Optional[str]:
+        return self._get_profile_column(user_id, "google_token_pickle")
+
+    def _save_profile_token(self, user_id: str, creds) -> bool:
+        try:
+            token_b64 = base64.b64encode(pickle.dumps(creds)).decode("utf-8")
+            return self._set_profile_column(user_id, "google_token_pickle", token_b64)
         except Exception as e:
             print(f"[EmailRepository] Error saving profile token: {e}")
             return False
 
     def _clear_profile_token(self, user_id: str) -> bool:
-        try:
-            supabase = get_supabase_service()
-            response = (
-                supabase.table("profile")
-                .update({"google_token_pickle": None})
-                .eq("id", user_id)
-                .execute()
-            )
-            return bool(response.data)
-        except Exception as e:
-            print(f"[EmailRepository] Error clearing profile token: {e}")
-            return False
+        return self._clear_profile_column(user_id, "google_token_pickle")
 
     def get_gmail_oauth_url(self, redirect_url: str = None, user_id: str = None) -> Dict:
         """Start Gmail OAuth web flow and return the authorization URL."""

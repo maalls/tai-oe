@@ -7,8 +7,8 @@
 ### Refactoring préalable (non-breaking)
 - [x] A — Créer `back/src/infrastructure/clients/oauth/state.py` (encode/decode state)
 - [x] A — Remplacer les encodages inline dans `email_repository.py` et `azure_client.py`
-- [ ] B — Refactorer `_get/set/clear_profile_column()` dans `EmailRepository`
-- [ ] B — Faire pointer les méthodes Gmail existantes vers ces génériques
+- [x] B — Refactorer `_get/set/clear_profile_column()` dans `EmailRepository`
+- [x] B — Faire pointer les méthodes Gmail existantes vers ces génériques
 - [ ] C — Créer `back/src/service/email/base.py` (ABC `EmailProviderService`)
 - [ ] C — Faire implémenter `EmailProviderService` à `GmailService`
 - [ ] D — Créer `make_email_provider_router()` dans le routeur email
