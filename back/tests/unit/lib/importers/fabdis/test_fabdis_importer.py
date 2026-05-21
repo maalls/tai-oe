@@ -32,6 +32,7 @@ def mock_supabase():
 			self._select_type = None
 			self._ilike_val = None
 			self._eq_vals = {}
+			self._in_vals = {}
 		def select(self, *args, **kwargs):
 			self._select_type = args[0] if args else None
 			return self
@@ -40,6 +41,9 @@ def mock_supabase():
 			return self
 		def eq(self, field, value):
 			self._eq_vals[field] = value
+			return self
+		def in_(self, field, values):
+			self._in_vals[field] = values
 			return self
 		def limit(self, n):
 			return self
@@ -50,6 +54,15 @@ def mock_supabase():
 				if self._ilike_val == "BrandB":
 					return ChainMock(data=[{"id": "brandB_id"}])
 				return ChainMock(data=[])
+			if self._select_type == "id,sku" and "brand_id" in self._eq_vals and "sku" in self._in_vals:
+				brand_id = self._eq_vals["brand_id"]
+				skus = set(self._in_vals["sku"])
+				rows = []
+				if brand_id == "brandA_id" and "SKU1" in skus:
+					rows.append({"id": "prodA_id", "sku": "SKU1"})
+				if brand_id == "brandB_id" and "SKU2" in skus:
+					rows.append({"id": "prodB_id", "sku": "SKU2"})
+				return ChainMock(data=rows)
 			if self._select_type == "id" and "brand_id" in self._eq_vals and "sku" in self._eq_vals:
 				if self._eq_vals["brand_id"] == "brandA_id" and self._eq_vals["sku"] == "SKU1":
 					return ChainMock(data=[{"id": "prodA_id"}])
@@ -57,6 +70,8 @@ def mock_supabase():
 					return ChainMock(data=[{"id": "prodB_id"}])
 				return ChainMock(data=[])
 			if self._select_type == "id" and "product_id" in self._eq_vals:
+				return ChainMock(data=[])
+			if self._select_type == "product_id,type,url" and "product_id" in self._in_vals:
 				return ChainMock(data=[])
 			return ChainMock(data=[])
 		def upsert(self, *args, **kwargs):

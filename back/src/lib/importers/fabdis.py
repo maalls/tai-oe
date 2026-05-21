@@ -326,22 +326,39 @@ class FabdisImporter:
 		if not self.media_rows:
 			self.load_media()
 
+		total_rows = len(self.media_rows)
+		print(f"[fabdis:media] Starting media import for {total_rows} row(s)")
+
+		if not self.media_rows:
+			print("[fabdis:media] No media rows to process")
+			self.last_summary["media_upserted"] = 0
+			self.last_summary["media_existing"] = 0
+			self.last_summary["media_skipped"] = 0
+			if return_stats:
+				return {"created": 0, "existing": 0, "skipped": 0}
+			return None
+
 		skipped = 0
 		upserted = 0
 		existing = 0
 
+		# 1) Resolve brand ids once per distinct brand name.
+		def _is_uri_too_long_error(exc: Exception) -> bool:
+			msg = str(exc).lower()
+			return "uri too long" in msg or "'code': 414" in msg or '"code": 414' in msg
+
+		brand_ids_by_name: dict[str, str] = {}
 		for row in self.media_rows:
 			brand_name = row["brand_name"]
-			sku = row["sku"]
-
-			# Resolve brand_id then product_id
 			brand_key = brand_name.casefold()
+			if brand_key in brand_ids_by_name:
+				continue
+
 			brand_id = next(
 				(v for (_, bname), v in self._brand_cache.items() if bname == brand_key),
 				None,
 			)
 			if not brand_id:
-				# Try resolving directly from DB
 				resp = (
 					self.supabase_client.table("brand")
 					.select("id")
@@ -349,59 +366,189 @@ class FabdisImporter:
 					.limit(1)
 					.execute()
 				)
-				if not resp.data:
-					skipped += 1
-					continue
-				brand_id = resp.data[0]["id"]
+				if resp.data:
+					brand_id = resp.data[0]["id"]
 
-			product_key = (brand_id, sku)
-			product_id = self._product_cache.get(product_key)
+			if brand_id:
+				brand_ids_by_name[brand_key] = brand_id
+		print(
+			f"[fabdis:media] Resolved {len(brand_ids_by_name)} distinct brand(s) from {len({r['brand_name'].casefold() for r in self.media_rows})} in file"
+		)
+
+		# 2) Resolve product ids once per distinct (brand_id, sku).
+		product_ids_by_key: dict[tuple[str, str], str] = {}
+		sku_by_brand_id: dict[str, set[str]] = {}
+		for row in self.media_rows:
+			brand_key = row["brand_name"].casefold()
+			brand_id = brand_ids_by_name.get(brand_key)
+			if not brand_id:
+				continue
+			sku_by_brand_id.setdefault(brand_id, set()).add(row["sku"])
+
+		product_lookup_chunk_size = 500
+		total_lookup_pairs = sum(len(skus) for skus in sku_by_brand_id.values())
+		print(
+			f"[fabdis:media] Looking up {total_lookup_pairs} distinct (brand, sku) pair(s)"
+		)
+
+		for brand_id, sku_set in sku_by_brand_id.items():
+			skus = sorted(sku_set)
+			total_brand_chunks = (len(skus) + product_lookup_chunk_size - 1) // product_lookup_chunk_size
+			for idx in range(0, len(skus), product_lookup_chunk_size):
+				initial_chunk = skus[idx : idx + product_lookup_chunk_size]
+				chunk_no = (idx // product_lookup_chunk_size) + 1
+				pending_chunks: list[list[str]] = [initial_chunk]
+
+				while pending_chunks:
+					sku_chunk = pending_chunks.pop(0)
+					try:
+						resp = (
+							self.supabase_client.table("product")
+							.select("id,sku")
+							.eq("brand_id", brand_id)
+							.in_("sku", sku_chunk)
+							.execute()
+						)
+					except Exception as exc:
+						if _is_uri_too_long_error(exc) and len(sku_chunk) > 1:
+							mid = len(sku_chunk) // 2
+							left = sku_chunk[:mid]
+							right = sku_chunk[mid:]
+							print(
+								f"[fabdis:media] Product lookup chunk too large ({len(sku_chunk)} sku(s)); splitting into {len(left)} + {len(right)}"
+							)
+							pending_chunks.insert(0, right)
+							pending_chunks.insert(0, left)
+							continue
+						raise
+
+					print(
+						f"[fabdis:media] Product lookup brand {brand_id} chunk {chunk_no}/{total_brand_chunks}: {len(sku_chunk)} sku(s)"
+					)
+					for item in resp.data or []:
+						product_id = item.get("id")
+						sku = item.get("sku")
+						if not product_id or not sku:
+							continue
+						product_key = (brand_id, str(sku))
+						product_ids_by_key[product_key] = product_id
+						self._product_cache[product_key] = product_id
+		print(
+			f"[fabdis:media] Resolved {len(product_ids_by_key)} product(s) for media rows"
+		)
+
+		# 3) Build candidate rows and skip unresolved products.
+		candidate_rows = []
+		for row in self.media_rows:
+			brand_id = brand_ids_by_name.get(row["brand_name"].casefold())
+			if not brand_id:
+				skipped += 1
+				continue
+
+			product_key = (brand_id, row["sku"])
+			product_id = product_ids_by_key.get(product_key)
 			if not product_id:
-				resp = (
-					self.supabase_client.table("product")
-					.select("id")
-					.eq("brand_id", brand_id)
-					.eq("sku", sku)
-					.limit(1)
-					.execute()
-				)
-				if not resp.data:
-					skipped += 1
-					continue
-				product_id = resp.data[0]["id"]
-				self._product_cache[product_key] = product_id
+				skipped += 1
+				continue
 
-			# Check if media already exists for this product/type/url
-			exists_resp = (
-				self.supabase_client.table("product_media")
-				.select("id")
-				.eq("product_id", product_id)
-				.eq("type", row["type"])
-				.eq("url", row["url"])
-				.limit(1)
-				.execute()
-			)
-			if exists_resp.data:
+			candidate_rows.append((row, product_id))
+		print(
+			f"[fabdis:media] Candidate media rows: {len(candidate_rows)} (ignored missing product/brand: {skipped})"
+		)
+
+		if not candidate_rows:
+			print("[fabdis:media] Nothing to upsert after filtering")
+			self.last_summary["media_upserted"] = 0
+			self.last_summary["media_existing"] = 0
+			self.last_summary["media_skipped"] = skipped
+			if return_stats:
+				return {"created": 0, "existing": 0, "skipped": skipped}
+			return None
+
+		# 4) Prefetch existing media keys in chunks to avoid per-row existence checks.
+		existing_keys: set[tuple[str, str, str]] = set()
+		product_ids = sorted({product_id for _, product_id in candidate_rows})
+		chunk_size = 200
+		total_prefetch_chunks = (len(product_ids) + chunk_size - 1) // chunk_size
+		print(
+			f"[fabdis:media] Prefetching existing media for {len(product_ids)} product(s) in {total_prefetch_chunks} chunk(s)"
+		)
+		for idx in range(0, len(product_ids), chunk_size):
+			chunk = product_ids[idx : idx + chunk_size]
+			chunk_no = (idx // chunk_size) + 1
+			pending_chunks: list[list[str]] = [chunk]
+			while pending_chunks:
+				prefetch_chunk = pending_chunks.pop(0)
+				try:
+					resp = (
+						self.supabase_client.table("product_media")
+						.select("product_id,type,url")
+						.in_("product_id", prefetch_chunk)
+						.execute()
+					)
+				except Exception as exc:
+					if _is_uri_too_long_error(exc) and len(prefetch_chunk) > 1:
+						mid = len(prefetch_chunk) // 2
+						left = prefetch_chunk[:mid]
+						right = prefetch_chunk[mid:]
+						print(
+							f"[fabdis:media] Prefetch chunk too large ({len(prefetch_chunk)} product(s)); splitting into {len(left)} + {len(right)}"
+						)
+						pending_chunks.insert(0, right)
+						pending_chunks.insert(0, left)
+						continue
+					raise
+
+				print(
+					f"[fabdis:media] Prefetch chunk {chunk_no}/{total_prefetch_chunks}: {len(prefetch_chunk)} product(s)"
+				)
+				for item in resp.data or []:
+					pid = item.get("product_id")
+					mtype = item.get("type")
+					url = item.get("url")
+					if pid and mtype and url:
+						existing_keys.add((pid, str(mtype), str(url)))
+
+		# 5) Count existing and batch upsert only new media entries.
+		rows_to_upsert = []
+		for row, product_id in candidate_rows:
+			media_key = (product_id, row["type"], row["url"])
+			if media_key in existing_keys:
 				existing += 1
 				continue
 
-			upsert_data = {
-				"product_id": product_id,
-				"url": row["url"],
-				"type": row["type"],
-				"source": "fabdis",
-				"position": row["position"],
-			}
+			rows_to_upsert.append(
+				{
+					"product_id": product_id,
+					"url": row["url"],
+					"type": row["type"],
+					"source": "fabdis",
+					"position": row["position"],
+				}
+			)
+		print(
+			f"[fabdis:media] Existing media: {existing}, to create: {len(rows_to_upsert)}"
+		)
+
+		total_upsert_chunks = (len(rows_to_upsert) + chunk_size - 1) // chunk_size
+		for idx in range(0, len(rows_to_upsert), chunk_size):
+			chunk = rows_to_upsert[idx : idx + chunk_size]
+			chunk_no = (idx // chunk_size) + 1
 			result = (
 				self.supabase_client.table("product_media")
-				.upsert(upsert_data, on_conflict="product_id,type,url")
+				.upsert(chunk, on_conflict="product_id,type,url")
 				.execute()
 			)
 			if getattr(result, "error", None):
-				raise RuntimeError(
-					f"Failed to upsert media for product '{sku}': {result.error}"
-				)
-			upserted += 1
+				raise RuntimeError(f"Failed to upsert media batch: {result.error}")
+			upserted += len(chunk)
+			print(
+				f"[fabdis:media] Upsert chunk {chunk_no}/{total_upsert_chunks}: +{len(chunk)} (total created: {upserted})"
+			)
+
+		print(
+			f"[fabdis:media] Done. created={upserted}, existing={existing}, ignored={skipped}"
+		)
 
 		self.last_summary["media_upserted"] = upserted
 		self.last_summary["media_existing"] = existing
