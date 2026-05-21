@@ -1,6 +1,0 @@
-DO $$
-BEGIN
-  ALTER TYPE document_type ADD VALUE 'FAMILY_DISCOUNT';
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
