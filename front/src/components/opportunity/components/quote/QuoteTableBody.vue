@@ -480,7 +480,7 @@ const performSkuSearch = (idx: number, sku: string, markChanged: boolean) => {
    skuSuggestionErrors.value[idx] = '';
 
    // Clear suggestions if SKU is empty
-   if (!sku || sku.length < 2) {
+   if (!sku || sku.length < 1) {
       skuSuggestions.value[idx] = [];
       skuSuggestionStatus.value[idx] = { loading: false, queried: false };
       discountFamilies.value[idx] = null;

@@ -16,7 +16,7 @@ class ProductService:
         limit = int(qs.get("limit", [10])[0])
         query = self.supabase.from_("product").select("*,brand(*),product_family(*,family(*))")
         if sku:
-            query = query.ilike("sku", f"{sku}")
+            query = query.ilike("sku", f"{str(sku).strip()}%")
         query = query.limit(limit)
         result = query.execute()
         return result.data if result and result.data else []

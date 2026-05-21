@@ -50,5 +50,5 @@ def test_list_products_applies_sku_filter_and_limit():
 
     assert result == [{"sku": "ABC"}]
     assert supabase.last_query.select_fields == "*,brand(*),product_family(*,family(*))"
-    assert supabase.last_query.ilike_calls == [("sku", "ABC")]
+    assert supabase.last_query.ilike_calls == [("sku", "ABC%")]
     assert supabase.last_query.limit_value == 5
