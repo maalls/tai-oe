@@ -17,7 +17,7 @@
 ### Outlook
 - [x] 0 — Remplacer le flux login Azure existant (`azure_client.py`) par le flux Microsoft OAuth unifié
 - [ ] 1 — Azure AD : App Registration + scopes + redirect URI (portail Azure)
-- [ ] 2 — Migration `044_add_outlook_token.sql` + màj `schema/tables/profile.sql`
+- [x] 2 — Migration `044_add_outlook_token.sql` (table `oauth_tokens`) + màj schéma SQL
 - [ ] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`
 - [ ] 4 — Ajouter méthodes Outlook dans `EmailRepository`
 - [ ] 5 — Créer `back/src/service/email/outlook_service.py`
@@ -153,8 +153,8 @@ infrastructure/clients/oauth/azure_client.py        ← màj pour utiliser state
 
 La table de l'Étape 3 liste `_save_outlook_token`, `_get_outlook_token` comme méthodes dédiées. Après l'abstraction **B**, ces wrappers n'ont plus lieu d'être — l'implémentation appelle directement :
 ```python
-self._set_profile_column(user_id, "outlook_token_json", json.dumps(token_dict))
-self._get_profile_column(user_id, "outlook_token_json")
+self.oauth_token_repository.set_token_json(user_id, "microsoft", "mail", json.dumps(token_dict))
+self.oauth_token_repository.get_token_json(user_id, "microsoft", "mail")
 ```
 La table de l'Étape 3 est indicative ; c'est l'abstraction B qui fait foi.
 
@@ -231,7 +231,7 @@ def _clear_profile_token(self, user_id):
     return self._clear_profile_column(user_id, "google_token_pickle")
 ```
 
-Outlook utilise directement `_get_profile_column(user_id, "outlook_token_json")`.
+Outlook utilise le repository dédié OAuth (`oauth_tokens`) avec la clé composée `(user_id, provider, service)`.
 
 ---
 
@@ -328,11 +328,20 @@ Ajouter la colonne token Outlook dans la table `profile`.
 **Fichier :** `back/migrations/044_add_outlook_token.sql`
 
 ```sql
-ALTER TABLE "public"."profile"
-ADD COLUMN IF NOT EXISTS "outlook_token_json" text;
+CREATE TABLE IF NOT EXISTS "public"."oauth_tokens" (
+    "user_id" uuid NOT NULL,
+    "provider" text NOT NULL,
+    "service" text NOT NULL,
+    "token_json" text NOT NULL,
+    "scope" text,
+    "expires_at" timestamptz,
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY ("user_id", "provider", "service")
+);
 ```
 
-Mettre à jour `back/schema/tables/profile.sql` avec la nouvelle colonne.
+Ajouter `back/schema/tables/oauth_tokens.sql`.
 
 ---
 
@@ -347,7 +356,7 @@ Classe `OutlookClient` (analogue à `GmailClient`) :
 - `list_messages(max_results)` — `GET https://graph.microsoft.com/v1.0/me/messages?$top={max_results}&$select=id,subject,from,receivedDateTime,bodyPreview`
 - `send_message(to, subject, body)` — `POST https://graph.microsoft.com/v1.0/me/sendMail`
 
-Token stocké comme JSON (dict) dans `profile.outlook_token_json` :
+Token stocké comme JSON (dict) dans `oauth_tokens.token_json` pour (`provider=microsoft`, `service=mail`) :
 ```json
 {
   "access_token": "...",
@@ -384,8 +393,8 @@ Ajouter (à côté des méthodes Gmail équivalentes) :
 |---|---|---|
 | `get_outlook_oauth_url(redirect_url, user_id)` | `get_gmail_oauth_url()` | Génère l'URL de consentement |
 | `handle_outlook_oauth_callback(code, state)` | `handle_gmail_oauth_callback()` | Échange le code, stocke le token |
-| `_save_outlook_token(user_id, token_dict)` | `_save_profile_token()` | `UPDATE profile SET outlook_token_json=...` |
-| `_get_outlook_token(user_id)` | `_get_profile_token_b64()` | `SELECT outlook_token_json FROM profile` |
+| `_save_outlook_token(user_id, token_dict)` | `_save_profile_token()` | `UPSERT oauth_tokens (provider='microsoft', service='mail')` |
+| `_get_outlook_token(user_id)` | `_get_profile_token_b64()` | `SELECT token_json FROM oauth_tokens` |
 | `_get_outlook_client(user_id)` | `_get_gmail_client()` | Construit `OutlookClient` avec token saver |
 | `get_outlook_status(user_id)` | `get_gmail_status()` | Vérifie si token valide |
 | `get_outlook_profile(user_id)` | `get_gmail_profile()` | Récupère profil via Graph |
@@ -474,7 +483,7 @@ Si les emails Outlook doivent apparaître dans la page mail (comme Gmail), ajout
 |---|---|---|
 | Lib auth | `google-auth-oauthlib` (Flow) | `requests` direct (token endpoint) |
 | Serialisation token | `pickle` base64 | JSON texte |
-| Colonne DB | `profile.google_token_pickle` | `profile.outlook_token_json` |
+| Stockage DB | `profile.google_token_pickle` | `oauth_tokens (provider='microsoft', service='mail')` |
 | Credentials source | `var/credentials.json` | env vars `AZUR_*` |
 | API messages | `googleapis` SDK | `https://graph.microsoft.com/v1.0/me/messages` |
 | Refresh | `creds.refresh(Request())` | POST token endpoint `grant_type=refresh_token` |
@@ -522,7 +531,7 @@ back/src/repository/email_repository.py  (méthodes génériques)
 | C | Créer `base.py` ABC + faire implémenter à `GmailService` | — (interface pure) | `refactor(email): EmailProviderService interface` |
 | D | Créer `make_email_provider_router` + remplacer routes Gmail | Vérifier que les tests de routes Gmail existants passent toujours | `refactor(email): generic email provider router factory` |
 | 1 | Azure AD : App Registration (portail Azure, hors code) | — | — |
-| 2 | Migration `044_add_outlook_token.sql` + schema | — | `feat(db): add outlook_token_json column to profile` |
+| 2 | Migration `044_add_outlook_token.sql` + schema `oauth_tokens` | — | `feat(db): add oauth_tokens table for provider tokens` |
 | 3 | `outlook_client.py` | `test_outlook_client_get_profile.py`, `test_outlook_client_list_messages.py`, `test_outlook_client_refresh.py` | `feat(outlook): Microsoft Graph client` |
 | 4 | Méthodes Outlook dans `EmailRepository` | `test_outlook_oauth_callback.py`, `test_get_outlook_status.py` | `feat(outlook): email repository methods` |
 | 5 | `outlook_service.py` | `test_outlook_service_get_status.py`, `test_outlook_service_oauth_flow.py`, `test_outlook_service_revoke.py` | `feat(outlook): OutlookService` |
