@@ -105,11 +105,11 @@ class QuoteService:
             print(f"[QuoteController][update] Error updating quote: {e}")
             raise e
 
-    def safe_numeric(self, value):
+    def safe_numeric(self, value, default=0):
         try:
             return float(value)
         except (TypeError, ValueError):
-            return None
+            return default
 
     def update_line_from_product(self, document: Dict, product: Dict) -> None:
         print(f"[QuoteController][update_line_from_product] Updating line from product: {product}")
