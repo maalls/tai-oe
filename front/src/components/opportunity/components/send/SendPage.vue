@@ -193,18 +193,23 @@
             >
                {{ t('opportunities.quotePdfNotGenerated') }}
 
-               <button @click="generateQuotePdf()" class="btn btn-primary ml-2">
+               <ActionButton
+                  type="button"
+                  variant="primary"
+                  class="ml-2"
+                  @click="generateQuotePdf()"
+               >
                   {{ t('opportunities.generatePdf') }}
-               </button>
+               </ActionButton>
             </div>
 
             <div class="flex gap-3 pt-4">
-               <button type="submit" :disabled="isSending" class="btn btn-primary">
+               <ActionButton type="submit" variant="primary" :disabled="isSending">
                   {{ isSending ? t('opportunities.sending') : t('opportunities.sendEmail') }}
-               </button>
-               <router-link :to="`/opportunities/${opportunityId}/quote`" class="btn btn-secondary">
+               </ActionButton>
+               <ActionButton :to="`/opportunities/${opportunityId}/quote`" variant="neutral">
                   {{ t('common.cancel') }}
-               </router-link>
+               </ActionButton>
             </div>
          </form>
       </div>
@@ -223,6 +228,7 @@ import { listContacts } from '../../../../api/contact';
 import { listOpportunityDocuments } from '../../../../api/document';
 import { getOpportunitySentEmail, getOpportunitySummary } from '../../../../api/opportunity';
 import { getOpportunitySource } from '../../../../api/opportunitySource';
+import ActionButton from '../../../common/ActionButton.vue';
 const route = useRoute();
 const router = useRouter();
 const { session, user } = useAuth();

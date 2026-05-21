@@ -218,16 +218,25 @@
                }}
             </p>
             <div class="flex gap-3 justify-end">
-               <button @click="showBatchDeleteConfirmation = false" class="btn btn-secondary">
+               <ActionButton
+                  type="button"
+                  variant="neutral"
+                  @click="showBatchDeleteConfirmation = false"
+               >
                   {{ t('common.cancel') }}
-               </button>
-               <button @click="batchDelete" :disabled="isDeleting" class="btn btn-danger">
+               </ActionButton>
+               <ActionButton
+                  type="button"
+                  variant="danger"
+                  :disabled="isDeleting"
+                  @click="batchDelete"
+               >
                   {{
                      isDeleting
                         ? t('opportunities.batchDelete.deleting')
                         : t('opportunities.batchDelete.deleteAll')
                   }}
-               </button>
+               </ActionButton>
             </div>
          </div>
       </div>
@@ -241,6 +250,7 @@ import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
 import { listAccounts } from '../../api/account';
 import { apiUrl } from '../../utils/api';
+import ActionButton from '../common/ActionButton.vue';
 
 const { t, te } = useI18n();
 
