@@ -19,7 +19,7 @@
 - [x] 0 — Remplacer le flux login Azure existant (`azure_client.py`) par le flux Microsoft OAuth unifié
 - [ ] 1 — Azure AD : App Registration + scopes + redirect URI (portail Azure)
 - [x] 2 — Migration `044_add_outlook_token.sql` (table `oauth_tokens`) + màj schéma SQL
-- [ ] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`
+- [x] 3 — Créer `back/src/infrastructure/clients/outlook_client.py`
 - [ ] 4 — Ajouter méthodes Outlook dans `EmailRepository`
 - [ ] 5 — Créer `back/src/service/email/outlook_service.py`
 - [ ] 6 — Ajouter `get_outlook_service` dans `dependencies.py` + instancier `outlook_router`
