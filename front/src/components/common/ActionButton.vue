@@ -31,7 +31,7 @@ const variantClassMap = {
 const buttonClass = computed(() => {
    const variantClass = variantClassMap[props.variant] || variantClassMap.primary;
    return [
-      'inline-flex h-8 items-center justify-center px-2 text-sm leading-none rounded appearance-none border-0 m-0 transition cursor-pointer',
+      'inline-flex h-8 items-center justify-center px-2 text-sm rounded transition cursor-pointer',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       variantClass,
    ];
