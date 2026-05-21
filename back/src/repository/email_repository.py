@@ -18,6 +18,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from src.lib.classification.email_classifier import EmailClassifier
 from src.infrastructure.clients.gmail_client import GmailClient
+from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.lib.email.mime import parse_from_header
@@ -1116,7 +1117,7 @@ class EmailRepository:
                 "callback_url": callback_url,
                 "user_id": user_id,
             }
-            state = base64.urlsafe_b64encode(json.dumps(state_payload).encode()).decode()
+            state = encode_oauth_state(state_payload)
 
             auth_url, _ = flow.authorization_url(
                 access_type="offline",
@@ -1146,8 +1147,7 @@ class EmailRepository:
             user_id = None
             if state:
                 try:
-                    decoded = base64.urlsafe_b64decode(state.encode()).decode()
-                    payload = json.loads(decoded)
+                    payload = decode_oauth_state(state)
                     redirect_url = payload.get("redirect_url") or redirect_url
                     callback_url = payload.get("callback_url") or self._resolve_gmail_callback_url(redirect_url)
                     user_id = payload.get("user_id")

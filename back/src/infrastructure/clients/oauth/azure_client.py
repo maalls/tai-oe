@@ -1,7 +1,8 @@
 import os
-import base64
-import json
 import requests
+
+from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
+
 
 def get_azure_oauth_url(redirect_url=None):
     """Generate Azure OAuth2 login URL."""
@@ -14,7 +15,7 @@ def get_azure_oauth_url(redirect_url=None):
     state_payload = {
         'redirect_url': redirect_url or default_redirect_uri,
     }
-    state = base64.urlsafe_b64encode(json.dumps(state_payload).encode()).decode()
+    state = encode_oauth_state(state_payload)
 
     authorize_url = (
         f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize?"
@@ -39,8 +40,7 @@ def handle_azure_oauth_callback(code, state=None):
     redirect_url = redirect_uri
     if state:
         try:
-            decoded = base64.urlsafe_b64decode(state.encode()).decode()
-            payload = json.loads(decoded)
+            payload = decode_oauth_state(state)
             redirect_url = payload.get('redirect_url') or redirect_uri
         except Exception:
             pass
