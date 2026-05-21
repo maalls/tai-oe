@@ -16,8 +16,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-
-
 ## Prod update
 
 To update venv in another instance:
@@ -30,15 +28,21 @@ venv/bin/python -m pip install -r requirements.txt
 
 (If venv doesn't exist on the remote, create it with `python3 -m venv venv` first)
 
-
-
 Environment/config changes (.env files):
 `sudo systemctl restart taioe-backend`
 
 ## Systemd Entrypoint
 
 The backend is started by systemd using:
+
 ```
 python -m src.command.dev_server
 ```
+
 See deployment/systemd/taioe-backend.service and deployment/systemd/taioe-frontend.service
+
+migration:
+
+```
+python -m script.run_migrations
+```
