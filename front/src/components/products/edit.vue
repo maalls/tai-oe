@@ -88,11 +88,7 @@
             >
                {{ isDeleting ? 'Deleting...' : 'Delete' }}
             </ActionButton>
-            <router-link
-               to="/products"
-               class="inline-flex h-8 items-center justify-center bg-gray-300 text-gray-800 px-3 text-sm leading-none rounded hover:bg-gray-400"
-               >Cancel</router-link
-            >
+            <ActionButton to="/products" variant="neutral">Cancel</ActionButton>
          </div>
       </form>
    </div>

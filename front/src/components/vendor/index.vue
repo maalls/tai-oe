@@ -2,12 +2,9 @@
    <div>
       <ProductsSubHeader>
          <template #actions>
-            <router-link
-               to="/vendors/new"
-               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm"
-            >
+            <ActionButton to="/vendors/new" variant="dark">
                {{ t('vendors.new') }}
-            </router-link>
+            </ActionButton>
          </template>
       </ProductsSubHeader>
       <div class="list-page-shell">
@@ -104,6 +101,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import ProductsSubHeader from '../products/ProductsSubHeader.vue';
+import ActionButton from '../common/ActionButton.vue';
 import { listVendors, type Vendor } from '../../api/vendor';
 import { useI18n } from '../../i18n/useI18n';
 

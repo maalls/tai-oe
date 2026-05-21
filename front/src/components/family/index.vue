@@ -2,14 +2,14 @@
    <div>
       <ProductsSubHeader>
          <template #actions>
-            <button
+            <ActionButton
                type="button"
-               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+               variant="dark"
                :disabled="isCreatingFamily"
                @click="addFamily"
             >
                {{ isCreatingFamily ? t('products.family.adding') : t('products.family.add') }}
-            </button>
+            </ActionButton>
          </template>
       </ProductsSubHeader>
       <div class="p-6 max-w-7xl mx-auto space-y-6">
@@ -138,14 +138,16 @@
             <div v-if="isLoading" class="p-6 text-gray-500">Loading...</div>
             <div v-else-if="!filteredFamilies.length" class="p-6 text-gray-500">
                <div>Nothing found.</div>
-               <button
+               <ActionButton
                   v-if="hasActiveFilters"
                   type="button"
-                  class="mt-3 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  variant="neutral"
+                  size="xs"
+                  class="mt-3"
                   @click="clearFilters"
                >
                   Clear filters
-               </button>
+               </ActionButton>
             </div>
             <div v-else class="overflow-x-auto">
                <div
@@ -462,14 +464,15 @@
                            </RouterLink>
                         </td>
                         <td class="px-4 py-2 text-right">
-                           <button
+                           <ActionButton
                               type="button"
-                              class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              variant="danger-outline"
+                              size="xs"
                               :disabled="isDeletingById[family.id]"
                               @click="deleteFamily(family)"
                            >
                               {{ isDeletingById[family.id] ? 'Deleting...' : 'Delete' }}
-                           </button>
+                           </ActionButton>
                         </td>
                      </tr>
                   </tbody>
@@ -514,6 +517,7 @@ input[type='number'] {
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ProductsSubHeader from './../products/ProductsSubHeader.vue';
+import ActionButton from '../common/ActionButton.vue';
 import PaginationControls from '../products/components/table/PaginationControls.vue';
 import { useBrandFamilyData } from '../products/useBrandFamilyData';
 import { searchProductBySku } from '../../composables/useSuggestionSearch';

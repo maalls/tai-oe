@@ -9,9 +9,9 @@
                </h1>
                <p class="text-sm text-gray-500">{{ t('products.familyDiscount.subtitle') }}</p>
             </div>
-            <button type="button" class="text-sm text-gray-600 hover:text-gray-900" @click="goBack">
+            <ActionButton type="button" variant="neutral" size="xs" @click="goBack">
                {{ t('products.familyDiscount.back') }}
-            </button>
+            </ActionButton>
          </div>
 
          <div v-if="errorMessage" class="rounded-lg bg-red-50 text-red-700 p-4">
@@ -54,22 +54,24 @@
                         {{ t('products.familyDiscount.linesTitle') }}
                      </div>
                      <div class="flex items-center gap-2">
-                        <button
+                        <ActionButton
                            type="button"
-                           class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                           variant="neutral"
+                           size="xs"
                            :disabled="!documentId"
                            @click="addLine"
                         >
                            {{ t('products.familyDiscount.addLine') }}
-                        </button>
-                        <button
+                        </ActionButton>
+                        <ActionButton
                            type="button"
-                           class="inline-flex items-center rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-800"
+                           variant="dark"
+                           size="xs"
                            :disabled="!documentId || isSaving"
                            @click="saveLines"
                         >
                            {{ isSaving ? t('common.saving') : t('common.save') }}
-                        </button>
+                        </ActionButton>
                      </div>
                   </div>
 
@@ -179,6 +181,7 @@
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProductsSubHeader from './ProductsSubHeader.vue';
+import ActionButton from '../common/ActionButton.vue';
 import {
    getFamily,
    getFamilyDiscountLines,
