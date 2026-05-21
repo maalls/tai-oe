@@ -74,6 +74,7 @@ def test_products_quote_context_returns_grouped_payload():
                 "sku": "SKU-1",
                 "name": "Produit 1",
                 "price": 100,
+                "batch": None,
                 "brand_id": "b-1",
                 "brand": {
                     "id": "b-1",

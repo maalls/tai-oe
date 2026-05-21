@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import pytest
 from dotenv import load_dotenv
@@ -6,9 +7,16 @@ from dotenv import load_dotenv
 from src.infrastructure.clients.llm import get_llm_service
 
 
+def _require_live_llm_tests() -> None:
+	if os.getenv("RUN_LLM_TESTS", "").lower() not in {"1", "true", "yes"}:
+		pytest.skip("Live LLM tests disabled. Set RUN_LLM_TESTS=1 to enable.")
+
+
 @pytest.mark.slow
 @pytest.mark.timeout(60)
 def test_get_llm_service_and_query_json() -> None:
+	_require_live_llm_tests()
+
 	back_root = Path(__file__).resolve().parents[4]
 	env_path = back_root / ".env"
 	if env_path.exists():

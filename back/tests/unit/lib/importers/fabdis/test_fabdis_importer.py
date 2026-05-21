@@ -106,6 +106,7 @@ class FakePandas:
 				"FAM3L",
 			]
 		)
+		self.media_df = pd.DataFrame(columns=["MARQUE", "REFCIALE", "MTYP", "MNUM", "MURL"])
 
 	def ExcelFile(self, fabdis_file: Path) -> object:
 		self.called_with = fabdis_file
@@ -117,6 +118,8 @@ class FakePandas:
 			return self.cartouche_df
 		if sheet_name == "B01_COMMERCE":
 			return self.commerce_df
+		if sheet_name == "B03_MEDIA":
+			return self.media_df
 		raise AssertionError(f"Unexpected sheet: {sheet_name}")
 
 	def isna(self, value: object) -> bool:
@@ -540,6 +543,9 @@ def test_import_runs_cartouche_flow():
 		"products_updated": 0,
 		"families_created": 0,
 		"product_family_created": 0,
+		"media_upserted": 0,
+		"media_existing": 0,
+		"media_skipped": 0,
 	}
 
 

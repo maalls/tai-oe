@@ -21,6 +21,17 @@ class ProductService:
         result = query.execute()
         return result.data if result and result.data else []
 
+    def create_family(self, family_code: str, brand_id: str) -> Dict[str, Any]:
+        payload = {
+            "brand_id": brand_id,
+            "code": family_code,
+            "type": family_code,
+        }
+        result = self.supabase.from_("family").insert(payload).execute()
+        if not result.data:
+            raise RuntimeError("Failed to insert family")
+        return result.data[0]
+
     def post_product(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         product = self.upsert_product(payload)
         self.upsert_family(product, payload)
