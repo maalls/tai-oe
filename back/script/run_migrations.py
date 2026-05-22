@@ -13,7 +13,7 @@ import sys
 import hashlib
 from pathlib import Path
 from typing import List, Dict
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.config import create_database_handler
 from src.infrastructure.config import create_database_service
 
 BACK_DIR = Path(__file__).resolve().parents[1]
@@ -50,11 +50,11 @@ def get_migration_files() -> List[Dict[str, str]]:
     return migration_files
 
 
-def get_executed_migrations(supabase) -> set:
+def get_executed_migrations(db_handler) -> set:
     """Get list of migrations that have already been executed."""
     try:
-        response = supabase.table("migrations").select("migration_name").execute()
-        return {row["migration_name"] for row in response.data} if response.data else set()
+        rows = db_handler.execute_dict_query("SELECT migration_name FROM migrations")
+        return {row["migration_name"] for row in rows} if rows else set()
     except Exception as e:
         print(f"Error fetching executed migrations: {e}")
         print("Note: If migrations table doesn't exist, run schema/migrations.sql first")
@@ -83,7 +83,7 @@ def get_db_connection():
     return conn
 
 
-def execute_migration(supabase, migration: Dict[str, str], auto_confirm: bool = False) -> bool:
+def execute_migration(db_handler, migration: Dict[str, str], auto_confirm: bool = False) -> bool:
     """Execute a single migration and record it."""
     print(f"\n▶ Executing migration: {migration['name']}")
     print(f"  Checksum: {migration['checksum'][:16]}...")
@@ -112,10 +112,10 @@ def execute_migration(supabase, migration: Dict[str, str], auto_confirm: bool = 
         conn.close()
         
         # Record the migration as executed
-        supabase.table("migrations").insert({
-            "migration_name": migration['name'],
-            "checksum": migration['checksum']
-        }).execute()
+        db_handler.execute_update(
+            "INSERT INTO migrations (migration_name, checksum) VALUES (%s, %s)",
+            (migration["name"], migration["checksum"]),
+        )
         
         print(f"✓ Migration executed and recorded: {migration['name']}")
         return True
@@ -127,10 +127,13 @@ def execute_migration(supabase, migration: Dict[str, str], auto_confirm: bool = 
         return False
 
 
-def reset_migration(supabase, migration_name: str):
+def reset_migration(db_handler, migration_name: str):
     """Remove a migration record to allow re-execution."""
     try:
-        supabase.table("migrations").delete().eq("migration_name", migration_name).execute()
+        db_handler.execute_update(
+            "DELETE FROM migrations WHERE migration_name = %s",
+            (migration_name,),
+        )
         print(f"✓ Removed migration record: {migration_name}")
     except Exception as e:
         print(f"✗ Error removing migration record: {e}")
@@ -140,7 +143,10 @@ def run_migrations(reset: bool = False):
     """Run all pending migrations."""
     print("Starting migration process...")
     
-    supabase = get_supabase_service()
+    db_handler = create_database_handler(
+        current_file=__file__,
+        require_postgres_password=False,
+    )
     
     # Get all migration files
     migration_files = get_migration_files()
@@ -151,14 +157,14 @@ def run_migrations(reset: bool = False):
     print(f"Found {len(migration_files)} migration file(s)")
     
     # Get already executed migrations
-    executed = get_executed_migrations(supabase)
+    executed = get_executed_migrations(db_handler)
     print(f"Already executed: {len(executed)} migration(s)")
     
     # Reset if requested
     if reset and executed:
         print("\n⚠ RESET MODE: Clearing migration records...")
         for migration_name in executed:
-            reset_migration(supabase, migration_name)
+            reset_migration(db_handler, migration_name)
         executed = set()
     
     # Find pending migrations
@@ -175,7 +181,7 @@ def run_migrations(reset: bool = False):
     # Execute pending migrations
     executed_count = 0
     for migration in pending:
-        if execute_migration(supabase, migration):
+        if execute_migration(db_handler, migration):
             executed_count += 1
         else:
             print(f"\n⚠ Migration halted at: {migration['name']}")

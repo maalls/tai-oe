@@ -21,8 +21,8 @@ import pytest
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.infrastructure.config import create_database_handler
 from src.repository.opportunity import OpportunityRepository
-from src.infrastructure.clients.supabase import get_supabase_service
 
 RUN_MANUAL_SMOKE_TESTS = os.getenv("RUN_MANUAL_SMOKE_TESTS") == "1"
 
@@ -42,17 +42,19 @@ def _run_generate_quote_for_opportunity_test() -> bool:
     
     # Initialize repository
     repo = OpportunityRepository()
-    supabase = get_supabase_service()
+    db_handler = create_database_handler(
+        current_file=__file__,
+        require_postgres_password=False,
+    )
     
     # Step 1: Verify opportunity exists
     print(f"[TEST] Step 1: Verify opportunity exists...")
     try:
-        opp_response = supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-        if getattr(opp_response, "error", None):
-            print(f"[ERROR] Opportunity lookup failed: {opp_response.error}")
-            return False
-        
-        opportunity = opp_response.data
+        opp_rows = db_handler.execute_dict_query(
+            "SELECT * FROM opportunity WHERE id = %s LIMIT 1",
+            (opportunity_id,),
+        )
+        opportunity = opp_rows[0] if opp_rows else None
         if not opportunity:
             print(f"[ERROR] Opportunity not found: {opportunity_id}")
             return False
@@ -75,25 +77,33 @@ def _run_generate_quote_for_opportunity_test() -> bool:
     
     if source == 'email':
         try:
-            email_response = supabase.table("email").select("*").eq("id", source_ref_id).single().execute()
-            if not getattr(email_response, "error", None) and email_response.data:
-                email = email_response.data
+            email_rows = db_handler.execute_dict_query(
+                "SELECT * FROM email WHERE id = %s LIMIT 1",
+                (source_ref_id,),
+            )
+            if email_rows:
+                email = email_rows[0]
                 print(f"[OK] Email source found:")
                 print(f"     Subject: {email.get('subject')}")
                 print(f"     From: {email.get('from_email')}")
                 print(f"     Body Preview: {email.get('body_preview', '')[:100]}...")
                 
                 # Check for attachments
-                att_response = supabase.table("email_attachment").select("*").eq("email_id", source_ref_id).execute()
-                attachments = att_response.data or []
+                attachments = db_handler.execute_dict_query(
+                    "SELECT * FROM email_attachment WHERE email_id = %s",
+                    (source_ref_id,),
+                )
                 print(f"     Attachments: {len(attachments)}")
                 for att in attachments:
                     print(f"        - {att.get('filename')} ({att.get('mime_type')})")
             else:
                 # Try lookup by provider_message_id
-                email_response = supabase.table("email").select("*").eq("provider_message_id", source_ref_id).execute()
-                if email_response.data and len(email_response.data) > 0:
-                    email = email_response.data[0]
+                email_rows = db_handler.execute_dict_query(
+                    "SELECT * FROM email WHERE provider_message_id = %s LIMIT 1",
+                    (source_ref_id,),
+                )
+                if email_rows:
+                    email = email_rows[0]
                     print(f"[OK] Email source found (by provider_message_id):")
                     print(f"     Subject: {email.get('subject')}")
                     print(f"     From: {email.get('from_email')}")
@@ -104,9 +114,12 @@ def _run_generate_quote_for_opportunity_test() -> bool:
     
     elif source == 'rfp_upload':
         try:
-            doc_response = supabase.table("document").select("*").eq("id", source_ref_id).single().execute()
-            if not getattr(doc_response, "error", None) and doc_response.data:
-                document = doc_response.data
+            doc_rows = db_handler.execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (source_ref_id,),
+            )
+            if doc_rows:
+                document = doc_rows[0]
                 print(f"[OK] RFP document source found:")
                 print(f"     Type: {document.get('type')}")
                 print(f"     Storage Key: {document.get('storage_key')}")
@@ -118,9 +131,12 @@ def _run_generate_quote_for_opportunity_test() -> bool:
     
     elif source == 'text':
         try:
-            doc_response = supabase.table("document").select("*").eq("id", source_ref_id).single().execute()
-            if not getattr(doc_response, "error", None) and doc_response.data:
-                document = doc_response.data
+            doc_rows = db_handler.execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (source_ref_id,),
+            )
+            if doc_rows:
+                document = doc_rows[0]
                 print(f"[OK] Text document source found:")
                 print(f"     Type: {document.get('type')}")
                 print(f"     Storage Key: {document.get('storage_key')}")

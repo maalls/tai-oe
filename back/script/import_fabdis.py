@@ -10,7 +10,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import pandas as pd
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.config import create_database_handler
+from src.infrastructure.database.supabase_compat_adapter import SupabaseCompatAdapter
 from src.lib.importers.fabdis import FabdisImporter
 
 
@@ -31,9 +32,13 @@ def main() -> int:
 	args = parse_args()
 
 	try:
-		supabase_client = get_supabase_service()
-	except ValueError as exc:
-		print(f"Error: could not initialize Supabase client: {exc}")
+		db_handler = create_database_handler(
+			current_file=__file__,
+			require_postgres_password=False,
+		)
+		supabase_client = SupabaseCompatAdapter(db_handler)
+	except Exception as exc:
+		print(f"Error: could not initialize database handler: {exc}")
 		return 1
 
 	importer = FabdisImporter(pd, supabase_client)

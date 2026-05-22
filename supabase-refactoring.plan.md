@@ -96,6 +96,17 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `back/src/infrastructure/supabase/vendor_supabase.py`
 - [x] `back/src/infrastructure/clients/supabase.py` (conserve comme couche de compatibilite auth/integration)
 
+### Chemins restants scripts/tests (a migrer)
+
+- [x] `back/script/run_migrations.py` (acces `supabase.table(...)` + `get_supabase_service()`)
+- [x] `back/script/import_fabdis.py` (usage `get_supabase_service()`)
+- [x] `back/script/update_discount.py` (usage `get_supabase_service()`)
+- [x] `back/script/update_net_price.py` (usage `get_supabase_service()`)
+- [x] `back/tests/test_generate_quote_for_opportunity.py` (queries directes via `supabase.table(...)`)
+- [x] `back/tests/verify_attachment_type.py` (queries directes via `supabase.table(...)`)
+- [x] `back/tests/integration/lib/importers/discount/test_importer_discount_functional.py` (usage `get_supabase_service()`)
+- [x] `back/tests/integration/lib/calculations/net_price/test_importer_net_price_functional.py` (usage `get_supabase_service()`)
+
 ## Strategie de migration
 
 ### Lot 1 - Inventaire et frontieres

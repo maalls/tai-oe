@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 
 from src.infrastructure.clients.llm import get_llm_service
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.config import create_database_handler
+from src.infrastructure.database.supabase_compat_adapter import SupabaseCompatAdapter
 from src.lib.importers.net_price import NetPriceImporter
 
 
@@ -46,9 +47,13 @@ def main() -> None:
     
     # Initialize clients
     try:
-        supabase_client = get_supabase_service()
+        db_handler = create_database_handler(
+            current_file=__file__,
+            require_postgres_password=False,
+        )
+        supabase_client = SupabaseCompatAdapter(db_handler)
         llm_client = get_llm_service()
-    except ImportError as e:
+    except Exception as e:
         print(f"Error: Failed to initialize clients: {e}", file=sys.stderr)
         sys.exit(1)
     

@@ -5,10 +5,11 @@ Verify that ATTACHMENT type has been added to the document_type enum.
 
 import sys
 from pathlib import Path
+import uuid
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.config import create_database_handler
 
 def verify_attachment_type():
     print("\n" + "="*80)
@@ -16,12 +17,18 @@ def verify_attachment_type():
     print("="*80 + "\n")
     
     try:
-        supabase = get_supabase_service()
+        db_handler = create_database_handler(
+            current_file=__file__,
+            require_postgres_password=False,
+        )
         
         # Try to insert a test document with type ATTACHMENT
         print("[VERIFY] Testing if ATTACHMENT type is available...")
+
+        test_id = str(uuid.uuid4())
         
         test_data = {
+            "id": test_id,
             "opportunity_id": "00000000-0000-0000-0000-000000000000",  # dummy UUID
             "type": "ATTACHMENT",
             "status": "RECEIVED",
@@ -32,15 +39,38 @@ def verify_attachment_type():
         }
         
         try:
-            result = supabase.table("document").insert(test_data).execute()
+            db_handler.execute_dict_query(
+                """
+                INSERT INTO document (
+                    id,
+                    opportunity_id,
+                    type,
+                    status,
+                    title,
+                    currency,
+                    channel,
+                    storage_key
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    test_data["id"],
+                    test_data["opportunity_id"],
+                    test_data["type"],
+                    test_data["status"],
+                    test_data["title"],
+                    test_data["currency"],
+                    test_data["channel"],
+                    test_data["storage_key"],
+                ),
+            )
             print("[VERIFY] ✅ ATTACHMENT type is available in database!")
             print(f"[VERIFY] Test insert successful")
             
             # Delete the test record
-            if result.data:
-                test_id = result.data[0]['id']
-                supabase.table("document").delete().eq("id", test_id).execute()
-                print("[VERIFY] ✓ Cleaned up test record")
+            db_handler.execute_update("DELETE FROM document WHERE id = %s", (test_id,))
+            print("[VERIFY] ✓ Cleaned up test record")
                 
         except Exception as e:
             error_msg = str(e)
@@ -54,11 +84,13 @@ def verify_attachment_type():
         
         # Also check the migrations table
         print("\n[VERIFY] Checking migrations table...")
-        migrations = supabase.table("migrations").select("*").order("created_at", desc=True).limit(5).execute()
+        migrations = db_handler.execute_dict_query(
+            "SELECT * FROM migrations ORDER BY created_at DESC LIMIT 5"
+        )
         
-        if migrations.data:
+        if migrations:
             print("\n[VERIFY] Recent migrations:")
-            for mig in migrations.data:
+            for mig in migrations:
                 print(f"  - {mig.get('name', 'N/A')}: {mig.get('applied_at', 'N/A')}")
                 if '006' in mig.get('name', ''):
                     print("[VERIFY] ✅ Migration 006 appears to be applied!")

@@ -4,9 +4,18 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
+from src.infrastructure.config import create_database_handler
+from src.infrastructure.database.supabase_compat_adapter import SupabaseCompatAdapter
 from src.infrastructure.clients.llm import get_llm_service
-from src.infrastructure.clients.supabase import get_supabase_service
 from src.lib.importers.net_price import NetPriceImporter
+
+
+def _build_importer_or_skip() -> NetPriceImporter:
+	try:
+		db_handler = create_database_handler(current_file=__file__, require_postgres_password=False)
+	except Exception as exc:
+		pytest.skip(f"SQL handler unavailable for functional test: {exc}")
+	return NetPriceImporter(SupabaseCompatAdapter(db_handler), llm_client=object())
 
 
 @pytest.mark.slow
@@ -17,7 +26,7 @@ def test_set_brand_abb_success() -> None:
 	if env_path.exists():
 		load_dotenv(env_path, override=False)
 
-	importer = NetPriceImporter(get_supabase_service(), llm_client=object())
+	importer = _build_importer_or_skip()
 
 	brand = importer.setBrand("ABB")
 
@@ -34,7 +43,7 @@ def test_set_brand_abc_fail() -> None:
 	if env_path.exists():
 		load_dotenv(env_path, override=False)
 
-	importer = NetPriceImporter(get_supabase_service(), llm_client=object())
+	importer = _build_importer_or_skip()
 
 	with pytest.raises(ValueError, match="Brand not found"):
 		importer.setBrand("ABC")
