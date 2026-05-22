@@ -1,22 +1,32 @@
 """Email authentication verification service."""
 
 from datetime import datetime
+import json
 from typing import Dict, List
 
-from src.infrastructure.clients.supabase import get_supabase_service
-from src.lib.email.auth_parser import EmailAuthParser
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 
 
 class EmailAuthService:
     """Handle email authentication verification and trust scoring."""
 
-    def __init__(self):
-        self.supabase = get_supabase_service()
+    def __init__(self, db_handler: DatabaseHandler | None = None):
+        self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = DatabaseHandler(
+                database_service=create_database_service(
+                    current_file=__file__,
+                    require_postgres_password=True,
+                )
+            )
+        return self.db_handler
 
     def _execute_raw_sql(self, query: str, params: tuple = None) -> bool:
-        _ = params
         try:
-            self.supabase.rpc("exec_sql", {"query": query}).execute()
+            self._get_db_handler().execute_update(query, params or ())
             return True
         except Exception as exc:
             print(f"[EmailAuthService] Warning: Raw SQL execution not available: {exc}")
@@ -34,9 +44,13 @@ class EmailAuthService:
         dmarc_status: str,
     ) -> Dict:
         try:
+            db_handler = self._get_db_handler()
             sender_domain = sender_email.split("@")[1] if "@" in sender_email else ""
-            response = self.supabase.table("sender_verification").select("*").eq("user_id", user_id).eq("sender_email", sender_email).execute()
-            existing = response.data[0] if response.data else None
+            rows = db_handler.execute_dict_query(
+                "SELECT * FROM sender_verification WHERE user_id = %s AND sender_email = %s LIMIT 1",
+                (user_id, sender_email),
+            )
+            existing = rows[0] if rows else None
 
             if existing:
                 auth_history = existing.get("auth_history", []) or []
@@ -65,12 +79,57 @@ class EmailAuthService:
                 }
 
                 try:
-                    self.supabase.table("sender_verification").update(update_data).eq("id", existing["id"]).execute()
+                    db_handler.execute_dict_query(
+                        """
+                        UPDATE sender_verification
+                        SET trust_score = %s,
+                            auth_history = %s::jsonb,
+                            total_emails_received = %s,
+                            verified_emails_count = %s,
+                            last_verified_at = %s,
+                            updated_at = %s
+                        WHERE id = %s
+                        RETURNING id
+                        """,
+                        (
+                            update_data["trust_score"],
+                            json.dumps(update_data["auth_history"]),
+                            update_data["total_emails_received"],
+                            update_data["verified_emails_count"],
+                            update_data["last_verified_at"],
+                            update_data["updated_at"],
+                            existing["id"],
+                        ),
+                    )
                 except Exception:
-                    self.supabase.table("sender_verification").update(update_data).eq("id", existing["id"]).execute()
+                    db_handler.execute_dict_query(
+                        """
+                        UPDATE sender_verification
+                        SET trust_score = %s,
+                            auth_history = %s::jsonb,
+                            total_emails_received = %s,
+                            verified_emails_count = %s,
+                            last_verified_at = %s,
+                            updated_at = %s
+                        WHERE id = %s
+                        RETURNING id
+                        """,
+                        (
+                            update_data["trust_score"],
+                            json.dumps(update_data["auth_history"]),
+                            update_data["total_emails_received"],
+                            update_data["verified_emails_count"],
+                            update_data["last_verified_at"],
+                            update_data["updated_at"],
+                            existing["id"],
+                        ),
+                    )
 
                 try:
-                    self.supabase.table("sender_verification").update({"is_verified": is_verified}).eq("id", existing["id"]).execute()
+                    db_handler.execute_update(
+                        "UPDATE sender_verification SET is_verified = %s WHERE id = %s",
+                        (is_verified, existing["id"]),
+                    )
                 except Exception:
                     pass
 
@@ -101,10 +160,39 @@ class EmailAuthService:
                 "last_verified_at": datetime.now().isoformat(),
             }
 
-            result = self.supabase.table("sender_verification").insert(insert_data).execute()
-            if result.data:
+            result_rows = db_handler.execute_dict_query(
+                """
+                INSERT INTO sender_verification (
+                    user_id,
+                    sender_email,
+                    sender_domain,
+                    sender_name,
+                    trust_score,
+                    auth_history,
+                    total_emails_received,
+                    verified_emails_count,
+                    last_verified_at
+                ) VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    insert_data["user_id"],
+                    insert_data["sender_email"],
+                    insert_data["sender_domain"],
+                    insert_data["sender_name"],
+                    insert_data["trust_score"],
+                    json.dumps(insert_data["auth_history"]),
+                    insert_data["total_emails_received"],
+                    insert_data["verified_emails_count"],
+                    insert_data["last_verified_at"],
+                ),
+            )
+            if result_rows:
                 try:
-                    self.supabase.table("sender_verification").update({"is_verified": is_verified}).eq("id", result.data[0]["id"]).execute()
+                    db_handler.execute_update(
+                        "UPDATE sender_verification SET is_verified = %s WHERE id = %s",
+                        (is_verified, result_rows[0]["id"]),
+                    )
                 except Exception:
                     pass
 
@@ -120,9 +208,12 @@ class EmailAuthService:
 
     def get_sender_trust_info(self, user_id: str, sender_email: str) -> Dict:
         try:
-            response = self.supabase.table("sender_verification").select("*").eq("user_id", user_id).eq("sender_email", sender_email).execute()
-            if response.data:
-                return response.data[0]
+            rows = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM sender_verification WHERE user_id = %s AND sender_email = %s LIMIT 1",
+                (user_id, sender_email),
+            )
+            if rows:
+                return rows[0]
             return {
                 "trust_score": 0,
                 "is_verified": False,
@@ -137,16 +228,25 @@ class EmailAuthService:
 
     def mark_sender_as_trusted(self, user_id: str, sender_email: str) -> Dict:
         try:
-            response = self.supabase.table("sender_verification").select("id").eq("user_id", user_id).eq("sender_email", sender_email).execute()
-            if not response.data:
+            db_handler = self._get_db_handler()
+            response = db_handler.execute_dict_query(
+                "SELECT id FROM sender_verification WHERE user_id = %s AND sender_email = %s LIMIT 1",
+                (user_id, sender_email),
+            )
+            if not response:
                 return {"status": "error", "message": "Sender not found"}
 
-            sender_id = response.data[0]["id"]
-            self.supabase.table("sender_verification").update({
-                "is_trusted": True,
-                "is_blocklisted": False,
-                "updated_at": datetime.now().isoformat(),
-            }).eq("id", sender_id).execute()
+            sender_id = response[0]["id"]
+            db_handler.execute_update(
+                """
+                UPDATE sender_verification
+                SET is_trusted = %s,
+                    is_blocklisted = %s,
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                (True, False, datetime.now().isoformat(), sender_id),
+            )
 
             return {"status": "ok", "message": "Sender marked as trusted"}
         except Exception as exc:
@@ -155,16 +255,25 @@ class EmailAuthService:
 
     def mark_sender_as_blocklisted(self, user_id: str, sender_email: str) -> Dict:
         try:
-            response = self.supabase.table("sender_verification").select("id").eq("user_id", user_id).eq("sender_email", sender_email).execute()
-            if not response.data:
+            db_handler = self._get_db_handler()
+            response = db_handler.execute_dict_query(
+                "SELECT id FROM sender_verification WHERE user_id = %s AND sender_email = %s LIMIT 1",
+                (user_id, sender_email),
+            )
+            if not response:
                 return {"status": "error", "message": "Sender not found"}
 
-            sender_id = response.data[0]["id"]
-            self.supabase.table("sender_verification").update({
-                "is_blocklisted": True,
-                "is_trusted": False,
-                "updated_at": datetime.now().isoformat(),
-            }).eq("id", sender_id).execute()
+            sender_id = response[0]["id"]
+            db_handler.execute_update(
+                """
+                UPDATE sender_verification
+                SET is_blocklisted = %s,
+                    is_trusted = %s,
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                (True, False, datetime.now().isoformat(), sender_id),
+            )
 
             return {"status": "ok", "message": "Sender marked as blocklisted"}
         except Exception as exc:
@@ -173,20 +282,32 @@ class EmailAuthService:
 
     def get_high_risk_senders(self, user_id: str, trust_score_threshold: int = 30) -> List[Dict]:
         try:
-            response = self.supabase.table("sender_verification").select(
-                "sender_email, sender_name, trust_score, total_emails_received, is_blocklisted"
-            ).eq("user_id", user_id).lt("trust_score", trust_score_threshold).execute()
-            return response.data if response.data else []
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT sender_email, sender_name, trust_score, total_emails_received, is_blocklisted
+                FROM sender_verification
+                WHERE user_id = %s AND trust_score < %s
+                """,
+                (user_id, trust_score_threshold),
+            )
+            return rows or []
         except Exception as exc:
             print(f"[EmailAuthService] Error getting high-risk senders: {exc}")
             return []
 
     def get_verified_senders(self, user_id: str, limit: int = 50) -> List[Dict]:
         try:
-            response = self.supabase.table("sender_verification").select(
-                "sender_email, sender_name, trust_score, total_emails_received"
-            ).eq("user_id", user_id).eq("is_verified", True).order("total_emails_received", desc=True).limit(limit).execute()
-            return response.data if response.data else []
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT sender_email, sender_name, trust_score, total_emails_received
+                FROM sender_verification
+                WHERE user_id = %s AND is_verified = %s
+                ORDER BY total_emails_received DESC
+                LIMIT %s
+                """,
+                (user_id, True, limit),
+            )
+            return rows or []
         except Exception as exc:
             print(f"[EmailAuthService] Error getting verified senders: {exc}")
             return []
