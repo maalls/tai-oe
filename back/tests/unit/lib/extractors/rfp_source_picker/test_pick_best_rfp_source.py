@@ -93,3 +93,17 @@ def test_pick_best_rfp_source_raises_on_vision_pdf_error(monkeypatch, tmp_path: 
         )
     assert "vision PDF extraction failed" in str(exc_info.value)
     assert "Connection error" in str(exc_info.value)
+
+    def test_pick_best_rfp_source_raises_when_text_extraction_fails_without_pdf_fallback(monkeypatch):
+        monkeypatch.setenv("QUOTE_EXTRACTION_MODE", "text")
+
+        def _failing_extract_rfp_from_text(_text, timeout_seconds=None):
+            raise RuntimeError("No models loaded")
+
+        monkeypatch.setattr("src.lib.extractors.rfp_source_picker.extract_rfp_from_text", _failing_extract_rfp_from_text)
+
+        with pytest.raises(RuntimeError, match="No models loaded"):
+            pick_best_rfp_source(
+                body_text="body text",
+                pdf_candidates=[],
+            )

@@ -36,9 +36,14 @@ class ConfigProvider:
         )
         shared_env_path = self._resolve_shared_env_path(shared_env_rel)
         shared_env_values = self._load_env_file_values(shared_env_path)
+        merged_shared_values = self._merge_postgres_overrides(
+            shared_env_values,
+            local_env_values,
+            self._environ,
+        )
 
         shared = parse_shared_supabase_config(
-            shared_env_values,
+            merged_shared_values,
             require_postgres_password=self._require_postgres_password,
         )
 
@@ -75,6 +80,27 @@ class ConfigProvider:
             supabase_anon_key=supabase_anon_key,
             supabase_service_key=supabase_service_key,
         )
+
+    @staticmethod
+    def _merge_postgres_overrides(
+        shared_values: Mapping[str, str],
+        local_values: Mapping[str, str],
+        environ: Mapping[str, str],
+    ) -> dict[str, str]:
+        """Merge POSTGRES_* values with precedence: process env > local env > shared env."""
+        merged = dict(shared_values)
+        postgres_keys = (
+            "POSTGRES_PASSWORD",
+            "POSTGRES_USER",
+            "POSTGRES_HOST",
+            "POSTGRES_PORT",
+            "POSTGRES_DB",
+        )
+        for key in postgres_keys:
+            value = environ.get(key) or local_values.get(key)
+            if value:
+                merged[key] = value
+        return merged
 
     def _resolve_shared_env_path(self, shared_env_rel: str) -> Path:
         path = Path(shared_env_rel)

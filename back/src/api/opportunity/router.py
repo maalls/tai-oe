@@ -293,7 +293,7 @@ def opportunities_search(
         source_reference_id=query.source_reference_id,
         name=query.name,
     )
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.post("/api/opportunities/create-manual")
@@ -311,7 +311,7 @@ def opportunities_create_manual(
         user_id=user_id,
         name=payload.name,
     )
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.post("/api/opportunities/create-draft")
@@ -487,7 +487,7 @@ def opportunities_create_from_email(
         generate_quote_for_opportunity=opportunity_repository.handle_generate_quote_for_opportunity,
     )
     result = service.create_opportunity_from_email(message_id=payload.message_id, user_id=user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.delete("/api/opportunities/{opportunity_ids}")
@@ -503,7 +503,7 @@ def opportunities_delete(
 
     ids_list = [raw_id.strip() for raw_id in opportunity_ids.split(",") if raw_id.strip()]
     result = opportunity_repository.delete_opportunities(opportunity_ids=ids_list, user_id=user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.post("/api/opportunity/{opportunity_id}/rfq/generate")
@@ -518,7 +518,7 @@ def opportunity_rfq_generate(
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
     result = opportunity_repository.handle_generate_quote_for_opportunity(opportunity_id=opportunity_id, user_id=user_id)
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.post("/api/opportunity/{opportunity_id}/rfq/create-from-text")
@@ -543,7 +543,7 @@ async def opportunity_rfq_create_from_text(
         user_id=user_id,
     )
 
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.post("/api/opportunity/{opportunity_id}/send-quote")
@@ -563,7 +563,7 @@ def opportunity_send_quote(
         payload=payload,
         user_id=user_id,
     )
-    return JSONResponse(result, status_code=_status_from_result(result))
+    return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
 
 @router.get("/api/opportunity/{opportunity_id}/sent-email")

@@ -289,6 +289,25 @@ class RfqSourceService:
                 user_id=user_id,
             )
 
+        if not isinstance(quote_result, dict) or quote_result.get("status") != "ok":
+            return {
+                "status": "error",
+                "message": "RFQ quote generation failed",
+                "details": quote_result if isinstance(quote_result, dict) else str(quote_result),
+            }
+
+        draft = quote_result.get("draft") if isinstance(quote_result, dict) else None
+        draft_products = draft.get("products") if isinstance(draft, dict) else None
+        if isinstance(draft_products, list) and len(draft_products) == 0:
+            details = None
+            if isinstance(pre_extracted, dict):
+                details = pre_extracted.get("_extraction_error")
+            return {
+                "status": "error",
+                "message": "RFQ extraction returned no products",
+                "details": details or "Ensure LLM model is loaded and retry.",
+            }
+
         return {
             "status": "ok",
             "message": "RFQ source created successfully",

@@ -67,19 +67,15 @@ def _extract_with_cache(text: str) -> Tuple[int, Optional[Dict]]:
     if not text or not text.strip():
         return 0, None
     
-    try:
-        timeout_seconds = int(os.getenv("QUOTE_LLM_TIMEOUT", os.getenv("RFQ_LLM_TIMEOUT", "600")))
-        rfp_data = extract_rfp_from_text(text, timeout_seconds=timeout_seconds)
-        normalized = _normalize_rfp_data(rfp_data)
-        product_count = len(normalized.get("products", []) or [])
-        
-        if product_count > 0:
-            return product_count, normalized
-        else:
-            return 0, normalized  # Return empty but normalized structure
-    except Exception as e:
-        print(f"[RFPSourcePicker] Warning: LLM extraction failed: {e}")
-        return 0, None
+    timeout_seconds = int(os.getenv("QUOTE_LLM_TIMEOUT", os.getenv("RFQ_LLM_TIMEOUT", "600")))
+    rfp_data = extract_rfp_from_text(text, timeout_seconds=timeout_seconds)
+    normalized = _normalize_rfp_data(rfp_data)
+    product_count = len(normalized.get("products", []) or [])
+
+    if product_count > 0:
+        return product_count, normalized
+
+    return 0, normalized  # Return empty but normalized structure
 
 
 def _resolve_quote_extraction_mode() -> tuple[str, str]:
@@ -137,6 +133,10 @@ def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
     best_content = body_text or ""
     best_count, best_extracted_data = _extract_with_cache(best_content)
     best_pdf_id: Optional[str] = None
+    extraction_errors: List[str] = []
+
+    if isinstance(best_extracted_data, dict) and best_extracted_data.get("_extraction_error"):
+        extraction_errors.append(str(best_extracted_data.get("_extraction_error")))
 
     for candidate in pdf_candidates or []:
         path = candidate.get("path")
@@ -157,12 +157,18 @@ def pick_best_rfp_source(body_text: str, pdf_candidates: List[Dict]) -> Dict:
                 print(f"[RFPSourcePicker] Selected PDF (products: {pdf_count} > {best_count-pdf_count})")
         except Exception as e:
             print(f"[RFPSourcePicker] Warning: could not extract PDF: {e}")
+            extraction_errors.append(str(e))
             if effective_mode == "vision":
                 filename = candidate.get("filename") or str(path)
                 raise RuntimeError(
                     f"vision PDF extraction failed for '{filename}': {e}"
                 ) from e
             continue
+
+    if best_count <= 0 and extraction_errors:
+        raise RuntimeError(
+            "all RFP extraction attempts failed: " + " | ".join(extraction_errors)
+        )
 
     print(
         "[RFPSourcePicker] Quote extraction used "

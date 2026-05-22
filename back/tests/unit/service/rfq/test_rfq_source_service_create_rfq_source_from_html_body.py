@@ -1,5 +1,7 @@
 """Tests for RfqSourceService.create_rfq_source_from_html_body."""
 
+import importlib
+
 from service.rfq.rfq_source_service import RfqSourceService
 
 
@@ -22,6 +24,15 @@ class _FakeOpportunityRepository:
 
     def handle_generate_quote_for_opportunity(self, opportunity_id: str, user_id: str = None):
         return {"status": "ok", "opportunity_id": opportunity_id, "user_id": user_id}
+
+
+class _FakeOpportunityRepositoryEmptyDraft(_FakeOpportunityRepository):
+    def handle_generate_quote_with_content(self, opportunity_id: str, content: str, user_id: str = None, pre_extracted_data=None):
+        return {
+            "status": "ok",
+            "opportunity_id": opportunity_id,
+            "draft": {"products": []},
+        }
 
 
 class _FakeEmailRepository:
@@ -89,12 +100,10 @@ def test_create_rfq_source_from_html_body_creates_records_and_quote(monkeypatch,
             None,
         ),
     )
-    monkeypatch.setattr("src.service.rfq.rfq_source_service.pick_best_rfp_source", lambda text, pdf_candidates: {"content": "pdf extracted", "extracted_data": {"products": [{"sku": "P1"}], "contact": {}}})
-    monkeypatch.setattr("service.rfq.rfq_source_service.pick_best_rfp_source", lambda text, pdf_candidates: {"content": "pdf extracted", "extracted_data": {"products": [{"sku": "P1"}], "contact": {}}})
-    monkeypatch.setattr("src.service.rfq.rfq_source_service.get_storage_dir", lambda _source: tmp_path)
-    monkeypatch.setattr("service.rfq.rfq_source_service.get_storage_dir", lambda _source: tmp_path)
-    monkeypatch.setattr("src.service.rfq.rfq_source_service.time.time", lambda: 1700000000)
-    monkeypatch.setattr("service.rfq.rfq_source_service.time.time", lambda: 1700000000)
+    module = importlib.import_module(service.__class__.__module__)
+    monkeypatch.setattr(module, "pick_best_rfp_source", lambda text, pdf_candidates: {"content": "pdf extracted", "extracted_data": {"products": [{"sku": "P1"}], "contact": {}}})
+    monkeypatch.setattr(module, "get_storage_dir", lambda _source: tmp_path)
+    monkeypatch.setattr(module.time, "time", lambda: 1700000000)
 
     result = service.create_rfq_source_from_html_body(
         opportunity_id="new",
@@ -128,3 +137,78 @@ def test_create_rfq_source_from_html_body_requires_message_or_attachment(monkeyp
     )
 
     assert result == {"status": "error", "message": "Message text or attachment is required"}
+
+
+def test_create_rfq_source_from_html_body_surfaces_picker_failure(monkeypatch, tmp_path):
+    db_handler = _FakeDbHandler()
+    service = RfqSourceService(
+        opportunity_repository=_FakeOpportunityRepository(),
+        email_repository=_FakeEmailRepository(),
+        db_handler=db_handler,
+    )
+
+    monkeypatch.setattr(
+        service,
+        "get_form",
+        lambda _body, _content_type: (
+            {
+                "message": "Message content",
+                "opportunity_name": "RFQ Alpha",
+            },
+            None,
+        ),
+    )
+
+    module = importlib.import_module(service.__class__.__module__)
+    monkeypatch.setattr(module, "extract_company_from_text", lambda _text: {})
+    monkeypatch.setattr(module, "pick_best_rfp_source", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("No models loaded")))
+    monkeypatch.setattr(module, "get_storage_dir", lambda _source: tmp_path)
+    monkeypatch.setattr(module.time, "time", lambda: 1700000000)
+
+    result = service.create_rfq_source_from_html_body(
+        opportunity_id="new",
+        body=b"ignored",
+        content_type="multipart/form-data; boundary=abc",
+        user_id="u-1",
+    )
+
+    assert result["status"] == "error"
+    assert "RFQ extraction failed" in result["message"]
+    assert "No models loaded" in result["details"]
+
+
+def test_create_rfq_source_from_html_body_returns_error_when_quote_has_no_products(monkeypatch, tmp_path):
+    db_handler = _FakeDbHandler()
+    service = RfqSourceService(
+        opportunity_repository=_FakeOpportunityRepositoryEmptyDraft(),
+        email_repository=_FakeEmailRepository(),
+        db_handler=db_handler,
+    )
+
+    monkeypatch.setattr(
+        service,
+        "get_form",
+        lambda _body, _content_type: (
+            {
+                "message": "Message content",
+                "opportunity_name": "RFQ Alpha",
+            },
+            None,
+        ),
+    )
+
+    module = importlib.import_module(service.__class__.__module__)
+    monkeypatch.setattr(module, "extract_company_from_text", lambda _text: {})
+    monkeypatch.setattr(module, "pick_best_rfp_source", lambda *_args, **_kwargs: {"content": "body text", "extracted_data": {"products": []}})
+    monkeypatch.setattr(module, "get_storage_dir", lambda _source: tmp_path)
+    monkeypatch.setattr(module.time, "time", lambda: 1700000000)
+
+    result = service.create_rfq_source_from_html_body(
+        opportunity_id="new",
+        body=b"ignored",
+        content_type="multipart/form-data; boundary=abc",
+        user_id="u-1",
+    )
+
+    assert result["status"] == "error"
+    assert result["message"] == "RFQ extraction returned no products"

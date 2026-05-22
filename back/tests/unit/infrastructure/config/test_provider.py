@@ -23,11 +23,21 @@ def test_provider_resolves_relative_shared_env_path(tmp_path):
     assert "pw" == resolved.shared.postgres_password
 
 
-def test_provider_db_hints_are_read_from_shared_env_only(tmp_path):
+def test_provider_db_hints_allow_local_postgres_overrides(tmp_path):
     env_file = tmp_path / "back.env"
     shared_env = tmp_path / ".env.prod"
 
-    env_file.write_text(f"SUPABASE_ENV_FILE={shared_env}\n", encoding="utf-8")
+    env_file.write_text(
+        "\n".join(
+            [
+                f"SUPABASE_ENV_FILE={shared_env}",
+                "POSTGRES_HOST=localhost",
+                "POSTGRES_PORT=5433",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     shared_env.write_text(
         "\n".join(
             [
@@ -53,14 +63,57 @@ def test_provider_db_hints_are_read_from_shared_env_only(tmp_path):
 
     resolved = provider.resolve()
 
-    assert "db.internal" == resolved.db_hints.host
-    assert 6432 == resolved.db_hints.port
+    assert "localhost" == resolved.db_hints.host
+    assert 5433 == resolved.db_hints.port
     assert "ge_prod" == resolved.db_hints.database
     assert "app_user" == resolved.db_hints.username
     assert "prefer" == resolved.db_hints.sslmode
     assert resolved.database_url is None
     assert resolved.migration_database_url is None
     assert resolved.admin_database_url is None
+
+
+def test_provider_db_hints_prioritize_process_over_local_and_shared(tmp_path):
+    env_file = tmp_path / "back.env"
+    shared_env = tmp_path / ".env.prod"
+
+    env_file.write_text(
+        "\n".join(
+            [
+                f"SUPABASE_ENV_FILE={shared_env}",
+                "POSTGRES_HOST=localhost",
+                "POSTGRES_PORT=5433",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    shared_env.write_text(
+        "\n".join(
+            [
+                "POSTGRES_PASSWORD=shared_pw",
+                "POSTGRES_USER=app_user",
+                "POSTGRES_HOST=db.internal",
+                "POSTGRES_PORT=6432",
+                "POSTGRES_DB=ge_prod",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    provider = ConfigProvider(
+        environ={
+            "POSTGRES_HOST": "127.0.0.1",
+            "POSTGRES_PORT": "6544",
+        },
+        env_file_path=env_file,
+        current_file=str(Path(__file__)),
+    )
+
+    resolved = provider.resolve()
+
+    assert "127.0.0.1" == resolved.db_hints.host
+    assert 6544 == resolved.db_hints.port
 
 
 def test_provider_prefers_process_env_over_shared_for_supabase_keys(tmp_path):
