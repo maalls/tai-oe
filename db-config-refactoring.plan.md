@@ -264,7 +264,7 @@ Use micro-commits, one per consumer:
 ### TDD checklist
 
 - [x] Run full backend tests.
-- [ ] Add regression tests that fail if legacy loaders are accidentally reintroduced.
+- [x] Add regression tests that fail if legacy loaders are accidentally reintroduced.
 
 ### Commit reminder
 
@@ -343,7 +343,8 @@ Use micro-commits, one per consumer:
 - [x] Phase 2 completed.
 - [x] Phase 3 completed.
 - [x] Phase 4 completed.
-- [~] Phase 5 in progress.
+- [x] Phase 5 completed.
+- [~] Phase 6 in progress.
 
 Phase 5 completed items:
 
@@ -354,9 +355,11 @@ Phase 5 completed items:
 - [x] `src/command/run_migration.py` delegates to `script.run_migrations` as canonical entrypoint.
 - [x] API routers now consume `get_database_repository` dependency injection instead of local DB constructors.
 
-Phase 5 remaining items:
+Phase 6 ongoing cleanup notes:
 
-- [x] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
+- [x] Replaced legacy `load_dotenv` entrypoint loading in `src/command/*` with `load_runtime_env` bootstrap.
+- [x] Added regression guard test to detect legacy dotenv usage in command entrypoints.
+- [ ] Remaining legacy loader in `script/db_create.py` pending migration to unified config path.
 
 Recent implementation commits:
 

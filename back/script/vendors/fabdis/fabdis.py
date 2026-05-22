@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, Iterator, Tuple
-from dotenv import load_dotenv
-load_dotenv()
+from src.infrastructure.runtime.env_loader import load_runtime_env
 from vendor import handle_vendor
+
+load_runtime_env(current_file=__file__)
 
 try:
 	import yaml

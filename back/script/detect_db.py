@@ -3,9 +3,9 @@ Detect and test database connection for migrations.
 """
 import os
 import psycopg2
-from dotenv import load_dotenv
+from src.infrastructure.runtime.env_loader import load_runtime_env
 
-load_dotenv()
+load_runtime_env(current_file=__file__)
 
 
 def try_connection(connection_string, description):

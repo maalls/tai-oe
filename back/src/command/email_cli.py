@@ -18,20 +18,14 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
-from dotenv import load_dotenv, find_dotenv
 from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.runtime.env_loader import load_runtime_env
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.config import EMAIL_FETCH_MAX_RESULTS
 from src.repository.email_repository import EmailRepository
 
-# Load .env if available
-try:
-	_env_file = find_dotenv(usecwd=True)
-	if _env_file:
-		load_dotenv(_env_file, override=False)
-except Exception:
-	pass
+load_runtime_env(current_file=__file__)
 
 default_user_id = os.environ.get("SUPABASE_USER_ID") or os.environ.get("DEFAULT_USER_ID")
 

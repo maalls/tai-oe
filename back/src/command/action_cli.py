@@ -18,9 +18,9 @@ import json
 from typing import Optional
 from src.repository.action_repository import ActionRepository
 from src.service.action_scheduler import ActionScheduler
-from dotenv import load_dotenv
+from src.infrastructure.runtime.env_loader import load_runtime_env
 
-load_dotenv()
+load_runtime_env(current_file=__file__)
 
 
 class ActionCLI:

@@ -6,9 +6,8 @@ import json
 import sys
 from pathlib import Path
 
-from dotenv import find_dotenv, load_dotenv
-
 from src.infrastructure.clients.llm import get_llm_service
+from src.infrastructure.runtime.env_loader import load_runtime_env
 from src.lib.importers.net_price import NetPriceImporter
 
 
@@ -21,9 +20,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-	env_file = find_dotenv(usecwd=True)
-	if env_file:
-		load_dotenv(env_file, override=False)
+	load_runtime_env(current_file=__file__)
 
 	args = parse_args()
 	pdf_path = Path(args.pdf_file)
