@@ -4,8 +4,10 @@ import re
 import sys
 from collections import defaultdict, deque
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
-from dotenv import load_dotenv
+from src.infrastructure.config.bootstrap import create_database_service
+from src.infrastructure.runtime.env_loader import load_runtime_env
 
 from script.cli import _connect
 
@@ -217,16 +219,8 @@ def _confirm_destructive_action(force: bool = False) -> None:
         sys.exit(1)
 
 
-def _db_from_database_url() -> dict:
-    database_url = os.getenv("DATABASE_URL", "").strip()
-    if not database_url:
-        print("Missing DATABASE_URL in environment (.env).")
-        print("Expected format: postgresql://user:password@host:port/database")
-        sys.exit(1)
-
+def _db_from_url(database_url: str) -> dict:
     try:
-        from urllib.parse import urlparse
-
         parsed = urlparse(database_url)
         if parsed.scheme not in ("postgres", "postgresql"):
             print("Invalid DATABASE_URL scheme. Use postgres:// or postgresql://")
@@ -237,7 +231,7 @@ def _db_from_database_url() -> dict:
             "port": parsed.port or 5432,
             "database": (parsed.path or "").lstrip("/") or None,
             "user": parsed.username,
-            "password": parsed.password,
+            "password": unquote(parsed.password) if parsed.password else None,
             "sslmode": "prefer",
         }
 
@@ -257,8 +251,20 @@ def _db_from_database_url() -> dict:
 
 
 def _resolve_db_config() -> dict:
-    print("Using database settings from DATABASE_URL in .env")
-    return _db_from_database_url()
+    load_runtime_env(current_file=__file__)
+    try:
+        database_service = create_database_service(
+            current_file=__file__,
+            require_postgres_password=True,
+        )
+        source, database_url = database_service.resolve_migration_db_url()
+    except Exception as exc:
+        print("Failed to resolve migration DB profile from SUPABASE_ENV_FILE.")
+        print(f"Error: {exc}")
+        sys.exit(1)
+
+    print(f"Using database settings from migration profile source: {source}")
+    return _db_from_url(database_url)
 
 
 def create_tables_from_schema(
@@ -266,7 +272,6 @@ def create_tables_from_schema(
     force: bool = False,
     include_fabdis: bool = False,
 ) -> None:
-    load_dotenv()
     db = _resolve_db_config()
 
     base_dir = Path(__file__).resolve().parent.parent

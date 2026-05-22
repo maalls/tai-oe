@@ -329,7 +329,7 @@ Use micro-commits, one per consumer:
 - [x] `database.py` migrated to shared factory.
 - [x] `supabase.py` migrated to shared provider.
 - [x] all migration command paths migrated.
-- [ ] duplicate env loaders removed.
+- [x] duplicate env loaders removed.
 - [x] dependency inversion completed for database client/repository boundaries.
 - [x] legacy singleton DB wiring reduced or removed.
 - [ ] docs/runbook updated.
@@ -344,7 +344,7 @@ Use micro-commits, one per consumer:
 - [x] Phase 3 completed.
 - [x] Phase 4 completed.
 - [x] Phase 5 completed.
-- [~] Phase 6 in progress.
+- [x] Phase 6 completed.
 
 Phase 5 completed items:
 
@@ -359,7 +359,7 @@ Phase 6 ongoing cleanup notes:
 
 - [x] Replaced legacy `load_dotenv` entrypoint loading in `src/command/*` with `load_runtime_env` bootstrap.
 - [x] Added regression guard test to detect legacy dotenv usage in command entrypoints.
-- [ ] Remaining legacy loader in `script/db_create.py` pending migration to unified config path.
+- [x] Migrated `script/db_create.py` from `DATABASE_URL`/`load_dotenv` to migration profile resolution via unified config service.
 
 Recent implementation commits:
 
