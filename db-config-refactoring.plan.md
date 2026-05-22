@@ -306,10 +306,10 @@ Use micro-commits, one per consumer:
 - [x] DatabaseService connection factory implemented.
 - [x] `database.py` migrated to shared factory.
 - [x] `supabase.py` migrated to shared provider.
-- [ ] all migration command paths migrated.
+- [x] all migration command paths migrated.
 - [ ] duplicate env loaders removed.
 - [ ] dependency inversion completed for database client/repository boundaries.
-- [ ] legacy singleton DB wiring reduced or removed.
+- [x] legacy singleton DB wiring reduced or removed.
 - [ ] docs/runbook updated.
 - [ ] full test suite green.
 - [ ] end-to-end migration validation complete.
@@ -327,10 +327,11 @@ Phase 5 completed items:
 - [x] `src/infrastructure/clients/supabase.py` migrated to `ConfigProvider`.
 - [x] `script/run_migrations.py` migrated to bootstrap + `DatabaseService` orchestration.
 - [x] `src/infrastructure/clients/database.py` now routes app connection through `DatabaseService`.
+- [x] `src/command/migrations_cli.py` delegates to `script.run_migrations` as canonical entrypoint.
+- [x] `src/command/run_migration.py` delegates to `script.run_migrations` as canonical entrypoint.
+- [x] API routers now consume `get_database_repository` dependency injection instead of local DB constructors.
 
 Phase 5 remaining items:
-- [ ] `src/command/migrations_cli.py` migration to shared bootstrap/service path.
-- [ ] `src/command/run_migration.py` migration to shared bootstrap/service path.
 - [ ] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
 
 Recent implementation commits:
@@ -344,6 +345,7 @@ Recent implementation commits:
 - `4d11fb4` refactor(db): move migration source resolution to factory/service
 - `5bf64b2` refactor(db): script orchestration-only via service bootstrap
 - `32bd616` refactor(db): DatabaseHandler connections via DatabaseService
+- `3b914f1` refactor(db): enforce shared env DB source and central DI wiring
 
 ## Quality Gates (Do Not Skip)
 
