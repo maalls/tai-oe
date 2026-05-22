@@ -58,6 +58,15 @@ class ConfigProvider:
             or shared.service_role_key
         )
 
+        migration_database_url = (
+            self._environ.get("MIGRATION_DATABASE_URL")
+            or local_env_values.get("MIGRATION_DATABASE_URL")
+        )
+        admin_database_url = (
+            self._environ.get("ADMIN_DATABASE_URL")
+            or local_env_values.get("ADMIN_DATABASE_URL")
+        )
+
         database_url = self._environ.get("DATABASE_URL") or local_env_values.get("DATABASE_URL")
         if database_url:
             db_hints = parse_database_runtime_hints(database_url)
@@ -71,6 +80,9 @@ class ConfigProvider:
         return ResolvedRuntimeConfig(
             shared=shared,
             db_hints=db_hints,
+            database_url=database_url,
+            migration_database_url=migration_database_url,
+            admin_database_url=admin_database_url,
             supabase_url=supabase_url,
             supabase_anon_key=supabase_anon_key,
             supabase_service_key=supabase_service_key,
@@ -84,8 +96,20 @@ class ConfigProvider:
         if self._env_file_path:
             return (self._env_file_path.parent / path).resolve()
 
-        base_dir = self._current_file.parents[3]
+        base_dir = self._infer_backend_dir(self._current_file)
         return (base_dir / path).resolve()
+
+    @staticmethod
+    def _infer_backend_dir(current_file: Path) -> Path:
+        for ancestor in [current_file, *current_file.parents]:
+            if ancestor.is_dir() and ancestor.name == "back":
+                return ancestor
+            if ancestor.is_file() and ancestor.parent.name == "back":
+                return ancestor.parent
+
+        if len(current_file.parents) >= 4:
+            return current_file.parents[3]
+        return current_file.parent
 
     @staticmethod
     def _load_env_file_values(path: Optional[Path]) -> dict[str, str]:

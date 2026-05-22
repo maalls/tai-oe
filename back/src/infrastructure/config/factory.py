@@ -29,20 +29,30 @@ class DbProfileFactory:
     def build_migration_profile(
         self,
         *,
-        migration_database_url: Optional[str],
-        admin_database_url: Optional[str],
-        database_url: Optional[str],
+        migration_database_url: Optional[str] = None,
+        admin_database_url: Optional[str] = None,
+        database_url: Optional[str] = None,
     ) -> DbProfile:
+        migration_database_url = migration_database_url or self._config.migration_database_url
+        admin_database_url = admin_database_url or self._config.admin_database_url
+        database_url = database_url or self._config.database_url
+
         if migration_database_url:
             return self._profile_from_url(migration_database_url, source="MIGRATION_DATABASE_URL")
 
         if admin_database_url:
             return self._profile_from_url(admin_database_url, source="ADMIN_DATABASE_URL")
 
-        runtime_hints = parse_database_runtime_hints(database_url) if database_url else self._config.db_hints
+        if not self._config.shared.postgres_password:
+            if database_url:
+                return self._profile_from_url(database_url, source="DATABASE_URL")
+            raise ValueError(
+                "No PostgreSQL URL configured for migrations. "
+                "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
+                "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
+            )
 
-        if not self._config.shared.postgres_password and database_url:
-            return self._profile_from_url(database_url, source="DATABASE_URL")
+        runtime_hints = parse_database_runtime_hints(database_url) if database_url else self._config.db_hints
 
         tenant_suffix = runtime_hints.tenant_suffix
         migration_user = f"supabase_admin.{tenant_suffix}" if tenant_suffix else "supabase_admin"
@@ -56,6 +66,15 @@ class DbProfileFactory:
             sslmode=runtime_hints.sslmode,
             source="SUPABASE_ENV_FILE",
         )
+
+    def get_configured_database_url(self, source: str) -> Optional[str]:
+        """Return configured raw URL value for explicit DB URL sources."""
+        source_map = {
+            "MIGRATION_DATABASE_URL": self._config.migration_database_url,
+            "ADMIN_DATABASE_URL": self._config.admin_database_url,
+            "DATABASE_URL": self._config.database_url,
+        }
+        return source_map.get(source)
 
     @staticmethod
     def _profile_from_url(db_url: str, *, source: str) -> DbProfile:

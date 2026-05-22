@@ -13,10 +13,9 @@ import sys
 import hashlib
 from pathlib import Path
 from typing import List, Dict
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 from src.infrastructure.clients.supabase import get_supabase_service
-import psycopg2
-from dotenv import dotenv_values, load_dotenv
+from dotenv import load_dotenv
 from src.infrastructure.config.factory import DbProfileFactory
 from src.infrastructure.config.provider import ConfigProvider
 from src.infrastructure.config.service import DatabaseService
@@ -27,23 +26,18 @@ BACK_DIR = Path(__file__).resolve().parents[1]
 
 
 def _build_runtime_config_for_migrations():
-    env_file_path = BACK_DIR / ".env"
     return ConfigProvider(
         environ=os.environ,
-        env_file_path=env_file_path if env_file_path.exists() else None,
+        env_file_path=None,
         current_file=str(Path(__file__).resolve()),
         require_postgres_password=False,
     ).resolve()
 
 
-def _build_migration_profile():
+def _build_database_service_for_migrations() -> DatabaseService:
     runtime_config = _build_runtime_config_for_migrations()
     profile_factory = DbProfileFactory(runtime_config)
-    return profile_factory.build_migration_profile(
-        migration_database_url=os.getenv("MIGRATION_DATABASE_URL"),
-        admin_database_url=os.getenv("ADMIN_DATABASE_URL"),
-        database_url=os.getenv("DATABASE_URL"),
-    )
+    return DatabaseService(profile_factory=profile_factory)
 
 
 def get_migration_files() -> List[Dict[str, str]]:
@@ -81,90 +75,10 @@ def get_executed_migrations(supabase) -> set:
         return set()
 
 
-def get_shared_supabase_env() -> dict[str, str]:
-    """Load the shared Supabase env file referenced by SUPABASE_ENV_FILE."""
-    shared_env_rel = os.getenv("SUPABASE_ENV_FILE", "../supabase/.env.prod")
-    shared_env_path = Path(shared_env_rel)
-    if not shared_env_path.is_absolute():
-        shared_env_path = (BACK_DIR / shared_env_path).resolve()
-
-    if not shared_env_path.exists():
-        return {}
-
-    return {
-        str(key): str(value)
-        for key, value in dotenv_values(shared_env_path).items()
-        if key and value is not None
-    }
-
-
-def build_admin_db_url_from_shared_env() -> tuple[str, str] | None:
-    """Derive a migration URL from the shared Supabase env file when possible."""
-    shared_env = get_shared_supabase_env()
-    postgres_password = shared_env.get("POSTGRES_PASSWORD")
-    if not postgres_password:
-        return None
-
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        parsed = urlparse(database_url)
-        scheme = parsed.scheme or "postgresql"
-        host = parsed.hostname or "localhost"
-        port = parsed.port or 5432
-        database = (parsed.path or "").lstrip("/") or "postgres"
-        username = parsed.username or ""
-        tenant_suffix = username.split(".", 1)[1] if "." in username else ""
-        admin_username = f"supabase_admin.{tenant_suffix}" if tenant_suffix else "supabase_admin"
-        admin_url = (
-            f"{scheme}://{admin_username}:{quote(postgres_password, safe='')}"
-            f"@{host}:{port}/{database}"
-        )
-        return "SUPABASE_ENV_FILE", admin_url
-
-    host = shared_env.get("POSTGRES_HOST", "localhost")
-    port = shared_env.get("POSTGRES_PORT", "5432")
-    database = shared_env.get("POSTGRES_DB", "postgres")
-    admin_url = (
-        f"postgresql://supabase_admin:{quote(postgres_password, safe='')}"
-        f"@{host}:{port}/{database}"
-    )
-    return "SUPABASE_ENV_FILE", admin_url
-
-
 def get_migration_db_url() -> tuple[str, str]:
     """Resolve the PostgreSQL URL used for schema migrations."""
-    profile = _build_migration_profile()
-
-    if (
-        profile.source == "SUPABASE_ENV_FILE"
-        and not profile.password
-        and not os.getenv("MIGRATION_DATABASE_URL")
-        and not os.getenv("ADMIN_DATABASE_URL")
-        and not os.getenv("DATABASE_URL")
-    ):
-        raise ValueError(
-            "No PostgreSQL URL configured for migrations. "
-            "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
-            "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
-        )
-
-    if profile.source in ("MIGRATION_DATABASE_URL", "ADMIN_DATABASE_URL", "DATABASE_URL"):
-        value = os.getenv(profile.source)
-        if value:
-            return profile.source, value
-
-    if profile.source == "SUPABASE_ENV_FILE":
-        db_url = (
-            f"postgresql://{profile.user}:{quote(profile.password, safe='')}"
-            f"@{profile.host}:{profile.port}/{profile.database}"
-        )
-        return profile.source, db_url
-
-    raise ValueError(
-        "No PostgreSQL URL configured for migrations. "
-        "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
-        "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
-    )
+    service = _build_database_service_for_migrations()
+    return service.resolve_migration_db_url()
 
 
 def mask_db_url(db_url: str) -> str:
@@ -185,30 +99,11 @@ def mask_db_url(db_url: str) -> str:
 
 def get_db_connection():
     """Get direct PostgreSQL connection with admin privileges."""
-    profile = _build_migration_profile()
-    if profile.source == "SUPABASE_ENV_FILE" and not profile.password:
-        raise ValueError(
-            "No PostgreSQL URL configured for migrations. "
-            "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
-            "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
-        )
+    service = _build_database_service_for_migrations()
+    source, db_url = service.resolve_migration_db_url()
+    print(f"ℹ Connecting to database with {source}: {mask_db_url(db_url)}")
 
-    db_url = (
-        f"postgresql://{profile.user}:{quote(profile.password, safe='')}"
-        f"@{profile.host}:{profile.port}/{profile.database}"
-    )
-    print(f"ℹ Connecting to database with {profile.source}: {mask_db_url(db_url)}")
-
-    runtime_config = _build_runtime_config_for_migrations()
-    profile_factory = DbProfileFactory(runtime_config)
-    service = DatabaseService(profile_factory=profile_factory)
-
-    conn = service.connect(
-        profile_name="migration",
-        migration_database_url=os.getenv("MIGRATION_DATABASE_URL"),
-        admin_database_url=os.getenv("ADMIN_DATABASE_URL"),
-        database_url=os.getenv("DATABASE_URL"),
-    )
+    conn = service.create_migration_db()
 
     with conn.cursor() as cursor:
         cursor.execute(

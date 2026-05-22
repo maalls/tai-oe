@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Callable, Optional
+from urllib.parse import quote
 
 import psycopg2
 
@@ -45,6 +46,30 @@ class DatabaseService:
             password=profile.password,
             sslmode=profile.sslmode,
         )
+
+    def create_migration_db(self):
+        """Create a migration-scoped DB connection."""
+        return self.connect(profile_name="migration")
+
+    def resolve_migration_db_url(self) -> tuple[str, str]:
+        """Resolve migration DB source and log-safe raw URL."""
+        profile = self._resolve_profile(
+            profile_name="migration",
+            migration_database_url=None,
+            admin_database_url=None,
+            database_url=None,
+        )
+
+        if profile.source in ("MIGRATION_DATABASE_URL", "ADMIN_DATABASE_URL", "DATABASE_URL"):
+            value = self._profile_factory.get_configured_database_url(profile.source)
+            if value:
+                return profile.source, value
+
+        db_url = (
+            f"postgresql://{profile.user}:{quote(profile.password, safe='')}"
+            f"@{profile.host}:{profile.port}/{profile.database}"
+        )
+        return profile.source, db_url
 
     @contextmanager
     def cursor(

@@ -123,3 +123,63 @@ def test_connect_raises_for_unknown_profile_name():
 
     with pytest.raises(ValueError, match="Unsupported profile_name"):
         service.connect(profile_name="unknown")
+
+
+def test_create_migration_db_uses_migration_profile():
+    connector = RecordingConnector()
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(_runtime_config()),
+        connector=connector,
+    )
+
+    conn = service.create_migration_db()
+
+    assert conn is connector.connection
+    kwargs = connector.calls[0]
+    assert "supabase_admin.ge-prod" == kwargs["user"]
+
+
+def test_resolve_migration_db_url_prefers_explicit_source_from_config():
+    connector = RecordingConnector()
+    runtime = _runtime_config()
+    runtime = ResolvedRuntimeConfig(
+        shared=runtime.shared,
+        db_hints=runtime.db_hints,
+        migration_database_url="postgresql://mig:pw@mig-db:5544/mig_db",
+        admin_database_url=None,
+        database_url="postgresql://app:pw@app-db:5432/app_db",
+    )
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(runtime),
+        connector=connector,
+    )
+
+    source, db_url = service.resolve_migration_db_url()
+
+    assert "MIGRATION_DATABASE_URL" == source
+    assert "postgresql://mig:pw@mig-db:5544/mig_db" == db_url
+
+
+def test_resolve_migration_db_url_raises_when_no_source_available():
+    connector = RecordingConnector()
+    runtime = ResolvedRuntimeConfig(
+        shared=SharedSupabaseConfig(postgres_password=""),
+        db_hints=DatabaseRuntimeHints(
+            host="runtime-db",
+            port=5544,
+            database="runtime_db",
+            username=None,
+            sslmode="prefer",
+            tenant_suffix=None,
+        ),
+        migration_database_url=None,
+        admin_database_url=None,
+        database_url=None,
+    )
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(runtime),
+        connector=connector,
+    )
+
+    with pytest.raises(ValueError, match="No PostgreSQL URL configured for migrations"):
+        service.resolve_migration_db_url()
