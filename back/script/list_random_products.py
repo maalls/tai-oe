@@ -15,6 +15,7 @@ SRC_DIR = BACK_DIR / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from src.infrastructure.clients.database import DatabaseHandler  # noqa: E402
+from src.infrastructure.config import create_database_service  # noqa: E402
 
 try:
     from reportlab.lib import colors
@@ -190,7 +191,11 @@ def main() -> int:
     if args.min_qty <= 0 or args.max_qty <= 0 or args.min_qty > args.max_qty:
         raise SystemExit("Invalid quantity bounds")
 
-    db_handler = DatabaseHandler()
+    database_service = create_database_service(
+        current_file=__file__,
+        require_postgres_password=True,
+    )
+    db_handler = DatabaseHandler(database_service=database_service)
     rows = db_handler.execute_dict_query(_build_query(), (args.count,))
 
     if args.format == "pdf":

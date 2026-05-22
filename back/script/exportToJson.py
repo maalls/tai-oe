@@ -27,6 +27,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 
 
 def serialize_value(value):
@@ -61,8 +62,12 @@ def export_table_to_json(
         limit: Maximum number of rows to export
         columns: Columns to export (default: all)
     """
-    # Initialize database handler
-    db = DatabaseHandler()
+    # Initialize database handler from the unified config path
+    database_service = create_database_service(
+        current_file=__file__,
+        require_postgres_password=True,
+    )
+    db = DatabaseHandler(database_service=database_service)
     
     # Build query
     query = f"SELECT {columns} FROM {table}"
