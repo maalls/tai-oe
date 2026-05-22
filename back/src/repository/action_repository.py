@@ -1,71 +1,123 @@
 """Repository for action CRUD operations and scheduling."""
 
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta, timezone
-from uuid import UUID
 import json
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 
 
 class ActionRepository:
     """Handle database operations for actions."""
-    
-    def __init__(self):
-        self.supabase = get_supabase_service()
+
+    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
+        self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = DatabaseHandler(
+                database_service=create_database_service(
+                    current_file=__file__,
+                    require_postgres_password=True,
+                )
+            )
+        return self.db_handler
     
     def create_action(self, user_id: str, opportunity_id: str, action_type: str,
                      schedule_type: str, schedule_config: Dict[str, Any],
                      config: Dict[str, Any], max_executions: Optional[int] = None) -> Dict[str, Any]:
         """Create a new action."""
         next_execution = self._calculate_next_execution(schedule_type, schedule_config)
-        
-        data = {
-            'user_id': user_id,
-            'opportunity_id': opportunity_id,
-            'action_type': action_type,
-            'status': 'active',
-            'schedule_type': schedule_type,
-            'schedule_config': schedule_config,
-            'config': config,
-            'next_execution_at': next_execution.isoformat() if next_execution else None,
-            'execution_count': 0,
-            'max_executions': max_executions,
-            'created_by': user_id,
-        }
-        
-        response = self.supabase.table('action').insert(data).execute()
-        return response.data[0] if response.data else None
+
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO action (
+                user_id,
+                opportunity_id,
+                action_type,
+                status,
+                schedule_type,
+                schedule_config,
+                config,
+                next_execution_at,
+                execution_count,
+                max_executions,
+                created_by
+            ) VALUES (%s, %s, %s, 'active', %s, %s::jsonb, %s::jsonb, %s, 0, %s, %s)
+            RETURNING *
+            """,
+            (
+                user_id,
+                opportunity_id,
+                action_type,
+                schedule_type,
+                json.dumps(schedule_config or {}),
+                json.dumps(config or {}),
+                next_execution.isoformat() if next_execution else None,
+                max_executions,
+                user_id,
+            ),
+        )
+        return rows[0] if rows else None
     
     def get_action(self, action_id: str) -> Optional[Dict[str, Any]]:
         """Get a single action by ID."""
-        response = self.supabase.table('action').select('*').eq('id', action_id).single().execute()
-        return response.data if response.data else None
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT * FROM action WHERE id = %s LIMIT 1",
+            (action_id,),
+        )
+        return rows[0] if rows else None
     
     def list_actions(self, opportunity_id: str) -> List[Dict[str, Any]]:
         """List all actions for an opportunity."""
-        response = self.supabase.table('action').select('*').eq('opportunity_id', opportunity_id).execute()
-        return response.data if response.data else []
+        return self._get_db_handler().execute_dict_query(
+            "SELECT * FROM action WHERE opportunity_id = %s ORDER BY created_at DESC",
+            (opportunity_id,),
+        )
     
     def update_action(self, action_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
         """Update an action."""
-        updates['updated_at'] = datetime.now(timezone.utc).isoformat()
-        response = self.supabase.table('action').update(updates).eq('id', action_id).execute()
-        return response.data[0] if response.data else None
+        payload = dict(updates)
+        payload['updated_at'] = datetime.now(timezone.utc).isoformat()
+
+        set_clauses = []
+        params: List[Any] = []
+        for column, value in payload.items():
+            if isinstance(value, (dict, list)):
+                set_clauses.append(f"{column} = %s::jsonb")
+                params.append(json.dumps(value))
+            else:
+                set_clauses.append(f"{column} = %s")
+                params.append(value)
+
+        params.append(action_id)
+        query = f"UPDATE action SET {', '.join(set_clauses)} WHERE id = %s RETURNING *"
+        rows = self._get_db_handler().execute_dict_query(query, tuple(params))
+        return rows[0] if rows else None
     
     def delete_action(self, action_id: str) -> bool:
         """Delete an action."""
-        response = self.supabase.table('action').delete().eq('id', action_id).execute()
-        return True
+        rows_affected = self._get_db_handler().execute_update(
+            "DELETE FROM action WHERE id = %s",
+            (action_id,),
+        )
+        return rows_affected >= 0
     
     def get_due_actions(self) -> List[Dict[str, Any]]:
         """Get all actions that are due for execution."""
         now = datetime.now(timezone.utc).isoformat()
-        response = self.supabase.table('action').select('*')\
-            .eq('status', 'active')\
-            .lte('next_execution_at', now)\
-            .execute()
-        return response.data if response.data else []
+        return self._get_db_handler().execute_dict_query(
+            """
+            SELECT *
+            FROM action
+            WHERE status = 'active'
+              AND next_execution_at IS NOT NULL
+              AND next_execution_at <= %s
+            ORDER BY next_execution_at ASC
+            """,
+            (now,),
+        )
     
     def record_execution(self, action_id: str, status: str, duration_ms: int = None,
                         result_data: Dict[str, Any] = None, error_message: str = None) -> Dict[str, Any]:
@@ -78,8 +130,28 @@ class ActionRepository:
             'result_data': result_data,
             'error_message': error_message,
         }
-        
-        response = self.supabase.table('action_execution_log').insert(log_data).execute()
+
+        response = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO action_execution_log (
+                action_id,
+                status,
+                executed_at,
+                duration_ms,
+                result_data,
+                error_message
+            ) VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+            RETURNING *
+            """,
+            (
+                log_data['action_id'],
+                log_data['status'],
+                log_data['executed_at'],
+                log_data['duration_ms'],
+                json.dumps(log_data['result_data']) if log_data['result_data'] is not None else None,
+                log_data['error_message'],
+            ),
+        )
         
         # Update action execution count and last executed time
         action = self.get_action(action_id)
@@ -95,16 +167,20 @@ class ActionRepository:
             
             self.update_action(action_id, updates)
         
-        return response.data[0] if response.data else None
+        return response[0] if response else None
     
     def get_execution_logs(self, action_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Get execution logs for an action."""
-        response = self.supabase.table('action_execution_log').select('*')\
-            .eq('action_id', action_id)\
-            .order('executed_at', desc=True)\
-            .limit(limit)\
-            .execute()
-        return response.data if response.data else []
+        return self._get_db_handler().execute_dict_query(
+            """
+            SELECT *
+            FROM action_execution_log
+            WHERE action_id = %s
+            ORDER BY executed_at DESC
+            LIMIT %s
+            """,
+            (action_id, limit),
+        )
     
     def pause_action(self, action_id: str) -> Dict[str, Any]:
         """Pause an action."""

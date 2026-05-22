@@ -63,7 +63,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 - [x] `OAuthTokenRepository` migre vers `DatabaseHandler` et SQL direct.
 - [ ] `EmailRepository` reste a decouper puis rerouter vers l'adapter SQL.
-- [ ] `ActionRepository` reste a basculer vers la meme couche technique.
+- [x] `ActionRepository` migre vers `DatabaseHandler` et SQL direct.
 
 ## Strategie de migration
 
