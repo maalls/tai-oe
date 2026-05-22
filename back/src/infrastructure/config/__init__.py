@@ -2,8 +2,10 @@
 
 from .models import DatabaseRuntimeHints, ResolvedRuntimeConfig, SharedSupabaseConfig
 from .parser import mask_connection_url, parse_database_runtime_hints, parse_shared_supabase_config
+from .provider import ConfigProvider
 
 __all__ = [
+    "ConfigProvider",
     "DatabaseRuntimeHints",
     "ResolvedRuntimeConfig",
     "SharedSupabaseConfig",

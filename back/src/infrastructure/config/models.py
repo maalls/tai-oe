@@ -35,3 +35,6 @@ class ResolvedRuntimeConfig:
 
     shared: SharedSupabaseConfig
     db_hints: DatabaseRuntimeHints
+    supabase_url: Optional[str] = None
+    supabase_anon_key: Optional[str] = None
+    supabase_service_key: Optional[str] = None
