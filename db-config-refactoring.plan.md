@@ -79,9 +79,9 @@ Incremental, test-first migration in 8 phases with micro-commits.
 
 ### TDD checklist
 
-- [ ] Add failing characterization tests for current config resolution paths.
-- [ ] Make tests pass without refactor.
-- [ ] Confirm no regressions in existing migration tests.
+- [x] Add failing characterization tests for current config resolution paths.
+- [x] Make tests pass without refactor.
+- [x] Confirm no regressions in existing migration tests.
 
 ### Commit reminder
 
@@ -107,9 +107,9 @@ Commit once phase is green:
 
 ### TDD checklist
 
-- [ ] Write parser tests first (missing key, malformed URL, valid file).
-- [ ] Implement model and parser to satisfy tests.
-- [ ] Add tests for masking utility.
+- [x] Write parser tests first (missing key, malformed URL, valid file).
+- [x] Implement model and parser to satisfy tests.
+- [x] Add tests for masking utility.
 
 ### Commit reminder
 
@@ -136,10 +136,10 @@ Commit once phase is green:
 
 ### TDD checklist
 
-- [ ] Write tests for precedence order.
-- [ ] Write tests for relative/absolute `SUPABASE_ENV_FILE` resolution.
-- [ ] Write tests for missing shared file behavior.
-- [ ] Implement provider until tests pass.
+- [x] Write tests for precedence order.
+- [x] Write tests for relative/absolute `SUPABASE_ENV_FILE` resolution.
+- [x] Write tests for missing shared file behavior.
+- [x] Implement provider until tests pass.
 
 ### Commit reminder
 
@@ -168,10 +168,10 @@ Commit once phase is green:
 
 ### TDD checklist
 
-- [ ] Start with failing tests for tenant/no-tenant username derivation.
-- [ ] Add tests for migration profile fallback chain.
-- [ ] Add tests for malformed or missing password in shared env.
-- [ ] Implement factory until tests pass.
+- [x] Start with failing tests for tenant/no-tenant username derivation.
+- [x] Add tests for migration profile fallback chain.
+- [x] Add tests for malformed or missing password in shared env.
+- [x] Implement factory until tests pass.
 
 ### Commit reminder
 
@@ -192,9 +192,9 @@ Commit once phase is green:
 
 ### TDD checklist
 
-- [ ] Add unit tests with mocked psycopg2 connect args.
-- [ ] Add integration-like tests for profile name selection.
-- [ ] Ensure failure messages include remediation guidance.
+- [x] Add unit tests with mocked psycopg2 connect args.
+- [x] Add integration-like tests for profile name selection.
+- [x] Ensure failure messages include remediation guidance.
 
 ### Commit reminder
 
@@ -217,9 +217,9 @@ Commit once phase is green:
 
 ### TDD checklist
 
-- [ ] Add/adjust unit tests per consumer before refactor.
-- [ ] Update tests to assert same behavior with new provider.
-- [ ] Verify migration execution path in tests uses derived migration profile.
+- [x] Add/adjust unit tests per consumer before refactor.
+- [x] Update tests to assert same behavior with new provider.
+- [x] Verify migration execution path in tests uses derived migration profile.
 
 ### Commit reminder
 
@@ -237,6 +237,9 @@ Use micro-commits, one per consumer:
 1. Remove obsolete helper functions and duplicated env-loading logic.
 2. Remove conflicting precedence docs/comments in old modules.
 3. Ensure only one official config-loading path remains.
+4. Consolidate parallel migration entrypoints to a canonical flow (or make legacy commands delegates).
+5. Align `src/infrastructure/runtime/env_loader.py` with `ConfigProvider` to avoid dual env mutation systems.
+6. Reduce/remove singleton DB wiring (`get_db_handler`) when it conflicts with explicit injection.
 
 ### TDD checklist
 
@@ -296,18 +299,51 @@ Use micro-commits, one per consumer:
 
 ## Master TODO List
 
-- [ ] Baseline characterization tests added and passing.
-- [ ] Typed config models implemented.
-- [ ] ConfigProvider implemented with precedence tests.
-- [ ] DbProfileFactory implemented with tenant-aware tests.
-- [ ] DatabaseService connection factory implemented.
-- [ ] `database.py` migrated to shared factory.
-- [ ] `supabase.py` migrated to shared provider.
+- [x] Baseline characterization tests added and passing.
+- [x] Typed config models implemented.
+- [x] ConfigProvider implemented with precedence tests.
+- [x] DbProfileFactory implemented with tenant-aware tests.
+- [x] DatabaseService connection factory implemented.
+- [x] `database.py` migrated to shared factory.
+- [x] `supabase.py` migrated to shared provider.
 - [ ] all migration command paths migrated.
 - [ ] duplicate env loaders removed.
+- [ ] dependency inversion completed for database client/repository boundaries.
+- [ ] legacy singleton DB wiring reduced or removed.
 - [ ] docs/runbook updated.
 - [ ] full test suite green.
 - [ ] end-to-end migration validation complete.
+
+## Progress Snapshot
+
+- [x] Phase 0 completed.
+- [x] Phase 1 completed.
+- [x] Phase 2 completed.
+- [x] Phase 3 completed.
+- [x] Phase 4 completed.
+- [~] Phase 5 in progress.
+
+Phase 5 completed items:
+- [x] `src/infrastructure/clients/supabase.py` migrated to `ConfigProvider`.
+- [x] `script/run_migrations.py` migrated to bootstrap + `DatabaseService` orchestration.
+- [x] `src/infrastructure/clients/database.py` now routes app connection through `DatabaseService`.
+
+Phase 5 remaining items:
+- [ ] `src/command/migrations_cli.py` migration to shared bootstrap/service path.
+- [ ] `src/command/run_migration.py` migration to shared bootstrap/service path.
+- [ ] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
+
+Recent implementation commits:
+- `84b12db` test(config): characterization tests baseline
+- `4789f64` feat(config): typed config models + parser
+- `c7b4982` feat(config): ConfigProvider
+- `7059614` feat(db): DbProfileFactory
+- `45003ef` feat(db): DatabaseService
+- `c71d84d` refactor(config): supabase client -> ConfigProvider
+- `9f4545b` refactor(migration): run_migrations profile resolution
+- `4d11fb4` refactor(db): move migration source resolution to factory/service
+- `5bf64b2` refactor(db): script orchestration-only via service bootstrap
+- `32bd616` refactor(db): DatabaseHandler connections via DatabaseService
 
 ## Quality Gates (Do Not Skip)
 
