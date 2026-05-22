@@ -80,6 +80,38 @@ class EmailDatabaseHandler:
             return rows[0].get("id")
         return None
 
+    def find_email_id_by_provider_message(
+        self,
+        user_id: str,
+        provider: str,
+        provider_message_id: str,
+    ) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            SELECT id
+            FROM email
+            WHERE user_id = %s
+              AND provider = %s
+              AND provider_message_id = %s
+            LIMIT 1
+            """,
+            (user_id, provider, provider_message_id),
+        )
+        return rows[0].get("id") if rows else None
+
+    def find_attachment_by_provider_id(self, email_id: str, provider_attachment_id: str) -> Optional[Dict]:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            SELECT id, storage_path
+            FROM email_attachment
+            WHERE email_id = %s
+              AND provider_attachment_id = %s
+            LIMIT 1
+            """,
+            (email_id, provider_attachment_id),
+        )
+        return rows[0] if rows else None
+
     def create_account_from_data(self, account_data: Dict) -> Optional[str]:
         payload = {
             "name": account_data.get("name", "").strip(),

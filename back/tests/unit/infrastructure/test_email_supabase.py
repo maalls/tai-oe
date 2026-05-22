@@ -1,7 +1,5 @@
 """Tests for SupabaseEmailRepository and DTO mapping."""
 
-from unittest.mock import MagicMock
-
 from datetime import datetime, timezone
 
 import pytest
@@ -13,15 +11,18 @@ from infrastructure.supabase.email_supabase import SupabaseEmailRepository
 from tests.fixtures.sample_data import sample_email
 
 
-def _mock_supabase_with_data(data):
-    supabase = MagicMock()
-    query = supabase.table.return_value
-    query.select.return_value = query
-    query.eq.return_value = query
-    query.limit.return_value = query
-    query.order.return_value = query
-    query.execute.return_value = MagicMock(data=data)
-    return supabase
+class _DbHandlerStub:
+    def __init__(self, query_rows=None, update_rows_affected=1):
+        self.query_rows = query_rows or []
+        self.update_rows_affected = update_rows_affected
+        self.last_update = None
+
+    def execute_dict_query(self, _query, _params=None):
+        return self.query_rows
+
+    def execute_update(self, query, params=None):
+        self.last_update = (query, params)
+        return self.update_rows_affected
 
 
 def test_email_dto_ignores_extra_fields():
@@ -36,7 +37,7 @@ def test_email_dto_ignores_extra_fields():
 
 
 def test_get_by_id_maps_to_domain_entity():
-    supabase = _mock_supabase_with_data(
+    db_handler = _DbHandlerStub(
         [
             {
                 "id": "e-1",
@@ -50,7 +51,7 @@ def test_get_by_id_maps_to_domain_entity():
         ]
     )
 
-    repo = SupabaseEmailRepository(supabase)
+    repo = SupabaseEmailRepository(db_handler=db_handler)
     email = repo.get_by_id("e-1")
 
     assert email.id == "e-1"
@@ -60,30 +61,30 @@ def test_get_by_id_maps_to_domain_entity():
 
 
 def test_get_by_id_raises_not_found():
-    supabase = _mock_supabase_with_data([])
-    repo = SupabaseEmailRepository(supabase)
+    db_handler = _DbHandlerStub([])
+    repo = SupabaseEmailRepository(db_handler=db_handler)
 
     with pytest.raises(NotFoundError):
         repo.get_by_id("missing")
 
 
 def test_save_writes_transformed_sql_payload():
-    supabase = _mock_supabase_with_data([])
-    repo = SupabaseEmailRepository(supabase)
+    db_handler = _DbHandlerStub([])
+    repo = SupabaseEmailRepository(db_handler=db_handler)
     email = sample_email(id="e-save", status=EmailStatus.UNREAD)
 
     repo.save(email)
 
-    update_call = supabase.table.return_value.update.call_args
-    payload = update_call.args[0]
+    assert db_handler.last_update is not None
+    _, params = db_handler.last_update
 
-    assert payload["from_email"] == email.sender
-    assert payload["is_classified"] is False
+    assert params[1] == email.sender
+    assert params[3] is False
 
 
 def test_to_domain_raises_mapping_error_on_invalid_payload():
-    supabase = _mock_supabase_with_data([])
-    repo = SupabaseEmailRepository(supabase)
+    db_handler = _DbHandlerStub([])
+    repo = SupabaseEmailRepository(db_handler=db_handler)
 
     with pytest.raises(MappingError):
         repo._to_domain({"id": "broken"})

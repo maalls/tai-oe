@@ -18,7 +18,6 @@ from cryptography.fernet import Fernet, InvalidToken
 from src.lib.classification.email_classifier import EmailClassifier
 from src.infrastructure.clients.gmail_client import GmailClient
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
-from src.infrastructure.clients.supabase import get_supabase_service
 from src.infrastructure.database.email_database_handler import EmailDatabaseHandler
 from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.lib.email.html_parser import EmailHTMLParser
@@ -1813,11 +1812,13 @@ class EmailRepository:
         # Check if email already exists to avoid duplicate attachments
         provider_message_id = message.get('id')
         try:
-            existing = self.db_handler.supabase.table('email').select('id').eq(
-                'user_id', user_id
-            ).eq('provider_message_id', provider_message_id).limit(1).execute()
-            
-            if existing.data and len(existing.data) > 0:
+            existing_email_id = self.db_handler.find_email_id_by_provider_message(
+                user_id=user_id,
+                provider="gmail",
+                provider_message_id=provider_message_id,
+            )
+
+            if existing_email_id:
                 print(f"[EmailRepository] Email already exists: {provider_message_id}, skipping")
                 return {"success": True, "skipped": True}
         except Exception as e:
@@ -1933,12 +1934,10 @@ class EmailRepository:
                     # Check if attachment already exists in database
                     existing_attachment = None
                     try:
-                        response = self.db_handler.supabase.table('email_attachment').select(
-                            'id, storage_path'
-                        ).eq('email_id', email_id).eq('provider_attachment_id', attachment_id).limit(1).execute()
-                        
-                        if response.data and len(response.data) > 0:
-                            existing_attachment = response.data[0]
+                        existing_attachment = self.db_handler.find_attachment_by_provider_id(
+                            email_id=email_id,
+                            provider_attachment_id=attachment_id,
+                        )
                     except Exception as e:
                         print(f"[EmailRepository] Warning: failed to check existing attachment: {e}")
                     

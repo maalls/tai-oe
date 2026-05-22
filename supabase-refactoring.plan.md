@@ -87,10 +87,10 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 ### Chemins restants (acces Supabase detectes)
 
-- [ ] `back/src/repository/email_repository.py` (usages `self.db_handler.supabase.table(...)`)
+- [x] `back/src/repository/email_repository.py` (usages `self.db_handler.supabase.table(...)`)
 - [x] `back/src/service/opportunity/document_content_service.py` (fallback Supabase dans `update_opportunity_timestamp`)
 - [x] `back/src/service/opportunity/document_rfp_extraction_service.py` (fallback Supabase pour lecture `document`)
-- [ ] `back/src/infrastructure/supabase/email_supabase.py`
+- [x] `back/src/infrastructure/supabase/email_supabase.py`
 - [ ] `back/src/infrastructure/supabase/opportunity_supabase.py`
 - [ ] `back/src/infrastructure/supabase/rfp_supabase.py`
 - [ ] `back/src/infrastructure/supabase/vendor_supabase.py`
