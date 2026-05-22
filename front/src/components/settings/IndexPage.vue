@@ -175,7 +175,7 @@
                   <div class="text-gray-700">
                      <span class="text-gray-600">{{ t('settings.emailLabel') }}</span>
                      <span class="ml-2 text-gray-900">{{
-                        outlookProfile.profile?.mail || outlookProfile.profile?.userPrincipalName
+                        getOutlookDisplayEmail(outlookProfile.profile)
                      }}</span>
                   </div>
                   <div class="text-gray-700">
@@ -428,6 +428,7 @@ import {
    revokeOutlook,
    startOutlookOAuth,
 } from '../../api/outlook';
+import { getOutlookDisplayEmail } from './outlookEmail';
 
 const router = useRouter();
 const { user, signOut, getValidToken, updateDisplayName } = useAuth();
