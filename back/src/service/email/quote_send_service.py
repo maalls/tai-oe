@@ -5,7 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 
 
 class QuoteSendService:
@@ -16,14 +17,22 @@ class QuoteSendService:
         send_email: Callable[..., Dict],
         storage_path_resolver: Callable[[str, str], Path],
         path_cls=Path,
-        supabase_factory: Callable[[], object] = get_supabase_service,
+        db_handler: DatabaseHandler = None,
         now_provider: Callable[[], datetime] = None,
     ):
         self._send_email = send_email
         self._storage_path_resolver = storage_path_resolver
         self._path_cls = path_cls
-        self._supabase_factory = supabase_factory
+        self._db_handler = db_handler
         self._now_provider = now_provider or datetime.now
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self._db_handler is None:
+            self._db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self._db_handler
 
     def handle_quote_send(self, body: bytes, content_type: str) -> Dict:
         """Send a quote PDF by email using the legacy quote-send contract."""
@@ -137,7 +146,7 @@ class QuoteSendService:
                     "message": result.get("message", "Failed to send email") if isinstance(result, dict) else str(result),
                 }
 
-            supabase = self._supabase_factory()
+            db_handler = self._get_db_handler()
             quote_id = payload.get("quote_id")
             if not quote_id:
                 raise ValueError("quote_id not provided in payload")
@@ -150,10 +159,24 @@ class QuoteSendService:
                 "source_message_id": result.get("message_id"),
                 "issued_at": now_iso,
             }
-            sent_doc_resp = supabase.table("document").update(update_payload).eq("id", quote_id).execute()
-            if getattr(sent_doc_resp, "error", None):
-                raise RuntimeError(f"Failed to update quote document: {sent_doc_resp.error}")
-            if not sent_doc_resp.data:
+            updated_docs = db_handler.execute_update(
+                """
+                UPDATE document
+                SET status = %s,
+                    channel = %s,
+                    source_message_id = %s,
+                    issued_at = %s
+                WHERE id = %s
+                """,
+                (
+                    update_payload["status"],
+                    update_payload["channel"],
+                    update_payload["source_message_id"],
+                    update_payload["issued_at"],
+                    quote_id,
+                ),
+            )
+            if updated_docs <= 0:
                 raise RuntimeError(f"Update executed but no rows affected for quote {quote_id}")
 
             sent_email_data = {
@@ -170,21 +193,52 @@ class QuoteSendService:
                 "sent_at": now_iso,
                 "attachment_names": [pdf_filename] if pdf_filename else [],
             }
-            insert_result = supabase.table("sent_email").insert(sent_email_data).execute()
-            if getattr(insert_result, "error", None):
-                raise RuntimeError(f"Failed to save sent_email record: {insert_result.error}")
-            if not insert_result.data:
+            inserted_rows = db_handler.execute_update(
+                """
+                INSERT INTO sent_email (
+                    document_id,
+                    opportunity_id,
+                    from_email,
+                    to_emails,
+                    cc_emails,
+                    subject,
+                    body,
+                    provider,
+                    provider_message_id,
+                    status,
+                    sent_at,
+                    attachment_names
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    sent_email_data["document_id"],
+                    sent_email_data["opportunity_id"],
+                    sent_email_data["from_email"],
+                    sent_email_data["to_emails"],
+                    sent_email_data["cc_emails"],
+                    sent_email_data["subject"],
+                    sent_email_data["body"],
+                    sent_email_data["provider"],
+                    sent_email_data["provider_message_id"],
+                    sent_email_data["status"],
+                    sent_email_data["sent_at"],
+                    sent_email_data["attachment_names"],
+                ),
+            )
+            if inserted_rows <= 0:
                 raise RuntimeError("Sent email insert returned no data")
 
-            update_resp = supabase.table("opportunity").update(
-                {
-                    "stage": "OFFER_SENT",
-                    "updated_at": now_iso,
-                }
-            ).eq("id", opportunity_id).execute()
-            if getattr(update_resp, "error", None):
-                raise RuntimeError(f"Failed to update opportunity stage: {update_resp.error}")
-            if not update_resp.data:
+            updated_opportunities = db_handler.execute_update(
+                """
+                UPDATE opportunity
+                SET stage = %s,
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                ("OFFER_SENT", now_iso, opportunity_id),
+            )
+            if updated_opportunities <= 0:
                 raise RuntimeError(f"Opportunity stage update returned no data for {opportunity_id}")
 
             return {

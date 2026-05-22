@@ -35,39 +35,13 @@ class _SendEmailStub:
         return {"status": "ok", "message_id": "m-1", "provider": "gmail"}
 
 
-class _Resp:
-    def __init__(self, data):
-        self.data = data
-        self.error = None
-
-
-class _TableOp:
-    def __init__(self, table_name: str, recorder: list):
-        self.table_name = table_name
-        self.recorder = recorder
-
-    def update(self, payload):
-        self.recorder.append((self.table_name, "update", payload))
-        return self
-
-    def insert(self, payload):
-        self.recorder.append((self.table_name, "insert", payload))
-        return self
-
-    def eq(self, field, value):
-        self.recorder.append((self.table_name, "eq", field, value))
-        return self
-
-    def execute(self):
-        return _Resp([{"ok": True}])
-
-
-class _SupabaseStub:
+class _DbHandlerStub:
     def __init__(self, recorder: list):
         self.recorder = recorder
 
-    def table(self, name: str):
-        return _TableOp(name, self.recorder)
+    def execute_update(self, query, params=None):
+        self.recorder.append(("sql", " ".join(query.split()), params))
+        return 1
 
 
 def test_handle_send_quote_for_opportunity_success():
@@ -77,7 +51,7 @@ def test_handle_send_quote_for_opportunity_success():
             exists_rule=lambda p: p.endswith("var/storage/quotes/quote_1.pdf") or p.endswith("/var/storage/quotes/quote_1.pdf"),
         )
 
-    supabase_calls = []
+    db_calls = []
     sender = _SendEmailStub()
     service = QuoteSendService(
         send_email=sender,
@@ -86,7 +60,7 @@ def test_handle_send_quote_for_opportunity_success():
             exists_rule=lambda p: p.endswith("var/storage/quotes/quote_1.pdf") or p.endswith("/var/storage/quotes/quote_1.pdf"),
         ),
         path_cls=_path_factory,
-        supabase_factory=lambda: _SupabaseStub(supabase_calls),
+        db_handler=_DbHandlerStub(db_calls),
         now_provider=lambda: datetime(2026, 5, 15, 10, 0, 0),
     )
 
@@ -106,9 +80,9 @@ def test_handle_send_quote_for_opportunity_success():
     assert sender.calls[0]["to"] == "a@example.com, b@example.com"
     assert sender.calls[0]["cc"] == "c@example.com"
     assert sender.calls[0]["user_id"] == "u-1"
-    assert any(call[0] == "document" and call[1] == "update" for call in supabase_calls)
-    assert any(call[0] == "sent_email" and call[1] == "insert" for call in supabase_calls)
-    assert any(call[0] == "opportunity" and call[1] == "update" for call in supabase_calls)
+    assert any("UPDATE document" in call[1] for call in db_calls)
+    assert any("INSERT INTO sent_email" in call[1] for call in db_calls)
+    assert any("UPDATE opportunity" in call[1] for call in db_calls)
 
 
 def test_handle_send_quote_for_opportunity_requires_to():
