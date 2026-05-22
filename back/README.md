@@ -53,3 +53,6 @@ journalctl -u taioe-backend.service -f
 journalctl -u taioe-backend.service -n 200
 journalctl -u taioe-backend.service --since "1 hour ago"
 journalctl -t taioe-backend -f
+
+DB config runbook:
+docs/db_config_runbook.md

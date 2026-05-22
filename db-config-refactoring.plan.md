@@ -289,8 +289,8 @@ Use micro-commits, one per consumer:
 
 ### TDD checklist
 
-- [ ] Validate documented commands against real local setup.
-- [ ] Ensure docs reflect actual tested behavior.
+- [x] Validate documented commands against real local setup.
+- [x] Ensure docs reflect actual tested behavior.
 
 ### Commit reminder
 
@@ -309,8 +309,8 @@ Use micro-commits, one per consumer:
 
 ### TDD checklist
 
-- [ ] Add one end-to-end test for migration profile resolution from shared env.
-- [ ] Add one end-to-end test for app profile resolution.
+- [x] Add one end-to-end test for migration profile resolution from shared env.
+- [x] Add one end-to-end test for app profile resolution.
 
 ### Commit reminder
 
@@ -332,9 +332,9 @@ Use micro-commits, one per consumer:
 - [x] duplicate env loaders removed.
 - [x] dependency inversion completed for database client/repository boundaries.
 - [x] legacy singleton DB wiring reduced or removed.
-- [ ] docs/runbook updated.
+- [x] docs/runbook updated.
 - [x] full test suite green.
-- [ ] end-to-end migration validation complete.
+- [x] end-to-end migration validation complete.
 
 ## Progress Snapshot
 
@@ -345,6 +345,8 @@ Use micro-commits, one per consumer:
 - [x] Phase 4 completed.
 - [x] Phase 5 completed.
 - [x] Phase 6 completed.
+- [x] Phase 7 completed.
+- [x] Phase 8 completed.
 
 Phase 5 completed items:
 
@@ -374,6 +376,11 @@ Recent implementation commits:
 - `5bf64b2` refactor(db): script orchestration-only via service bootstrap
 - `32bd616` refactor(db): DatabaseHandler connections via DatabaseService
 - `3b914f1` refactor(db): enforce shared env DB source and central DI wiring
+- `a02f73c` test(api): switch overrides to centralized db dependency
+- `65883ce` chore(config): remove legacy dotenv loaders in command entrypoints
+- `22a3d8a` refactor(db): migrate db_create to unified migration profile
+- `0c0f1cd` refactor(config): split bootstrap composition helpers
+- `27aeaec` refactor(config): reuse bootstrap runtime resolver in clients
 
 ## Quality Gates (Do Not Skip)
 
