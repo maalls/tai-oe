@@ -5,8 +5,7 @@ import httpx
 from pathlib import Path
 from supabase import create_client, Client
 from supabase.lib.client_options import SyncClientOptions
-from dotenv import find_dotenv
-from src.infrastructure.config.provider import ConfigProvider
+from src.infrastructure.config.bootstrap import create_runtime_config
 
 
 def _resolve_supabase_credentials(
@@ -15,19 +14,12 @@ def _resolve_supabase_credentials(
     env_file_path: Path | None = None,
 ):
     """Resolve Supabase URL and keys via the shared ConfigProvider pipeline."""
-    effective_env = dict(os.environ) if environ is None else dict(environ)
-
-    effective_env_file = env_file_path
-    if effective_env_file is None:
-        discovered_env = find_dotenv(usecwd=True)
-        effective_env_file = Path(discovered_env) if discovered_env else None
-
-    runtime_config = ConfigProvider(
-        environ=effective_env,
-        env_file_path=effective_env_file,
+    runtime_config = create_runtime_config(
         current_file=str(Path(__file__).resolve()),
         require_postgres_password=False,
-    ).resolve()
+        environ=os.environ if environ is None else environ,
+        env_file_path=env_file_path,
+    )
 
     return (
         runtime_config.supabase_url,

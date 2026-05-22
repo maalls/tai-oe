@@ -5,9 +5,8 @@ from pathlib import Path
 import yaml
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
-from dotenv import find_dotenv
+from src.infrastructure.config.bootstrap import create_runtime_config
 from src.infrastructure.config.models import ResolvedRuntimeConfig
-from src.infrastructure.config.provider import ConfigProvider
 from src.infrastructure.config.service import DatabaseService
 
 
@@ -114,14 +113,11 @@ class DatabaseHandler:
         }
 
     def _resolve_runtime_config(self) -> ResolvedRuntimeConfig:
-        discovered_env = find_dotenv(usecwd=True)
-        env_file_path = Path(discovered_env).resolve() if discovered_env else None
-        return ConfigProvider(
-            environ=os.environ,
-            env_file_path=env_file_path,
+        return create_runtime_config(
             current_file=str(Path(__file__).resolve()),
             require_postgres_password=True,
-        ).resolve()
+            environ=os.environ,
+        )
     
     def _create_connection(self, name: Optional[str] = None):
         """Create a new database connection."""

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Mapping, Optional
 
 from dotenv import find_dotenv
 
@@ -13,13 +14,24 @@ from .provider import ConfigProvider
 from .service import DatabaseService
 
 
-def create_runtime_config(*, current_file: str, require_postgres_password: bool = False) -> ResolvedRuntimeConfig:
+def create_runtime_config(
+    *,
+    current_file: str,
+    require_postgres_password: bool = False,
+    environ: Optional[Mapping[str, str]] = None,
+    env_file_path: Optional[Path] = None,
+) -> ResolvedRuntimeConfig:
     """Resolve and return normalized runtime configuration."""
-    discovered_env = find_dotenv(usecwd=True)
-    env_file_path = Path(discovered_env).resolve() if discovered_env else None
+    effective_environ = dict(os.environ) if environ is None else dict(environ)
+
+    effective_env_file_path = env_file_path
+    if effective_env_file_path is None:
+        discovered_env = find_dotenv(usecwd=True)
+        effective_env_file_path = Path(discovered_env).resolve() if discovered_env else None
+
     return ConfigProvider(
-        environ=os.environ,
-        env_file_path=env_file_path,
+        environ=effective_environ,
+        env_file_path=effective_env_file_path,
         current_file=current_file,
         require_postgres_password=require_postgres_password,
     ).resolve()
