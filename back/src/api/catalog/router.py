@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 
 from src.api.dependencies import get_database_repository
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from .schemas import CatalogBrandResponse, CatalogFamilyResponse
 
 router = APIRouter()

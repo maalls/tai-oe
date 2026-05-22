@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.dependencies import get_database_repository
 from .schemas import VendorBrandResponse, VendorCreate, VendorResponse, VendorUpdate
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 
 router = APIRouter()
 

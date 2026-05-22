@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 
 from src.api.dependencies import get_database_repository, get_file_handler
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from src.service.csv.file_service import CsvFileService
 
 router = APIRouter(tags=["csv"])

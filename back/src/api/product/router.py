@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from src.api.dependencies import get_database_repository, get_product_service
 from src.api.product.schemas import ProductUpsertRequest
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from src.service.product.service import ProductService
 
 router = APIRouter(tags=["product"])

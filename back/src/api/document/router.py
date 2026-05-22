@@ -12,7 +12,7 @@ from src.api.document.schemas import (
     DocumentUpdateStatusRequest,
     DocumentUpdateStorageKeyRequest,
 )
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 from src.service.document.document_service import DocumentService
 

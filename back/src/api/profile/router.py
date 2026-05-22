@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from ..dependencies import get_auth_service, get_database_repository
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from .schemas import ProfileResponse, ProfileUpdateRequest
 
 router = APIRouter()

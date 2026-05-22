@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from .schemas import AccountResponse, AccountCreate, AccountUpdate
 from src.api.dependencies import get_database_repository
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from typing import List
 
 router = APIRouter()

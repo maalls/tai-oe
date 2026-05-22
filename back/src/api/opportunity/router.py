@@ -34,7 +34,7 @@ from src.domain.enums import OpportunityStage
 from src.infrastructure.factory import ServiceFactory
 from src.repository.email_repository import EmailRepository
 from src.repository.opportunity import OpportunityRepository
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 from src.service.email.opportunity_from_email_service import OpportunityFromEmailService
 from src.service.email.quote_send_service import QuoteSendService

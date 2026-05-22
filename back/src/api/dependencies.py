@@ -18,7 +18,7 @@ from src.service.rfq.rfq_service import RfqService
 from src.service.rfq.rfq_source_service import RfqSourceService
 from src.service.utility.utility_service import UtilityService
 from src.repository.email_repository import EmailRepository
-from src.repository.database.repository import DatabaseRepository
+from src.repository.repository import DatabaseRepository
 from src.repository.opportunity import OpportunityRepository
 from src.infrastructure.clients.database import DatabaseHandler
 from src.infrastructure.config import create_database_service
