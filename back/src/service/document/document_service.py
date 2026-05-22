@@ -6,7 +6,8 @@ from typing import Callable, Dict
 import time
 import uuid
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 from src.lib.extractors.text_reader import extract_company_from_text, extract_rfp_from_text
 from src.lib.storage_paths import get_storage_dir, get_storage_path
 from src.repository.email_repository import EmailRepository
@@ -20,13 +21,15 @@ class DocumentService:
 
     def __init__(
         self,
+        db_handler: DatabaseHandler | None = None,
         supabase=None,
         storage_dir_resolver: Callable = None,
         storage_path_resolver: Callable = None,
         clean_email_body: Callable = None,
         enrich_rfp: Callable = None,
     ):
-        self.supabase = supabase or get_supabase_service()
+        self.db_handler = db_handler
+        self.supabase = supabase
         self.storage_dir_resolver = storage_dir_resolver or get_storage_dir
         self.storage_path_resolver = storage_path_resolver or get_storage_path
         self.clean_email_body = clean_email_body or EmailRepository._clean_email_body
@@ -45,26 +48,42 @@ class DocumentService:
         self._document_content_service = None
         self._document_rfp_extraction_service = None
 
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
+
     @property
     def document_content_service(self) -> DocumentContentService:
         if self._document_content_service is None:
-            self._document_content_service = DocumentContentService(
-                supabase=self.supabase,
-                storage_dir_resolver=self.storage_dir_resolver,
-            )
+            kwargs = {
+                "storage_dir_resolver": self.storage_dir_resolver,
+            }
+            if self.supabase is not None:
+                kwargs["supabase"] = self.supabase
+            else:
+                kwargs["db_handler"] = self._get_db_handler()
+            self._document_content_service = DocumentContentService(**kwargs)
         return self._document_content_service
 
     @property
     def document_rfp_extraction_service(self) -> DocumentRfpExtractionService:
         if self._document_rfp_extraction_service is None:
-            self._document_rfp_extraction_service = DocumentRfpExtractionService(
-                supabase=self.supabase,
-                storage_path_resolver=self.storage_path_resolver,
-                clean_email_body=self.clean_email_body,
-                extract_rfp=extract_rfp_from_text,
-                extract_company=extract_company_from_text,
-                enrich_rfp=self.enrich_rfp,
-            )
+            kwargs = {
+                "storage_path_resolver": self.storage_path_resolver,
+                "clean_email_body": self.clean_email_body,
+                "extract_rfp": extract_rfp_from_text,
+                "extract_company": extract_company_from_text,
+                "enrich_rfp": self.enrich_rfp,
+            }
+            if self.supabase is not None:
+                kwargs["supabase"] = self.supabase
+            else:
+                kwargs["db_handler"] = self._get_db_handler()
+            self._document_rfp_extraction_service = DocumentRfpExtractionService(**kwargs)
         return self._document_rfp_extraction_service
 
     def handle_update_document_content(self, document_id: str, content: str, user_id: str = None) -> Dict:
@@ -78,14 +97,16 @@ class DocumentService:
     def handle_delete_document(self, document_id: str, user_id: str = None) -> Dict:
         _ = user_id
         try:
-            doc_resp = (
-                self.supabase.table("document")
-                .select("id, type, storage_key, opportunity_id")
-                .eq("id", document_id)
-                .maybe_single()
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT id, type, storage_key, opportunity_id
+                FROM document
+                WHERE id = %s
+                LIMIT 1
+                """,
+                (document_id,),
             )
-            document = doc_resp.data if doc_resp and doc_resp.data else None
+            document = rows[0] if rows else None
 
             if not document:
                 return {"status": "error", "message": "Document not found"}
@@ -94,9 +115,10 @@ class DocumentService:
             storage_type = "quote" if doc_type == "quote" else "invoice" if doc_type == "invoice" else "rfp_upload"
             self._delete_storage_file(storage_type=storage_type, storage_key=document.get("storage_key"))
 
-            delete_resp = self.supabase.table("document").delete().eq("id", document_id).execute()
-            if getattr(delete_resp, "error", None):
-                return {"status": "error", "message": f"Failed to delete document: {delete_resp.error}"}
+            self._get_db_handler().execute_update(
+                "DELETE FROM document WHERE id = %s",
+                (document_id,),
+            )
 
             return {
                 "status": "ok",
@@ -162,16 +184,42 @@ class DocumentService:
                 "created_by": user_id,
             }
 
-            doc_result = self.supabase.table("document").insert(doc_data).execute()
-            if not doc_result.data:
+            doc_rows = self._get_db_handler().execute_dict_query(
+                """
+                INSERT INTO document (
+                    opportunity_id,
+                    type,
+                    status,
+                    title,
+                    currency,
+                    channel,
+                    storage_key,
+                    created_by
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    doc_data["opportunity_id"],
+                    doc_data["type"],
+                    doc_data["status"],
+                    doc_data["title"],
+                    doc_data["currency"],
+                    doc_data["channel"],
+                    doc_data["storage_key"],
+                    doc_data["created_by"],
+                ),
+            )
+            if not doc_rows:
                 return {"status": "error", "message": "Failed to create document"}
 
-            document_id = doc_result.data[0]["id"]
+            document_id = doc_rows[0]["id"]
 
             try:
-                self.supabase.table("opportunity").update({"updated_at": datetime.now().isoformat()}).eq(
-                    "id", opportunity_id
-                ).execute()
+                self._get_db_handler().execute_update(
+                    "UPDATE opportunity SET updated_at = %s WHERE id = %s",
+                    (datetime.now().isoformat(), opportunity_id),
+                )
             except Exception as exc:
                 print(f"[DocumentService] Warning: failed to touch opportunity {opportunity_id}: {exc}")
 
