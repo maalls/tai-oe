@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Callable, Dict
 
 from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 
 
 class DocumentContentService:
@@ -23,22 +24,16 @@ class DocumentContentService:
         self.storage_dir_resolver = storage_dir_resolver
         self.now_provider = now_provider or datetime.utcnow
 
-    def _get_document(self, document_id: str) -> Dict | None:
-        if self.supabase is not None:
-            doc_result = (
-                self.supabase
-                .table("document")
-                .select("id, storage_key, type, opportunity_id")
-                .eq("id", document_id)
-                .single()
-                .execute()
-            )
-            return doc_result.data if doc_result and doc_result.data else None
-
+    def _get_db_handler(self) -> DatabaseHandler:
         if self.db_handler is None:
-            raise ValueError("DocumentContentService requires either supabase or db_handler")
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
 
-        rows = self.db_handler.execute_dict_query(
+    def _get_document(self, document_id: str) -> Dict | None:
+        rows = self._get_db_handler().execute_dict_query(
             """
             SELECT id, storage_key, type, opportunity_id
             FROM document
@@ -51,14 +46,7 @@ class DocumentContentService:
 
     def _touch_opportunity(self, opportunity_id: str) -> None:
         updated_at = self.now_provider().isoformat()
-        if self.supabase is not None:
-            self.supabase.table("opportunity").update({"updated_at": updated_at}).eq("id", opportunity_id).execute()
-            return
-
-        if self.db_handler is None:
-            raise ValueError("DocumentContentService requires either supabase or db_handler")
-
-        self.db_handler.execute_update(
+        self._get_db_handler().execute_update(
             "UPDATE opportunity SET updated_at = %s WHERE id = %s",
             (updated_at, opportunity_id),
         )

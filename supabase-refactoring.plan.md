@@ -85,6 +85,17 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `QuoteService` migre ses acces document/document_line/opportunity/account vers `DatabaseHandler` SQL direct (suppression des appels Supabase directs).
 - [x] `QuoteSendService` migre la persistence d'envoi (document/sent_email/opportunity) vers `DatabaseHandler` SQL direct.
 
+### Chemins restants (acces Supabase detectes)
+
+- [ ] `back/src/repository/email_repository.py` (usages `self.db_handler.supabase.table(...)`)
+- [x] `back/src/service/opportunity/document_content_service.py` (fallback Supabase dans `update_opportunity_timestamp`)
+- [ ] `back/src/service/opportunity/document_rfp_extraction_service.py` (fallback Supabase pour lecture `document`)
+- [ ] `back/src/infrastructure/supabase/email_supabase.py`
+- [ ] `back/src/infrastructure/supabase/opportunity_supabase.py`
+- [ ] `back/src/infrastructure/supabase/rfp_supabase.py`
+- [ ] `back/src/infrastructure/supabase/vendor_supabase.py`
+- [ ] `back/src/infrastructure/clients/supabase.py` (a conserver uniquement si necessaire pour compatibilite, sinon retirer en lot 4)
+
 ## Strategie de migration
 
 ### Lot 1 - Inventaire et frontieres

@@ -21,56 +21,27 @@ class _PathStub:
         self.writes[self.path] = (content, encoding)
 
 
-class _Response:
-    def __init__(self, data):
-        self.data = data
-
-
-class _TableQuery:
-    def __init__(self, db, table_name):
-        self.db = db
-        self.table_name = table_name
-        self.mode = None
-        self.payload = None
-        self.filters = {}
-
-    def select(self, _fields):
-        self.mode = "select"
-        return self
-
-    def update(self, payload):
-        self.mode = "update"
-        self.payload = payload
-        return self
-
-    def eq(self, field, value):
-        self.filters[field] = value
-        return self
-
-    def single(self):
-        return self
-
-    def execute(self):
-        if self.table_name == "document" and self.mode == "select":
-            doc_id = self.filters.get("id")
-            return _Response(self.db.documents.get(doc_id))
-        if self.table_name == "opportunity" and self.mode == "update":
-            self.db.updates.append((self.table_name, self.payload, self.filters))
-            return _Response([{"ok": True}])
-        raise AssertionError(f"Unexpected query {self.table_name}:{self.mode}")
-
-
-class _SupabaseStub:
+class _DbHandlerStub:
     def __init__(self, documents):
         self.documents = documents
         self.updates = []
 
-    def table(self, table_name: str):
-        return _TableQuery(self, table_name)
+    def execute_dict_query(self, query, params=None):
+        if "FROM document" in query:
+            doc_id = params[0]
+            document = self.documents.get(doc_id)
+            return [document] if document else []
+        raise AssertionError(f"Unexpected query: {query}")
+
+    def execute_update(self, query, params=None):
+        if query.strip().startswith("UPDATE opportunity"):
+            self.updates.append((query, params))
+            return 1
+        raise AssertionError(f"Unexpected update query: {query}")
 
 
 def test_update_document_content_success_updates_file_and_opportunity_timestamp():
-    supabase = _SupabaseStub(
+    db_handler = _DbHandlerStub(
         {
             "doc-1": {
                 "id": "doc-1",
@@ -83,7 +54,7 @@ def test_update_document_content_success_updates_file_and_opportunity_timestamp(
 
     base_dir = _PathStub("var/storage/rfp_uploads", existing_paths)
     service = DocumentContentService(
-        supabase=supabase,
+        db_handler=db_handler,
         storage_dir_resolver=lambda _source: base_dir,
         now_provider=lambda: datetime(2026, 5, 15, 12, 0, 0),
     )
@@ -95,18 +66,13 @@ def test_update_document_content_success_updates_file_and_opportunity_timestamp(
         "message": "Document content updated successfully",
         "document_id": "doc-1",
     }
-    assert supabase.updates == [
-        (
-            "opportunity",
-            {"updated_at": "2026-05-15T12:00:00"},
-            {"id": "opp-1"},
-        )
-    ]
+    assert len(db_handler.updates) == 1
+    assert db_handler.updates[0][1] == ("2026-05-15T12:00:00", "opp-1")
 
 
 def test_update_document_content_returns_not_found_when_document_missing():
     service = DocumentContentService(
-        supabase=_SupabaseStub({}),
+        db_handler=_DbHandlerStub({}),
         storage_dir_resolver=lambda _source: _PathStub("var/storage/rfp_uploads", set()),
     )
 
