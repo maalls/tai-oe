@@ -5,7 +5,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_auth_service, get_invoice_handlers, get_quote_controller, get_quote_send_service
+from src.api.dependencies import get_auth_service, get_invoice_handlers, get_quote_send_service, get_quote_service
 from src.api.main import create_app
 
 
@@ -17,7 +17,7 @@ class _FakeAuthService:
 
 
 def _client(monkeypatch) -> TestClient:
-    class _FakeQuoteController:
+    class _FakeQuoteService:
         def update(self, document_id: str, payload: dict, user_id: str | None = None):
             return {"status": "ok", "document_id": document_id, "payload": payload, "user_id": user_id}
 
@@ -56,7 +56,7 @@ def _client(monkeypatch) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_quote_send_service] = lambda: _FakeQuoteSendService()
-    app.dependency_overrides[get_quote_controller] = lambda: _FakeQuoteController()
+    app.dependency_overrides[get_quote_service] = lambda: _FakeQuoteService()
     app.dependency_overrides[get_invoice_handlers] = lambda: _FakeInvoiceHandlers()
     return TestClient(app)
 

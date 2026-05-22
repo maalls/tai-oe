@@ -13,7 +13,7 @@ from src.service.email.outlook_service import OutlookService
 from src.service.email.quote_send_service import QuoteSendService
 from src.service.invoice.invoice_service import InvoiceService
 from src.service.product.service import ProductService
-from src.service.quote.quote_controller import QuoteController
+from src.service.quote.service import QuoteService
 from src.service.rfq.rfq_service import RfqService
 from src.service.rfq.rfq_source_service import RfqSourceService
 from src.service.utility.utility_service import UtilityService
@@ -61,8 +61,8 @@ def get_quote_send_service() -> QuoteSendService:
     )
 
 
-def get_quote_controller() -> QuoteController:
-    return QuoteController()
+def get_quote_service() -> QuoteService:
+    return QuoteService()
 
 
 def get_invoice_handlers() -> InvoiceService:

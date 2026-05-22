@@ -1,8 +1,8 @@
-"""Tests for QuoteController PDF generation path resolution."""
+"""Tests for QuoteService PDF generation path resolution."""
 
 from pathlib import Path
 
-from src.service.quote.quote_controller import QuoteController
+from src.service.quote.service import QuoteService
 
 
 class _Template:
@@ -43,18 +43,18 @@ class _Html:
 def test_generate_quote_pdf_uses_back_templates_dir(monkeypatch, tmp_path):
     recorder = {}
 
-    monkeypatch.setattr(QuoteController, "_get_storage_dir", staticmethod(lambda _source: tmp_path))
+    monkeypatch.setattr(QuoteService, "_get_storage_dir", staticmethod(lambda _source: tmp_path))
     monkeypatch.setattr(
-        "src.service.quote.quote_controller.FileSystemLoader",
+        "src.service.quote.service.FileSystemLoader",
         lambda path: _Loader(path, recorder),
     )
     monkeypatch.setattr(
-        "src.service.quote.quote_controller.Environment",
+        "src.service.quote.service.Environment",
         lambda loader: _Environment(loader, recorder),
     )
-    monkeypatch.setattr("src.service.quote.quote_controller.HTML", _Html)
+    monkeypatch.setattr("src.service.quote.service.HTML", _Html)
 
-    controller = QuoteController()
+    controller = QuoteService()
     filename = controller._generate_quote_pdf(
         {
             "quote_id": "Q-1",
@@ -77,18 +77,18 @@ def test_generate_quote_pdf_uses_back_templates_dir(monkeypatch, tmp_path):
 def test_generate_quote_pdf_computes_unit_price_and_line_total(monkeypatch, tmp_path):
     recorder = {}
 
-    monkeypatch.setattr(QuoteController, "_get_storage_dir", staticmethod(lambda _source: tmp_path))
+    monkeypatch.setattr(QuoteService, "_get_storage_dir", staticmethod(lambda _source: tmp_path))
     monkeypatch.setattr(
-        "src.service.quote.quote_controller.FileSystemLoader",
+        "src.service.quote.service.FileSystemLoader",
         lambda path: _Loader(path, recorder),
     )
     monkeypatch.setattr(
-        "src.service.quote.quote_controller.Environment",
+        "src.service.quote.service.Environment",
         lambda loader: _Environment(loader, recorder),
     )
-    monkeypatch.setattr("src.service.quote.quote_controller.HTML", _Html)
+    monkeypatch.setattr("src.service.quote.service.HTML", _Html)
 
-    controller = QuoteController()
+    controller = QuoteService()
     controller._generate_quote_pdf(
         {
             "quote_id": "Q-2",
