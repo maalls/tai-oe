@@ -13,31 +13,20 @@ import sys
 import hashlib
 from pathlib import Path
 from typing import List, Dict
-from urllib.parse import urlparse
 from src.infrastructure.clients.supabase import get_supabase_service
 from dotenv import load_dotenv
-from src.infrastructure.config.factory import DbProfileFactory
-from src.infrastructure.config.provider import ConfigProvider
-from src.infrastructure.config.service import DatabaseService
+from src.infrastructure.config import create_database_service
 
 load_dotenv()
 
 BACK_DIR = Path(__file__).resolve().parents[1]
 
 
-def _build_runtime_config_for_migrations():
-    return ConfigProvider(
-        environ=os.environ,
-        env_file_path=None,
+def _build_database_service_for_migrations():
+    return create_database_service(
         current_file=str(Path(__file__).resolve()),
         require_postgres_password=False,
-    ).resolve()
-
-
-def _build_database_service_for_migrations() -> DatabaseService:
-    runtime_config = _build_runtime_config_for_migrations()
-    profile_factory = DbProfileFactory(runtime_config)
-    return DatabaseService(profile_factory=profile_factory)
+    )
 
 
 def get_migration_files() -> List[Dict[str, str]]:
@@ -81,46 +70,18 @@ def get_migration_db_url() -> tuple[str, str]:
     return service.resolve_migration_db_url()
 
 
-def mask_db_url(db_url: str) -> str:
-    """Return a log-safe representation of a PostgreSQL URL."""
-    parsed = urlparse(db_url)
-    if not parsed.scheme:
-        return "<invalid database url>"
-
-    auth = parsed.username or "<unknown-user>"
-    if parsed.password:
-        auth = f"{auth}:***"
-
-    host = parsed.hostname or "<unknown-host>"
-    port = parsed.port or 5432
-    database = (parsed.path or "").lstrip("/") or "postgres"
-    return f"{parsed.scheme}://{auth}@{host}:{port}/{database}"
-
-
 def get_db_connection():
     """Get direct PostgreSQL connection with admin privileges."""
     service = _build_database_service_for_migrations()
-    source, db_url = service.resolve_migration_db_url()
-    print(f"ℹ Connecting to database with {source}: {mask_db_url(db_url)}")
+    source, masked_db_url = service.resolve_masked_migration_db_url()
+    print(f"ℹ Connecting to database with {source}: {masked_db_url}")
 
     conn = service.create_migration_db()
-
-    with conn.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT current_user, has_schema_privilege(current_user, 'public', 'CREATE')
-            """
-        )
-        current_user, can_create_public = cursor.fetchone()
-
-    if not can_create_public:
+    try:
+        service.assert_migration_create_privilege(conn)
+    except Exception:
         conn.close()
-        raise PermissionError(
-            "Connected as role "
-            f"'{current_user}', but it does not have CREATE privilege on schema 'public'. "
-            "Use MIGRATION_DATABASE_URL (or ADMIN_DATABASE_URL) with a schema-owning/admin role, "
-            "or grant CREATE on schema public to the configured role."
-        )
+        raise
 
     return conn
 

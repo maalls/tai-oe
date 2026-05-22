@@ -14,6 +14,17 @@ from src.infrastructure.config.service import DatabaseService
 class FakeCursor:
     def __init__(self):
         self.closed = False
+        self._fetchone_result = None
+        self.executed = []
+
+    def set_fetchone_result(self, value):
+        self._fetchone_result = value
+
+    def execute(self, query):
+        self.executed.append(query)
+
+    def fetchone(self):
+        return self._fetchone_result
 
     def close(self):
         self.closed = True
@@ -183,3 +194,52 @@ def test_resolve_migration_db_url_raises_when_no_source_available():
 
     with pytest.raises(ValueError, match="No PostgreSQL URL configured for migrations"):
         service.resolve_migration_db_url()
+
+
+def test_resolve_masked_migration_db_url_masks_password():
+    connector = RecordingConnector()
+    runtime = _runtime_config()
+    runtime = ResolvedRuntimeConfig(
+        shared=runtime.shared,
+        db_hints=runtime.db_hints,
+        migration_database_url="postgresql://mig:supersecret@mig-db:5544/mig_db",
+        admin_database_url=None,
+        database_url=None,
+    )
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(runtime),
+        connector=connector,
+    )
+
+    source, masked = service.resolve_masked_migration_db_url()
+
+    assert "MIGRATION_DATABASE_URL" == source
+    assert "supersecret" not in masked
+    assert "***" in masked
+
+
+def test_assert_migration_create_privilege_returns_current_user_when_allowed():
+    connector = RecordingConnector()
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(_runtime_config()),
+        connector=connector,
+    )
+    conn = connector.connection
+    conn.cursor_instance.set_fetchone_result(("supabase_admin", True))
+
+    current_user = service.assert_migration_create_privilege(conn)
+
+    assert "supabase_admin" == current_user
+
+
+def test_assert_migration_create_privilege_raises_when_not_allowed():
+    connector = RecordingConnector()
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(_runtime_config()),
+        connector=connector,
+    )
+    conn = connector.connection
+    conn.cursor_instance.set_fetchone_result(("postgres", False))
+
+    with pytest.raises(PermissionError, match="does not have CREATE privilege"):
+        service.assert_migration_create_privilege(conn)

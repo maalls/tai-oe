@@ -9,6 +9,7 @@ from urllib.parse import quote
 import psycopg2
 
 from .factory import DbProfileFactory
+from .parser import mask_connection_url
 
 
 class DatabaseService:
@@ -50,6 +51,34 @@ class DatabaseService:
     def create_migration_db(self):
         """Create a migration-scoped DB connection."""
         return self.connect(profile_name="migration")
+
+    def resolve_masked_migration_db_url(self) -> tuple[str, str]:
+        """Resolve migration DB source and masked URL for safe logging."""
+        source, db_url = self.resolve_migration_db_url()
+        return source, mask_connection_url(db_url)
+
+    def assert_migration_create_privilege(self, conn) -> str:
+        """Ensure connected role can create objects in public schema."""
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT current_user, has_schema_privilege(current_user, 'public', 'CREATE')
+                """
+            )
+            current_user, can_create_public = cursor.fetchone()
+        finally:
+            cursor.close()
+
+        if not can_create_public:
+            raise PermissionError(
+                "Connected as role "
+                f"'{current_user}', but it does not have CREATE privilege on schema 'public'. "
+                "Use MIGRATION_DATABASE_URL (or ADMIN_DATABASE_URL) with a schema-owning/admin role, "
+                "or grant CREATE on schema public to the configured role."
+            )
+
+        return current_user
 
     def resolve_migration_db_url(self) -> tuple[str, str]:
         """Resolve migration DB source and log-safe raw URL."""
