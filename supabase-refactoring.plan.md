@@ -8,9 +8,9 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 ## Etat actuel
 
-- Les repositories metier utilisent encore `get_supabase_service()` directement pour lire et ecrire.
-- La pile `DatabaseRepository` / `DatabaseHandler` existe deja et utilise la connexion Postgres injectee.
-- `EmailRepository` sert deja de facade metier, mais delegate encore a un adapter Supabase pour certaines operations.
+- Les repositories/services metier migrés passent par `DatabaseHandler` SQL centralise.
+- Les scripts/tests identifies ont ete migres vers SQL ou adaptateur SQL compatible.
+- Le client Supabase restant est conserve pour l'auth (anon) et certains besoins de compatibilite/integration uniquement.
 
 ## Principe cible
 
@@ -30,10 +30,10 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 - [x] Lot 1: inventorier les flux Supabase et Postgres existants.
 - [x] Lot 2: extraire les adapters infra et retirer l'acces Supabase direct des repositories concernes.
-- [ ] Lot 3: migrer les services/commandes restants vers le flux SQL/Postgres centralise.
-- [ ] Lot 4: nettoyer les helpers, imports et tests obsoletes.
-- [ ] Valider chaque lot avec les tests cibles avant commit.
-- [ ] Faire un commit atomique a la fin de chaque lot.
+- [x] Lot 3: migrer les services/commandes restants vers le flux SQL/Postgres centralise.
+- [x] Lot 4: nettoyer les helpers, imports et tests obsoletes.
+- [x] Valider chaque lot avec les tests cibles avant commit.
+- [x] Faire un commit atomique a la fin de chaque lot.
 
 ## Inventaire initial
 

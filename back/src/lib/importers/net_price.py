@@ -16,7 +16,7 @@ class NetPriceImporter:
         Initialize the NetPriceImporter.
         
         Args:
-            supabase_client: Supabase client for database operations
+            supabase_client: table-compatible database client for persistence operations
             llm_client: LLM client for PDF text extraction and parsing
         """
         self.supabase_client = supabase_client

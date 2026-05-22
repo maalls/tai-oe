@@ -30,7 +30,7 @@ class FabdisImporter:
 
 	def import_products(self) -> list[dict[str, object]]:
 		if self.supabase_client is None:
-			raise RuntimeError("Supabase client not configured")
+			raise RuntimeError("Database table client not configured")
 
 		if not self.commerce_rows:
 			self.load_commerce()
@@ -92,7 +92,7 @@ class FabdisImporter:
 
 	def import_cartouche(self) -> list[dict[str, str | None]]:
 		if self.supabase_client is None:
-			raise RuntimeError("Supabase client not configured")
+			raise RuntimeError("Database table client not configured")
 
 		if not self.cartouche_rows:
 			self.load_cartouche()
@@ -321,7 +321,7 @@ class FabdisImporter:
 
 	def import_media(self, return_stats: bool = False) -> dict | None:
 		if self.supabase_client is None:
-			raise RuntimeError("Supabase client not configured")
+			raise RuntimeError("Database table client not configured")
 
 		if not self.media_rows:
 			self.load_media()

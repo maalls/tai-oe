@@ -15,20 +15,20 @@ from src.service.vendor.vendor_service import VendorService
 class ServiceFactory:
     """Create repositories and services with injected dependencies."""
 
-    def __init__(self, supabase_client=None):
-        self.supabase_client = supabase_client
+    def __init__(self, repository_client=None, supabase_client=None):
+        self.repository_client = repository_client if repository_client is not None else supabase_client
 
     def create_email_repository(self):
-        return SupabaseEmailRepository(self.supabase_client)
+        return SupabaseEmailRepository(self.repository_client)
 
     def create_rfp_repository(self):
-        return SupabaseRfpRepository(self.supabase_client)
+        return SupabaseRfpRepository(self.repository_client)
 
     def create_opportunity_repository(self):
-        return SupabaseOpportunityRepository(self.supabase_client)
+        return SupabaseOpportunityRepository(self.repository_client)
 
     def create_vendor_repository(self):
-        return SupabaseVendorRepository(self.supabase_client)
+        return SupabaseVendorRepository(self.repository_client)
 
     def create_email_service(self) -> EmailService:
         return EmailService(self.create_email_repository())
