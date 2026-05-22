@@ -64,6 +64,109 @@ class EmailDatabaseHandler:
     def clear_profile_column(self, user_id: str, column: str) -> bool:
         return self.set_profile_column(user_id, column, None)
 
+    def find_account_id_by_contact_email(self, email: str) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT account_id FROM contact WHERE email = %s LIMIT 1",
+            (email,),
+        )
+        if rows:
+            return rows[0].get("account_id")
+        return None
+
+    def create_account(self, name: str) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            "INSERT INTO account (name) VALUES (%s) RETURNING id",
+            (name,),
+        )
+        if rows:
+            return rows[0].get("id")
+        return None
+
+    def delete_account(self, account_id: str) -> bool:
+        rows_affected = self._get_db_handler().execute_update(
+            "DELETE FROM account WHERE id = %s",
+            (account_id,),
+        )
+        return rows_affected >= 0
+
+    def create_contact(
+        self,
+        name: str,
+        email: str,
+        account_id: str,
+        phone: Optional[str] = None,
+        role_title: Optional[str] = None,
+    ) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO contact (name, email, phone, role_title, account_id)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (name, email, phone, role_title, account_id),
+        )
+        if rows:
+            return rows[0].get("id")
+        return None
+
+    def find_opportunity_by_source_reference(self, user_id: str, source_reference_id: str) -> Optional[Dict]:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            SELECT id, name, stage, status, account_id, source_reference_id
+            FROM opportunity
+            WHERE owner_user_id = %s AND source_reference_id = %s
+            LIMIT 1
+            """,
+            (user_id, source_reference_id),
+        )
+        if rows:
+            return rows[0]
+        return None
+
+    def create_opportunity(
+        self,
+        owner_user_id: str,
+        account_id: str,
+        name: str,
+        stage: str,
+        source_reference_id: str,
+        source: str = "email",
+        status: str = "OPEN",
+    ) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO opportunity (
+                owner_user_id,
+                account_id,
+                name,
+                stage,
+                status,
+                source,
+                source_reference_id
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (owner_user_id, account_id, name, stage, status, source, source_reference_id),
+        )
+        if rows:
+            return rows[0].get("id")
+        return None
+
+    def list_email_attachments(self, email_id: str) -> List[Dict]:
+        return self._get_db_handler().execute_dict_query(
+            "SELECT id, filename, mime_type, storage_path FROM email_attachment WHERE email_id = %s",
+            (email_id,),
+        )
+
+    def find_email_by_user_and_sender(self, user_id: str, from_email: str) -> Optional[Dict]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT from_email FROM email WHERE user_id = %s AND from_email = %s LIMIT 1",
+            (user_id, from_email),
+        )
+        if rows:
+            return rows[0]
+        return None
+
     
     def _parse_email_date(self, date_string: str) -> Optional[str]:
         """Parse email date string to ISO format (UTC)."""

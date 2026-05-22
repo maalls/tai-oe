@@ -853,30 +853,18 @@ class EmailRepository:
         if not from_email:
             raise ValueError("Cannot create account/contact without email address")
         
-        # Use Supabase service client
-        supabase = get_supabase_service()
-        
-        # Step 1: Check if contact already exists (reuse existing account if so)
-        try:
-            existing_contacts = supabase.table("contact").select("*, account:account_id(id, name)").eq("email", from_email).limit(1).execute()
-            if existing_contacts.data and len(existing_contacts.data) > 0:
-                contact = existing_contacts.data[0]
-                account_id = contact.get("account_id")
-                print(f"[EmailRepository] Found existing contact {contact.get('id')} with account {account_id}")
-                return account_id
-        except Exception as e:
-            print(f"[EmailRepository] Warning: Error checking existing contact: {e}")
+        existing_account_id = self.db_handler.find_account_id_by_contact_email(from_email)
+        if existing_account_id:
+            print(f"[EmailRepository] Found existing contact account {existing_account_id} for {from_email}")
+            return existing_account_id
         
         # Step 2: Create account (required for contact.account_id foreign key)
         company_name = from_name or from_email.split("@")[1] if "@" in from_email else "Unknown Company"
         
         try:
-            account_data = {"name": company_name}
-            account_response = supabase.table("account").insert(account_data).execute()
-            if not account_response.data or len(account_response.data) == 0:
+            account_id = self.db_handler.create_account(company_name)
+            if not account_id:
                 raise ValueError("Account creation returned no data")
-            
-            account_id = account_response.data[0]["id"]
             print(f"[EmailRepository] Created new account: {account_id} ({company_name})")
         except Exception as e:
             print(f"[EmailRepository] Error creating account: {e}")
@@ -886,31 +874,22 @@ class EmailRepository:
         
         # Step 3: Create contact (REQUIRED - if this fails, rollback should happen)
         try:
-            contact_data = {
-                "name": from_name or from_email,
-                "email": from_email,
-                "account_id": account_id,
-            }
-            contact_response = supabase.table("contact").insert(contact_data).execute()
-            if not contact_response.data or len(contact_response.data) == 0:
-                # Critical failure - account exists but contact creation failed
-                # Delete the orphaned account
-                try:
-                    supabase.table("account").delete().eq("id", account_id).execute()
-                    print(f"[EmailRepository] Rolled back orphaned account {account_id}")
-                except Exception as rollback_error:
-                    print(f"[EmailRepository] Warning: Failed to rollback account {account_id}: {rollback_error}")
-                
+            contact_id = self.db_handler.create_contact(
+                name=from_name or from_email,
+                email=from_email,
+                account_id=account_id,
+            )
+            if not contact_id:
+                self.db_handler.delete_account(account_id)
+                print(f"[EmailRepository] Rolled back orphaned account {account_id}")
                 raise ValueError("Contact creation returned no data")
-            
-            contact_id = contact_response.data[0]["id"]
             print(f"[EmailRepository] Created new contact: {contact_id} for {from_email}")
             
         except Exception as e:
             print(f"[EmailRepository] CRITICAL: Contact creation failed for account {account_id}: {e}")
             # Try to clean up orphaned account
             try:
-                supabase.table("account").delete().eq("id", account_id).execute()
+                self.db_handler.delete_account(account_id)
                 print(f"[EmailRepository] Rolled back orphaned account {account_id}")
             except Exception as rollback_error:
                 print(f"[EmailRepository] ERROR: Failed to rollback account {account_id}: {rollback_error}")
@@ -922,7 +901,6 @@ class EmailRepository:
         return account_id
     
     def create_opportunity_from_email(self, message_id, user_id) -> Dict:
-        supabase = get_supabase_service()
         email = self.db_handler.get_email(message_id)
         print(f"[EmailRepository] Email result type: {type(email)}, value: {email}")
         
@@ -974,15 +952,27 @@ class EmailRepository:
         }
         
         print(f"[EmailRepository] Creating opportunity with data: {opportunity_insert_data}")
-        result = supabase.table("opportunity").insert(opportunity_insert_data).execute()
-        
-        if not result.data:
+        existing = self.db_handler.find_opportunity_by_source_reference(user_id, message_id)
+        if existing:
+            return {
+                "status": "skipped",
+                "reason": "opportunity_already_exists",
+                "opportunity_id": existing.get("id"),
+            }
+
+        opportunity_id = self.db_handler.create_opportunity(
+            owner_user_id=user_id,
+            account_id=account_id,
+            name=opportunity_name,
+            stage=opportunity_stage,
+            source_reference_id=message_id,
+        )
+
+        if not opportunity_id:
             return {
                 "status": "error",
                 "message": "Failed to create opportunity in Supabase"
             }
-        
-        opportunity_id = result.data[0]["id"]
         
         print(f"[EmailRepository] Opportunity created successfully: {opportunity_id}")
         return {
@@ -1239,12 +1229,11 @@ class EmailRepository:
             return result
     
     def get_contact_by_email(self, email_list: List[str], user_id: str) -> Dict:    
-        from src.infrastructure.clients.supabase import get_supabase_service
-        supabase = get_supabase_service()
         for email in email_list:
-            fetch_result = supabase.table("email").select("from_email").eq("user_id", user_id).eq("from_email", email).limit(1).execute()
-            if fetch_result.data and len(fetch_result.data) > 0:
-                return
+            rows = self.db_handler.find_email_by_user_and_sender(user_id, email)
+            if rows:
+                return rows.get("from_email")
+        return None
         
     def send_email(
         self,
@@ -1566,29 +1555,19 @@ class EmailRepository:
         
         Scans both email body and PDF attachments for products, uses whichever has most products.
         """
-        from src.infrastructure.clients.supabase import get_supabase_service
         from pathlib import Path
         import json
         from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 
 
         try:
-            supabase = get_supabase_service()
-
             # Avoid duplicates: check existing opportunity linked to this email
-            existing = (
-                supabase.table("opportunity")
-                .select("id")
-                .eq("source_reference_id", email_id)
-                .eq("owner_user_id", user_id)
-                .limit(1)
-                .execute()
-            )
+            existing = self.db_handler.find_opportunity_by_source_reference(user_id, email_id)
             if existing.data:
                 return {
                     "status": "skipped",
                     "reason": "opportunity_already_exists",
-                    "opportunity_id": existing.data[0].get("id"),
+                    "opportunity_id": existing.get("id"),
                 }
 
             # Get email body
@@ -1603,15 +1582,10 @@ class EmailRepository:
             email_body = email.get("body_full") or email.get("body_preview") or ""
             
             # Get PDF attachments
-            pdf_attachment_id = None
             pdf_attachments = []
             try:
-                attachments_response = supabase.table("email_attachment").select(
-                    "id, filename, mime_type, storage_path"
-                ).eq("email_id", email_id).execute()
-                
                 pdf_attachments = [
-                    att for att in (attachments_response.data or [])
+                    att for att in (self.db_handler.list_email_attachments(email_id) or [])
                     if att.get("mime_type") == "application/pdf"
                 ]
                 

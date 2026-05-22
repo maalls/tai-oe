@@ -63,7 +63,9 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 - [x] `OAuthTokenRepository` migre vers `DatabaseHandler` et SQL direct.
 - [x] `EmailRepository` profil/IMAP migre vers `EmailDatabaseHandler` SQL-backed.
+- [x] `EmailRepository` compte/contact/opportunite depuis email migre vers SQL-backed handler.
 - [x] `ActionRepository` migre vers `DatabaseHandler` et SQL direct.
+- [ ] `EmailRepository` reste a nettoyer sur les autres requetes annexes et le flux Gmail restant.
 
 ## Strategie de migration
 
