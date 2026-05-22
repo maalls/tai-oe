@@ -28,8 +28,8 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 ## Todo list
 
-- [ ] Lot 1: inventorier les flux Supabase et Postgres existants. (en cours)
-- [ ] Lot 2: extraire les adapters infra et retirer l'acces Supabase direct des repositories concernes. (en cours)
+- [x] Lot 1: inventorier les flux Supabase et Postgres existants.
+- [x] Lot 2: extraire les adapters infra et retirer l'acces Supabase direct des repositories concernes.
 - [ ] Lot 3: migrer les repositories restants vers le flux SQL/Postgres centralise.
 - [ ] Lot 4: nettoyer les helpers, imports et tests obsoletes.
 - [ ] Valider chaque lot avec les tests cibles avant commit.
@@ -68,6 +68,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `EmailRepository` ne contient plus d'acces Supabase direct.
 - [x] `GmailProviderRepository` migre la persistence `profile.google_token_pickle` vers SQL (`DatabaseHandler`).
 - [x] `GmailProviderRepository` simplifie: delegation directe des operations token au `EmailDatabaseHandler` (suppression wrappers profile dupliques).
+- [x] `OpportunityRepository` migre ses CRUD et generation de quote vers `DatabaseHandler` SQL direct.
 
 ## Strategie de migration
 

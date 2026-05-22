@@ -5,7 +5,8 @@ import os
 
 from flask import json
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.repository.email_repository import EmailRepository
@@ -13,6 +14,18 @@ from pathlib import Path
 
 
 class OpportunityRepository:
+    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
+        self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = DatabaseHandler(
+                database_service=create_database_service(
+                    current_file=__file__,
+                    require_postgres_password=True,
+                )
+            )
+        return self.db_handler
 
     def _select_best_family(self, product: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         direct_net_price_family = product.get("direct_net_price_family") if isinstance(product, dict) else None
@@ -45,7 +58,7 @@ class OpportunityRepository:
 
         return best_discount_family
 
-    def _build_lines_from_rfp_data(self, rfp_data: Dict[str, Any], supabase) -> tuple:
+    def _build_lines_from_rfp_data(self, rfp_data: Dict[str, Any], db_source) -> tuple:
         """Build document lines list and totals from extracted RFP data.
 
         Fetches product metadata from DB, computes ``client_discount_rate`` for
@@ -61,26 +74,62 @@ class OpportunityRepository:
         unique_skus = list(dict.fromkeys(skus))
         if unique_skus:
             try:
-                product_resp = (
-                    supabase.table("product")
-                    .select("sku, price, brand(*), product_family(family(*))")
-                    .in_("sku", unique_skus)
-                    .execute()
-                )
-                for prod in (product_resp.data or []):
+                if hasattr(db_source, "execute_dict_query"):
+                    products = db_source.execute_dict_query(
+                        """
+                        SELECT
+                            p.sku,
+                            p.price,
+                            CASE
+                                WHEN b.id IS NULL THEN '{}'::jsonb
+                                ELSE jsonb_build_object('target_margin', b.target_margin)
+                            END AS brand,
+                            COALESCE(
+                                (
+                                    SELECT jsonb_agg(jsonb_build_object('family', to_jsonb(f.*)))
+                                    FROM product_family pf
+                                    LEFT JOIN family f ON f.id = pf.family_id
+                                    WHERE pf.product_id = p.id
+                                ),
+                                '[]'::jsonb
+                            ) AS product_family
+                        FROM product p
+                        LEFT JOIN brand b ON b.id = p.brand_id
+                        WHERE p.sku = ANY(%s)
+                        """,
+                        (unique_skus,),
+                    )
+                else:
+                    product_resp = (
+                        db_source.table("product")
+                        .select("sku, price, brand(*), product_family(family(*))")
+                        .in_("sku", unique_skus)
+                        .execute()
+                    )
+                    products = product_resp.data or []
+
+                for prod in (products or []):
                     sku = str((prod or {}).get("sku") or "").strip()
                     if sku:
                         product_meta_by_sku[sku] = prod
 
                 # Net-price families are keyed by family.product_code, not always by product_family links.
-                net_price_resp = (
-                    supabase.table("family")
-                    .select("*")
-                    .in_("product_code", unique_skus)
-                    .ilike("type", "net_price")
-                    .execute()
-                )
-                for family in (net_price_resp.data or []):
+                if hasattr(db_source, "execute_dict_query"):
+                    net_price_families = db_source.execute_dict_query(
+                        "SELECT * FROM family WHERE product_code = ANY(%s) AND LOWER(type) = 'net_price'",
+                        (unique_skus,),
+                    )
+                else:
+                    net_price_resp = (
+                        db_source.table("family")
+                        .select("*")
+                        .in_("product_code", unique_skus)
+                        .ilike("type", "net_price")
+                        .execute()
+                    )
+                    net_price_families = net_price_resp.data or []
+
+                for family in (net_price_families or []):
                     sku = str((family or {}).get("product_code") or "").strip()
                     if not sku:
                         continue
@@ -201,22 +250,24 @@ class OpportunityRepository:
         if not trimmed_name:
             return {"status": "error", "message": "Missing opportunity name"}
 
-        supabase = get_supabase_service()
+        db_handler = self._get_db_handler()
         try:
             account_name = "Unknown Company"
             account_id = None
 
-            account_response = (
-                supabase.table("account").select("id").eq("name", account_name).limit(1).execute()
+            account_rows = db_handler.execute_dict_query(
+                "SELECT id FROM account WHERE name = %s LIMIT 1",
+                (account_name,),
             )
-            if account_response.data:
-                account_id = account_response.data[0].get("id")
+            if account_rows:
+                account_id = account_rows[0].get("id")
             else:
-                created_account = (
-                    supabase.table("account").insert({"name": account_name}).execute()
+                created_account = db_handler.execute_dict_query(
+                    "INSERT INTO account (name) VALUES (%s) RETURNING id",
+                    (account_name,),
                 )
-                if created_account.data:
-                    account_id = created_account.data[0].get("id")
+                if created_account:
+                    account_id = created_account[0].get("id")
 
             if not account_id:
                 return {"status": "error", "message": "Failed to resolve default account"}
@@ -229,15 +280,23 @@ class OpportunityRepository:
                 "status": "OPEN",
                 "source": "manual",
             }
-            response = supabase.table("opportunity").insert(insert_data).execute()
+            created_rows = db_handler.execute_dict_query(
+                """
+                INSERT INTO opportunity (owner_user_id, account_id, name, stage, status, source)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (
+                    insert_data["owner_user_id"],
+                    insert_data["account_id"],
+                    insert_data["name"],
+                    insert_data["stage"],
+                    insert_data["status"],
+                    insert_data["source"],
+                ),
+            )
 
-            if getattr(response, "error", None):
-                return {
-                    "status": "error",
-                    "message": f"Failed to create opportunity: {response.error}",
-                }
-
-            created = response.data[0] if response.data else None
+            created = created_rows[0] if created_rows else None
             return {"status": "ok", "opportunity": created}
         except Exception as e:
             return {"status": "error", "message": f"Error creating opportunity: {str(e)}"}
@@ -257,10 +316,11 @@ class OpportunityRepository:
         Dict
             Response with list of opportunities
         """
-        supabase = get_supabase_service()
+        db_handler = self._get_db_handler()
         
         try:
-            query = supabase.table("opportunity").select("*")
+            query = "SELECT * FROM opportunity WHERE 1 = 1"
+            params: list = []
             
             # Filter by source_reference_id if provided
             if source_reference_id:
@@ -271,21 +331,21 @@ class OpportunityRepository:
                         "status": "error",
                         "message": "Invalid source_reference_id. Expected a UUID.",
                     }
-                query = query.eq("source_reference_id", source_reference_id)
+                query += " AND source_reference_id = %s"
+                params.append(source_reference_id)
 
             if name:
-                query = query.ilike("name", f"%{name}%")
+                query += " AND name ILIKE %s"
+                params.append(f"%{name}%")
             
             # Order by created date descending
-            response = query.order("created_at", desc=True).execute()
-            
-            if getattr(response, "error", None):
-                return {"status": "error", "message": f"Failed to search opportunities: {response.error}"}
+            query += " ORDER BY created_at DESC"
+            rows = db_handler.execute_dict_query(query, tuple(params))
             
             return {
                 "status": "ok",
-                "opportunities": response.data or [],
-                "count": len(response.data or [])
+                "opportunities": rows or [],
+                "count": len(rows or [])
             }
         except Exception as e:
             return {"status": "error", "message": f"Error searching opportunities: {str(e)}"}
@@ -305,7 +365,7 @@ class OpportunityRepository:
         Dict
             Response with deletion status and count
         """
-        supabase = get_supabase_service()
+        db_handler = self._get_db_handler()
         
         if not opportunity_ids:
             return {"status": "error", "message": "No opportunity IDs provided"}
@@ -317,18 +377,23 @@ class OpportunityRepository:
             for opportunity_id in opportunity_ids:
                 try:
                     # Verify opportunity exists
-                    opp_response = supabase.table("opportunity").select("id").eq("id", opportunity_id).single().execute()
-                    if getattr(opp_response, "error", None) or not opp_response.data:
+                    opp_rows = db_handler.execute_dict_query(
+                        "SELECT id FROM opportunity WHERE id = %s LIMIT 1",
+                        (opportunity_id,),
+                    )
+                    if not opp_rows:
                         errors.append(f"Opportunity not found: {opportunity_id}")
                         continue
                     
                     # Delete opportunity (cascade will handle related records)
-                    delete_response = supabase.table("opportunity").delete().eq("id", opportunity_id).execute()
-                    
-                    if getattr(delete_response, "error", None):
-                        errors.append(f"Failed to delete {opportunity_id}: {delete_response.error}")
-                    else:
+                    deleted = db_handler.execute_update(
+                        "DELETE FROM opportunity WHERE id = %s",
+                        (opportunity_id,),
+                    )
+                    if deleted > 0:
                         deleted_count += 1
+                    else:
+                        errors.append(f"Failed to delete {opportunity_id}: no rows affected")
                 except Exception as e:
                     errors.append(f"Error deleting {opportunity_id}: {str(e)}")
             
@@ -390,14 +455,15 @@ class OpportunityRepository:
             Pre-extracted RFP data (e.g., from pick_best_rfp_source).
             If provided, skips LLM extraction and enriches directly.
         """
-        supabase = get_supabase_service()
+        db_handler = self._get_db_handler()
 
         try:
             # 1) Load opportunity
-            opp_response = supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-            if getattr(opp_response, "error", None):
-                return {"status": "error", "message": f"Opportunity lookup failed: {opp_response.error}"}
-            opportunity = opp_response.data
+            opp_rows = db_handler.execute_dict_query(
+                "SELECT * FROM opportunity WHERE id = %s LIMIT 1",
+                (opportunity_id,),
+            )
+            opportunity = opp_rows[0] if opp_rows else None
             if not opportunity:
                 return {"status": "error", "message": f"Opportunity not found: {opportunity_id}"}
 
@@ -409,7 +475,7 @@ class OpportunityRepository:
 
             # 2) Extract and enrich RFP/quote data via shared helper
             rfp_data = self._extract_and_enrich_rfp_data(content, pre_extracted_data=pre_extracted_data)
-            lines, totals = self._build_lines_from_rfp_data(rfp_data, supabase)
+            lines, totals = self._build_lines_from_rfp_data(rfp_data, db_handler)
 
             document_data = {
                 "opportunity_id": opportunity_id,
@@ -426,27 +492,72 @@ class OpportunityRepository:
                 "created_by": user_id,
             }
 
-            doc_resp = supabase.table("document").insert(document_data).execute()
-            if getattr(doc_resp, "error", None):
-                return {"status": "error", "message": f"Failed to save document: {doc_resp.error}"}
-            if not doc_resp.data:
+            doc_rows = db_handler.execute_dict_query(
+                """
+                INSERT INTO document (
+                    opportunity_id, type, status, title, external_ref, currency,
+                    channel, storage_key, total_excl_tax, total_tax, total_incl_tax, created_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (
+                    document_data["opportunity_id"],
+                    document_data["type"],
+                    document_data["status"],
+                    document_data["title"],
+                    document_data["external_ref"],
+                    document_data["currency"],
+                    document_data["channel"],
+                    document_data["storage_key"],
+                    document_data["total_excl_tax"],
+                    document_data["total_tax"],
+                    document_data["total_incl_tax"],
+                    document_data["created_by"],
+                ),
+            )
+            if not doc_rows:
                 return {"status": "error", "message": "Document insert returned no data"}
 
-            document = doc_resp.data[0]
+            document = doc_rows[0]
             document_id = document.get("id")
 
             # Insert specialized quote row
-            quote_resp = supabase.table("quote").insert({"document_id": document_id}).execute()
-            if getattr(quote_resp, "error", None):
-                print(f"[OpportunityRepository] Warning: failed to insert quote specialization: {quote_resp.error}")
+            try:
+                db_handler.execute_update(
+                    "INSERT INTO quote (document_id) VALUES (%s)",
+                    (document_id,),
+                )
+            except Exception as quote_err:
+                print(f"[OpportunityRepository] Warning: failed to insert quote specialization: {quote_err}")
 
             # Insert document lines from products
             if lines:
-                for line in lines:
-                    line["document_id"] = document_id
-                line_resp = supabase.table("document_line").insert(lines).execute()
-                if getattr(line_resp, "error", None):
-                    print(f"[OpportunityRepository] Warning: failed to insert document lines: {line_resp.error}")
+                try:
+                    for line in lines:
+                        db_handler.execute_update(
+                            """
+                            INSERT INTO document_line (
+                                document_id, position, sku, brand, description,
+                                quantity, unit, unit_price_excl_tax, tax_rate,
+                                line_total_excl_tax, client_discount_rate
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (
+                                document_id,
+                                line.get("position"),
+                                line.get("sku"),
+                                line.get("brand"),
+                                line.get("description"),
+                                line.get("quantity"),
+                                line.get("unit"),
+                                line.get("unit_price_excl_tax"),
+                                line.get("tax_rate"),
+                                line.get("line_total_excl_tax"),
+                                line.get("client_discount_rate"),
+                            ),
+                        )
+                except Exception as line_err:
+                    print(f"[OpportunityRepository] Warning: failed to insert document lines: {line_err}")
 
             return {
                 "status": "ok",
@@ -475,14 +586,15 @@ class OpportunityRepository:
         3. Extract RFP data via the existing LLM pipeline
         4. Persist document + lines (DRAFT) without generating PDF
         """
-        supabase = get_supabase_service()
+        db_handler = self._get_db_handler()
 
         try:
             # 1) Load opportunity
-            opp_response = supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-            if getattr(opp_response, "error", None):
-                return {"status": "error", "message": f"Opportunity lookup failed: {opp_response.error}"}
-            opportunity = opp_response.data
+            opp_rows = db_handler.execute_dict_query(
+                "SELECT * FROM opportunity WHERE id = %s LIMIT 1",
+                (opportunity_id,),
+            )
+            opportunity = opp_rows[0] if opp_rows else None
             if not opportunity:
                 return {"status": "error", "message": f"Opportunity not found: {opportunity_id}"}
 
@@ -498,15 +610,11 @@ class OpportunityRepository:
                     email = repo.db_handler.get_email(source_ref_id)
                     if not email:
                         try:
-                            email = (
-                                supabase.table("email")
-                                .select("*")
-                                .eq("provider_message_id", source_ref_id)
-                                .eq("user_id", user_id)
-                                .single()
-                                .execute()
-                                .data
+                            email_rows = db_handler.execute_dict_query(
+                                "SELECT * FROM email WHERE provider_message_id = %s AND user_id = %s LIMIT 1",
+                                (source_ref_id, user_id),
                             )
+                            email = email_rows[0] if email_rows else None
                         except Exception as lookup_err:
                             print(f"[OpportunityRepository] Warning: email lookup by provider_message_id failed: {lookup_err}")
                     email_body = ""
@@ -517,11 +625,9 @@ class OpportunityRepository:
 
                     pdf_candidates = []
                     try:
-                        attachments_response = (
-                            supabase.table("email_attachment")
-                            .select("id, filename, mime_type, storage_path")
-                            .eq("email_id", source_ref_id)
-                            .execute()
+                        attachments = db_handler.execute_dict_query(
+                            "SELECT id, filename, mime_type, storage_path FROM email_attachment WHERE email_id = %s",
+                            (source_ref_id,),
                         )
                         pdf_candidates = [
                             {
@@ -529,7 +635,7 @@ class OpportunityRepository:
                                 "filename": att.get("filename"),
                                 "path": Path(att.get("storage_path")) if att.get("storage_path") else None,
                             }
-                            for att in (attachments_response.data or [])
+                            for att in (attachments or [])
                             if (att.get("mime_type") or "").lower().startswith("application/pdf")
                         ]
                     except Exception as e:
@@ -545,9 +651,12 @@ class OpportunityRepository:
             elif opportunity.get("source") == "rfp_upload" and source_ref_id:
                 try:
                     print("[OpportunityRepository] Loading RFP document for opportunity quote generation")
-                    doc_response = supabase.table("document").select("*").eq("id", source_ref_id).single().execute()
-                    if not getattr(doc_response, "error", None) and doc_response.data:
-                        document = doc_response.data
+                    doc_rows = db_handler.execute_dict_query(
+                        "SELECT * FROM document WHERE id = %s LIMIT 1",
+                        (source_ref_id,),
+                    )
+                    if doc_rows:
+                        document = doc_rows[0]
                         base_text = ""
                         
                         # Get content from storage_key if available
@@ -572,14 +681,11 @@ class OpportunityRepository:
                         # Look for PDF attachments linked to this opportunity
                         pdf_candidates = []
                         try:
-                            att_response = (
-                                supabase.table("document")
-                                .select("id, title, storage_key")
-                                .eq("opportunity_id", opportunity_id)
-                                .eq("type", "ATTACHMENT")
-                                .execute()
+                            attachments = db_handler.execute_dict_query(
+                                "SELECT id, title, storage_key FROM document WHERE opportunity_id = %s AND type = %s",
+                                (opportunity_id, "ATTACHMENT"),
                             )
-                            for att in (att_response.data or []):
+                            for att in (attachments or []):
                                 name = att.get("title") or att.get("storage_key") or ""
                                 # Check if this is a PDF by name
                                 if (name.lower().endswith(".pdf") or "pdf" in name.lower()) and att.get("storage_key"):
@@ -608,7 +714,7 @@ class OpportunityRepository:
 
             # 3) Extract, enrich, and build lines with discounts
             rfp_data = self._extract_and_enrich_rfp_data(content, pre_extracted_data=pre_extracted_data)
-            lines, totals = self._build_lines_from_rfp_data(rfp_data, supabase)
+            lines, totals = self._build_lines_from_rfp_data(rfp_data, db_handler)
 
             # 4) Persist document + lines (no PDF yet)
             document_data = {
@@ -626,26 +732,71 @@ class OpportunityRepository:
                 "created_by": user_id,
             }
 
-            doc_resp = supabase.table("document").insert(document_data).execute()
-            if getattr(doc_resp, "error", None):
-                return {"status": "error", "message": f"Failed to save document: {doc_resp.error}"}
-            if not doc_resp.data:
+            doc_rows = db_handler.execute_dict_query(
+                """
+                INSERT INTO document (
+                    opportunity_id, type, status, title, external_ref, currency,
+                    channel, storage_key, total_excl_tax, total_tax, total_incl_tax, created_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (
+                    document_data["opportunity_id"],
+                    document_data["type"],
+                    document_data["status"],
+                    document_data["title"],
+                    document_data["external_ref"],
+                    document_data["currency"],
+                    document_data["channel"],
+                    document_data["storage_key"],
+                    document_data["total_excl_tax"],
+                    document_data["total_tax"],
+                    document_data["total_incl_tax"],
+                    document_data["created_by"],
+                ),
+            )
+            if not doc_rows:
                 return {"status": "error", "message": "Document insert returned no data"}
 
-            document = doc_resp.data[0]
+            document = doc_rows[0]
             document_id = document.get("id")
 
             # Insert specialized quote row
-            quote_resp = supabase.table("quote").insert({"document_id": document_id}).execute()
-            if getattr(quote_resp, "error", None):
-                print(f"[OpportunityRepository] Warning: failed to insert quote specialization: {quote_resp.error}")
+            try:
+                db_handler.execute_update(
+                    "INSERT INTO quote (document_id) VALUES (%s)",
+                    (document_id,),
+                )
+            except Exception as quote_err:
+                print(f"[OpportunityRepository] Warning: failed to insert quote specialization: {quote_err}")
 
             if lines:
-                for line in lines:
-                    line["document_id"] = document_id
-                line_resp = supabase.table("document_line").insert(lines).execute()
-                if getattr(line_resp, "error", None):
-                    print(f"[OpportunityRepository] Warning: failed to insert document lines: {line_resp.error}")
+                try:
+                    for line in lines:
+                        db_handler.execute_update(
+                            """
+                            INSERT INTO document_line (
+                                document_id, position, sku, brand, description,
+                                quantity, unit, unit_price_excl_tax, tax_rate,
+                                line_total_excl_tax, client_discount_rate
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (
+                                document_id,
+                                line.get("position"),
+                                line.get("sku"),
+                                line.get("brand"),
+                                line.get("description"),
+                                line.get("quantity"),
+                                line.get("unit"),
+                                line.get("unit_price_excl_tax"),
+                                line.get("tax_rate"),
+                                line.get("line_total_excl_tax"),
+                                line.get("client_discount_rate"),
+                            ),
+                        )
+                except Exception as line_err:
+                    print(f"[OpportunityRepository] Warning: failed to insert document lines: {line_err}")
 
             return {
                 "status": "ok",
