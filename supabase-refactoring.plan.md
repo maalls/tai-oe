@@ -91,10 +91,10 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `back/src/service/opportunity/document_content_service.py` (fallback Supabase dans `update_opportunity_timestamp`)
 - [x] `back/src/service/opportunity/document_rfp_extraction_service.py` (fallback Supabase pour lecture `document`)
 - [x] `back/src/infrastructure/supabase/email_supabase.py`
-- [ ] `back/src/infrastructure/supabase/opportunity_supabase.py`
-- [ ] `back/src/infrastructure/supabase/rfp_supabase.py`
-- [ ] `back/src/infrastructure/supabase/vendor_supabase.py`
-- [ ] `back/src/infrastructure/clients/supabase.py` (a conserver uniquement si necessaire pour compatibilite, sinon retirer en lot 4)
+- [x] `back/src/infrastructure/supabase/opportunity_supabase.py`
+- [x] `back/src/infrastructure/supabase/rfp_supabase.py`
+- [x] `back/src/infrastructure/supabase/vendor_supabase.py`
+- [x] `back/src/infrastructure/clients/supabase.py` (conserve comme couche de compatibilite auth/integration)
 
 ## Strategie de migration
 

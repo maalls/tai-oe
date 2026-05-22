@@ -10,18 +10,15 @@ from infrastructure.supabase.vendor_supabase import SupabaseVendorRepository
 from domain.vendor import Vendor
 
 
-def _mock_supabase_with_data(data):
-    supabase = MagicMock()
-    query = supabase.table.return_value
-    query.select.return_value = query
-    query.eq.return_value = query
-    query.limit.return_value = query
-    query.execute.return_value = MagicMock(data=data)
-    return supabase
+def _mock_db_handler_with_data(data, update_rows_affected=1):
+    db_handler = MagicMock()
+    db_handler.execute_dict_query.return_value = data
+    db_handler.execute_update.return_value = update_rows_affected
+    return db_handler
 
 
 def test_vendor_get_by_id_maps_domain():
-    supabase = _mock_supabase_with_data([
+    db_handler = _mock_db_handler_with_data([
         {
             "id": "v-1",
             "name": "Vendor A",
@@ -31,7 +28,7 @@ def test_vendor_get_by_id_maps_domain():
             "created_at": "2026-05-13T10:20:30Z",
         }
     ])
-    repo = SupabaseVendorRepository(supabase)
+    repo = SupabaseVendorRepository(db_handler=db_handler)
 
     vendor = repo.get_by_id("v-1")
 
@@ -41,20 +38,20 @@ def test_vendor_get_by_id_maps_domain():
 
 
 def test_vendor_get_by_id_not_found():
-    supabase = _mock_supabase_with_data([])
-    repo = SupabaseVendorRepository(supabase)
+    db_handler = _mock_db_handler_with_data([])
+    repo = SupabaseVendorRepository(db_handler=db_handler)
 
     with pytest.raises(NotFoundError):
         repo.get_by_id("missing")
 
 
 def test_vendor_save_updates_payload():
-    supabase = _mock_supabase_with_data([])
-    repo = SupabaseVendorRepository(supabase)
+    db_handler = _mock_db_handler_with_data([])
+    repo = SupabaseVendorRepository(db_handler=db_handler)
     vendor = Vendor(id="v-save", name="Vendor Save", email="save@vendor.com")
 
     repo.save(vendor)
 
-    payload = supabase.table.return_value.update.call_args.args[0]
-    assert payload["name"] == "Vendor Save"
-    assert payload["email"] == "save@vendor.com"
+    params = db_handler.execute_update.call_args.args[1]
+    assert params[0] == "Vendor Save"
+    assert params[1] == "save@vendor.com"

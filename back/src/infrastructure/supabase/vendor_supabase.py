@@ -1,32 +1,43 @@
-"""Supabase implementation of vendor repository contract."""
+"""SQL-backed implementation of vendor repository contract."""
 
 from datetime import datetime
 from typing import Any, Optional
 
 from src.domain.vendor import Vendor
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 from src.infrastructure.exceptions import MappingError, NotFoundError, RepositoryError
 from src.repository.contracts.vendor_repository import VendorRepositoryContract
 
 
 class SupabaseVendorRepository(VendorRepositoryContract):
-    """Vendor repository backed by Supabase."""
+    """Compatibility repository now backed by SQL DatabaseHandler."""
 
-    def __init__(self, supabase_client: Optional[Any] = None):
-        if supabase_client is not None:
-            self.supabase = supabase_client
+    def __init__(self, supabase_client: Optional[Any] = None, db_handler: Optional[DatabaseHandler] = None):
+        if db_handler is not None:
+            self.db_handler = db_handler
+        elif supabase_client is not None and hasattr(supabase_client, "execute_dict_query"):
+            self.db_handler = supabase_client
         else:
-            from src.infrastructure.clients.supabase import get_supabase_service
+            self.db_handler = None
 
-            self.supabase = get_supabase_service()
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
 
     def get_by_id(self, vendor_id: str) -> Vendor:
         try:
-            response = (
-                self.supabase.table("vendor").select("*").eq("id", vendor_id).limit(1).execute()
+            rows = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM vendor WHERE id = %s LIMIT 1",
+                (vendor_id,),
             )
-            if not response.data:
+            if not rows:
                 raise NotFoundError(f"Vendor {vendor_id} not found")
-            return self._to_domain(response.data[0])
+            return self._to_domain(rows[0])
         except NotFoundError:
             raise
         except Exception as exc:
@@ -35,7 +46,19 @@ class SupabaseVendorRepository(VendorRepositoryContract):
     def save(self, vendor: Vendor) -> None:
         try:
             row = self._to_sql(vendor)
-            self.supabase.table("vendor").update(row).eq("id", vendor.id).execute()
+            rows_affected = self._get_db_handler().execute_update(
+                """
+                UPDATE vendor
+                SET name = %s,
+                    email = %s,
+                    phone = %s,
+                    website = %s
+                WHERE id = %s
+                """,
+                (row["name"], row["email"], row["phone"], row["website"], vendor.id),
+            )
+            if rows_affected <= 0:
+                raise NotFoundError(f"Vendor {vendor.id} not found")
         except Exception as exc:
             raise RepositoryError(f"Failed to save vendor {vendor.id}") from exc
 

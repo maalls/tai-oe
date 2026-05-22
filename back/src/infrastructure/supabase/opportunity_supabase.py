@@ -1,37 +1,44 @@
-"""Supabase implementation of opportunity repository contract."""
+"""SQL-backed implementation of opportunity repository contract."""
 
 from typing import Any, List, Optional
 
 from src.domain.enums import OpportunityStage, OpportunityStatus
 from src.domain.opportunity import Opportunity
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 from src.infrastructure.database.dto import OpportunityDTO
 from src.infrastructure.exceptions import MappingError, NotFoundError, RepositoryError
 from src.repository.contracts.opportunity_repository import OpportunityRepositoryContract
 
 
 class SupabaseOpportunityRepository(OpportunityRepositoryContract):
-    """Opportunity repository backed by Supabase."""
+    """Compatibility repository now backed by SQL DatabaseHandler."""
 
-    def __init__(self, supabase_client: Optional[Any] = None):
-        if supabase_client is not None:
-            self.supabase = supabase_client
+    def __init__(self, supabase_client: Optional[Any] = None, db_handler: Optional[DatabaseHandler] = None):
+        if db_handler is not None:
+            self.db_handler = db_handler
+        elif supabase_client is not None and hasattr(supabase_client, "execute_dict_query"):
+            self.db_handler = supabase_client
         else:
-            from src.infrastructure.clients.supabase import get_supabase_service
+            self.db_handler = None
 
-            self.supabase = get_supabase_service()
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
 
     def get_by_id(self, opportunity_id: str) -> Opportunity:
         try:
-            response = (
-                self.supabase.table("opportunity")
-                .select("*")
-                .eq("id", opportunity_id)
-                .limit(1)
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM opportunity WHERE id = %s LIMIT 1",
+                (opportunity_id,),
             )
-            if not response.data:
+            if not rows:
                 raise NotFoundError(f"Opportunity {opportunity_id} not found")
-            return self._to_domain(response.data[0])
+            return self._to_domain(rows[0])
         except NotFoundError:
             raise
         except Exception as exc:
@@ -40,21 +47,54 @@ class SupabaseOpportunityRepository(OpportunityRepositoryContract):
     def save(self, opportunity: Opportunity) -> None:
         try:
             row = self._to_sql(opportunity)
-            self.supabase.table("opportunity").update(row).eq("id", opportunity.id).execute()
+            rows_affected = self._get_db_handler().execute_update(
+                """
+                UPDATE opportunity
+                SET owner_user_id = %s,
+                    account_id = %s,
+                    name = %s,
+                    stage = %s,
+                    status = %s,
+                    amount_estimated = %s,
+                    probability = %s,
+                    expected_close_date = %s,
+                    source = %s,
+                    source_reference_id = %s
+                WHERE id = %s
+                """,
+                (
+                    row["owner_user_id"],
+                    row["account_id"],
+                    row["name"],
+                    row["stage"],
+                    row["status"],
+                    row["amount_estimated"],
+                    row["probability"],
+                    row["expected_close_date"],
+                    row["source"],
+                    row["source_reference_id"],
+                    opportunity.id,
+                ),
+            )
+            if rows_affected <= 0:
+                raise NotFoundError(f"Opportunity {opportunity.id} not found")
         except Exception as exc:
             raise RepositoryError(f"Failed to save opportunity {opportunity.id}") from exc
 
     def get_open_by_user(self, user_id: str, limit: int = 100) -> List[Opportunity]:
         try:
-            response = (
-                self.supabase.table("opportunity")
-                .select("*")
-                .eq("owner_user_id", user_id)
-                .eq("status", OpportunityStatus.OPEN.value)
-                .limit(limit)
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT *
+                FROM opportunity
+                WHERE owner_user_id = %s
+                  AND status = %s
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (user_id, OpportunityStatus.OPEN.value, limit),
             )
-            return [self._to_domain(row) for row in (response.data or [])]
+            return [self._to_domain(row) for row in rows]
         except Exception as exc:
             raise RepositoryError(f"Failed to fetch open opportunities for user {user_id}") from exc
 

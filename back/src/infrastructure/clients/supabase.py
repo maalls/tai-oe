@@ -1,4 +1,4 @@
-"""Supabase client wrapper for authentication and database operations."""
+"""Supabase client wrapper retained for auth and integration compatibility."""
 
 import os
 import httpx
@@ -55,7 +55,7 @@ def get_supabase_anon() -> Client:
 
 
 def get_supabase_service() -> Client:
-    """Get the Supabase service-role client (bypasses Row Level Security)."""
+    """Get the Supabase service-role client (compatibility path for scripts/tests)."""
     global _supabase_service
     if _supabase_service is None:
         supabase_url, _, supabase_service_key = _resolve_supabase_credentials()
