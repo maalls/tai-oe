@@ -80,6 +80,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `ProductService` migre vers `DatabaseHandler` SQL direct (suppression de l'acces Supabase direct dans le service produit).
 - [x] `InvoiceService` migre vers `DatabaseHandler` SQL direct (generation facture/pdf/envoi sans acces Supabase direct).
 - [x] `DocumentService` migre ses flux delete/upload vers `DatabaseHandler` SQL direct (avec compatibilite d'injection pour services de contenu/extraction).
+- [x] `RfqSourceService` migre vers `DatabaseHandler` SQL direct (creation compte/opportunite/documents/participants sans acces Supabase direct).
 
 ## Strategie de migration
 

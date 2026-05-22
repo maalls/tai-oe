@@ -1,10 +1,11 @@
 """Service for RFQ source creation from multipart HTML/form payloads."""
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict
 import time
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 from src.lib.extractors.rfp_source_picker import pick_best_rfp_source
 from src.lib.extractors.text_reader import extract_company_from_text
 from src.lib.storage_paths import get_storage_dir
@@ -19,11 +20,119 @@ class RfqSourceService:
         self,
         opportunity_repository: OpportunityRepository = None,
         email_repository: EmailRepository = None,
-        supabase: Any = None,
+        db_handler: DatabaseHandler | None = None,
     ):
         self.opportunity_repository = opportunity_repository or OpportunityRepository()
         self.email_repository = email_repository or EmailRepository()
-        self.supabase = supabase or get_supabase_service()
+        self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
+
+    def _find_account_id(self, account_name: str, contact_email: str | None) -> str | None:
+        db_handler = self._get_db_handler()
+        rows = db_handler.execute_dict_query(
+            "SELECT id FROM account WHERE name = %s LIMIT 1",
+            (account_name,),
+        )
+        if rows:
+            return rows[0]["id"]
+
+        if contact_email:
+            rows = db_handler.execute_dict_query(
+                "SELECT account_id FROM contact WHERE email = %s LIMIT 1",
+                (contact_email,),
+            )
+            if rows:
+                return rows[0]["account_id"]
+
+        return None
+
+    def _create_account(self, account_name: str) -> str | None:
+        rows = self._get_db_handler().execute_dict_query(
+            "INSERT INTO account (name) VALUES (%s) RETURNING id",
+            (account_name,),
+        )
+        return rows[0]["id"] if rows else None
+
+    def _create_opportunity(self, user_id: str | None, opportunity_name: str, account_id: str) -> str | None:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO opportunity (owner_user_id, name, stage, status, source, account_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (user_id, opportunity_name, "RFP_IN_PROGRESS", "OPEN", "user_form", account_id),
+        )
+        return rows[0]["id"] if rows else None
+
+    def _create_document(
+        self,
+        opportunity_id: str,
+        doc_type: str,
+        title: str,
+        storage_key: str,
+        user_id: str | None,
+    ) -> str | None:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO document (opportunity_id, type, status, title, currency, channel, storage_key, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (opportunity_id, doc_type, "RECEIVED", title, "EUR", "OTHER", storage_key, user_id),
+        )
+        return rows[0]["id"] if rows else None
+
+    def _link_opportunity_source_document(self, opportunity_id: str, document_id: str) -> None:
+        self._get_db_handler().execute_update(
+            "UPDATE opportunity SET source_reference_id = %s, source = %s WHERE id = %s",
+            (document_id, "rfp_upload", opportunity_id),
+        )
+
+    def _find_opportunity_account_id(self, opportunity_id: str) -> str | None:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT account_id FROM opportunity WHERE id = %s LIMIT 1",
+            (opportunity_id,),
+        )
+        return rows[0]["account_id"] if rows else None
+
+    def _find_contact_id(self, account_id: str, email: str) -> str | None:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT id FROM contact WHERE email = %s AND account_id = %s LIMIT 1",
+            (email, account_id),
+        )
+        return rows[0]["id"] if rows else None
+
+    def _create_contact(self, account_id: str, contact_data: Dict[str, str]) -> str | None:
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO contact (account_id, name, email, phone)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                account_id,
+                contact_data.get("name") or contact_data.get("email"),
+                contact_data["email"],
+                contact_data.get("phone"),
+            ),
+        )
+        return rows[0]["id"] if rows else None
+
+    def _create_opportunity_participant(self, opportunity_id: str, contact_id: str) -> None:
+        self._get_db_handler().execute_update(
+            """
+            INSERT INTO opportunity_participant (opportunity_id, contact_id, role)
+            VALUES (%s, %s, %s)
+            """,
+            (opportunity_id, contact_id, "BUYER"),
+        )
 
     def create_rfq_source_from_html_body(
         self,
@@ -57,7 +166,6 @@ class RfqSourceService:
         account_name = rfp_data.get("contact", {}).get("company_name") if isinstance(rfp_data.get("contact"), dict) else None
 
         if opportunity_id == "new":
-            account_id = None
             if not account_name:
                 contact_data = rfp_data.get("contact", {})
                 account_name = contact_data.get("company_name") if isinstance(contact_data, dict) else None
@@ -66,37 +174,19 @@ class RfqSourceService:
                 if not account_name:
                     account_name = "Unknown Company"
 
-            account_response = self.supabase.table("account").select("id").eq("name", account_name).limit(1).execute()
-            if account_response.data and len(account_response.data) > 0:
-                account_id = account_response.data[0]["id"]
+            contact_email = rfp_data.get("contact", {}).get("email") if isinstance(rfp_data.get("contact"), dict) else None
+            account_id = self._find_account_id(account_name=account_name, contact_email=contact_email)
 
             if not account_id:
-                contact_email = rfp_data.get("contact", {}).get("email") if isinstance(rfp_data.get("contact"), dict) else None
-                if contact_email:
-                    contact_response = self.supabase.table("contact").select("account_id").eq("email", contact_email).limit(1).execute()
-                    if contact_response.data and len(contact_response.data) > 0:
-                        account_id = contact_response.data[0]["account_id"]
-
-            if not account_id:
-                new_account = self.supabase.table("account").insert({"name": account_name}).execute()
-                if new_account.data:
-                    account_id = new_account.data[0]["id"]
+                account_id = self._create_account(account_name)
 
             if not account_id:
                 return {"status": "error", "message": "Failed to create or find account"}
 
-            opportunity_data = {
-                "owner_user_id": user_id,
-                "name": opportunity_name,
-                "stage": "RFP_IN_PROGRESS",
-                "status": "OPEN",
-                "source": "user_form",
-                "account_id": account_id,
-            }
-            opp_result = self.supabase.table("opportunity").insert(opportunity_data).execute()
-            if not opp_result.data:
+            new_opportunity_id = self._create_opportunity(user_id, opportunity_name, account_id)
+            if not new_opportunity_id:
                 return {"status": "error", "message": "Failed to create opportunity"}
-            opportunity_id = opp_result.data[0]["id"]
+            opportunity_id = new_opportunity_id
 
         storage_dir = get_storage_dir("rfp_upload")
         storage_dir.mkdir(parents=True, exist_ok=True)
@@ -106,20 +196,15 @@ class RfqSourceService:
         text_file_path = storage_dir / text_filename
         text_file_path.write_text(message_text, encoding="utf-8")
 
-        doc_data = {
-            "opportunity_id": opportunity_id,
-            "type": "RFP",
-            "status": "RECEIVED",
-            "title": opportunity_name,
-            "currency": "EUR",
-            "channel": "OTHER",
-            "storage_key": text_filename,
-            "created_by": user_id,
-        }
-        doc_result = self.supabase.table("document").insert(doc_data).execute()
-        if not doc_result.data:
+        document_id = self._create_document(
+            opportunity_id=opportunity_id,
+            doc_type="RFP",
+            title=opportunity_name,
+            storage_key=text_filename,
+            user_id=user_id,
+        )
+        if not document_id:
             return {"status": "error", "message": "Failed to create document"}
-        document_id = doc_result.data[0]["id"]
 
         attachment_doc_id = None
         attachment_file_path = None
@@ -143,39 +228,26 @@ class RfqSourceService:
                     "storage_key": safe_filename,
                     "created_by": user_id,
                 }
-                attachment_result = self.supabase.table("document").insert(attachment_doc_data).execute()
-                if attachment_result.data:
-                    attachment_doc_id = attachment_result.data[0]["id"]
+                attachment_doc_id = self._create_document(
+                    opportunity_id=attachment_doc_data["opportunity_id"],
+                    doc_type=attachment_doc_data["type"],
+                    title=attachment_doc_data["title"],
+                    storage_key=attachment_doc_data["storage_key"],
+                    user_id=attachment_doc_data["created_by"],
+                )
 
-        self.supabase.table("opportunity").update({"source_reference_id": document_id, "source": "rfp_upload"}).eq("id", opportunity_id).execute()
+        self._link_opportunity_source_document(opportunity_id=opportunity_id, document_id=document_id)
 
         contact_data = rfp_data.get("contact", {})
         if isinstance(contact_data, dict) and contact_data.get("email"):
             try:
-                opp_response = self.supabase.table("opportunity").select("account_id").eq("id", opportunity_id).single().execute()
-                if opp_response.data:
-                    account_id = opp_response.data["account_id"]
-                    existing_contact = self.supabase.table("contact").select("id").eq("email", contact_data["email"]).eq("account_id", account_id).limit(1).execute()
-                    contact_id = None
-                    if existing_contact.data and len(existing_contact.data) > 0:
-                        contact_id = existing_contact.data[0]["id"]
-                    else:
-                        new_contact_data = {
-                            "account_id": account_id,
-                            "name": contact_data.get("name") or contact_data.get("email"),
-                            "email": contact_data["email"],
-                            "phone": contact_data.get("phone"),
-                        }
-                        contact_result = self.supabase.table("contact").insert(new_contact_data).execute()
-                        if contact_result.data:
-                            contact_id = contact_result.data[0]["id"]
+                account_id = self._find_opportunity_account_id(opportunity_id)
+                if account_id:
+                    contact_id = self._find_contact_id(account_id=account_id, email=contact_data["email"])
+                    if not contact_id:
+                        contact_id = self._create_contact(account_id=account_id, contact_data=contact_data)
                     if contact_id:
-                        participant_data = {
-                            "opportunity_id": opportunity_id,
-                            "contact_id": contact_id,
-                            "role": "BUYER",
-                        }
-                        self.supabase.table("opportunity_participant").insert(participant_data).execute()
+                        self._create_opportunity_participant(opportunity_id=opportunity_id, contact_id=contact_id)
             except Exception as exc:
                 print(f"[RfqSourceService] Warning: Failed to create contact/participant: {exc}")
 
