@@ -18,7 +18,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 from src.infrastructure.runtime.env_loader import load_runtime_env
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -35,6 +36,19 @@ DEFAULT_LOOP_CLASSIFY_LIMIT = 30
 DEFAULT_INTERVAL_SECONDS = 120
 
 STATUS_PATH = Path(__file__).resolve().parents[3] / "var" / "email_fetch_loop.json"
+_DB_HANDLER: DatabaseHandler | None = None
+
+
+def _get_db_handler() -> DatabaseHandler:
+	global _DB_HANDLER
+	if _DB_HANDLER is None:
+		_DB_HANDLER = DatabaseHandler(
+			database_service=create_database_service(
+				current_file=__file__,
+				require_postgres_password=True,
+			)
+		)
+	return _DB_HANDLER
 
 
 def _write_status(payload: dict):
@@ -56,9 +70,8 @@ def _clear_status():
 def get_all_users() -> List[dict]:
 	"""Get all users from the profile table."""
 	try:
-		supabase = get_supabase_service()
-		response = supabase.table("profile").select("id, email").execute()
-		return response.data or []
+		rows = _get_db_handler().execute_dict_query("SELECT id, email FROM profile")
+		return rows or []
 	except Exception as exc:
 		print(f"[email-cli] Error getting users: {exc}")
 		return []

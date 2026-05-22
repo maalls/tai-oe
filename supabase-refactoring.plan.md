@@ -73,6 +73,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 ### Avancement lot 3
 
 - [x] `EmailAuthService` migre vers `DatabaseHandler` SQL direct (plus d'acces Supabase direct).
+- [x] `email_cli` migre la lecture des utilisateurs vers `DatabaseHandler` SQL direct.
 
 ## Strategie de migration
 
