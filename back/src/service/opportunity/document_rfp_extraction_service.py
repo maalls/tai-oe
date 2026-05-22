@@ -41,10 +41,6 @@ class DocumentRfpExtractionService:
         return self.db_handler
 
     def _get_document(self, document_id: str) -> Dict | None:
-        if self.supabase is not None:
-            doc_result = self.supabase.table("document").select("*").eq("id", document_id).single().execute()
-            return doc_result.data if doc_result and doc_result.data else None
-
         rows = self._get_db_handler().execute_dict_query(
             "SELECT * FROM document WHERE id = %s LIMIT 1",
             (document_id,),

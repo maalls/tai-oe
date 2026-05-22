@@ -17,42 +17,19 @@ class _PathStub:
         return self._text
 
 
-class _Response:
-    def __init__(self, data):
-        self.data = data
-
-
-class _Query:
-    def __init__(self, db):
-        self.db = db
-        self.doc_id = None
-
-    def select(self, _fields):
-        return self
-
-    def eq(self, field, value):
-        assert field == "id"
-        self.doc_id = value
-        return self
-
-    def single(self):
-        return self
-
-    def execute(self):
-        return _Response(self.db.docs.get(self.doc_id))
-
-
-class _SupabaseStub:
+class _DbHandlerStub:
     def __init__(self, docs):
         self.docs = docs
 
-    def table(self, table_name: str):
-        assert table_name == "document"
-        return _Query(self)
+    def execute_dict_query(self, query, params=None):
+        assert "FROM document" in query
+        doc_id = params[0]
+        doc = self.docs.get(doc_id)
+        return [doc] if doc else []
 
 
 def test_extract_from_document_success_for_text_file():
-    supabase = _SupabaseStub(
+    db_handler = _DbHandlerStub(
         {
             "doc-1": {
                 "id": "doc-1",
@@ -62,7 +39,7 @@ def test_extract_from_document_success_for_text_file():
     )
 
     service = DocumentRfpExtractionService(
-        supabase=supabase,
+        db_handler=db_handler,
         storage_path_resolver=lambda _source, _filename: _PathStub(".txt", True, "raw content"),
         clean_email_body=lambda text: f"clean:{text}",
         extract_rfp=lambda clean: {"products": [{"sku": "A1"}], "contact": {}, "source": clean},
@@ -80,7 +57,7 @@ def test_extract_from_document_success_for_text_file():
 
 def test_extract_from_document_returns_error_when_document_missing():
     service = DocumentRfpExtractionService(
-        supabase=_SupabaseStub({}),
+        db_handler=_DbHandlerStub({}),
         storage_path_resolver=lambda _source, _filename: _PathStub(".txt", False, ""),
         clean_email_body=lambda text: text,
         extract_rfp=lambda clean: {},
@@ -94,7 +71,7 @@ def test_extract_from_document_returns_error_when_document_missing():
 
 
 def test_extract_from_document_pdf_uses_vision_mode_when_env_enabled(monkeypatch):
-    supabase = _SupabaseStub(
+    db_handler = _DbHandlerStub(
         {
             "doc-pdf": {
                 "id": "doc-pdf",
@@ -106,7 +83,7 @@ def test_extract_from_document_pdf_uses_vision_mode_when_env_enabled(monkeypatch
     called = {"text": 0, "vision": 0}
 
     service = DocumentRfpExtractionService(
-        supabase=supabase,
+        db_handler=db_handler,
         storage_path_resolver=lambda _source, _filename: _PathStub(".pdf", True, "pdf text content"),
         clean_email_body=lambda text: f"clean:{text}",
         extract_rfp=lambda clean: {"products": [{"sku": "TEXT"}], "contact": {}, "source": clean},
