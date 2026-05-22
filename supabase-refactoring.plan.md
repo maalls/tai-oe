@@ -66,6 +66,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `EmailRepository` compte/contact/opportunite depuis email migre vers SQL-backed handler.
 - [x] `ActionRepository` migre vers `DatabaseHandler` et SQL direct.
 - [x] `EmailRepository` ne contient plus d'acces Supabase direct.
+- [x] `GmailProviderRepository` migre la persistence `profile.google_token_pickle` vers SQL (`DatabaseHandler`).
 
 ## Strategie de migration
 
