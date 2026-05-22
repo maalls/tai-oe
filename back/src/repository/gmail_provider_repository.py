@@ -55,33 +55,27 @@ class GmailProviderRepository:
         token_path = var_dir / "token.pickle"
         return credentials_path, token_path
 
-    def _get_profile_column(self, user_id: str, column: str) -> Optional[str]:
-        try:
-            return self.email_db_handler.get_profile_column(user_id, column)
-        except Exception as exc:
-            print(f"[GmailProviderRepository] Error reading profile column '{column}': {exc}")
-        return None
-
-    def _set_profile_column(self, user_id: str, column: str, value: Optional[str]) -> bool:
-        try:
-            return self.email_db_handler.set_profile_column(user_id, column, value)
-        except Exception as exc:
-            print(f"[GmailProviderRepository] Error setting profile column '{column}': {exc}")
-            return False
-
     def _get_profile_token_b64(self, user_id: str) -> Optional[str]:
-        return self._get_profile_column(user_id, "google_token_pickle")
+        try:
+            return self.email_db_handler.get_profile_column(user_id, "google_token_pickle")
+        except Exception as exc:
+            print(f"[GmailProviderRepository] Error reading profile token: {exc}")
+            return None
 
     def _save_profile_token(self, user_id: str, creds) -> bool:
         try:
             token_b64 = base64.b64encode(pickle.dumps(creds)).decode("utf-8")
-            return self._set_profile_column(user_id, "google_token_pickle", token_b64)
+            return self.email_db_handler.set_profile_column(user_id, "google_token_pickle", token_b64)
         except Exception as exc:
             print(f"[GmailProviderRepository] Error saving profile token: {exc}")
             return False
 
     def _clear_profile_token(self, user_id: str) -> bool:
-        return self._set_profile_column(user_id, "google_token_pickle", None)
+        try:
+            return self.email_db_handler.clear_profile_column(user_id, "google_token_pickle")
+        except Exception as exc:
+            print(f"[GmailProviderRepository] Error clearing profile token: {exc}")
+            return False
 
     def _get_gmail_client(self, user_id: str = None) -> tuple:
         credentials_path, token_path = self._get_gmail_paths()
