@@ -5,37 +5,36 @@ import httpx
 from pathlib import Path
 from supabase import create_client, Client
 from supabase.lib.client_options import SyncClientOptions
-from dotenv import load_dotenv, dotenv_values
+from dotenv import find_dotenv, load_dotenv
+from src.infrastructure.config.provider import ConfigProvider
 
 load_dotenv()
 
 
-def _load_shared_supabase_env() -> None:
-    """Load SUPABASE_* vars from shared Supabase env file when available."""
-    shared_env_rel = os.getenv('SUPABASE_ENV_FILE', '../supabase/.env.prod')
-    shared_env_path = Path(shared_env_rel)
-    if not shared_env_path.is_absolute():
-        back_dir = Path(__file__).resolve().parents[3]
-        shared_env_path = (back_dir / shared_env_path).resolve()
+def _resolve_supabase_credentials(
+    *,
+    environ: dict[str, str] | None = None,
+    env_file_path: Path | None = None,
+):
+    """Resolve Supabase URL and keys via the shared ConfigProvider pipeline."""
+    effective_env = dict(os.environ) if environ is None else dict(environ)
 
-    if not shared_env_path.exists():
-        return
+    effective_env_file = env_file_path
+    if effective_env_file is None:
+        discovered_env = find_dotenv(usecwd=True)
+        effective_env_file = Path(discovered_env) if discovered_env else None
 
-    values = dotenv_values(shared_env_path)
-    shared_url = values.get('SUPABASE_PUBLIC_URL') or values.get('API_EXTERNAL_URL') or values.get('SITE_URL')
-    if shared_url:
-        os.environ['SUPABASE_URL'] = shared_url
-    if values.get('ANON_KEY'):
-        os.environ['SUPABASE_ANON_KEY'] = values['ANON_KEY']
-    if values.get('SERVICE_ROLE_KEY'):
-        os.environ['SUPABASE_SERVICE_KEY'] = values['SERVICE_ROLE_KEY']
+    runtime_config = ConfigProvider(
+        environ=effective_env,
+        env_file_path=effective_env_file,
+        current_file=str(Path(__file__).resolve()),
+    ).resolve()
 
-
-_load_shared_supabase_env()
-
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY')
-SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')
+    return (
+        runtime_config.supabase_url,
+        runtime_config.supabase_anon_key,
+        runtime_config.supabase_service_key,
+    )
 
 _supabase_anon: Client = None
 _supabase_service: Client = None
@@ -57,9 +56,10 @@ def get_supabase_anon() -> Client:
     """Get the Supabase anon client (respects Row Level Security)."""
     global _supabase_anon
     if _supabase_anon is None:
-        if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        supabase_url, supabase_anon_key, _ = _resolve_supabase_credentials()
+        if not supabase_url or not supabase_anon_key:
             raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment variables")
-        _supabase_anon = create_client(SUPABASE_URL, SUPABASE_ANON_KEY, options=_get_supabase_options())
+        _supabase_anon = create_client(supabase_url, supabase_anon_key, options=_get_supabase_options())
     return _supabase_anon
 
 
@@ -67,9 +67,10 @@ def get_supabase_service() -> Client:
     """Get the Supabase service-role client (bypasses Row Level Security)."""
     global _supabase_service
     if _supabase_service is None:
-        if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        supabase_url, _, supabase_service_key = _resolve_supabase_credentials()
+        if not supabase_url or not supabase_service_key:
             raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in environment variables")
-        _supabase_service = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY, options=_get_supabase_options())
+        _supabase_service = create_client(supabase_url, supabase_service_key, options=_get_supabase_options())
     return _supabase_service
 
 
