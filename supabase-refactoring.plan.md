@@ -26,6 +26,39 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - Ne pas recréer un deuxieme canal d'acces aux donnees dans un nouveau module.
 - Mettre a jour les tests a chaque lot quand le comportement change.
 
+## Todo list
+
+- [ ] Lot 1: inventorier les flux Supabase et Postgres existants. (en cours)
+- [ ] Lot 2: extraire les adapters infra et retirer l'acces Supabase direct des repositories concernes.
+- [ ] Lot 3: migrer les repositories restants vers le flux SQL/Postgres centralise.
+- [ ] Lot 4: nettoyer les helpers, imports et tests obsoletes.
+- [ ] Valider chaque lot avec les tests cibles avant commit.
+- [ ] Faire un commit atomique a la fin de chaque lot.
+
+## Inventaire initial
+
+### Flux Supabase direct
+
+- `EmailRepository`
+- `OpportunityRepository`
+- `ActionRepository`
+- `GmailProviderRepository`
+- `OutlookProviderRepository`
+- `OAuthTokenRepository`
+
+### Flux SQL/Postgres centralise
+
+- `DatabaseRepository`
+- `CoreDatabaseRepository`
+- `ProfileRepositoryMixin`
+- `SchemaRepositoryMixin`
+
+### Observations
+
+- `EmailRepository` reste une facade metier, mais contient encore plusieurs appels Supabase directs a migrer.
+- Le flux SQL/Postgres centralise existe deja et sert de base technique pour la migration.
+- Le prochain pas est de definir quel module migre en premier sans casser les tests existants.
+
 ## Strategie de migration
 
 ### Lot 1 - Inventaire et frontieres
@@ -41,6 +74,8 @@ Definition of Done:
 
 - Cartographie complete des flux Supabase et Postgres.
 - Liste des modules a migrer en priorite.
+- Tests de cartographie/documentation passes si des tests sont ajoutes pour ce lot.
+- Commit de lot apres validation.
 
 ### Lot 2 - Extraction des adapters infra
 
@@ -55,6 +90,7 @@ Definition of Done:
 
 - Les repositories metier ne parlent plus directement a Supabase pour les operations visees.
 - Les tests unitaires ciblant ces flux passent.
+- Commit de lot apres validation.
 
 ### Lot 3 - Migration des repositories restants
 
@@ -68,6 +104,7 @@ Definition of Done:
 
 - Plus de repository metier standard ne depend de `get_supabase_service()` pour l'acces aux donnees.
 - Les flux de lecture et d'ecriture passent tous par la meme couche technique.
+- Commit de lot apres validation.
 
 ### Lot 4 - Nettoyage final
 
@@ -82,6 +119,7 @@ Definition of Done:
 
 - Un seul chemin technique d'acces aux donnees reste en usage normal.
 - La documentation de l'architecture est a jour.
+- Commit de lot apres validation.
 
 ## Reperes de validation
 
@@ -91,6 +129,7 @@ Apres chaque lot:
 2. Lancer la suite backend si le lot touche un flux transversal.
 3. Verifier les imports et les erreurs d'analyse du fichier modifie.
 4. Faire un commit atomique avec un message descriptif.
+5. Marquer la todo correspondante comme terminee avant de passer au lot suivant.
 
 ## Journal de decisions
 
