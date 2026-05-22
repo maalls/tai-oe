@@ -20,8 +20,7 @@ from src.service.utility.utility_service import UtilityService
 from src.repository.email_repository import EmailRepository
 from src.repository.repository import DatabaseRepository
 from src.repository.opportunity import OpportunityRepository
-from src.infrastructure.clients.database import DatabaseHandler
-from src.infrastructure.config import create_database_service
+from src.infrastructure.config import create_database_handler
 from src.infrastructure.factory import ServiceFactory
 from src.lib.storage_paths import get_storage_path
 from src.lib.readers.csv import CSVReader
@@ -88,11 +87,11 @@ def get_opportunity_repository() -> OpportunityRepository:
 
 
 def get_database_repository() -> DatabaseRepository:
-    database_service = create_database_service(
+    database_handler = create_database_handler(
         current_file=__file__,
         require_postgres_password=True,
     )
-    return DatabaseRepository(DatabaseHandler(database_service=database_service))
+    return DatabaseRepository(database_handler)
 
 
 def get_email_repository() -> EmailRepository:

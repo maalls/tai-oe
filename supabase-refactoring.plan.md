@@ -76,6 +76,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - [x] `email_cli` migre la lecture des utilisateurs vers `DatabaseHandler` SQL direct.
 - [x] `DocumentRfpExtractionService` migre vers `DatabaseHandler` SQL direct par defaut (fallback d'injection conserve pour tests/stubs).
 - [x] Factory centralisee `create_database_handler` ajoutee et adoptee dans les classes migrees pour supprimer la duplication d'instanciation DB.
+- [x] Provider DI `get_database_repository` aligne sur `create_database_handler` (suppression de la construction manuelle handler+service).
 
 ## Strategie de migration
 
