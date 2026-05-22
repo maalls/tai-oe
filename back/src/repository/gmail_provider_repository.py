@@ -11,7 +11,7 @@ from google_auth_oauthlib.flow import Flow
 
 from src.infrastructure.clients.gmail_client import GmailClient
 from src.infrastructure.clients.database import DatabaseHandler
-from src.infrastructure.supabase.email_database_handler import EmailDatabaseHandler
+from src.infrastructure.database.email_database_handler import EmailDatabaseHandler
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
 
 

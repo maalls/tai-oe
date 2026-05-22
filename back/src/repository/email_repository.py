@@ -19,7 +19,7 @@ from src.lib.classification.email_classifier import EmailClassifier
 from src.infrastructure.clients.gmail_client import GmailClient
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
 from src.infrastructure.clients.supabase import get_supabase_service
-from src.infrastructure.supabase.email_database_handler import EmailDatabaseHandler
+from src.infrastructure.database.email_database_handler import EmailDatabaseHandler
 from src.lib.extractors.text_reader import extract_rfp_from_text
 from src.lib.email.html_parser import EmailHTMLParser
 from src.lib.email.mime import parse_from_header
