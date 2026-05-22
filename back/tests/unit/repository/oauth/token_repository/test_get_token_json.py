@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.repository.oauth.token_repository import OAuthTokenRepository
+from src.repository.token_repository import OAuthTokenRepository
 
 
 class _SupabaseSelectOAuthMock:
@@ -27,7 +27,7 @@ class _SupabaseSelectOAuthMock:
 
 def test_get_token_json_returns_stored_token(monkeypatch):
     supabase = _SupabaseSelectOAuthMock([{"token_json": "{\"access_token\":\"abc\"}"}])
-    monkeypatch.setattr("src.repository.oauth.token_repository.get_supabase_service", lambda: supabase)
+    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
 
     repo = OAuthTokenRepository()
 

@@ -9,7 +9,7 @@ from src.infrastructure.clients.outlook_client import (
     handle_outlook_oauth_callback,
     OutlookClient,
 )
-from src.repository.oauth.token_repository import OAuthTokenRepository
+from src.repository.token_repository import OAuthTokenRepository
 
 
 class OutlookProviderRepository:

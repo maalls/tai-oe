@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.repository.oauth.token_repository import OAuthTokenRepository
+from src.repository.token_repository import OAuthTokenRepository
 
 
 class _SupabaseDeleteOAuthMock:
@@ -23,7 +23,7 @@ class _SupabaseDeleteOAuthMock:
 
 def test_clear_token_deletes_by_compound_key(monkeypatch):
     supabase = _SupabaseDeleteOAuthMock()
-    monkeypatch.setattr("src.repository.oauth.token_repository.get_supabase_service", lambda: supabase)
+    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
 
     repo = OAuthTokenRepository()
 

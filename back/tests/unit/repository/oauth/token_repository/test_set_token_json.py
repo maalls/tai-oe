@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.repository.oauth.token_repository import OAuthTokenRepository
+from src.repository.token_repository import OAuthTokenRepository
 
 
 class _SupabaseUpsertOAuthMock:
@@ -23,7 +23,7 @@ class _SupabaseUpsertOAuthMock:
 
 def test_set_token_json_upserts_compound_key(monkeypatch):
     supabase = _SupabaseUpsertOAuthMock([{"user_id": "user-1"}])
-    monkeypatch.setattr("src.repository.oauth.token_repository.get_supabase_service", lambda: supabase)
+    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
 
     repo = OAuthTokenRepository()
 
@@ -47,7 +47,7 @@ def test_set_token_json_upserts_compound_key(monkeypatch):
 
 def test_set_token_json_converts_unix_expires_at(monkeypatch):
     supabase = _SupabaseUpsertOAuthMock([{"user_id": "user-1"}])
-    monkeypatch.setattr("src.repository.oauth.token_repository.get_supabase_service", lambda: supabase)
+    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
 
     repo = OAuthTokenRepository()
 
