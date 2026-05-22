@@ -74,6 +74,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 
 - [x] `EmailAuthService` migre vers `DatabaseHandler` SQL direct (plus d'acces Supabase direct).
 - [x] `email_cli` migre la lecture des utilisateurs vers `DatabaseHandler` SQL direct.
+- [x] `DocumentRfpExtractionService` migre vers `DatabaseHandler` SQL direct par defaut (fallback d'injection conserve pour tests/stubs).
 
 ## Strategie de migration
 

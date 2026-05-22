@@ -3,7 +3,8 @@
 import os
 from typing import Callable, Dict
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 
 
 class DocumentRfpExtractionService:
@@ -11,6 +12,7 @@ class DocumentRfpExtractionService:
 
     def __init__(
         self,
+        db_handler: DatabaseHandler | None = None,
         supabase=None,
         storage_path_resolver: Callable[[str, str], object] = None,
         clean_email_body: Callable[[str], str] = None,
@@ -20,7 +22,8 @@ class DocumentRfpExtractionService:
         extract_pdf_text: Callable[[object], str] = None,
         extract_rfp_pdf_vision: Callable[[object], Dict] = None,
     ):
-        self.supabase = supabase or get_supabase_service()
+        self.db_handler = db_handler
+        self.supabase = supabase
         self.storage_path_resolver = storage_path_resolver
         self.clean_email_body = clean_email_body
         self.extract_rfp = extract_rfp
@@ -29,13 +32,32 @@ class DocumentRfpExtractionService:
         self.extract_pdf_text = extract_pdf_text
         self.extract_rfp_pdf_vision = extract_rfp_pdf_vision
 
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = DatabaseHandler(
+                database_service=create_database_service(
+                    current_file=__file__,
+                    require_postgres_password=True,
+                )
+            )
+        return self.db_handler
+
+    def _get_document(self, document_id: str) -> Dict | None:
+        if self.supabase is not None:
+            doc_result = self.supabase.table("document").select("*").eq("id", document_id).single().execute()
+            return doc_result.data if doc_result and doc_result.data else None
+
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT * FROM document WHERE id = %s LIMIT 1",
+            (document_id,),
+        )
+        return rows[0] if rows else None
+
     def extract_from_document(self, document_id: str) -> Dict:
         try:
-            doc_result = self.supabase.table("document").select("*").eq("id", document_id).single().execute()
-            if not doc_result.data:
+            document = self._get_document(document_id)
+            if not document:
                 return {"status": "error", "message": "Document not found"}
-
-            document = doc_result.data
             storage_key = document.get("storage_key")
 
             if not storage_key:
