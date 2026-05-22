@@ -3,39 +3,21 @@ from types import SimpleNamespace
 from src.repository.token_repository import OAuthTokenRepository
 
 
-class _SupabaseSelectOAuthMock:
-    def __init__(self, data):
-        self.data = data
-        self.eq_filters = []
+class _DbHandlerMock:
+    def __init__(self, rows):
+        self.rows = rows
+        self.calls = []
 
-    def table(self, _name):
-        return self
-
-    def select(self, _columns):
-        return self
-
-    def eq(self, key, value):
-        self.eq_filters.append((key, value))
-        return self
-
-    def limit(self, _value):
-        return self
-
-    def execute(self):
-        return SimpleNamespace(data=self.data)
+    def execute_dict_query(self, query, params=None):
+        self.calls.append((query, params))
+        return self.rows
 
 
 def test_get_token_json_returns_stored_token(monkeypatch):
-    supabase = _SupabaseSelectOAuthMock([{"token_json": "{\"access_token\":\"abc\"}"}])
-    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
-
-    repo = OAuthTokenRepository()
+    db_handler = _DbHandlerMock([{"token_json": "{\"access_token\":\"abc\"}"}])
+    repo = OAuthTokenRepository(db_handler=db_handler)
 
     token = repo.get_token_json("user-1", "microsoft", "mail")
 
     assert token == "{\"access_token\":\"abc\"}"
-    assert supabase.eq_filters == [
-        ("user_id", "user-1"),
-        ("provider", "microsoft"),
-        ("service", "mail"),
-    ]
+    assert db_handler.calls[0][1] == ("user-1", "microsoft", "mail")

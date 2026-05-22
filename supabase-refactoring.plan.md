@@ -29,7 +29,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 ## Todo list
 
 - [ ] Lot 1: inventorier les flux Supabase et Postgres existants. (en cours)
-- [ ] Lot 2: extraire les adapters infra et retirer l'acces Supabase direct des repositories concernes.
+- [ ] Lot 2: extraire les adapters infra et retirer l'acces Supabase direct des repositories concernes. (en cours)
 - [ ] Lot 3: migrer les repositories restants vers le flux SQL/Postgres centralise.
 - [ ] Lot 4: nettoyer les helpers, imports et tests obsoletes.
 - [ ] Valider chaque lot avec les tests cibles avant commit.
@@ -58,6 +58,12 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 - `EmailRepository` reste une facade metier, mais contient encore plusieurs appels Supabase directs a migrer.
 - Le flux SQL/Postgres centralise existe deja et sert de base technique pour la migration.
 - Le prochain pas est de definir quel module migre en premier sans casser les tests existants.
+
+### Avancement lot 2
+
+- [x] `OAuthTokenRepository` migre vers `DatabaseHandler` et SQL direct.
+- [ ] `EmailRepository` reste a decouper puis rerouter vers l'adapter SQL.
+- [ ] `ActionRepository` reste a basculer vers la meme couche technique.
 
 ## Strategie de migration
 

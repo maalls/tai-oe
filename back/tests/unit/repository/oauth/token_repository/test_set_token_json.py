@@ -3,29 +3,19 @@ from types import SimpleNamespace
 from src.repository.token_repository import OAuthTokenRepository
 
 
-class _SupabaseUpsertOAuthMock:
-    def __init__(self, data):
-        self.data = data
-        self.payload = None
-        self.on_conflict = None
+class _DbHandlerMock:
+    def __init__(self, rows):
+        self.rows = rows
+        self.calls = []
 
-    def table(self, _name):
-        return self
-
-    def upsert(self, payload, on_conflict=None):
-        self.payload = payload
-        self.on_conflict = on_conflict
-        return self
-
-    def execute(self):
-        return SimpleNamespace(data=self.data)
+    def execute_dict_query(self, query, params=None):
+        self.calls.append((query, params))
+        return self.rows
 
 
 def test_set_token_json_upserts_compound_key(monkeypatch):
-    supabase = _SupabaseUpsertOAuthMock([{"user_id": "user-1"}])
-    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
-
-    repo = OAuthTokenRepository()
+    db_handler = _DbHandlerMock([{"user_id": "user-1"}])
+    repo = OAuthTokenRepository(db_handler=db_handler)
 
     ok = repo.set_token_json(
         user_id="user-1",
@@ -36,20 +26,14 @@ def test_set_token_json_upserts_compound_key(monkeypatch):
     )
 
     assert ok is True
-    assert supabase.on_conflict == "user_id,provider,service"
-    assert supabase.payload["user_id"] == "user-1"
-    assert supabase.payload["provider"] == "microsoft"
-    assert supabase.payload["service"] == "mail"
-    assert supabase.payload["token_json"] == "{}"
-    assert supabase.payload["scope"] == "Mail.Read"
-    assert "updated_at" in supabase.payload
+    assert db_handler.calls[0][1][0:4] == ("user-1", "microsoft", "mail", "{}")
+    assert db_handler.calls[0][1][4] == "Mail.Read"
+    assert "T" in db_handler.calls[0][1][6]
 
 
 def test_set_token_json_converts_unix_expires_at(monkeypatch):
-    supabase = _SupabaseUpsertOAuthMock([{"user_id": "user-1"}])
-    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
-
-    repo = OAuthTokenRepository()
+    db_handler = _DbHandlerMock([{"user_id": "user-1"}])
+    repo = OAuthTokenRepository(db_handler=db_handler)
 
     ok = repo.set_token_json(
         user_id="user-1",
@@ -60,5 +44,5 @@ def test_set_token_json_converts_unix_expires_at(monkeypatch):
     )
 
     assert ok is True
-    assert isinstance(supabase.payload["expires_at"], str)
-    assert "T" in supabase.payload["expires_at"]
+    assert isinstance(db_handler.calls[0][1][5], str)
+    assert "T" in db_handler.calls[0][1][5]

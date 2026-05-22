@@ -3,35 +3,20 @@ from types import SimpleNamespace
 from src.repository.token_repository import OAuthTokenRepository
 
 
-class _SupabaseDeleteOAuthMock:
+class _DbHandlerMock:
     def __init__(self):
-        self.eq_filters = []
+        self.calls = []
 
-    def table(self, _name):
-        return self
-
-    def delete(self):
-        return self
-
-    def eq(self, key, value):
-        self.eq_filters.append((key, value))
-        return self
-
-    def execute(self):
-        return SimpleNamespace(data=[])
+    def execute_update(self, query, params=None):
+        self.calls.append((query, params))
+        return 1
 
 
 def test_clear_token_deletes_by_compound_key(monkeypatch):
-    supabase = _SupabaseDeleteOAuthMock()
-    monkeypatch.setattr("src.repository.token_repository.get_supabase_service", lambda: supabase)
-
-    repo = OAuthTokenRepository()
+    db_handler = _DbHandlerMock()
+    repo = OAuthTokenRepository(db_handler=db_handler)
 
     ok = repo.clear_token("user-1", "microsoft", "mail")
 
     assert ok is True
-    assert supabase.eq_filters == [
-        ("user_id", "user-1"),
-        ("provider", "microsoft"),
-        ("service", "mail"),
-    ]
+    assert db_handler.calls[0][1] == ("user-1", "microsoft", "mail")

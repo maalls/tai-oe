@@ -4,11 +4,25 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 
 
 class OAuthTokenRepository:
     """Repository dedicated to OAuth token persistence."""
+
+    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
+        self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = DatabaseHandler(
+                database_service=create_database_service(
+                    current_file=__file__,
+                    require_postgres_password=True,
+                )
+            )
+        return self.db_handler
 
     @staticmethod
     def _normalize_expires_at(expires_at: Any) -> Optional[str]:
@@ -30,18 +44,17 @@ class OAuthTokenRepository:
 
     def get_token_json(self, user_id: str, provider: str, service: str) -> Optional[str]:
         try:
-            response = (
-                get_supabase_service()
-                .table("oauth_tokens")
-                .select("token_json")
-                .eq("user_id", user_id)
-                .eq("provider", provider)
-                .eq("service", service)
-                .limit(1)
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT token_json
+                FROM oauth_tokens
+                WHERE user_id = %s AND provider = %s AND service = %s
+                LIMIT 1
+                """,
+                (user_id, provider, service),
             )
-            if response.data:
-                return response.data[0].get("token_json")
+            if rows:
+                return rows[0].get("token_json")
         except Exception as exc:
             print(f"[OAuthTokenRepository] Error reading oauth token ({provider}/{service}): {exc}")
         return None
@@ -65,29 +78,47 @@ class OAuthTokenRepository:
                 "expires_at": self._normalize_expires_at(expires_at),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            response = (
-                get_supabase_service()
-                .table("oauth_tokens")
-                .upsert(payload, on_conflict="user_id,provider,service")
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                INSERT INTO oauth_tokens (
+                    user_id,
+                    provider,
+                    service,
+                    token_json,
+                    scope,
+                    expires_at,
+                    updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id, provider, service)
+                DO UPDATE SET
+                    token_json = EXCLUDED.token_json,
+                    scope = EXCLUDED.scope,
+                    expires_at = EXCLUDED.expires_at,
+                    updated_at = EXCLUDED.updated_at
+                RETURNING user_id
+                """,
+                (
+                    payload["user_id"],
+                    payload["provider"],
+                    payload["service"],
+                    payload["token_json"],
+                    payload["scope"],
+                    payload["expires_at"],
+                    payload["updated_at"],
+                ),
             )
-            return bool(response.data)
+            return bool(rows)
         except Exception as exc:
             print(f"[OAuthTokenRepository] Error saving oauth token ({provider}/{service}): {exc}")
             return False
 
     def clear_token(self, user_id: str, provider: str, service: str) -> bool:
         try:
-            (
-                get_supabase_service()
-                .table("oauth_tokens")
-                .delete()
-                .eq("user_id", user_id)
-                .eq("provider", provider)
-                .eq("service", service)
-                .execute()
+            rows_affected = self._get_db_handler().execute_update(
+                "DELETE FROM oauth_tokens WHERE user_id = %s AND provider = %s AND service = %s",
+                (user_id, provider, service),
             )
-            return True
+            return rows_affected >= 0
         except Exception as exc:
             print(f"[OAuthTokenRepository] Error clearing oauth token ({provider}/{service}): {exc}")
             return False
