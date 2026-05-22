@@ -47,10 +47,9 @@ migration:
 python -m script.run_migrations
 ```
 
-The migration runner uses PostgreSQL URLs in this order:
-
-1. `MIGRATION_DATABASE_URL`
-2. `ADMIN_DATABASE_URL`
-3. `DATABASE_URL`
-
-For schema changes, point `MIGRATION_DATABASE_URL` at a role that can create/alter objects in `public`.
+log:
+systemctl status taioe-backend.service
+journalctl -u taioe-backend.service -f
+journalctl -u taioe-backend.service -n 200
+journalctl -u taioe-backend.service --since "1 hour ago"
+journalctl -t taioe-backend -f

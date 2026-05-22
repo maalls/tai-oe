@@ -5,6 +5,7 @@
 Create a single, reliable configuration source for database and Supabase credentials by deriving runtime config from `SUPABASE_ENV_FILE`, then exposing profile-specific connection settings through a dedicated infrastructure factory.
 
 This plan targets:
+
 - one source of truth for secrets and DB host/db metadata
 - explicit profile derivation (`app`, `migration`, optional `readonly`)
 - no ad-hoc config parsing spread across commands/services
@@ -13,6 +14,7 @@ This plan targets:
 ## Scope
 
 In scope:
+
 - backend config loading and normalization
 - DB profile factory + connection service
 - migration scripts/CLIs using shared factory
@@ -20,6 +22,7 @@ In scope:
 - tests for config derivation and profile correctness
 
 Out of scope:
+
 - rotating production secrets
 - changing DB schema/model behavior
 - frontend env flow
@@ -36,11 +39,13 @@ Out of scope:
 ### Target design
 
 1. `ConfigProvider` (single source reader)
+
 - loads process env + local `.env` + shared `SUPABASE_ENV_FILE`
 - validates required keys
 - returns typed immutable config object
 
 2. `DbProfileFactory` (derived views)
+
 - derives explicit DB profiles:
   - `app` profile: runtime usage
   - `migration` profile: schema migration/admin usage
@@ -48,11 +53,13 @@ Out of scope:
 - handles tenant suffix mapping (e.g. `*.ge-prod`) consistently
 
 3. `DatabaseService` (connection boundary)
+
 - opens psycopg2 connections from a selected profile
 - centralizes connect options (sslmode, timeout, db name override)
 - used by commands and migration scripts
 
 4. `SupabaseConfigAdapter`
+
 - resolves URL/keys from the same typed config object
 - avoids import-time side effects and duplicated dotenv loading
 
@@ -86,6 +93,7 @@ Incremental, test-first migration in 8 phases with micro-commits.
 ### Commit reminder
 
 Commit once phase is green:
+
 - `test(config): add characterization tests for current env resolution`
 
 ---
@@ -95,11 +103,13 @@ Commit once phase is green:
 ### Steps
 
 1. Add typed config dataclasses:
+
 - `SharedSupabaseConfig`
 - `DatabaseRuntimeHints`
 - `ResolvedRuntimeConfig`
 
 2. Add parser utilities:
+
 - normalize booleans, ints, URLs, optional keys
 - strict validation with actionable exceptions
 
@@ -122,14 +132,17 @@ Commit once phase is green:
 ### Steps
 
 1. Create infrastructure module (example):
+
 - `src/infrastructure/config/provider.py`
 
 2. Implement precedence:
+
 - explicit process env override
 - local `.env` fallback
 - shared file from `SUPABASE_ENV_FILE`
 
 3. Provide one entrypoint API:
+
 - `get_runtime_config()`
 
 4. Remove direct `dotenv_values` use from consumers progressively.
@@ -152,17 +165,21 @@ Commit once phase is green:
 ### Steps
 
 1. Add `DbProfile` model:
+
 - host, port, user, password, database, sslmode, source
 
 2. Implement profile derivation methods:
+
 - `build_app_profile(config)`
 - `build_migration_profile(config)`
 
 3. Add tenant-aware username logic:
+
 - derive suffix from app user when required
 - map to `supabase_admin[.tenant]` for migration profile
 
 4. Add validation helpers:
+
 - profile completeness
 - unsupported combination detection
 
@@ -184,6 +201,7 @@ Commit once phase is green:
 ### Steps
 
 1. Add `DatabaseService` API:
+
 - `connect(profile_name="app")`
 - `cursor(profile_name="app")`
 
@@ -209,6 +227,7 @@ Commit once phase is green:
 1. Refactor `src/infrastructure/clients/database.py` to consume `DatabaseService`/`DbProfileFactory`.
 2. Refactor `src/infrastructure/clients/supabase.py` to use `ConfigProvider` (remove duplicate dotenv side effects).
 3. Refactor migration scripts/CLIs:
+
 - `script/run_migrations.py`
 - `src/command/migrations_cli.py`
 - `src/command/run_migration.py`
@@ -224,6 +243,7 @@ Commit once phase is green:
 ### Commit reminder
 
 Use micro-commits, one per consumer:
+
 - `refactor(db): move database.py to DatabaseService`
 - `refactor(config): make supabase client use ConfigProvider`
 - `refactor(migration): unify migration DB profile resolution`
@@ -258,11 +278,13 @@ Use micro-commits, one per consumer:
 
 1. Update backend docs with new architecture and precedence.
 2. Add quick recipes:
+
 - local dev using `SUPABASE_ENV_FILE`
 - explicit override with `MIGRATION_DATABASE_URL`
 - troubleshooting matrix for common errors
 
 3. Add security note:
+
 - no plaintext secrets in committed files for non-dev environments.
 
 ### TDD checklist
@@ -324,6 +346,7 @@ Use micro-commits, one per consumer:
 - [~] Phase 5 in progress.
 
 Phase 5 completed items:
+
 - [x] `src/infrastructure/clients/supabase.py` migrated to `ConfigProvider`.
 - [x] `script/run_migrations.py` migrated to bootstrap + `DatabaseService` orchestration.
 - [x] `src/infrastructure/clients/database.py` now routes app connection through `DatabaseService`.
@@ -332,9 +355,11 @@ Phase 5 completed items:
 - [x] API routers now consume `get_database_repository` dependency injection instead of local DB constructors.
 
 Phase 5 remaining items:
+
 - [ ] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
 
 Recent implementation commits:
+
 - `84b12db` test(config): characterization tests baseline
 - `4789f64` feat(config): typed config models + parser
 - `c7b4982` feat(config): ConfigProvider
@@ -350,6 +375,7 @@ Recent implementation commits:
 ## Quality Gates (Do Not Skip)
 
 For every phase:
+
 1. Write/adjust tests first (TDD).
 2. Make the smallest code change to pass tests.
 3. Run targeted tests + impacted integration tests.
@@ -367,6 +393,7 @@ For every phase:
   - `chore(...)`
 
 Recommended sequence:
+
 1. tests
 2. implementation
 3. cleanup
