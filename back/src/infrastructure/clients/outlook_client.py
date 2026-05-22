@@ -13,6 +13,28 @@ from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oa
 MICROSOFT_OAUTH_SCOPE = "Mail.Read Mail.Send User.Read offline_access"
 
 
+def _extract_http_error_message(exc: Exception, fallback: str) -> str:
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                return (
+                    payload.get("error_description")
+                    or payload.get("message")
+                    or payload.get("error")
+                    or fallback
+                )
+        except Exception:
+            pass
+
+        response_text = getattr(response, "text", "")
+        if response_text:
+            return response_text
+
+    return f"{fallback}: {exc}"
+
+
 def _resolve_outlook_callback_url() -> str:
     configured = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153").strip()
     parsed = urlparse(configured)
@@ -112,6 +134,11 @@ def handle_outlook_oauth_callback(code: str, state: Optional[str] = None) -> dic
             "user_id": user_id,
             "redirect_url": redirect_url,
         }
+    except requests.HTTPError as exc:
+        return {
+            "status": "error",
+            "message": f"Microsoft OAuth failed: {_extract_http_error_message(exc, 'Token exchange failed')}",
+        }
     except Exception as exc:
         return {
             "status": "error",
@@ -158,7 +185,10 @@ class OutlookClient:
         }
 
         response = requests.post(token_url, data=data, timeout=15)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise RuntimeError(_extract_http_error_message(exc, "Outlook token refresh failed")) from exc
         refreshed = response.json()
 
         self.access_token = refreshed.get("access_token", self.access_token)
@@ -186,7 +216,10 @@ class OutlookClient:
     def get_profile(self) -> dict[str, Any]:
         self._refresh_if_needed()
         response = requests.get("https://graph.microsoft.com/v1.0/me", headers=self._headers(), timeout=15)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise RuntimeError(_extract_http_error_message(exc, "Outlook profile request failed")) from exc
         return response.json()
 
     def list_messages(self, max_results: int = 20) -> list[dict[str, Any]]:
@@ -196,7 +229,10 @@ class OutlookClient:
             f"?$top={max_results}&$select=id,subject,from,receivedDateTime,bodyPreview"
         )
         response = requests.get(url, headers=self._headers(), timeout=15)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise RuntimeError(_extract_http_error_message(exc, "Outlook messages request failed")) from exc
         payload = response.json()
         return payload.get("value", [])
 
@@ -225,5 +261,8 @@ class OutlookClient:
             json=payload,
             timeout=15,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise RuntimeError(_extract_http_error_message(exc, "Outlook sendMail request failed")) from exc
         return {"status": "ok"}
