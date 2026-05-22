@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import quote
 
 
 @dataclass(frozen=True)
@@ -38,3 +39,24 @@ class ResolvedRuntimeConfig:
     supabase_url: Optional[str] = None
     supabase_anon_key: Optional[str] = None
     supabase_service_key: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class DbProfile:
+    """Concrete PostgreSQL connection profile used by DB services/commands."""
+
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+    sslmode: str = "prefer"
+    source: str = "derived"
+
+    def to_url(self) -> str:
+        """Render profile as a PostgreSQL URL with safe password quoting."""
+        encoded_password = quote(self.password, safe="")
+        return (
+            f"postgresql://{self.user}:{encoded_password}"
+            f"@{self.host}:{self.port}/{self.database}?sslmode={self.sslmode}"
+        )
