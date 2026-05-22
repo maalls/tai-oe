@@ -2,18 +2,15 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.dependencies import get_database_repository
 from src.repository.database.repository import DatabaseRepository
 from .schemas import BrandCreate, BrandFamilyResponse, BrandResponse, BrandUpdate
 
 router = APIRouter()
 
 
-def get_db():
-    return DatabaseRepository()
-
-
 @router.get('/api/brand/{brand_id}', response_model=BrandResponse)
-def get_brand(brand_id: str, db=Depends(get_db)):
+def get_brand(brand_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT id, name, vendor_id, website, email, phone, minimum_margin, target_margin, created_at, updated_at
@@ -28,7 +25,7 @@ def get_brand(brand_id: str, db=Depends(get_db)):
 
 
 @router.post('/api/brand', response_model=BrandResponse)
-def create_brand(payload: BrandCreate, db=Depends(get_db)):
+def create_brand(payload: BrandCreate, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         INSERT INTO brand (name, website, email, phone, minimum_margin, target_margin, marque, vendor_id)
@@ -50,7 +47,11 @@ def create_brand(payload: BrandCreate, db=Depends(get_db)):
 
 
 @router.put('/api/brand/{brand_id}', response_model=BrandResponse)
-def update_brand(brand_id: str, payload: BrandUpdate, db=Depends(get_db)):
+def update_brand(
+    brand_id: str,
+    payload: BrandUpdate,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     fields = []
     values = []
     for field in ['name', 'vendor_id', 'website', 'email', 'phone', 'minimum_margin', 'target_margin']:
@@ -78,7 +79,10 @@ def update_brand(brand_id: str, payload: BrandUpdate, db=Depends(get_db)):
 
 
 @router.get('/api/brand/{brand_id}/families', response_model=List[BrandFamilyResponse])
-def list_brand_families(brand_id: str, db=Depends(get_db)):
+def list_brand_families(
+    brand_id: str,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     rows = db.execute_dict_query(
         """
         SELECT f.id,

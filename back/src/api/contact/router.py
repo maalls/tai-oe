@@ -3,17 +3,14 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
 from .schemas import ContactCreate, ContactResponse, ContactUpdate
+from src.api.dependencies import get_database_repository
 from src.repository.database.repository import DatabaseRepository
 
 router = APIRouter()
 
 
-def get_db():
-    return DatabaseRepository()
-
-
 @router.get("/api/contact", response_model=List[ContactResponse])
-def list_contacts(db=Depends(get_db)):
+def list_contacts(db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT c.id, c.account_id, c.name, c.email, c.phone, c.role_title, c.created_at,
@@ -27,7 +24,7 @@ def list_contacts(db=Depends(get_db)):
 
 
 @router.get("/api/contact/{contact_id}", response_model=ContactResponse)
-def get_contact(contact_id: str, db=Depends(get_db)):
+def get_contact(contact_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT c.id, c.account_id, c.name, c.email, c.phone, c.role_title, c.created_at,
@@ -44,7 +41,10 @@ def get_contact(contact_id: str, db=Depends(get_db)):
 
 
 @router.get("/api/contact/{contact_id}/opportunities")
-def list_contact_opportunities(contact_id: str, db=Depends(get_db)):
+def list_contact_opportunities(
+    contact_id: str,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     return db.execute_dict_query(
         """
         SELECT op.role,
@@ -61,7 +61,7 @@ def list_contact_opportunities(contact_id: str, db=Depends(get_db)):
 
 
 @router.post("/api/contact", response_model=ContactResponse)
-def create_contact(payload: ContactCreate, db=Depends(get_db)):
+def create_contact(payload: ContactCreate, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         INSERT INTO contact (account_id, name, email, phone, role_title)
@@ -75,7 +75,11 @@ def create_contact(payload: ContactCreate, db=Depends(get_db)):
 
 
 @router.put("/api/contact/{contact_id}", response_model=ContactResponse)
-def update_contact(contact_id: str, payload: ContactUpdate, db=Depends(get_db)):
+def update_contact(
+    contact_id: str,
+    payload: ContactUpdate,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     fields = []
     values = []
 
@@ -112,7 +116,7 @@ def update_contact(contact_id: str, payload: ContactUpdate, db=Depends(get_db)):
 
 
 @router.delete("/api/contact/{contact_id}")
-def delete_contact(contact_id: str, db=Depends(get_db)):
+def delete_contact(contact_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         "DELETE FROM contact WHERE id = %s RETURNING id",
         (contact_id,),

@@ -14,10 +14,7 @@ import hashlib
 from pathlib import Path
 from typing import List, Dict
 from src.infrastructure.clients.supabase import get_supabase_service
-from dotenv import load_dotenv
 from src.infrastructure.config import create_database_service
-
-load_dotenv()
 
 BACK_DIR = Path(__file__).resolve().parents[1]
 

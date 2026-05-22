@@ -5,10 +5,8 @@ import httpx
 from pathlib import Path
 from supabase import create_client, Client
 from supabase.lib.client_options import SyncClientOptions
-from dotenv import find_dotenv, load_dotenv
+from dotenv import find_dotenv
 from src.infrastructure.config.provider import ConfigProvider
-
-load_dotenv()
 
 
 def _resolve_supabase_credentials(

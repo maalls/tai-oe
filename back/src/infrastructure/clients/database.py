@@ -2,12 +2,13 @@
 
 import os
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 import yaml
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
+from dotenv import find_dotenv
 from src.infrastructure.config.factory import DbProfileFactory
-from src.infrastructure.config.models import DatabaseRuntimeHints, ResolvedRuntimeConfig, SharedSupabaseConfig
+from src.infrastructure.config.models import ResolvedRuntimeConfig
+from src.infrastructure.config.provider import ConfigProvider
 from src.infrastructure.config.service import DatabaseService
 def load_config_yaml(filename="config.yml"):
     # Try to find config.yml in common locations
@@ -91,37 +92,27 @@ class DatabaseHandler:
         return config
     
     def _get_db_config(self) -> dict:
-        """Extract database configuration from environment or config.
+        """Extract database configuration from shared SUPABASE_ENV_FILE."""
+        resolved = self._resolve_runtime_config()
+        hints = resolved.db_hints
+        return {
+            "host": hints.host,
+            "port": hints.port,
+            "user": hints.username or resolved.shared.postgres_user,
+            "password": resolved.shared.postgres_password,
+            "database": hints.database,
+            "sslmode": hints.sslmode,
+        }
 
-        Priority order:
-        1) DATABASE_URL from environment
-        2) supabase.db from config.yml
-        """
-        database_url = os.environ.get("DATABASE_URL")
-        if database_url:
-            parsed = urlparse(database_url)
-            query = parse_qs(parsed.query)
-            return {
-                "host": parsed.hostname,
-                "port": parsed.port or 5432,
-                "user": parsed.username,
-                "password": parsed.password,
-                "database": (parsed.path or "").lstrip("/") or "fabdis",
-                "sslmode": query.get("sslmode", ["prefer"])[0],
-            }
-
-        supabase = self.config.get("supabase", {})
-        db = supabase.get("db", {})
-        
-        required = ["host", "port", "user", "password"]
-        missing = [k for k in required if not db.get(k)]
-        if missing:
-            raise ValueError(f"Missing DB config keys: {', '.join(missing)}")
-
-        if not db.get("database"):
-            db["database"] = "fabdis"
-        
-        return db
+    def _resolve_runtime_config(self) -> ResolvedRuntimeConfig:
+        discovered_env = find_dotenv(usecwd=True)
+        env_file_path = Path(discovered_env).resolve() if discovered_env else None
+        return ConfigProvider(
+            environ=os.environ,
+            env_file_path=env_file_path,
+            current_file=str(Path(__file__).resolve()),
+            require_postgres_password=True,
+        ).resolve()
     
     def _create_connection(self, name: Optional[str] = None):
         """Create a new database connection."""
@@ -149,22 +140,8 @@ class DatabaseHandler:
             )
 
     def _build_database_service(self) -> DatabaseService:
-        """Build an app-scoped DatabaseService from resolved db_config values."""
-        runtime = ResolvedRuntimeConfig(
-            shared=SharedSupabaseConfig(
-                postgres_password=self.db_config.get("password", ""),
-                postgres_host=self.db_config.get("host", "localhost"),
-                postgres_port=self.db_config.get("port", 5432),
-                postgres_db=self.db_config.get("database", "fabdis"),
-            ),
-            db_hints=DatabaseRuntimeHints(
-                host=self.db_config.get("host", "localhost"),
-                port=self.db_config.get("port", 5432),
-                database=self.db_config.get("database", "fabdis"),
-                username=self.db_config.get("user"),
-                sslmode=self.db_config.get("sslmode", "prefer"),
-            ),
-        )
+        """Build an app-scoped DatabaseService from shared runtime config."""
+        runtime = self._resolve_runtime_config()
         return DatabaseService(profile_factory=DbProfileFactory(runtime))
     
     @contextmanager
@@ -324,20 +301,3 @@ class DatabaseHandler:
         return self.execute_dict_query(query, (table_name,))
 
 
-# Singleton instance for convenience
-_db_handler_instance: Optional[DatabaseHandler] = None
-
-
-def get_db_handler(config_path: Optional[str] = None) -> DatabaseHandler:
-    """Get or create a singleton DatabaseHandler instance.
-    
-    Args:
-        config_path: Optional path to config file
-        
-    Returns:
-        DatabaseHandler instance
-    """
-    global _db_handler_instance
-    if _db_handler_instance is None:
-        _db_handler_instance = DatabaseHandler(config_path)
-    return _db_handler_instance

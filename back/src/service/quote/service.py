@@ -3,7 +3,6 @@
 import uuid
 from typing import Dict
 
-from src.infrastructure.clients.database import DatabaseHandler
 from src.infrastructure.clients.supabase import get_supabase_service
 from src.repository.opportunity import OpportunityRepository
 
@@ -103,7 +102,9 @@ class QuoteService:
         new_lines: list,
         totals: Dict[str, float],
     ) -> None:
-        db_handler = self.db_handler or DatabaseHandler()
+        if self.db_handler is None:
+            raise ValueError("QuoteService requires an injected db_handler for atomic line replacement")
+        db_handler = self.db_handler
 
         with db_handler.get_connection() as conn:
             with conn.cursor() as cur:

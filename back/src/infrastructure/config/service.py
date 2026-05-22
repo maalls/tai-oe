@@ -74,8 +74,7 @@ class DatabaseService:
             raise PermissionError(
                 "Connected as role "
                 f"'{current_user}', but it does not have CREATE privilege on schema 'public'. "
-                "Use MIGRATION_DATABASE_URL (or ADMIN_DATABASE_URL) with a schema-owning/admin role, "
-                "or grant CREATE on schema public to the configured role."
+                "Grant CREATE on schema public to the configured role in SUPABASE_ENV_FILE."
             )
 
         return current_user
@@ -88,11 +87,6 @@ class DatabaseService:
             admin_database_url=None,
             database_url=None,
         )
-
-        if profile.source in ("MIGRATION_DATABASE_URL", "ADMIN_DATABASE_URL", "DATABASE_URL"):
-            value = self._profile_factory.get_configured_database_url(profile.source)
-            if value:
-                return profile.source, value
 
         db_url = (
             f"postgresql://{profile.user}:{quote(profile.password, safe='')}"

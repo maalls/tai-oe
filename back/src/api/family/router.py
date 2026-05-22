@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.dependencies import get_database_repository
 from src.repository.database.repository import DatabaseRepository
 
 router = APIRouter()
-
-
-def get_db():
-    return DatabaseRepository()
 
 
 def _sync_net_price_family_link(db: DatabaseRepository, family_id: str, product_code: str | None) -> None:
@@ -75,7 +72,7 @@ def _resolve_family_discount_document_id(db: DatabaseRepository, family_id: str)
 
 
 @router.get('/api/family/{family_id}')
-def get_family(family_id: str, db=Depends(get_db)):
+def get_family(family_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT id, name, code, type, brand_id, product_code, quantity, discount,
@@ -92,7 +89,7 @@ def get_family(family_id: str, db=Depends(get_db)):
 
 
 @router.post('/api/family')
-def create_family(payload: dict, db=Depends(get_db)):
+def create_family(payload: dict, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         INSERT INTO family (
@@ -124,7 +121,11 @@ def create_family(payload: dict, db=Depends(get_db)):
 
 
 @router.put('/api/family/{family_id}')
-def update_family(family_id: str, payload: dict, db=Depends(get_db)):
+def update_family(
+    family_id: str,
+    payload: dict,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     fields = []
     values = []
     for field in [
@@ -171,7 +172,7 @@ def update_family(family_id: str, payload: dict, db=Depends(get_db)):
 
 
 @router.delete('/api/family/{family_id}')
-def delete_family(family_id: str, db=Depends(get_db)):
+def delete_family(family_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     db.execute_dict_query(
         'DELETE FROM product_family WHERE family_id = %s',
         (family_id,),
@@ -183,7 +184,10 @@ def delete_family(family_id: str, db=Depends(get_db)):
 
 
 @router.get('/api/family/{family_id}/discount-lines')
-def list_family_discount_lines(family_id: str, db=Depends(get_db)):
+def list_family_discount_lines(
+    family_id: str,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     _, document_id = _resolve_family_discount_document_id(db, family_id)
     if not document_id:
         return {'document_id': None, 'lines': []}
@@ -208,7 +212,11 @@ def list_family_discount_lines(family_id: str, db=Depends(get_db)):
 
 
 @router.put('/api/family/{family_id}/discount-lines')
-def save_family_discount_lines(family_id: str, payload: dict, db=Depends(get_db)):
+def save_family_discount_lines(
+    family_id: str,
+    payload: dict,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     _, document_id = _resolve_family_discount_document_id(db, family_id)
     if not document_id:
         raise HTTPException(status_code=400, detail='No FAMILY_DISCOUNT document found for this family')

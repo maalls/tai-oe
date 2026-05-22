@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from src.api.dependencies import (
     get_auth_service,
+    get_database_repository,
     get_email_repository,
     get_opportunity_repository,
     get_quote_send_service,
@@ -42,10 +43,6 @@ from src.service.rfq.rfq_source_service import RfqSourceService
 router = APIRouter(tags=["opportunity"])
 
 
-def get_db():
-    return DatabaseRepository()
-
-
 def _serialize_opportunity(opportunity) -> dict:
     return jsonable_encoder(asdict(opportunity))
 
@@ -67,7 +64,10 @@ def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> st
 
 
 @router.get("/api/opportunity/{opportunity_id}/source")
-def get_opportunity_source(opportunity_id: str, db=Depends(get_db)):
+def get_opportunity_source(
+    opportunity_id: str,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     rows = db.execute_dict_query(
         """
         SELECT id, source, source_reference_id
@@ -175,7 +175,7 @@ def get_opportunity(
 def get_opportunity_stage_history(
     opportunity_id: str,
     query: OpportunityStageHistoryQuery = Depends(),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     capped_limit = max(1, min(query.limit, 50))
     rows = db.execute_dict_query(
@@ -201,7 +201,7 @@ def update_opportunity_stage_state(
     payload: OpportunityUpdateStageStateRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -319,7 +319,7 @@ def opportunities_create_draft(
     payload: OpportunityCreateDraftRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -345,7 +345,7 @@ def opportunity_update_name(
     payload: OpportunityUpdateNameRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -372,7 +372,7 @@ def opportunity_update_account(
     payload: OpportunityUpdateAccountRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -398,7 +398,7 @@ def opportunity_extract_author_contact(
     payload: OpportunityExtractAuthorContactRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -570,7 +570,7 @@ def opportunity_send_quote(
 def opportunity_get_sent_email(
     opportunity_id: str,
     document_id: str | None = None,
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     target_document_id = document_id
 

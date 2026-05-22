@@ -1,11 +1,21 @@
 from src.infrastructure.clients.database import DatabaseHandler
 
 
-def test_get_db_config_prefers_database_url(monkeypatch):
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        "postgresql://env_user:env_pass@localhost:5432/ge_prod?sslmode=disable",
+def test_get_db_config_reads_shared_supabase_env(monkeypatch, tmp_path):
+    shared = tmp_path / ".env.prod"
+    shared.write_text(
+        "\n".join(
+            [
+                "POSTGRES_PASSWORD=env_pass",
+                "POSTGRES_USER=env_user",
+                "POSTGRES_HOST=localhost",
+                "POSTGRES_PORT=5432",
+                "POSTGRES_DB=ge_prod",
+            ]
+        ),
+        encoding="utf-8",
     )
+    monkeypatch.setenv("SUPABASE_ENV_FILE", str(shared))
 
     handler = DatabaseHandler(
         config={
@@ -25,4 +35,4 @@ def test_get_db_config_prefers_database_url(monkeypatch):
     assert "localhost" == handler.db_config["host"]
     assert 5432 == handler.db_config["port"]
     assert "ge_prod" == handler.db_config["database"]
-    assert "disable" == handler.db_config["sslmode"]
+    assert "prefer" == handler.db_config["sslmode"]

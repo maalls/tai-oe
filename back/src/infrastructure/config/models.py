@@ -10,6 +10,7 @@ class SharedSupabaseConfig:
     """Shared Supabase environment values loaded from SUPABASE_ENV_FILE."""
 
     postgres_password: str
+    postgres_user: str = "postgres"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "postgres"
@@ -20,7 +21,7 @@ class SharedSupabaseConfig:
 
 @dataclass(frozen=True)
 class DatabaseRuntimeHints:
-    """Hints extracted from runtime DATABASE_URL or equivalent source."""
+    """Resolved database connection hints derived from shared runtime config."""
 
     host: str
     port: int

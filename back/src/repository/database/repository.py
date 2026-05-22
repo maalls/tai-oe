@@ -13,8 +13,8 @@ from src.infrastructure.clients.database import DatabaseHandler
 class DatabaseRepository:
     """Encapsulate database query execution and metadata retrieval."""
 
-    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
-        self.db_handler = db_handler or DatabaseHandler()
+    def __init__(self, db_handler: DatabaseHandler):
+        self.db_handler = db_handler
 
     def fetch_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         query = "SELECT id, email, full_name FROM profile WHERE id = %s LIMIT 1"

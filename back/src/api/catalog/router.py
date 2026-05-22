@@ -2,18 +2,15 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
+from src.api.dependencies import get_database_repository
 from src.repository.database.repository import DatabaseRepository
 from .schemas import CatalogBrandResponse, CatalogFamilyResponse
 
 router = APIRouter()
 
 
-def get_db():
-    return DatabaseRepository()
-
-
 @router.get("/api/catalog/brands", response_model=List[CatalogBrandResponse])
-def list_catalog_brands(db=Depends(get_db)):
+def list_catalog_brands(db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT id, name, vendor_id, website, email, phone,
@@ -26,7 +23,7 @@ def list_catalog_brands(db=Depends(get_db)):
 
 
 @router.get("/api/catalog/families", response_model=List[CatalogFamilyResponse])
-def list_catalog_families(db=Depends(get_db)):
+def list_catalog_families(db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT f.id,

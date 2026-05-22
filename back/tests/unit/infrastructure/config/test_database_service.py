@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import pytest
 
 from src.infrastructure.config.factory import DbProfileFactory
@@ -56,6 +54,7 @@ def _runtime_config() -> ResolvedRuntimeConfig:
     return ResolvedRuntimeConfig(
         shared=SharedSupabaseConfig(
             postgres_password="shared_pw",
+            postgres_user="app_user",
             postgres_host="shared-db",
             postgres_port=5432,
             postgres_db="ge_prod",
@@ -64,9 +63,9 @@ def _runtime_config() -> ResolvedRuntimeConfig:
             host="runtime-db",
             port=5433,
             database="runtime",
-            username="postgres.ge-prod",
+            username="app_user",
             sslmode="require",
-            tenant_suffix="ge-prod",
+            tenant_suffix=None,
         ),
     )
 
@@ -81,34 +80,55 @@ def test_connect_uses_app_profile_by_default():
     conn = service.connect()
 
     assert conn is connector.connection
-    assert 1 == len(connector.calls)
     kwargs = connector.calls[0]
     assert "runtime-db" == kwargs["host"]
     assert 5433 == kwargs["port"]
     assert "runtime" == kwargs["database"]
-    assert "postgres.ge-prod" == kwargs["user"]
+    assert "app_user" == kwargs["user"]
     assert "shared_pw" == kwargs["password"]
     assert "require" == kwargs["sslmode"]
 
 
-def test_connect_can_use_explicit_migration_profile():
+def test_create_migration_db_uses_same_profile_as_app():
     connector = RecordingConnector()
     service = DatabaseService(
         profile_factory=DbProfileFactory(_runtime_config()),
         connector=connector,
     )
 
-    conn = service.connect(
-        profile_name="migration",
-        migration_database_url=None,
-        admin_database_url=None,
-        database_url="postgresql://postgres.ge-prod:app_pw@localhost:5432/ge_prod",
+    app_conn = service.connect(profile_name="app")
+    migration_conn = service.create_migration_db()
+
+    assert app_conn is connector.connection
+    assert migration_conn is connector.connection
+    assert connector.calls[0] == connector.calls[1]
+
+
+def test_resolve_migration_db_url_derives_from_unified_profile():
+    connector = RecordingConnector()
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(_runtime_config()),
+        connector=connector,
     )
 
-    assert conn is connector.connection
-    kwargs = connector.calls[0]
-    assert "supabase_admin.ge-prod" == kwargs["user"]
-    assert "shared_pw" == kwargs["password"]
+    source, db_url = service.resolve_migration_db_url()
+
+    assert "SUPABASE_ENV_FILE" == source
+    assert db_url.startswith("postgresql://app_user:shared_pw@runtime-db:5433/runtime")
+
+
+def test_resolve_masked_migration_db_url_masks_password():
+    connector = RecordingConnector()
+    service = DatabaseService(
+        profile_factory=DbProfileFactory(_runtime_config()),
+        connector=connector,
+    )
+
+    source, masked = service.resolve_masked_migration_db_url()
+
+    assert "SUPABASE_ENV_FILE" == source
+    assert "shared_pw" not in masked
+    assert "***" in masked
 
 
 def test_cursor_context_closes_cursor_and_connection():
@@ -136,88 +156,6 @@ def test_connect_raises_for_unknown_profile_name():
         service.connect(profile_name="unknown")
 
 
-def test_create_migration_db_uses_migration_profile():
-    connector = RecordingConnector()
-    service = DatabaseService(
-        profile_factory=DbProfileFactory(_runtime_config()),
-        connector=connector,
-    )
-
-    conn = service.create_migration_db()
-
-    assert conn is connector.connection
-    kwargs = connector.calls[0]
-    assert "supabase_admin.ge-prod" == kwargs["user"]
-
-
-def test_resolve_migration_db_url_prefers_explicit_source_from_config():
-    connector = RecordingConnector()
-    runtime = _runtime_config()
-    runtime = ResolvedRuntimeConfig(
-        shared=runtime.shared,
-        db_hints=runtime.db_hints,
-        migration_database_url="postgresql://mig:pw@mig-db:5544/mig_db",
-        admin_database_url=None,
-        database_url="postgresql://app:pw@app-db:5432/app_db",
-    )
-    service = DatabaseService(
-        profile_factory=DbProfileFactory(runtime),
-        connector=connector,
-    )
-
-    source, db_url = service.resolve_migration_db_url()
-
-    assert "MIGRATION_DATABASE_URL" == source
-    assert "postgresql://mig:pw@mig-db:5544/mig_db" == db_url
-
-
-def test_resolve_migration_db_url_raises_when_no_source_available():
-    connector = RecordingConnector()
-    runtime = ResolvedRuntimeConfig(
-        shared=SharedSupabaseConfig(postgres_password=""),
-        db_hints=DatabaseRuntimeHints(
-            host="runtime-db",
-            port=5544,
-            database="runtime_db",
-            username=None,
-            sslmode="prefer",
-            tenant_suffix=None,
-        ),
-        migration_database_url=None,
-        admin_database_url=None,
-        database_url=None,
-    )
-    service = DatabaseService(
-        profile_factory=DbProfileFactory(runtime),
-        connector=connector,
-    )
-
-    with pytest.raises(ValueError, match="No PostgreSQL URL configured for migrations"):
-        service.resolve_migration_db_url()
-
-
-def test_resolve_masked_migration_db_url_masks_password():
-    connector = RecordingConnector()
-    runtime = _runtime_config()
-    runtime = ResolvedRuntimeConfig(
-        shared=runtime.shared,
-        db_hints=runtime.db_hints,
-        migration_database_url="postgresql://mig:supersecret@mig-db:5544/mig_db",
-        admin_database_url=None,
-        database_url=None,
-    )
-    service = DatabaseService(
-        profile_factory=DbProfileFactory(runtime),
-        connector=connector,
-    )
-
-    source, masked = service.resolve_masked_migration_db_url()
-
-    assert "MIGRATION_DATABASE_URL" == source
-    assert "supersecret" not in masked
-    assert "***" in masked
-
-
 def test_assert_migration_create_privilege_returns_current_user_when_allowed():
     connector = RecordingConnector()
     service = DatabaseService(
@@ -225,11 +163,11 @@ def test_assert_migration_create_privilege_returns_current_user_when_allowed():
         connector=connector,
     )
     conn = connector.connection
-    conn.cursor_instance.set_fetchone_result(("supabase_admin", True))
+    conn.cursor_instance.set_fetchone_result(("app_user", True))
 
     current_user = service.assert_migration_create_privilege(conn)
 
-    assert "supabase_admin" == current_user
+    assert "app_user" == current_user
 
 
 def test_assert_migration_create_privilege_raises_when_not_allowed():
@@ -239,7 +177,7 @@ def test_assert_migration_create_privilege_raises_when_not_allowed():
         connector=connector,
     )
     conn = connector.connection
-    conn.cursor_instance.set_fetchone_result(("postgres", False))
+    conn.cursor_instance.set_fetchone_result(("app_user", False))
 
     with pytest.raises(PermissionError, match="does not have CREATE privilege"):
         service.assert_migration_create_privilege(conn)

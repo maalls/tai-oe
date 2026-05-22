@@ -33,6 +33,7 @@ def parse_shared_supabase_config(
 
     return SharedSupabaseConfig(
         postgres_password=postgres_password or "",
+        postgres_user=values.get("POSTGRES_USER", "postgres"),
         postgres_host=values.get("POSTGRES_HOST", "localhost"),
         postgres_port=_parse_int(values.get("POSTGRES_PORT"), key="POSTGRES_PORT", default=5432),
         postgres_db=values.get("POSTGRES_DB", "postgres"),

@@ -8,7 +8,7 @@ from typing import Mapping, Optional
 from dotenv import dotenv_values
 
 from .models import DatabaseRuntimeHints, ResolvedRuntimeConfig
-from .parser import parse_database_runtime_hints, parse_shared_supabase_config
+from .parser import parse_shared_supabase_config
 
 
 class ConfigProvider:
@@ -58,31 +58,19 @@ class ConfigProvider:
             or shared.service_role_key
         )
 
-        migration_database_url = (
-            self._environ.get("MIGRATION_DATABASE_URL")
-            or local_env_values.get("MIGRATION_DATABASE_URL")
+        db_hints = DatabaseRuntimeHints(
+            host=shared.postgres_host,
+            port=shared.postgres_port,
+            database=shared.postgres_db,
+            username=shared.postgres_user,
         )
-        admin_database_url = (
-            self._environ.get("ADMIN_DATABASE_URL")
-            or local_env_values.get("ADMIN_DATABASE_URL")
-        )
-
-        database_url = self._environ.get("DATABASE_URL") or local_env_values.get("DATABASE_URL")
-        if database_url:
-            db_hints = parse_database_runtime_hints(database_url)
-        else:
-            db_hints = DatabaseRuntimeHints(
-                host=shared.postgres_host,
-                port=shared.postgres_port,
-                database=shared.postgres_db,
-            )
 
         return ResolvedRuntimeConfig(
             shared=shared,
             db_hints=db_hints,
-            database_url=database_url,
-            migration_database_url=migration_database_url,
-            admin_database_url=admin_database_url,
+            database_url=None,
+            migration_database_url=None,
+            admin_database_url=None,
             supabase_url=supabase_url,
             supabase_anon_key=supabase_anon_key,
             supabase_service_key=supabase_service_key,

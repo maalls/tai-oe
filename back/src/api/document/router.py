@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Header, Query, UploadFile
 from fastapi.responses import JSONResponse
 
-from src.api.dependencies import get_auth_service, get_document_service
+from src.api.dependencies import get_auth_service, get_database_repository, get_document_service
 from src.api.document.schemas import (
     DocumentExtractRfpRequest,
     DocumentUpdateContentRequest,
@@ -17,10 +17,6 @@ from src.service.auth.auth_service import AuthService
 from src.service.document.document_service import DocumentService
 
 router = APIRouter(tags=["document"])
-
-
-def get_db():
-    return DatabaseRepository()
 
 
 def _status_from_result(result: dict[str, Any], default_status: int = 200) -> int:
@@ -42,7 +38,7 @@ def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> st
 @router.get("/api/document")
 def document_list(
     opportunity_id: str | None = Query(default=None),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     if not opportunity_id:
         return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
@@ -74,7 +70,7 @@ def document_list(
 @router.get("/api/invoice")
 def invoice_list(
     opportunity_id: str | None = Query(default=None),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     if not opportunity_id:
         return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
@@ -109,7 +105,7 @@ def invoice_list(
 def invoice_get_view(
     invoice_id: str,
     opportunity_id: str | None = Query(default=None),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     if not opportunity_id:
         return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
@@ -190,7 +186,7 @@ def invoice_get_view(
 def document_get(
     document_id: str,
     opportunity_id: str | None = Query(default=None),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     if not opportunity_id:
         return JSONResponse({"error": "Missing opportunity_id"}, status_code=400)
@@ -248,7 +244,7 @@ def document_update_storage_key(
     payload: DocumentUpdateStorageKeyRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:
@@ -274,7 +270,7 @@ def document_update_status(
     payload: DocumentUpdateStatusRequest,
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
-    db=Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     user_id = _resolve_user_id(authorization, auth_service)
     if not user_id:

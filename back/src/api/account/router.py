@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from .schemas import AccountResponse, AccountCreate, AccountUpdate
+from src.api.dependencies import get_database_repository
 from src.repository.database.repository import DatabaseRepository
 from typing import List
 
 router = APIRouter()
 
-def get_db():
-    return DatabaseRepository()
-
 @router.get("/api/account", response_model=List[AccountResponse])
-def list_accounts(db=Depends(get_db)):
+def list_accounts(db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT id, name, vat_number, siret, address_line1, address_line2,
@@ -25,7 +23,7 @@ def list_accounts(db=Depends(get_db)):
     return rows
 
 @router.get("/api/account/{account_id}", response_model=AccountResponse)
-def get_account(account_id: str, db=Depends(get_db)):
+def get_account(account_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT id, name, vat_number, siret, address_line1, address_line2,
@@ -44,7 +42,7 @@ def get_account(account_id: str, db=Depends(get_db)):
     return rows[0]
 
 @router.post("/api/account", response_model=AccountResponse)
-def create_account(payload: AccountCreate, db=Depends(get_db)):
+def create_account(payload: AccountCreate, db: DatabaseRepository = Depends(get_database_repository)):
     row = db.execute_dict_query(
         """
         INSERT INTO account (
@@ -74,7 +72,11 @@ def create_account(payload: AccountCreate, db=Depends(get_db)):
     return row[0]
 
 @router.put("/api/account/{account_id}", response_model=AccountResponse)
-def update_account(account_id: str, payload: AccountUpdate, db=Depends(get_db)):
+def update_account(
+    account_id: str,
+    payload: AccountUpdate,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     fields = []
     values = []
     for field in [
@@ -114,7 +116,7 @@ def update_account(account_id: str, payload: AccountUpdate, db=Depends(get_db)):
     return row[0]
 
 @router.delete("/api/account/{account_id}")
-def delete_account(account_id: str, db=Depends(get_db)):
+def delete_account(account_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     row = db.execute_dict_query(
         "DELETE FROM account WHERE id = %s RETURNING id",
         (account_id,)

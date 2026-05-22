@@ -2,18 +2,15 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.dependencies import get_database_repository
 from .schemas import VendorBrandResponse, VendorCreate, VendorResponse, VendorUpdate
 from src.repository.database.repository import DatabaseRepository
 
 router = APIRouter()
 
 
-def get_db():
-    return DatabaseRepository()
-
-
 @router.get("/api/vendor", response_model=List[VendorResponse])
-def list_vendors(db=Depends(get_db)):
+def list_vendors(db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT v.id, v.name, v.email, v.phone, v.website, v.created_at, v.updated_at,
@@ -32,7 +29,7 @@ def list_vendors(db=Depends(get_db)):
 
 
 @router.get("/api/vendor/{vendor_id}", response_model=VendorResponse)
-def get_vendor(vendor_id: str, db=Depends(get_db)):
+def get_vendor(vendor_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT v.id, v.name, v.email, v.phone, v.website, v.created_at, v.updated_at,
@@ -54,7 +51,7 @@ def get_vendor(vendor_id: str, db=Depends(get_db)):
 
 
 @router.post("/api/vendor", response_model=VendorResponse)
-def create_vendor(payload: VendorCreate, db=Depends(get_db)):
+def create_vendor(payload: VendorCreate, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         INSERT INTO vendor (name, email, phone, website)
@@ -68,7 +65,11 @@ def create_vendor(payload: VendorCreate, db=Depends(get_db)):
 
 
 @router.put("/api/vendor/{vendor_id}", response_model=VendorResponse)
-def update_vendor(vendor_id: str, payload: VendorUpdate, db=Depends(get_db)):
+def update_vendor(
+    vendor_id: str,
+    payload: VendorUpdate,
+    db: DatabaseRepository = Depends(get_database_repository),
+):
     fields = []
     values = []
     for field in ["name", "email", "phone", "website"]:
@@ -115,7 +116,7 @@ def update_vendor(vendor_id: str, payload: VendorUpdate, db=Depends(get_db)):
 
 
 @router.delete("/api/vendor/{vendor_id}")
-def delete_vendor(vendor_id: str, db=Depends(get_db)):
+def delete_vendor(vendor_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query("DELETE FROM vendor WHERE id = %s RETURNING id", (vendor_id,))
     if not rows:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -123,7 +124,7 @@ def delete_vendor(vendor_id: str, db=Depends(get_db)):
 
 
 @router.get("/api/vendor/{vendor_id}/brands", response_model=List[VendorBrandResponse])
-def list_vendor_brands(vendor_id: str, db=Depends(get_db)):
+def list_vendor_brands(vendor_id: str, db: DatabaseRepository = Depends(get_database_repository)):
     rows = db.execute_dict_query(
         """
         SELECT b.id, b.name, b.marque, b.website, b.target_margin, b.minimum_margin,

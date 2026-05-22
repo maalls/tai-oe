@@ -6,16 +6,12 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from src.api.dependencies import get_product_service
+from src.api.dependencies import get_database_repository, get_product_service
 from src.api.product.schemas import ProductUpsertRequest
 from src.repository.database.repository import DatabaseRepository
 from src.service.product.service import ProductService
 
 router = APIRouter(tags=["product"])
-
-
-def get_db():
-    return DatabaseRepository()
 
 
 def _status_from_result(result: dict[str, Any], default_status: int = 200) -> int:
@@ -101,7 +97,7 @@ def products_search(
     exact_match: bool = Query(default=False),
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
-    db: DatabaseRepository = Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     filters: list[str] = []
     params: list[Any] = []
@@ -193,7 +189,7 @@ def products_search(
 @router.get("/api/products/quote-context")
 def products_quote_context(
     sku: list[str] = Query(default=[]),
-    db: DatabaseRepository = Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     skus = [value.strip() for value in sku if value and value.strip()]
     if not skus:
@@ -353,7 +349,7 @@ def product_update(
 @router.delete("/api/products/{product_id}")
 def product_delete(
     product_id: str,
-    db: DatabaseRepository = Depends(get_db),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     rows = db.execute_dict_query(
         "DELETE FROM product_family WHERE product_id = %s",
