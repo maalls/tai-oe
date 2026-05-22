@@ -49,3 +49,15 @@ def create_database_service(*, current_file: str, require_postgres_password: boo
         require_postgres_password=require_postgres_password,
     )
     return DatabaseService(profile_factory=create_db_profile_factory(runtime_config))
+
+
+def create_database_handler(*, current_file: str, require_postgres_password: bool = False):
+    """Create a DatabaseHandler from process environment + shared env configuration."""
+    from src.infrastructure.clients.database import DatabaseHandler
+
+    return DatabaseHandler(
+        database_service=create_database_service(
+            current_file=current_file,
+            require_postgres_password=require_postgres_password,
+        )
+    )

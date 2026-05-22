@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import List
 
 from src.infrastructure.clients.database import DatabaseHandler
-from src.infrastructure.config import create_database_service
+from src.infrastructure.config import create_database_handler
 from src.infrastructure.runtime.env_loader import load_runtime_env
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -42,11 +42,9 @@ _DB_HANDLER: DatabaseHandler | None = None
 def _get_db_handler() -> DatabaseHandler:
 	global _DB_HANDLER
 	if _DB_HANDLER is None:
-		_DB_HANDLER = DatabaseHandler(
-			database_service=create_database_service(
-				current_file=__file__,
-				require_postgres_password=True,
-			)
+		_DB_HANDLER = create_database_handler(
+			current_file=__file__,
+			require_postgres_password=True,
 		)
 	return _DB_HANDLER
 

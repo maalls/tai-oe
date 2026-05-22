@@ -7,7 +7,7 @@ import re
 from typing import Dict, List, Optional
 
 from src.infrastructure.clients.database import DatabaseHandler
-from src.infrastructure.config import create_database_service
+from src.infrastructure.config import create_database_handler
 
 
 def _normalize_iso_datetime(date_string: str) -> Optional[str]:
@@ -30,11 +30,9 @@ class EmailDatabaseHandler:
 
     def _get_db_handler(self) -> DatabaseHandler:
         if self.db_handler is None:
-            self.db_handler = DatabaseHandler(
-                database_service=create_database_service(
-                    current_file=__file__,
-                    require_postgres_password=True,
-                )
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
             )
         return self.db_handler
 
