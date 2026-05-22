@@ -2,10 +2,12 @@
 
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+import json
 import re
 from typing import Dict, List, Optional
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_service
 
 
 def _normalize_iso_datetime(date_string: str) -> Optional[str]:
@@ -23,8 +25,44 @@ def _normalize_iso_datetime(date_string: str) -> Optional[str]:
 class EmailDatabaseHandler:
     """Handle email storage in Supabase database."""
 
-    def __init__(self):
-        self.supabase = get_supabase_service()
+    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
+        self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = DatabaseHandler(
+                database_service=create_database_service(
+                    current_file=__file__,
+                    require_postgres_password=True,
+                )
+            )
+        return self.db_handler
+
+    def get_profile_row(self, user_id: str, columns: str) -> Optional[Dict]:
+        if not user_id:
+            return None
+
+        rows = self._get_db_handler().execute_dict_query(
+            f"SELECT {columns} FROM profile WHERE id = %s LIMIT 1",
+            (user_id,),
+        )
+        return rows[0] if rows else None
+
+    def get_profile_column(self, user_id: str, column: str) -> Optional[str]:
+        row = self.get_profile_row(user_id, column)
+        if row:
+            return row.get(column)
+        return None
+
+    def set_profile_column(self, user_id: str, column: str, value: Optional[str]) -> bool:
+        rows = self._get_db_handler().execute_dict_query(
+            f"UPDATE profile SET {column} = %s WHERE id = %s RETURNING id",
+            (value, user_id),
+        )
+        return bool(rows)
+
+    def clear_profile_column(self, user_id: str, column: str) -> bool:
+        return self.set_profile_column(user_id, column, None)
 
     
     def _parse_email_date(self, date_string: str) -> Optional[str]:
@@ -81,17 +119,17 @@ class EmailDatabaseHandler:
 
         existing_classification = None
         try:
-            existing = (
-                self.supabase.table("email")
-                .select("category, classification_reason, is_classified, classified_at, category_suggestion, important")
-                .eq("user_id", user_id)
-                .eq("provider", provider)
-                .eq("provider_message_id", provider_message_id)
-                .limit(1)
-                .execute()
+            existing_rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT category, classification_reason, is_classified, classified_at, category_suggestion, important
+                FROM email
+                WHERE user_id = %s AND provider = %s AND provider_message_id = %s
+                LIMIT 1
+                """,
+                (user_id, provider, provider_message_id),
             )
-            if existing.data:
-                existing_classification = existing.data[0]
+            if existing_rows:
+                existing_classification = existing_rows[0]
         except Exception:
             pass
 
@@ -140,83 +178,124 @@ class EmailDatabaseHandler:
 
         payload = dict(email_data)
 
-        def _existing_email_id() -> Optional[str]:
-            try:
-                existing = (
-                    self.supabase.table("email")
-                    .select("id")
-                    .eq("user_id", user_id)
-                    .eq("provider", provider)
-                    .eq("provider_message_id", provider_message_id)
-                    .limit(1)
-                    .execute()
-                )
-                if existing.data:
-                    return existing.data[0]["id"]
-            except Exception:
-                pass
-            return None
-
-        # Retry loop to tolerate schema drift (missing columns in PostgREST cache).
-        for _ in range(10):
-            try:
-                response = self.supabase.table("email").upsert(
-                    payload,
-                    on_conflict="user_id,provider,provider_message_id"
-                ).execute()
-
-                if response.data:
-                    return {
-                        "success": True,
-                        "email_id": response.data[0]["id"] if isinstance(response.data, list) else response.data["id"],
-                    }
-
-                existing_id = _existing_email_id()
-                if existing_id:
-                    return {"success": True, "email_id": existing_id, "skipped": True}
-                return {"success": False, "error": "Failed to insert email"}
-            except Exception as e:
-                error_text = str(e)
-
-                # No matching unique constraint for ON CONFLICT -> fallback to plain insert.
-                if "no unique or exclusion constraint" in error_text.lower():
-                    try:
-                        ins_response = self.supabase.table("email").insert(payload).execute()
-                        if ins_response.data:
-                            return {
-                                "success": True,
-                                "email_id": ins_response.data[0]["id"] if isinstance(ins_response.data, list) else ins_response.data["id"],
-                            }
-                    except Exception:
-                        existing_id = _existing_email_id()
-                        if existing_id:
-                            return {"success": True, "email_id": existing_id, "skipped": True}
-                    return {"success": False, "error": error_text}
-
-                # Missing column in schema cache: remove it and retry.
-                missing_col_match = re.search(r"Could not find the '([^']+)' column", error_text)
-                if missing_col_match:
-                    missing_col = missing_col_match.group(1)
-                    if missing_col in payload:
-                        print(f"[EmailRepository] Email schema mismatch: removing missing column '{missing_col}' and retrying")
-                        payload.pop(missing_col, None)
-                        continue
-
-                # Backward compatibility for old fallback behavior.
-                if "contact_id" in error_text or "account_id" in error_text:
-                    payload.pop("contact_id", None)
-                    payload.pop("account_id", None)
-                    continue
-
-                existing_id = _existing_email_id()
-                if existing_id:
-                    return {"success": True, "email_id": existing_id, "skipped": True}
-                return {"success": False, "error": error_text}
-
-        existing_id = _existing_email_id()
-        if existing_id:
-            return {"success": True, "email_id": existing_id, "skipped": True}
-        return {"success": False, "error": "Failed to insert email after schema fallback retries"}
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO email (
+                user_id,
+                provider,
+                provider_message_id,
+                provider_thread_id,
+                provider_account_id,
+                subject,
+                from_email,
+                from_name,
+                from_raw,
+                from_domain,
+                from_local,
+                from_is_valid,
+                to_email,
+                cc_email,
+                contact_id,
+                account_id,
+                email_date,
+                body_preview,
+                body_full,
+                category,
+                classification_reason,
+                is_classified,
+                classified_at,
+                provider_metadata,
+                fetched_at,
+                spf_status,
+                dkim_status,
+                dmarc_status,
+                auth_score,
+                is_verified,
+                auth_headers,
+                sender_verified_at,
+                category_suggestion,
+                important,
+                updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s
+            )
+            ON CONFLICT (user_id, provider, provider_message_id)
+            DO UPDATE SET
+                provider_thread_id = EXCLUDED.provider_thread_id,
+                provider_account_id = EXCLUDED.provider_account_id,
+                subject = EXCLUDED.subject,
+                from_email = EXCLUDED.from_email,
+                from_name = EXCLUDED.from_name,
+                from_raw = EXCLUDED.from_raw,
+                from_domain = EXCLUDED.from_domain,
+                from_local = EXCLUDED.from_local,
+                from_is_valid = EXCLUDED.from_is_valid,
+                to_email = EXCLUDED.to_email,
+                cc_email = EXCLUDED.cc_email,
+                contact_id = EXCLUDED.contact_id,
+                account_id = EXCLUDED.account_id,
+                email_date = EXCLUDED.email_date,
+                body_preview = EXCLUDED.body_preview,
+                body_full = EXCLUDED.body_full,
+                category = COALESCE(EXCLUDED.category, email.category),
+                classification_reason = COALESCE(EXCLUDED.classification_reason, email.classification_reason),
+                is_classified = COALESCE(EXCLUDED.is_classified, email.is_classified),
+                classified_at = COALESCE(EXCLUDED.classified_at, email.classified_at),
+                provider_metadata = EXCLUDED.provider_metadata,
+                fetched_at = EXCLUDED.fetched_at,
+                spf_status = EXCLUDED.spf_status,
+                dkim_status = EXCLUDED.dkim_status,
+                dmarc_status = EXCLUDED.dmarc_status,
+                auth_score = EXCLUDED.auth_score,
+                is_verified = EXCLUDED.is_verified,
+                auth_headers = EXCLUDED.auth_headers,
+                sender_verified_at = EXCLUDED.sender_verified_at,
+                category_suggestion = COALESCE(EXCLUDED.category_suggestion, email.category_suggestion),
+                important = COALESCE(EXCLUDED.important, email.important),
+                updated_at = EXCLUDED.updated_at
+            RETURNING id
+            """,
+            (
+                payload["user_id"],
+                payload["provider"],
+                payload["provider_message_id"],
+                payload["provider_thread_id"],
+                payload["provider_account_id"],
+                payload["subject"],
+                payload["from_email"],
+                payload["from_name"],
+                payload["from_raw"],
+                payload["from_domain"],
+                payload["from_local"],
+                payload["from_is_valid"],
+                payload["to_email"],
+                payload["cc_email"],
+                payload["contact_id"],
+                payload["account_id"],
+                payload["email_date"],
+                payload["body_preview"],
+                payload["body_full"],
+                payload["category"],
+                payload["classification_reason"],
+                payload["is_classified"],
+                payload["classified_at"],
+                json.dumps(payload["provider_metadata"]),
+                payload["fetched_at"],
+                payload["spf_status"],
+                payload["dkim_status"],
+                payload["dmarc_status"],
+                payload["auth_score"],
+                payload["is_verified"],
+                json.dumps(payload["auth_headers"]),
+                payload["sender_verified_at"],
+                payload.get("category_suggestion"),
+                payload.get("important", False),
+                datetime.utcnow().isoformat(),
+            ),
+        )
+        if rows:
+            return {"success": True, "email_id": rows[0].get("id")}
+        return {"success": False, "error": "Failed to insert email"}
 
     def add_labels(self, email_id: str, labels: List[Dict[str, str]]) -> Dict:
         """Add labels to an email."""
@@ -232,12 +311,20 @@ class EmailDatabaseHandler:
 
         try:
             # Upsert to avoid duplicate constraint errors on (email_id, provider_label_id)
-            response = (
-                self.supabase.table("email_labels")
-                .upsert(label_data, on_conflict="email_id,provider_label_id")
-                .execute()
-            )
-            return {"success": True, "labels_added": len(response.data) if response.data else 0}
+            rows = []
+            for label in label_data:
+                result = self._get_db_handler().execute_dict_query(
+                    """
+                    INSERT INTO email_labels (email_id, provider_label_id, label_name)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (email_id, provider_label_id)
+                    DO UPDATE SET label_name = EXCLUDED.label_name
+                    RETURNING id
+                    """,
+                    (label["email_id"], label["provider_label_id"], label["label_name"]),
+                )
+                rows.extend(result)
+            return {"success": True, "labels_added": len(rows)}
         except Exception as exc:  # pragma: no cover
             print(f"Error upserting labels: {exc}")
             return {"success": False, "error": str(exc)}
@@ -264,66 +351,86 @@ class EmailDatabaseHandler:
             return {"success": True, "attachments_added": 0}
 
         try:
-            response = (
-                self.supabase.table("email_attachment")
-                .upsert(attachment_data, on_conflict="email_id,provider_attachment_id")
-                .execute()
-            )
-            return {"success": True, "attachments_added": len(response.data) if response.data else 0}
+            rows = []
+            for attachment in attachment_data:
+                result = self._get_db_handler().execute_dict_query(
+                    """
+                    INSERT INTO email_attachment (
+                        email_id,
+                        provider_attachment_id,
+                        filename,
+                        mime_type,
+                        size,
+                        storage_path
+                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (email_id, provider_attachment_id)
+                    DO UPDATE SET
+                        filename = EXCLUDED.filename,
+                        mime_type = EXCLUDED.mime_type,
+                        size = EXCLUDED.size,
+                        storage_path = EXCLUDED.storage_path
+                    RETURNING id
+                    """,
+                    (
+                        attachment["email_id"],
+                        attachment["provider_attachment_id"],
+                        attachment.get("filename"),
+                        attachment.get("mime_type"),
+                        attachment.get("size"),
+                        attachment.get("storage_path"),
+                    ),
+                )
+                rows.extend(result)
+            return {"success": True, "attachments_added": len(rows)}
         except Exception as exc:  # pragma: no cover
             print(f"Error upserting attachments: {exc}")
             return {"success": False, "error": str(exc)}
 
     def get_labels(self, email_id: str) -> List[Dict]:
         """Get all labels for an email."""
-        response = (
-            self.supabase.table("email_labels")
-            .select("label_name, provider_label_id")
-            .eq("email_id", email_id)
-            .execute()
+        return self._get_db_handler().execute_dict_query(
+            "SELECT label_name, provider_label_id FROM email_labels WHERE email_id = %s",
+            (email_id,),
         )
-        return response.data if response.data else []
 
     def get_email(self, email_id: str) -> Optional[Dict]:
         """Get a single email by ID for a user."""
         try:
-            response = (
-                self.supabase.table("email")
-                .select("*")
-                .eq("id", email_id)
-                .single()
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM email WHERE id = %s LIMIT 1",
+                (email_id,),
             )
-            return response.data if response.data else None
+            return rows[0] if rows else None
         except Exception as exc:  # pragma: no cover - defensive logging
             print(f"Error getting email: {exc}")
             return None
 
     def get_emails_by_user(self, user_id: str, limit: int = 100, offset: int = 0) -> List[Dict]:
         """Get emails for a user."""
-        response = (
-            self.supabase.table("email")
-            .select("*")
-            .eq("user_id", user_id)
-            .order("email_date", desc=True)
-            .range(offset, offset + limit - 1)
-            .execute()
+        return self._get_db_handler().execute_dict_query(
+            """
+            SELECT *
+            FROM email
+            WHERE user_id = %s
+            ORDER BY email_date DESC
+            LIMIT %s OFFSET %s
+            """,
+            (user_id, limit, offset),
         )
-        return response.data if response.data else []
 
     def get_emails_by_category(self, user_id: str, category: str, limit: int = 100) -> List[Dict]:
         """Get emails by category."""
         try:
-            response = (
-                self.supabase.table("email")
-                .select("*")
-                .eq("user_id", user_id)
-                .eq("category", category)
-                .order("email_date", desc=True)
-                .limit(limit)
-                .execute()
+            return self._get_db_handler().execute_dict_query(
+                """
+                SELECT *
+                FROM email
+                WHERE user_id = %s AND category = %s
+                ORDER BY email_date DESC
+                LIMIT %s
+                """,
+                (user_id, category, limit),
             )
-            return response.data if response.data else []
         except Exception as exc:  # pragma: no cover
             print(f"Error getting emails by category: {exc}")
             return []
@@ -331,31 +438,30 @@ class EmailDatabaseHandler:
     def get_unclassified_emails(self, user_id: str, limit: int = 200) -> List[Dict]:
         """Return emails missing classification for a user."""
         try:
-            response = (
-                self.supabase.table("email")
-                .select("id, subject, from_email, body_full, body_preview")
-                .eq("user_id", user_id)
-                .is_("is_classified", False)
-                .order("email_date", desc=True)
-                .limit(limit)
-                .execute()
+            data = self._get_db_handler().execute_dict_query(
+                """
+                SELECT id, subject, from_email, body_full, body_preview
+                FROM email
+                WHERE user_id = %s AND is_classified = FALSE
+                ORDER BY email_date DESC
+                LIMIT %s
+                """,
+                (user_id, limit),
             )
-            data = response.data or []
 
-            # Also capture null is_classified to backfill older rows
             if len(data) < limit:
                 remaining = limit - len(data)
-                null_response = (
-                    self.supabase.table("email")
-                    .select("id, subject, from_email, body_full, body_preview")
-                    .eq("user_id", user_id)
-                    .is_("is_classified", None)
-                    .order("email_date", desc=True)
-                    .limit(remaining)
-                    .execute()
+                null_rows = self._get_db_handler().execute_dict_query(
+                    """
+                    SELECT id, subject, from_email, body_full, body_preview
+                    FROM email
+                    WHERE user_id = %s AND is_classified IS NULL
+                    ORDER BY email_date DESC
+                    LIMIT %s
+                    """,
+                    (user_id, remaining),
                 )
-                if null_response.data:
-                    data.extend(null_response.data)
+                data.extend(null_rows)
 
             return data
         except Exception as exc:  # pragma: no cover
@@ -364,16 +470,12 @@ class EmailDatabaseHandler:
 
     def get_latest_fetch_time(self, user_id: str, provider: str = "gmail") -> Optional[datetime]:
         """Get the timestamp of the last fetch from the provider."""
-        response = (
-            self.supabase.table("email_fetch_metadata")
-            .select("last_fetch_at")
-            .eq("user_id", user_id)
-            .eq("provider", provider)
-            .limit(1)
-            .execute()
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT last_fetch_at FROM email_fetch_metadata WHERE user_id = %s AND provider = %s LIMIT 1",
+            (user_id, provider),
         )
-        if response.data:
-            fetch_at_str = response.data[0].get("last_fetch_at")
+        if rows:
+            fetch_at_str = rows[0].get("last_fetch_at")
             if fetch_at_str:
                 normalized = _normalize_iso_datetime(fetch_at_str)
                 return datetime.fromisoformat(normalized) if normalized else None
@@ -381,17 +483,18 @@ class EmailDatabaseHandler:
     
     def get_last_fetched_email_id(self, user_id: str, provider: str = "gmail") -> Optional[str]:
         """Get the provider_message_id of the most recently fetched email."""
-        response = (
-            self.supabase.table("email")
-            .select("provider_message_id")
-            .eq("user_id", user_id)
-            .eq("provider", provider)
-            .order("email_date", desc=True)
-            .limit(1)
-            .execute()
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            SELECT provider_message_id
+            FROM email
+            WHERE user_id = %s AND provider = %s
+            ORDER BY email_date DESC
+            LIMIT 1
+            """,
+            (user_id, provider),
         )
-        if response.data and len(response.data) > 0:
-            return response.data[0].get("provider_message_id")
+        if rows:
+            return rows[0].get("provider_message_id")
         return None
 
     def update_email_classification(
@@ -417,14 +520,32 @@ class EmailDatabaseHandler:
                 "updated_at": datetime.now().isoformat(),
             }
 
-            response = (
-                self.supabase.table("email")
-                .update(update_data)
-                .eq("id", email_uuid)
-                .eq("user_id", user_id)
-                .execute()
+            rows = self._get_db_handler().execute_dict_query(
+                """
+                UPDATE email
+                SET category = %s,
+                    category_suggestion = %s,
+                    classification_reason = %s,
+                    is_classified = %s,
+                    important = %s,
+                    classified_at = %s,
+                    updated_at = %s
+                WHERE id = %s AND user_id = %s
+                RETURNING id
+                """,
+                (
+                    update_data["category"],
+                    update_data["category_suggestion"],
+                    update_data["classification_reason"],
+                    update_data["is_classified"],
+                    update_data["important"],
+                    update_data["classified_at"],
+                    update_data["updated_at"],
+                    email_uuid,
+                    user_id,
+                ),
             )
-            return bool(response.data)
+            return bool(rows)
         except Exception as exc:  # pragma: no cover
             print(f"Error updating email classification: {exc}")
             return False

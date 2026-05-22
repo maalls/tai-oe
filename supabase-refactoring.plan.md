@@ -62,7 +62,7 @@ Le but n'est pas de changer la base cible, mais de n'avoir qu'un seul chemin tec
 ### Avancement lot 2
 
 - [x] `OAuthTokenRepository` migre vers `DatabaseHandler` et SQL direct.
-- [ ] `EmailRepository` reste a decouper puis rerouter vers l'adapter SQL.
+- [x] `EmailRepository` profil/IMAP migre vers `EmailDatabaseHandler` SQL-backed.
 - [x] `ActionRepository` migre vers `DatabaseHandler` et SQL direct.
 
 ## Strategie de migration

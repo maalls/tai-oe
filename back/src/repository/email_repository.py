@@ -132,20 +132,7 @@ class EmailRepository:
             raise RuntimeError("Unable to decrypt IMAP password with current APP_SECRETS_ENCRYPTION_KEY") from exc
 
     def _get_profile_row(self, user_id: str, columns: str) -> Optional[Dict]:
-        if not user_id:
-            return None
-
-        response = (
-            get_supabase_service()
-            .table("profile")
-            .select(columns)
-            .eq("id", user_id)
-            .limit(1)
-            .execute()
-        )
-        if response.data:
-            return response.data[0]
-        return None
+        return self.db_handler.get_profile_row(user_id, columns)
 
     def _format_imap_config(self, row: Optional[Dict], include_password: bool = False) -> Dict:
         row = row or {}
@@ -232,14 +219,14 @@ class EmailRepository:
             if not update_data["imap_host"] or not update_data["imap_username"] or not update_data["imap_password"]:
                 return {"status": "error", "message": "IMAP host, username and password are required"}
 
-            response = (
-                get_supabase_service()
-                .table("profile")
-                .update(update_data)
-                .eq("id", user_id)
-                .execute()
-            )
-            if not response.data:
+            ok = self.db_handler.set_profile_column(user_id, "imap_host", update_data["imap_host"])
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_port", update_data["imap_port"])
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_username", update_data["imap_username"])
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_password", update_data["imap_password"])
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_mailbox", update_data["imap_mailbox"])
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_use_ssl", update_data["imap_use_ssl"])
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_enabled", update_data["imap_enabled"])
+            if not ok:
                 return {"status": "error", "message": "Profile not found for IMAP configuration"}
 
             return self.get_imap_config(user_id)
@@ -252,24 +239,14 @@ class EmailRepository:
             if not user_id:
                 return {"status": "error", "message": "Missing user_id"}
 
-            response = (
-                get_supabase_service()
-                .table("profile")
-                .update(
-                    {
-                        "imap_host": None,
-                        "imap_port": None,
-                        "imap_username": None,
-                        "imap_password": None,
-                        "imap_mailbox": None,
-                        "imap_use_ssl": True,
-                        "imap_enabled": False,
-                    }
-                )
-                .eq("id", user_id)
-                .execute()
-            )
-            if not response.data:
+            ok = self.db_handler.clear_profile_column(user_id, "imap_host")
+            ok = ok and self.db_handler.clear_profile_column(user_id, "imap_port")
+            ok = ok and self.db_handler.clear_profile_column(user_id, "imap_username")
+            ok = ok and self.db_handler.clear_profile_column(user_id, "imap_password")
+            ok = ok and self.db_handler.clear_profile_column(user_id, "imap_mailbox")
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_use_ssl", True)
+            ok = ok and self.db_handler.set_profile_column(user_id, "imap_enabled", False)
+            if not ok:
                 return {"status": "error", "message": "Profile not found for IMAP configuration"}
             return {"status": "ok", "message": "IMAP configuration removed"}
         except Exception as e:
@@ -607,50 +584,38 @@ class EmailRepository:
 
     def _get_profile_column(self, user_id: str, column: str) -> Optional[str]:
         try:
-            supabase = get_supabase_service()
-            response = (
-                supabase.table("profile")
-                .select(column)
-                .eq("id", user_id)
-                .limit(1)
-                .execute()
-            )
-            if response.data:
-                return response.data[0].get(column)
+            return self.db_handler.get_profile_column(user_id, column)
         except Exception as e:
             print(f"[EmailRepository] Error reading profile column '{column}': {e}")
         return None
 
     def _set_profile_column(self, user_id: str, column: str, value: Optional[str]) -> bool:
         try:
-            supabase = get_supabase_service()
-            response = (
-                supabase.table("profile")
-                .update({column: value})
-                .eq("id", user_id)
-                .execute()
-            )
-            return bool(response.data)
+            return self.db_handler.set_profile_column(user_id, column, value)
         except Exception as e:
             print(f"[EmailRepository] Error setting profile column '{column}': {e}")
             return False
 
     def _clear_profile_column(self, user_id: str, column: str) -> bool:
-        return self._set_profile_column(user_id, column, None)
+        try:
+            return self.db_handler.clear_profile_column(user_id, column)
+        except Exception as e:
+            print(f"[EmailRepository] Error clearing profile column '{column}': {e}")
+            return False
 
     def _get_profile_token_b64(self, user_id: str) -> Optional[str]:
-        return self._get_profile_column(user_id, "google_token_pickle")
+        return self.db_handler.get_profile_column(user_id, "google_token_pickle")
 
     def _save_profile_token(self, user_id: str, creds) -> bool:
         try:
             token_b64 = base64.b64encode(pickle.dumps(creds)).decode("utf-8")
-            return self._set_profile_column(user_id, "google_token_pickle", token_b64)
+            return self.db_handler.set_profile_column(user_id, "google_token_pickle", token_b64)
         except Exception as e:
             print(f"[EmailRepository] Error saving profile token: {e}")
             return False
 
     def _clear_profile_token(self, user_id: str) -> bool:
-        return self._clear_profile_column(user_id, "google_token_pickle")
+        return self.db_handler.clear_profile_column(user_id, "google_token_pickle")
 
     def get_gmail_oauth_url(self, redirect_url: str = None, user_id: str = None) -> Dict:
         """Start Gmail OAuth web flow and return the authorization URL."""
