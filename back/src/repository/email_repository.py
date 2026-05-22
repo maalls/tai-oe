@@ -101,10 +101,6 @@ class EmailDatabaseHandler:
 
         This avoids hardcoded backend ports in local environments.
         """
-        env_callback = os.getenv("GMAIL_OAUTH_CALLBACK_URL")
-        if env_callback:
-            return env_callback
-
         default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
         candidate = redirect_url or default_origin
         parsed = urlparse(candidate)
@@ -528,10 +524,6 @@ class EmailRepository:
 
     def _resolve_gmail_callback_url(self, redirect_url: Optional[str]) -> str:
         """Resolve OAuth callback URL from frontend redirect URL origin."""
-        env_callback = os.getenv("GMAIL_OAUTH_CALLBACK_URL")
-        if env_callback:
-            return env_callback
-
         default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
         candidate = redirect_url or default_origin
         parsed = urlparse(candidate)

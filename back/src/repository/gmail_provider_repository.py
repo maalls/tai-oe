@@ -32,10 +32,6 @@ class GmailProviderRepository:
     """Repository dedicated to Gmail OAuth and profile interactions."""
 
     def _resolve_gmail_callback_url(self, redirect_url: Optional[str]) -> str:
-        env_callback = os.getenv("GMAIL_OAUTH_CALLBACK_URL")
-        if env_callback:
-            return env_callback
-
         default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
         candidate = redirect_url or default_origin
         parsed = urlparse(candidate)

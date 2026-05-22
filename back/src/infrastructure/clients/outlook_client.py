@@ -2,7 +2,7 @@
 
 import time
 from typing import Any, Callable, Dict, Optional
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 import os
 
 import requests
@@ -10,14 +10,22 @@ import requests
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
 
 
-MICROSOFT_OAUTH_SCOPE = "Mail.Read Mail.Send offline_access"
+MICROSOFT_OAUTH_SCOPE = "Mail.Read Mail.Send User.Read offline_access"
+
+
+def _resolve_outlook_callback_url() -> str:
+    configured = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153").strip()
+    parsed = urlparse(configured)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}/api/outlook/oauth/callback"
+    return "http://localhost:7153/api/outlook/oauth/callback"
 
 
 def _oauth_settings() -> dict[str, str]:
     return {
         "client_id": os.getenv("AZUR_CLIENT_ID", ""),
         "client_secret": os.getenv("AZUR_CLIENT_SECRET", ""),
-        "redirect_uri": os.getenv("AZUR_REDIRECT_URI", ""),
+        "redirect_uri": _resolve_outlook_callback_url(),
         "tenant": os.getenv("AZUR_TENANT_ID", "common"),
     }
 
@@ -28,10 +36,10 @@ def get_outlook_oauth_url(redirect_url: Optional[str] = None, user_id: Optional[
     callback_url = settings["redirect_uri"]
     tenant = settings["tenant"]
 
-    if not client_id or not callback_url:
+    if not client_id:
         return {
             "status": "error",
-            "message": "Missing AZUR_CLIENT_ID or AZUR_REDIRECT_URI",
+            "message": "Missing AZUR_CLIENT_ID",
         }
 
     state = encode_oauth_state(
@@ -63,10 +71,10 @@ def handle_outlook_oauth_callback(code: str, state: Optional[str] = None) -> dic
     callback_url = settings["redirect_uri"]
     tenant = settings["tenant"]
 
-    if not client_id or not client_secret or not callback_url:
+    if not client_id or not client_secret:
         return {
             "status": "error",
-            "message": "Missing AZUR_CLIENT_ID, AZUR_CLIENT_SECRET, or AZUR_REDIRECT_URI",
+            "message": "Missing AZUR_CLIENT_ID or AZUR_CLIENT_SECRET",
         }
 
     redirect_url = callback_url

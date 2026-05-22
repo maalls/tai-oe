@@ -16,8 +16,8 @@ class _ResponseMock:
 def test_handle_azure_oauth_callback_exchanges_code(monkeypatch):
     monkeypatch.setenv("AZUR_CLIENT_ID", "client-id")
     monkeypatch.setenv("AZUR_CLIENT_SECRET", "client-secret")
-    monkeypatch.setenv("AZUR_REDIRECT_URI", "http://localhost:8000/api/outlook/oauth/callback")
     monkeypatch.setenv("AZUR_TENANT_ID", "common")
+    monkeypatch.setenv("FRONTEND_BASE_URL", "http://localhost:5173/")
 
     captured = {}
 
@@ -37,4 +37,5 @@ def test_handle_azure_oauth_callback_exchanges_code(monkeypatch):
     assert result["redirect_url"] == "http://localhost:7153/settings"
     assert captured["timeout"] == 15
     assert "oauth2/v2.0/token" in captured["url"]
-    assert captured["data"]["scope"] == "Mail.Read Mail.Send offline_access"
+    assert captured["data"]["scope"] == "Mail.Read Mail.Send User.Read offline_access"
+    assert captured["data"]["redirect_uri"] == "http://localhost:5173/api/outlook/oauth/callback"

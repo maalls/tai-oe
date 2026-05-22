@@ -10,6 +10,24 @@ from src.infrastructure.clients.supabase import get_supabase_service
 class OAuthTokenRepository:
     """Repository dedicated to OAuth token persistence."""
 
+    @staticmethod
+    def _normalize_expires_at(expires_at: Any) -> Optional[str]:
+        if expires_at is None:
+            return None
+
+        if isinstance(expires_at, (int, float)):
+            return datetime.fromtimestamp(float(expires_at), tz=timezone.utc).isoformat()
+
+        if isinstance(expires_at, str):
+            raw = expires_at.strip()
+            if not raw:
+                return None
+            if raw.isdigit():
+                return datetime.fromtimestamp(float(raw), tz=timezone.utc).isoformat()
+            return raw
+
+        return str(expires_at)
+
     def get_token_json(self, user_id: str, provider: str, service: str) -> Optional[str]:
         try:
             response = (
@@ -35,7 +53,7 @@ class OAuthTokenRepository:
         service: str,
         token_json: str,
         scope: Optional[str] = None,
-        expires_at: Optional[str] = None,
+        expires_at: Optional[Any] = None,
     ) -> bool:
         try:
             payload = {
@@ -44,7 +62,7 @@ class OAuthTokenRepository:
                 "service": service,
                 "token_json": token_json,
                 "scope": scope,
-                "expires_at": expires_at,
+                "expires_at": self._normalize_expires_at(expires_at),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
             response = (

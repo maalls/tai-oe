@@ -27,7 +27,7 @@ def test_outlook_client_refresh_updates_tokens_and_calls_saver(monkeypatch):
                 "refresh_token": "new-refresh",
                 "expires_in": 3600,
                 "token_type": "Bearer",
-                "scope": "Mail.Read Mail.Send offline_access",
+                "scope": "Mail.Read Mail.Send User.Read offline_access",
             }
         )
 

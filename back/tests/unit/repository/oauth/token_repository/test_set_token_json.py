@@ -43,3 +43,22 @@ def test_set_token_json_upserts_compound_key(monkeypatch):
     assert supabase.payload["token_json"] == "{}"
     assert supabase.payload["scope"] == "Mail.Read"
     assert "updated_at" in supabase.payload
+
+
+def test_set_token_json_converts_unix_expires_at(monkeypatch):
+    supabase = _SupabaseUpsertOAuthMock([{"user_id": "user-1"}])
+    monkeypatch.setattr("src.repository.oauth.token_repository.get_supabase_service", lambda: supabase)
+
+    repo = OAuthTokenRepository()
+
+    ok = repo.set_token_json(
+        user_id="user-1",
+        provider="microsoft",
+        service="mail",
+        token_json="{}",
+        expires_at=1779442744,
+    )
+
+    assert ok is True
+    assert isinstance(supabase.payload["expires_at"], str)
+    assert "T" in supabase.payload["expires_at"]

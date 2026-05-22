@@ -1,18 +1,26 @@
 import os
 import requests
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
 
 
-MICROSOFT_OAUTH_SCOPE = "Mail.Read Mail.Send offline_access"
+MICROSOFT_OAUTH_SCOPE = "Mail.Read Mail.Send User.Read offline_access"
+
+
+def _resolve_outlook_callback_url() -> str:
+    configured = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153").strip()
+    parsed = urlparse(configured)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}/api/outlook/oauth/callback"
+    return "http://localhost:7153/api/outlook/oauth/callback"
 
 
 def _oauth_settings() -> dict:
     return {
         "client_id": os.getenv("AZUR_CLIENT_ID"),
         "client_secret": os.getenv("AZUR_CLIENT_SECRET"),
-        "redirect_uri": os.getenv("AZUR_REDIRECT_URI"),
+        "redirect_uri": _resolve_outlook_callback_url(),
         "tenant": os.getenv("AZUR_TENANT_ID", "common"),
     }
 
@@ -24,10 +32,10 @@ def get_azure_oauth_url(redirect_url=None):
     default_redirect_uri = settings["redirect_uri"]
     tenant = settings["tenant"]
 
-    if not client_id or not default_redirect_uri:
+    if not client_id:
         return {
             "status": "error",
-            "message": "Missing AZUR_CLIENT_ID or AZUR_REDIRECT_URI",
+            "message": "Missing AZUR_CLIENT_ID",
         }
 
     state_payload = {
@@ -57,10 +65,10 @@ def handle_azure_oauth_callback(code, state=None):
     redirect_uri = settings["redirect_uri"]
     tenant = settings["tenant"]
 
-    if not client_id or not client_secret or not redirect_uri:
+    if not client_id or not client_secret:
         return {
             "status": "error",
-            "message": "Missing AZUR_CLIENT_ID, AZUR_CLIENT_SECRET, or AZUR_REDIRECT_URI",
+            "message": "Missing AZUR_CLIENT_ID or AZUR_CLIENT_SECRET",
         }
 
     token_url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
