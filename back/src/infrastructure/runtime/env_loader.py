@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from dotenv import find_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from src.infrastructure.config.provider import ConfigProvider
 
@@ -13,6 +13,8 @@ def load_runtime_env(current_file: str) -> None:
     try:
         env_file = find_dotenv(usecwd=True)
         env_file_path = Path(env_file).resolve() if env_file else None
+        if env_file_path:
+            load_dotenv(env_file_path, override=False)
         ConfigProvider(
             environ=os.environ,
             env_file_path=env_file_path,
