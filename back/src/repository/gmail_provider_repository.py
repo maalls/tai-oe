@@ -3,7 +3,6 @@
 import base64
 import os
 import pickle
-import re
 from pathlib import Path
 from typing import Dict, Optional
 from urllib.parse import urlparse
@@ -12,8 +11,8 @@ from google_auth_oauthlib.flow import Flow
 
 from src.infrastructure.clients.gmail_client import GmailClient
 from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.supabase.email_database_handler import EmailDatabaseHandler
 from src.infrastructure.clients.oauth.state import decode_oauth_state, encode_oauth_state
-from src.infrastructure.config import create_database_service
 
 
 def _resolve_frontend_redirect_url(default_path: str = "/settings") -> str:
@@ -33,18 +32,12 @@ def _resolve_frontend_redirect_url(default_path: str = "/settings") -> str:
 class GmailProviderRepository:
     """Repository dedicated to Gmail OAuth and profile interactions."""
 
-    def __init__(self, db_handler: Optional[DatabaseHandler] = None):
-        self.db_handler = db_handler
-
-    def _get_db_handler(self) -> DatabaseHandler:
-        if self.db_handler is None:
-            self.db_handler = DatabaseHandler(
-                database_service=create_database_service(
-                    current_file=__file__,
-                    require_postgres_password=True,
-                )
-            )
-        return self.db_handler
+    def __init__(
+        self,
+        db_handler: Optional[DatabaseHandler] = None,
+        email_db_handler: Optional[EmailDatabaseHandler] = None,
+    ):
+        self.email_db_handler = email_db_handler or EmailDatabaseHandler(db_handler=db_handler)
 
     def _resolve_gmail_callback_url(self, redirect_url: Optional[str]) -> str:
         default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
@@ -63,28 +56,15 @@ class GmailProviderRepository:
         return credentials_path, token_path
 
     def _get_profile_column(self, user_id: str, column: str) -> Optional[str]:
-        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", column):
-            return None
         try:
-            rows = self._get_db_handler().execute_dict_query(
-                f"SELECT {column} FROM profile WHERE id = %s LIMIT 1",
-                (user_id,),
-            )
-            if rows:
-                return rows[0].get(column)
+            return self.email_db_handler.get_profile_column(user_id, column)
         except Exception as exc:
             print(f"[GmailProviderRepository] Error reading profile column '{column}': {exc}")
         return None
 
     def _set_profile_column(self, user_id: str, column: str, value: Optional[str]) -> bool:
-        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", column):
-            return False
         try:
-            rows_affected = self._get_db_handler().execute_update(
-                f"UPDATE profile SET {column} = %s WHERE id = %s",
-                (value, user_id),
-            )
-            return rows_affected > 0
+            return self.email_db_handler.set_profile_column(user_id, column, value)
         except Exception as exc:
             print(f"[GmailProviderRepository] Error setting profile column '{column}': {exc}")
             return False
