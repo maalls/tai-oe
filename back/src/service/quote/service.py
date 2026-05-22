@@ -9,7 +9,8 @@ from typing import Dict
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 from src.lib.storage_paths import get_storage_dir, get_storage_path
 from src.repository.opportunity import OpportunityRepository
 
@@ -17,10 +18,17 @@ from src.repository.opportunity import OpportunityRepository
 class QuoteService:
     """Service that encapsulates quote business operations."""
 
-    def __init__(self, supabase=None, opportunity_repository=None, db_handler=None):
-        self.supabase = supabase or get_supabase_service()
+    def __init__(self, opportunity_repository=None, db_handler: DatabaseHandler | None = None):
         self.opportunity_repository = opportunity_repository or OpportunityRepository()
         self.db_handler = db_handler
+
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
 
     @staticmethod
     def _as_float(value, default: float = 0.0) -> float:
@@ -88,14 +96,18 @@ class QuoteService:
                 totals=totals,
             )
 
-            document = (
-                self.supabase.table("document")
-                .select("*, document_line(*)")
-                .eq("id", document_id)
-                .single()
-                .execute()
-                .data
+            rows = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (document_id,),
             )
+            if not rows:
+                raise ValueError(f"Document {document_id} not found")
+            document = rows[0]
+            document_lines = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM document_line WHERE document_id = %s ORDER BY position",
+                (document_id,),
+            )
+            document["document_line"] = document_lines
             return document
         except Exception as e:
             print(f"[QuoteService][update] Error updating quote: {e}")
@@ -194,13 +206,16 @@ class QuoteService:
             document_dict = document
 
         if product.get("id"):
-            response = self.supabase.table("document_line").select("*").eq("id", product.get("id")).single().execute()
-            if not response.data:
+            rows = self._get_db_handler().execute_dict_query(
+                "SELECT * FROM document_line WHERE id = %s LIMIT 1",
+                (product.get("id"),),
+            )
+            if not rows:
                 line = {
                     "document_id": document_dict.get("id"),
                 }
             else:
-                line = response.data
+                line = rows[0]
         else:
             line = {
                 "document_id": document_dict.get("id"),
@@ -346,10 +361,12 @@ class QuoteService:
         _ = user_id
 
         try:
-            doc_resp = self.supabase.table("document").select("*").eq("id", document_id).single().execute()
-            if getattr(doc_resp, "error", None):
-                return {"status": "error", "message": f"Document lookup failed: {doc_resp.error}"}
-            document = doc_resp.data
+            db_handler = self._get_db_handler()
+            doc_rows = db_handler.execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (document_id,),
+            )
+            document = doc_rows[0] if doc_rows else None
             if not document:
                 return {"status": "error", "message": f"Document not found: {document_id}"}
 
@@ -359,18 +376,24 @@ class QuoteService:
             opportunity_id = document.get("opportunity_id")
             account = {}
             if opportunity_id:
-                opp_resp = self.supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-                if not getattr(opp_resp, "error", None) and opp_resp.data:
-                    account_id = opp_resp.data.get("account_id")
+                opp_rows = db_handler.execute_dict_query(
+                    "SELECT * FROM opportunity WHERE id = %s LIMIT 1",
+                    (opportunity_id,),
+                )
+                if opp_rows:
+                    account_id = opp_rows[0].get("account_id")
                     if account_id:
-                        acc_resp = self.supabase.table("account").select("*").eq("id", account_id).single().execute()
-                        if not getattr(acc_resp, "error", None) and acc_resp.data:
-                            account = acc_resp.data
+                        acc_rows = db_handler.execute_dict_query(
+                            "SELECT * FROM account WHERE id = %s LIMIT 1",
+                            (account_id,),
+                        )
+                        if acc_rows:
+                            account = acc_rows[0]
 
-            line_resp = self.supabase.table("document_line").select("*").eq("document_id", document_id).order("position").execute()
-            if getattr(line_resp, "error", None):
-                return {"status": "error", "message": f"Document lines lookup failed: {line_resp.error}"}
-            lines = line_resp.data or []
+            lines = db_handler.execute_dict_query(
+                "SELECT * FROM document_line WHERE document_id = %s ORDER BY position",
+                (document_id,),
+            )
 
             rfp_data = {
                 "quote_id": document.get("id"),
@@ -445,14 +468,23 @@ class QuoteService:
                 "total_incl_tax": computed_total,
             }
 
-            upd_resp = self.supabase.table("document").update(update_payload).eq("id", document_id).execute()
-            if getattr(upd_resp, "error", None):
-                fallback_resp = self.supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
-                if getattr(fallback_resp, "error", None):
-                    return {
-                        "status": "error",
-                        "message": f"Failed to update document with PDF: {fallback_resp.error}",
-                    }
+            db_handler.execute_update(
+                """
+                UPDATE document
+                SET storage_key = %s,
+                    total_excl_tax = %s,
+                    total_tax = %s,
+                    total_incl_tax = %s
+                WHERE id = %s
+                """,
+                (
+                    update_payload["storage_key"],
+                    update_payload["total_excl_tax"],
+                    update_payload["total_tax"],
+                    update_payload["total_incl_tax"],
+                    document_id,
+                ),
+            )
 
             return {"status": "ok", "pdf_filename": pdf_filename}
         except Exception as exc:
@@ -465,23 +497,22 @@ class QuoteService:
         _ = user_id
 
         try:
-            quote_resp = (
-                self.supabase.table("document")
-                .select("id")
-                .eq("opportunity_id", opportunity_id)
-                .eq("type", "QUOTE")
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute()
+            quote_rows = self._get_db_handler().execute_dict_query(
+                """
+                SELECT id
+                FROM document
+                WHERE opportunity_id = %s
+                  AND type = 'QUOTE'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (opportunity_id,),
             )
 
-            if getattr(quote_resp, "error", None):
-                return {"status": "error", "message": f"Quote lookup failed: {quote_resp.error}"}
-
-            if not quote_resp.data:
+            if not quote_rows:
                 return {"status": "error", "message": f"No quote found for opportunity {opportunity_id}"}
 
-            document_id = quote_resp.data[0].get("id")
+            document_id = quote_rows[0].get("id")
             if not document_id:
                 return {"status": "error", "message": "Invalid quote document id"}
 

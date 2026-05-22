@@ -160,6 +160,26 @@ class _DbHandler:
         self.db = db
         self.fail_on_insert = fail_on_insert
 
+    def execute_dict_query(self, query, params=None):
+        if "SELECT * FROM document WHERE id" in query:
+            document_id = params[0]
+            data = {
+                **self.db.document[document_id],
+                "document_line": self.db.document_lines.get(document_id, []),
+            }
+            return [data]
+        if "SELECT * FROM document_line WHERE document_id" in query:
+            document_id = params[0]
+            return self.db.document_lines.get(document_id, [])
+        if "SELECT * FROM document_line WHERE id" in query:
+            line_id = params[0]
+            for rows in self.db.document_lines.values():
+                for row in rows:
+                    if row.get("id") == line_id:
+                        return [row]
+            return []
+        raise AssertionError(f"Unsupported dict query: {query}")
+
     @contextmanager
     def get_connection(self):
         conn = _Connection(self.db, fail_on_insert=self.fail_on_insert)
@@ -192,7 +212,7 @@ class _Supabase:
 def test_update_replaces_lines_and_recomputes_totals():
     supabase = _Supabase()
     db_handler = _DbHandler(supabase)
-    service = QuoteService(supabase=supabase, opportunity_repository=object(), db_handler=db_handler)
+    service = QuoteService(opportunity_repository=object(), db_handler=db_handler)
 
     payload = {
         "title": "Updated quote",
@@ -237,7 +257,7 @@ def test_update_replaces_lines_and_recomputes_totals():
 def test_update_raises_when_brand_is_not_string():
     supabase = _Supabase()
     db_handler = _DbHandler(supabase)
-    service = QuoteService(supabase=supabase, opportunity_repository=object(), db_handler=db_handler)
+    service = QuoteService(opportunity_repository=object(), db_handler=db_handler)
 
     payload = {
         "title": "Updated quote",
@@ -260,7 +280,7 @@ def test_update_raises_when_brand_is_not_string():
 def test_update_preserves_existing_data_when_insert_fails_in_transaction():
     supabase = _Supabase()
     db_handler = _DbHandler(supabase, fail_on_insert=True)
-    service = QuoteService(supabase=supabase, opportunity_repository=object(), db_handler=db_handler)
+    service = QuoteService(opportunity_repository=object(), db_handler=db_handler)
 
     payload = {
         "title": "Updated quote",

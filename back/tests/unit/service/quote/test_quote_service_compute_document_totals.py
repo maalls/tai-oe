@@ -4,7 +4,7 @@ from service.quote.service import QuoteService
 
 
 def test_compute_document_totals_applies_client_discount_and_tax():
-    service = QuoteService(supabase=object(), opportunity_repository=object())
+    service = QuoteService(opportunity_repository=object())
 
     totals = service._compute_document_totals(
         [
@@ -30,7 +30,7 @@ def test_compute_document_totals_applies_client_discount_and_tax():
 
 
 def test_compute_document_totals_handles_invalid_numbers_gracefully():
-    service = QuoteService(supabase=object(), opportunity_repository=object())
+    service = QuoteService(opportunity_repository=object())
 
     totals = service._compute_document_totals(
         [
