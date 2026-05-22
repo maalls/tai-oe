@@ -8,62 +8,84 @@ import uuid
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
-from src.infrastructure.clients.supabase import get_supabase_service
+from src.infrastructure.clients.database import DatabaseHandler
+from src.infrastructure.config import create_database_handler
 from src.lib.storage_paths import get_storage_dir
 
 
 class InvoiceService:
     """Handle invoice generation/pdf/send flows for FastAPI."""
 
-    def __init__(self, supabase=None, send_email_with_attachments: Callable = None, storage_path_resolver: Callable = None):
-        self.supabase = supabase or get_supabase_service()
+    def __init__(
+        self,
+        db_handler: DatabaseHandler = None,
+        send_email_with_attachments: Callable = None,
+        storage_path_resolver: Callable = None,
+    ):
+        self.db_handler = db_handler
         self.send_email_with_attachments = send_email_with_attachments
         self.storage_path_resolver = storage_path_resolver
 
+    def _get_db_handler(self) -> DatabaseHandler:
+        if self.db_handler is None:
+            self.db_handler = create_database_handler(
+                current_file=__file__,
+                require_postgres_password=True,
+            )
+        return self.db_handler
+
     def handle_generate_invoice_from_quote(self, quote_id: str, user_id: str = None) -> Dict:
         try:
-            quote_resp = self.supabase.table("document").select("*").eq("id", quote_id).execute()
+            db_handler = self._get_db_handler()
+            quote_rows = db_handler.execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (quote_id,),
+            )
 
-            if not quote_resp.data or len(quote_resp.data) == 0:
-                quote_resp = (
-                    self.supabase.table("document")
-                    .select("*")
-                    .eq("opportunity_id", quote_id)
-                    .eq("type", "QUOTE")
-                    .order("created_at", desc=True)
-                    .limit(1)
-                    .execute()
+            if not quote_rows:
+                quote_rows = db_handler.execute_dict_query(
+                    """
+                    SELECT *
+                    FROM document
+                    WHERE opportunity_id = %s
+                      AND type = 'QUOTE'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """,
+                    (quote_id,),
                 )
 
-            if getattr(quote_resp, "error", None) or not quote_resp.data:
+            if not quote_rows:
                 return {"status": "error", "message": f"Quote not found for {quote_id}"}
 
-            quote = quote_resp.data[0]
+            quote = quote_rows[0]
             if quote.get("type") != "QUOTE":
                 return {"status": "error", "message": "Document must be a QUOTE"}
 
             quote_document_id = quote.get("id")
 
-            existing_resp = (
-                self.supabase.table("document")
-                .select("id")
-                .eq("parent_document_id", quote_document_id)
-                .eq("type", "INVOICE")
-                .execute()
+            existing_rows = db_handler.execute_dict_query(
+                """
+                SELECT id
+                FROM document
+                WHERE parent_document_id = %s
+                  AND type = 'INVOICE'
+                LIMIT 1
+                """,
+                (quote_document_id,),
             )
-            if existing_resp.data and len(existing_resp.data) > 0:
+            if existing_rows:
                 return {"status": "error", "message": "Invoice already exists for this quote"}
 
-            lines_resp = (
-                self.supabase.table("document_line")
-                .select("*")
-                .eq("document_id", quote_document_id)
-                .order("position")
-                .execute()
+            lines = db_handler.execute_dict_query(
+                """
+                SELECT *
+                FROM document_line
+                WHERE document_id = %s
+                ORDER BY position
+                """,
+                (quote_document_id,),
             )
-            if getattr(lines_resp, "error", None):
-                return {"status": "error", "message": f"Failed to load quote lines: {lines_resp.error}"}
-            lines = lines_resp.data or []
 
             invoice_data = {
                 "type": "INVOICE",
@@ -79,11 +101,42 @@ class InvoiceService:
                 "issued_at": datetime.now().isoformat(),
             }
 
-            inv_resp = self.supabase.table("document").insert([invoice_data]).execute()
-            if getattr(inv_resp, "error", None) or not inv_resp.data:
-                return {"status": "error", "message": f"Failed to create invoice: {inv_resp.error}"}
+            inv_rows = db_handler.execute_dict_query(
+                """
+                INSERT INTO document (
+                    type,
+                    status,
+                    opportunity_id,
+                    parent_document_id,
+                    title,
+                    external_ref,
+                    currency,
+                    total_excl_tax,
+                    total_tax,
+                    total_incl_tax,
+                    issued_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    invoice_data["type"],
+                    invoice_data["status"],
+                    invoice_data["opportunity_id"],
+                    invoice_data["parent_document_id"],
+                    invoice_data["title"],
+                    invoice_data["external_ref"],
+                    invoice_data["currency"],
+                    invoice_data["total_excl_tax"],
+                    invoice_data["total_tax"],
+                    invoice_data["total_incl_tax"],
+                    invoice_data["issued_at"],
+                ),
+            )
+            if not inv_rows:
+                return {"status": "error", "message": "Failed to create invoice"}
 
-            invoice_id = inv_resp.data[0]["id"]
+            invoice_id = inv_rows[0]["id"]
 
             invoice_lines = []
             for line in lines:
@@ -102,13 +155,36 @@ class InvoiceService:
                     }
                 )
 
-            if invoice_lines:
-                line_insert_resp = self.supabase.table("document_line").insert(invoice_lines).execute()
-                if getattr(line_insert_resp, "error", None):
-                    return {
-                        "status": "error",
-                        "message": f"Failed to copy lines to invoice: {line_insert_resp.error}",
-                    }
+            for line in invoice_lines:
+                db_handler.execute_update(
+                    """
+                    INSERT INTO document_line (
+                        document_id,
+                        position,
+                        sku,
+                        brand,
+                        description,
+                        quantity,
+                        unit,
+                        unit_price_excl_tax,
+                        tax_rate,
+                        line_total_excl_tax
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        line.get("document_id"),
+                        line.get("position"),
+                        line.get("sku"),
+                        line.get("brand"),
+                        line.get("description"),
+                        line.get("quantity"),
+                        line.get("unit"),
+                        line.get("unit_price_excl_tax"),
+                        line.get("tax_rate"),
+                        line.get("line_total_excl_tax"),
+                    ),
+                )
 
             storage_key = None
             try:
@@ -164,10 +240,12 @@ class InvoiceService:
     def handle_generate_invoice_pdf(self, document_id: str, user_id: str = None) -> Dict:
         _ = user_id
         try:
-            doc_resp = self.supabase.table("document").select("*").eq("id", document_id).single().execute()
-            if getattr(doc_resp, "error", None):
-                return {"status": "error", "message": f"Document lookup failed: {doc_resp.error}"}
-            document = doc_resp.data
+            db_handler = self._get_db_handler()
+            doc_rows = db_handler.execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (document_id,),
+            )
+            document = doc_rows[0] if doc_rows else None
             if not document:
                 return {"status": "error", "message": f"Document not found: {document_id}"}
 
@@ -177,24 +255,29 @@ class InvoiceService:
             opportunity_id = document.get("opportunity_id")
             account = {}
             if opportunity_id:
-                opp_resp = self.supabase.table("opportunity").select("*").eq("id", opportunity_id).single().execute()
-                if not getattr(opp_resp, "error", None) and opp_resp.data:
-                    account_id = opp_resp.data.get("account_id")
+                opp_rows = db_handler.execute_dict_query(
+                    "SELECT * FROM opportunity WHERE id = %s LIMIT 1",
+                    (opportunity_id,),
+                )
+                if opp_rows:
+                    account_id = opp_rows[0].get("account_id")
                     if account_id:
-                        acc_resp = self.supabase.table("account").select("*").eq("id", account_id).single().execute()
-                        if not getattr(acc_resp, "error", None) and acc_resp.data:
-                            account = acc_resp.data
+                        acc_rows = db_handler.execute_dict_query(
+                            "SELECT * FROM account WHERE id = %s LIMIT 1",
+                            (account_id,),
+                        )
+                        if acc_rows:
+                            account = acc_rows[0]
 
-            line_resp = (
-                self.supabase.table("document_line")
-                .select("*")
-                .eq("document_id", document_id)
-                .order("position")
-                .execute()
+            lines = db_handler.execute_dict_query(
+                """
+                SELECT *
+                FROM document_line
+                WHERE document_id = %s
+                ORDER BY position
+                """,
+                (document_id,),
             )
-            if getattr(line_resp, "error", None):
-                return {"status": "error", "message": f"Document lines lookup failed: {line_resp.error}"}
-            lines = line_resp.data or []
 
             invoice_data = {
                 "invoice_id": document.get("id"),
@@ -229,9 +312,10 @@ class InvoiceService:
                 )
 
             pdf_filename = self._generate_invoice_pdf(invoice_data)
-            upd_resp = self.supabase.table("document").update({"storage_key": pdf_filename}).eq("id", document_id).execute()
-            if getattr(upd_resp, "error", None):
-                return {"status": "error", "message": f"Failed to update document with PDF: {upd_resp.error}"}
+            db_handler.execute_update(
+                "UPDATE document SET storage_key = %s WHERE id = %s",
+                (pdf_filename, document_id),
+            )
 
             return {"status": "ok", "storage_key": pdf_filename}
 
@@ -293,11 +377,15 @@ class InvoiceService:
 
     def handle_send_invoice(self, invoice_id: str, payload: Dict, user_id: str = None) -> Dict:
         try:
-            invoice_resp = self.supabase.table("document").select("*").eq("id", invoice_id).single().execute()
-            if getattr(invoice_resp, "error", None) or not invoice_resp.data:
+            db_handler = self._get_db_handler()
+            invoice_rows = db_handler.execute_dict_query(
+                "SELECT * FROM document WHERE id = %s LIMIT 1",
+                (invoice_id,),
+            )
+            if not invoice_rows:
                 return {"status": "error", "message": "Invoice not found"}
 
-            invoice = invoice_resp.data
+            invoice = invoice_rows[0]
             if invoice.get("type") != "INVOICE":
                 return {"status": "error", "message": "Document is not an invoice"}
 
@@ -341,7 +429,10 @@ class InvoiceService:
             if result.get("status") != "ok":
                 return result
 
-            self.supabase.table("document").update({"status": "SENT"}).eq("id", invoice_id).execute()
+            db_handler.execute_update(
+                "UPDATE document SET status = %s WHERE id = %s",
+                ("SENT", invoice_id),
+            )
 
             sent_email_data = {
                 "document_id": invoice_id,
@@ -359,7 +450,39 @@ class InvoiceService:
             }
 
             try:
-                self.supabase.table("sent_email").insert(sent_email_data).execute()
+                db_handler.execute_update(
+                    """
+                    INSERT INTO sent_email (
+                        document_id,
+                        opportunity_id,
+                        from_email,
+                        to_emails,
+                        cc_emails,
+                        subject,
+                        body,
+                        provider,
+                        provider_message_id,
+                        status,
+                        sent_at,
+                        attachment_names
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        sent_email_data["document_id"],
+                        sent_email_data["opportunity_id"],
+                        sent_email_data["from_email"],
+                        sent_email_data["to_emails"],
+                        sent_email_data["cc_emails"],
+                        sent_email_data["subject"],
+                        sent_email_data["body"],
+                        sent_email_data["provider"],
+                        sent_email_data["provider_message_id"],
+                        sent_email_data["status"],
+                        sent_email_data["sent_at"],
+                        sent_email_data["attachment_names"],
+                    ),
+                )
             except Exception as exc:
                 print(f"[InvoiceService] Warning: Failed to save sent_email record: {exc}")
 
