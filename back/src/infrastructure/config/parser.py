@@ -15,10 +15,14 @@ def _parse_int(raw_value: Optional[str], *, key: str, default: int) -> int:
         raise ValueError(f"Invalid integer for {key}: {raw_value}") from exc
 
 
-def parse_shared_supabase_config(values: Mapping[str, str]) -> SharedSupabaseConfig:
+def parse_shared_supabase_config(
+    values: Mapping[str, str],
+    *,
+    require_postgres_password: bool = True,
+) -> SharedSupabaseConfig:
     """Parse and validate shared Supabase environment values."""
     postgres_password = values.get("POSTGRES_PASSWORD")
-    if not postgres_password:
+    if require_postgres_password and not postgres_password:
         raise ValueError("Missing required key POSTGRES_PASSWORD in shared Supabase env")
 
     supabase_public_url = (
@@ -28,7 +32,7 @@ def parse_shared_supabase_config(values: Mapping[str, str]) -> SharedSupabaseCon
     )
 
     return SharedSupabaseConfig(
-        postgres_password=postgres_password,
+        postgres_password=postgres_password or "",
         postgres_host=values.get("POSTGRES_HOST", "localhost"),
         postgres_port=_parse_int(values.get("POSTGRES_PORT"), key="POSTGRES_PORT", default=5432),
         postgres_db=values.get("POSTGRES_DB", "postgres"),

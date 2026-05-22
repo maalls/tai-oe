@@ -127,3 +127,33 @@ def test_provider_prefers_database_url_for_db_hints_over_shared_defaults(tmp_pat
     assert "live_db" == resolved.db_hints.database
     assert "require" == resolved.db_hints.sslmode
     assert "ge-prod" == resolved.db_hints.tenant_suffix
+
+
+def test_provider_can_resolve_in_lenient_mode_without_shared_postgres_password(tmp_path):
+    env_file = tmp_path / "back.env"
+    shared_env = tmp_path / ".env.prod"
+
+    env_file.write_text(f"SUPABASE_ENV_FILE={shared_env}\n", encoding="utf-8")
+    shared_env.write_text(
+        "\n".join(
+            [
+                "API_EXTERNAL_URL=https://api.example.com",
+                "ANON_KEY=shared-anon",
+                "SERVICE_ROLE_KEY=shared-service",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    provider = ConfigProvider(
+        environ={"DATABASE_URL": "postgresql://app:pwd@db.internal:5432/ge_prod"},
+        env_file_path=env_file,
+        current_file=str(Path(__file__)),
+        require_postgres_password=False,
+    )
+
+    resolved = provider.resolve()
+
+    assert "" == resolved.shared.postgres_password
+    assert "https://api.example.com" == resolved.supabase_url
+    assert "app" == resolved.db_hints.username

@@ -125,6 +125,36 @@ def test_build_migration_profile_falls_back_to_shared_hints_when_no_database_url
     assert "supabase_admin" == profile.user
 
 
+def test_build_migration_profile_falls_back_to_database_url_when_shared_password_missing():
+    shared = SharedSupabaseConfig(
+        postgres_password="",
+        postgres_host="shared-db",
+        postgres_port=6432,
+        postgres_db="shared_db",
+    )
+    hints = DatabaseRuntimeHints(
+        host="runtime-db",
+        port=5544,
+        database="runtime_db",
+        username="postgres.ge-prod",
+        sslmode="require",
+        tenant_suffix="ge-prod",
+    )
+    config = ResolvedRuntimeConfig(shared=shared, db_hints=hints)
+
+    profile = DbProfileFactory(config).build_migration_profile(
+        migration_database_url=None,
+        admin_database_url=None,
+        database_url="postgresql://app_user:app_pw@app-db:5432/app_db",
+    )
+
+    assert "DATABASE_URL" == profile.source
+    assert "app-db" == profile.host
+    assert "app_db" == profile.database
+    assert "app_user" == profile.user
+    assert "app_pw" == profile.password
+
+
 def test_build_migration_profile_handles_url_encoding_for_password():
     shared = SharedSupabaseConfig(
         postgres_password="p@ss/with:special#chars",

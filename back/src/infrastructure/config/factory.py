@@ -41,6 +41,9 @@ class DbProfileFactory:
 
         runtime_hints = parse_database_runtime_hints(database_url) if database_url else self._config.db_hints
 
+        if not self._config.shared.postgres_password and database_url:
+            return self._profile_from_url(database_url, source="DATABASE_URL")
+
         tenant_suffix = runtime_hints.tenant_suffix
         migration_user = f"supabase_admin.{tenant_suffix}" if tenant_suffix else "supabase_admin"
 
@@ -51,7 +54,7 @@ class DbProfileFactory:
             user=migration_user,
             password=self._config.shared.postgres_password,
             sslmode=runtime_hints.sslmode,
-            source="derived-migration",
+            source="SUPABASE_ENV_FILE",
         )
 
     @staticmethod

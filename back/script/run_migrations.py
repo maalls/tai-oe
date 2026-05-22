@@ -17,10 +17,33 @@ from urllib.parse import quote, urlparse
 from src.infrastructure.clients.supabase import get_supabase_service
 import psycopg2
 from dotenv import dotenv_values, load_dotenv
+from src.infrastructure.config.factory import DbProfileFactory
+from src.infrastructure.config.provider import ConfigProvider
+from src.infrastructure.config.service import DatabaseService
 
 load_dotenv()
 
 BACK_DIR = Path(__file__).resolve().parents[1]
+
+
+def _build_runtime_config_for_migrations():
+    env_file_path = BACK_DIR / ".env"
+    return ConfigProvider(
+        environ=os.environ,
+        env_file_path=env_file_path if env_file_path.exists() else None,
+        current_file=str(Path(__file__).resolve()),
+        require_postgres_password=False,
+    ).resolve()
+
+
+def _build_migration_profile():
+    runtime_config = _build_runtime_config_for_migrations()
+    profile_factory = DbProfileFactory(runtime_config)
+    return profile_factory.build_migration_profile(
+        migration_database_url=os.getenv("MIGRATION_DATABASE_URL"),
+        admin_database_url=os.getenv("ADMIN_DATABASE_URL"),
+        database_url=os.getenv("DATABASE_URL"),
+    )
 
 
 def get_migration_files() -> List[Dict[str, str]]:
@@ -110,23 +133,32 @@ def build_admin_db_url_from_shared_env() -> tuple[str, str] | None:
 
 def get_migration_db_url() -> tuple[str, str]:
     """Resolve the PostgreSQL URL used for schema migrations."""
-    candidates = [
-        "MIGRATION_DATABASE_URL",
-        "ADMIN_DATABASE_URL",
-    ]
+    profile = _build_migration_profile()
 
-    for env_name in candidates:
-        db_url = os.getenv(env_name)
-        if db_url:
-            return env_name, db_url
+    if (
+        profile.source == "SUPABASE_ENV_FILE"
+        and not profile.password
+        and not os.getenv("MIGRATION_DATABASE_URL")
+        and not os.getenv("ADMIN_DATABASE_URL")
+        and not os.getenv("DATABASE_URL")
+    ):
+        raise ValueError(
+            "No PostgreSQL URL configured for migrations. "
+            "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
+            "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
+        )
 
-    derived_admin_url = build_admin_db_url_from_shared_env()
-    if derived_admin_url:
-        return derived_admin_url
+    if profile.source in ("MIGRATION_DATABASE_URL", "ADMIN_DATABASE_URL", "DATABASE_URL"):
+        value = os.getenv(profile.source)
+        if value:
+            return profile.source, value
 
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return "DATABASE_URL", database_url
+    if profile.source == "SUPABASE_ENV_FILE":
+        db_url = (
+            f"postgresql://{profile.user}:{quote(profile.password, safe='')}"
+            f"@{profile.host}:{profile.port}/{profile.database}"
+        )
+        return profile.source, db_url
 
     raise ValueError(
         "No PostgreSQL URL configured for migrations. "
@@ -153,10 +185,30 @@ def mask_db_url(db_url: str) -> str:
 
 def get_db_connection():
     """Get direct PostgreSQL connection with admin privileges."""
-    env_name, db_url = get_migration_db_url()
+    profile = _build_migration_profile()
+    if profile.source == "SUPABASE_ENV_FILE" and not profile.password:
+        raise ValueError(
+            "No PostgreSQL URL configured for migrations. "
+            "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
+            "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
+        )
 
-    print(f"ℹ Connecting to database with {env_name}: {mask_db_url(db_url)}")
-    conn = psycopg2.connect(db_url)
+    db_url = (
+        f"postgresql://{profile.user}:{quote(profile.password, safe='')}"
+        f"@{profile.host}:{profile.port}/{profile.database}"
+    )
+    print(f"ℹ Connecting to database with {profile.source}: {mask_db_url(db_url)}")
+
+    runtime_config = _build_runtime_config_for_migrations()
+    profile_factory = DbProfileFactory(runtime_config)
+    service = DatabaseService(profile_factory=profile_factory)
+
+    conn = service.connect(
+        profile_name="migration",
+        migration_database_url=os.getenv("MIGRATION_DATABASE_URL"),
+        admin_database_url=os.getenv("ADMIN_DATABASE_URL"),
+        database_url=os.getenv("DATABASE_URL"),
+    )
 
     with conn.cursor() as cursor:
         cursor.execute(

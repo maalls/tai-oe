@@ -19,10 +19,12 @@ class ConfigProvider:
         environ: Optional[Mapping[str, str]] = None,
         env_file_path: Optional[Path] = None,
         current_file: Optional[str] = None,
+        require_postgres_password: bool = True,
     ) -> None:
         self._environ = dict(environ or {})
         self._env_file_path = Path(env_file_path).resolve() if env_file_path else None
         self._current_file = Path(current_file).resolve() if current_file else Path(__file__).resolve()
+        self._require_postgres_password = require_postgres_password
 
     def resolve(self) -> ResolvedRuntimeConfig:
         local_env_values = self._load_env_file_values(self._env_file_path)
@@ -35,7 +37,10 @@ class ConfigProvider:
         shared_env_path = self._resolve_shared_env_path(shared_env_rel)
         shared_env_values = self._load_env_file_values(shared_env_path)
 
-        shared = parse_shared_supabase_config(shared_env_values)
+        shared = parse_shared_supabase_config(
+            shared_env_values,
+            require_postgres_password=self._require_postgres_password,
+        )
 
         supabase_url = (
             self._environ.get("SUPABASE_URL")
