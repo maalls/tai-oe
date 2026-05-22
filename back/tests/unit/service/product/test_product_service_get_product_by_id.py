@@ -3,52 +3,23 @@
 from service.product.service import ProductService
 
 
-class _Response:
-    def __init__(self, data):
-        self.data = data
+class _DbHandler:
+    def __init__(self, row):
+        self.row = row
+        self.calls = []
 
-
-class _Query:
-    def __init__(self, data):
-        self.data = data
-        self.select_fields = None
-        self.eq_calls = []
-        self.maybe_single_called = False
-
-    def select(self, fields):
-        self.select_fields = fields
-        return self
-
-    def eq(self, field, value):
-        self.eq_calls.append((field, value))
-        return self
-
-    def maybe_single(self):
-        self.maybe_single_called = True
-        return self
-
-    def execute(self):
-        return _Response(self.data)
-
-
-class _Supabase:
-    def __init__(self, data):
-        self.data = data
-        self.last_query = None
-
-    def from_(self, table):
-        assert table == "product"
-        self.last_query = _Query(self.data)
-        return self.last_query
+    def execute_dict_query(self, query, params=None):
+        self.calls.append((query, params))
+        return [self.row]
 
 
 def test_get_product_by_id_selects_media_relation():
-    supabase = _Supabase({"id": "p-1"})
-    service = ProductService(supabase=supabase)
+    db_handler = _DbHandler({"id": "p-1"})
+    service = ProductService(db_handler=db_handler)
 
     result = service.get_product_by_id("p-1")
 
     assert result == {"id": "p-1"}
-    assert supabase.last_query.select_fields == "*,brand(*),product_family(*,family(*)),product_media(*)"
-    assert supabase.last_query.eq_calls == [("id", "p-1")]
-    assert supabase.last_query.maybe_single_called is True
+    assert len(db_handler.calls) == 1
+    assert "product_media" in db_handler.calls[0][0]
+    assert db_handler.calls[0][1] == ("p-1",)

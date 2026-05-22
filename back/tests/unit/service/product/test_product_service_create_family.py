@@ -3,35 +3,18 @@
 from service.product.service import ProductService
 
 
-class _Response:
-    def __init__(self, data):
-        self.data = data
-
-
-class _FamilyInsertQuery:
+class _DbHandler:
     def __init__(self):
-        self.payload = None
+        self.calls = []
 
-    def insert(self, payload):
-        self.payload = payload
-        return self
-
-    def execute(self):
-        return _Response([{"id": "f-1", **self.payload}])
-
-
-class _Supabase:
-    def __init__(self):
-        self.query = _FamilyInsertQuery()
-
-    def from_(self, table):
-        assert table == "family"
-        return self.query
+    def execute_dict_query(self, query, params=None):
+        self.calls.append((query, params))
+        return [{"id": "f-1", "brand_id": params[0], "code": params[1], "type": params[2]}]
 
 
 def test_create_family_sets_brand_and_code():
-    supabase = _Supabase()
-    service = ProductService(supabase=supabase)
+    db_handler = _DbHandler()
+    service = ProductService(db_handler=db_handler)
 
     family = service.create_family("NET_PRICE", "b-1")
 
@@ -39,3 +22,4 @@ def test_create_family_sets_brand_and_code():
     assert family["brand_id"] == "b-1"
     assert family["code"] == "NET_PRICE"
     assert family["type"] == "NET_PRICE"
+    assert "INSERT INTO family" in db_handler.calls[0][0]

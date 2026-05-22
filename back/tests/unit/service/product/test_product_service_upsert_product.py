@@ -5,61 +5,38 @@ import pytest
 from service.product.service import ProductService
 
 
-class _Response:
-    def __init__(self, data):
-        self.data = data
-
-
-class _Query:
-    def __init__(self, table, db):
-        self.table = table
-        self.db = db
-        self.filters = []
-        self.insert_payload = None
-
-    def select(self, _fields):
-        return self
-
-    def eq(self, key, value):
-        self.filters.append((key, value))
-        return self
-
-    def insert(self, payload):
-        self.insert_payload = payload
-        return self
-
-    def execute(self):
-        filters = dict(self.filters)
-        if self.table == "brand":
-            brand_id = filters.get("id")
-            if brand_id:
-                return _Response([row for row in self.db.brands if row.get("id") == brand_id])
-            marque = filters.get("marque")
-            if marque is not None:
-                return _Response([row for row in self.db.brands if row.get("marque") == marque])
-            name = filters.get("name")
-            return _Response([row for row in self.db.brands if row.get("name") == name])
-        if self.table == "product" and self.insert_payload is None:
-            sku = filters.get("sku")
-            return _Response([row for row in self.db.products if row.get("sku") == sku])
-        if self.table == "product" and self.insert_payload is not None:
-            created = {"id": "p-new", **self.insert_payload}
-            self.db.products.append(created)
-            return _Response([created])
-        raise AssertionError("Unexpected query")
-
-
-class _Supabase:
+class _DbHandler:
     def __init__(self):
         self.brands = [{"id": "b-1", "marque": "ABB", "name": "ABB"}]
         self.products = []
+        self.calls = []
 
-    def from_(self, table):
-        return _Query(table, self)
+    def execute_dict_query(self, query, params=None):
+        self.calls.append((query, params))
+        if "FROM brand WHERE id" in query:
+            return [row for row in self.brands if row.get("id") == params[0]]
+        if "FROM brand WHERE marque" in query:
+            return [row for row in self.brands if row.get("marque") == params[0]]
+        if "FROM brand WHERE name" in query:
+            return [row for row in self.brands if row.get("name") == params[0]]
+        if "SELECT * FROM product WHERE sku" in query:
+            return [row for row in self.products if row.get("sku") == params[0]]
+        if "INSERT INTO product" in query:
+            created = {
+                "id": "p-new",
+                "sku": params[0],
+                "name": params[1],
+                "brand_id": params[2],
+                "price": params[3],
+                "batch": params[4],
+            }
+            self.products.append(created)
+            return [created]
+        raise AssertionError(f"Unexpected query: {query}")
 
 
 def test_upsert_product_requires_fields():
-    service = ProductService(supabase=_Supabase())
+    service = ProductService(db_handler=_DbHandler())
 
     with pytest.raises(ValueError, match="Missing product field: vector_text"):
         service.upsert_product(
@@ -74,8 +51,8 @@ def test_upsert_product_requires_fields():
 
 
 def test_upsert_product_inserts_and_attaches_brand():
-    supabase = _Supabase()
-    service = ProductService(supabase=supabase)
+    db_handler = _DbHandler()
+    service = ProductService(db_handler=db_handler)
 
     result = service.upsert_product(
         {
@@ -96,8 +73,8 @@ def test_upsert_product_inserts_and_attaches_brand():
 
 
 def test_upsert_product_prefers_brand_id_when_provided():
-    supabase = _Supabase()
-    service = ProductService(supabase=supabase)
+    db_handler = _DbHandler()
+    service = ProductService(db_handler=db_handler)
 
     result = service.upsert_product(
         {
@@ -115,8 +92,8 @@ def test_upsert_product_prefers_brand_id_when_provided():
 
 
 def test_upsert_product_defaults_batch_to_one_when_missing():
-    supabase = _Supabase()
-    service = ProductService(supabase=supabase)
+    db_handler = _DbHandler()
+    service = ProductService(db_handler=db_handler)
 
     result = service.upsert_product(
         {
