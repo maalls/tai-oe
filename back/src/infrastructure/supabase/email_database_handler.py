@@ -82,6 +82,45 @@ class EmailDatabaseHandler:
             return rows[0].get("id")
         return None
 
+    def create_account_from_data(self, account_data: Dict) -> Optional[str]:
+        payload = {
+            "name": account_data.get("name", "").strip(),
+            "address_line1": account_data.get("address"),
+            "city": account_data.get("city"),
+            "postal_code": account_data.get("zip_code"),
+            "country_code": account_data.get("country", "").upper()[:2] if account_data.get("country") else None,
+            "payment_terms_default": account_data.get("payment_terms_default"),
+        }
+        rows = self._get_db_handler().execute_dict_query(
+            """
+            INSERT INTO account (name, address_line1, city, postal_code, country_code, payment_terms_default)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                payload["name"],
+                payload["address_line1"],
+                payload["city"],
+                payload["postal_code"],
+                payload["country_code"],
+                payload["payment_terms_default"],
+            ),
+        )
+        if rows:
+            return rows[0].get("id")
+        if payload["name"]:
+            return self.create_account(payload["name"])
+        return None
+
+    def find_account_id_by_name(self, name: str) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT id FROM account WHERE name ILIKE %s LIMIT 1",
+            (name,),
+        )
+        if rows:
+            return rows[0].get("id")
+        return None
+
     def delete_account(self, account_id: str) -> bool:
         rows_affected = self._get_db_handler().execute_update(
             "DELETE FROM account WHERE id = %s",
@@ -109,6 +148,15 @@ class EmailDatabaseHandler:
             return rows[0].get("id")
         return None
 
+    def find_contact_id_by_email_and_account(self, email: str, account_id: str) -> Optional[str]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT id FROM contact WHERE email = %s AND account_id = %s LIMIT 1",
+            (email, account_id),
+        )
+        if rows:
+            return rows[0].get("id")
+        return None
+
     def find_opportunity_by_source_reference(self, user_id: str, source_reference_id: str) -> Optional[Dict]:
         rows = self._get_db_handler().execute_dict_query(
             """
@@ -122,6 +170,12 @@ class EmailDatabaseHandler:
         if rows:
             return rows[0]
         return None
+
+    def get_opportunities_for_email(self, email_id: str) -> List[Dict]:
+        return self._get_db_handler().execute_dict_query(
+            "SELECT id, stage, name FROM opportunity WHERE source = 'email' AND source_reference_id = %s",
+            (email_id,),
+        )
 
     def create_opportunity(
         self,
@@ -166,6 +220,65 @@ class EmailDatabaseHandler:
         if rows:
             return rows[0]
         return None
+
+    def get_email_by_id(self, email_id: str) -> Optional[Dict]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT * FROM email WHERE id = %s LIMIT 1",
+            (email_id,),
+        )
+        if rows:
+            return rows[0]
+        return None
+
+    def get_email_owner(self, email_id: str) -> Optional[Dict]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT id, user_id FROM email WHERE id = %s LIMIT 1",
+            (email_id,),
+        )
+        if rows:
+            return rows[0]
+        return None
+
+    def get_attachment_by_id(self, attachment_id: str) -> Optional[Dict]:
+        rows = self._get_db_handler().execute_dict_query(
+            "SELECT id, email_id, storage_path, filename, mime_type FROM email_attachment WHERE id = %s LIMIT 1",
+            (attachment_id,),
+        )
+        if rows:
+            return rows[0]
+        return None
+
+    def list_email_attachment_paths(self, email_id: str) -> List[Dict]:
+        return self._get_db_handler().execute_dict_query(
+            "SELECT id, storage_path FROM email_attachment WHERE email_id = %s",
+            (email_id,),
+        )
+
+    def delete_attachment(self, attachment_id: str) -> bool:
+        return self._get_db_handler().execute_update(
+            "DELETE FROM email_attachment WHERE id = %s",
+            (attachment_id,),
+        ) >= 0
+
+    def delete_email(self, email_id: str) -> bool:
+        return self._get_db_handler().execute_update(
+            "DELETE FROM email WHERE id = %s",
+            (email_id,),
+        ) >= 0
+
+    def update_email_links(self, email_id: str, update_data: Dict) -> bool:
+        if not update_data:
+            return True
+
+        set_clauses = []
+        params = []
+        for column, value in update_data.items():
+            set_clauses.append(f"{column} = %s")
+            params.append(value)
+
+        params.append(email_id)
+        query = f"UPDATE email SET {', '.join(set_clauses)} WHERE id = %s"
+        return self._get_db_handler().execute_update(query, tuple(params)) >= 0
 
     
     def _parse_email_date(self, date_string: str) -> Optional[str]:

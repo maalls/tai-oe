@@ -1195,7 +1195,6 @@ class EmailRepository:
             
             print(f"[EmailRepository] ✓ Fetched emails successfully")
             
-            supabase = get_supabase_service()
             # Get recent emails to process
             
             # Step 2: Classify unclassified emails
@@ -1351,15 +1350,7 @@ class EmailRepository:
         
         opportunities = []
         try:
-            supabase = get_supabase_service()
-            response = (
-                supabase.table("opportunity")
-                .select("id, name, stage, status, account_id, source_reference_id")
-                .eq("owner_user_id", user_id)
-                .eq("source_reference_id", uuid)
-                .execute()
-            )
-            opportunities = response.data or []
+            opportunities = self.db_handler.get_opportunities_for_email(uuid)
         except Exception as exc:  # pragma: no cover
             print(f"[EmailRepository] Error loading opportunities for email {uuid}: {exc}")
 
@@ -2085,12 +2076,7 @@ class EmailRepository:
     def _get_opportunities_for_email(self, email_id: str) -> List[Dict]:
         """Get opportunities related to this email."""
         try:
-            supabase = get_supabase_service()
-            response = supabase.table("opportunity").select(
-                "id, stage, name"
-            ).eq("source", "email").eq("source_reference_id", email_id).execute()
-            
-            return response.data if response.data else []
+            return self.db_handler.get_opportunities_for_email(email_id)
         except Exception as e:
             print(f"[EmailRepository] Error getting opportunities: {e}")
             return []
@@ -2163,17 +2149,9 @@ class EmailRepository:
             For serving as HTTP response
         """
         try:
-            supabase = get_supabase_service()
-            
-            # Get attachment from database
-            response = supabase.table('email_attachment').select(
-                'id, filename, mime_type, storage_path'
-            ).eq('id', attachment_id).single().execute()
-            
-            if not response.data:
+            attachment = self.db_handler.get_attachment_by_id(attachment_id)
+            if not attachment:
                 return 404, {}, b''
-            
-            attachment = response.data
             storage_path = attachment.get('storage_path')
             filename = attachment.get('filename', 'attachment')
             mime_type = attachment.get('mime_type', 'application/octet-stream')
@@ -2205,25 +2183,12 @@ class EmailRepository:
 
     def list_attachments(self, email_id: str, user_id: str | None = None) -> list[Dict]:
         try:
-            supabase = get_supabase_service()
             if user_id:
-                email_response = (
-                    supabase.table('email')
-                    .select('id, user_id')
-                    .eq('id', email_id)
-                    .single()
-                    .execute()
-                )
-                if not email_response.data or email_response.data.get('user_id') != user_id:
+                email_response = self.db_handler.get_email_owner(email_id)
+                if not email_response or email_response.get('user_id') != user_id:
                     return []
 
-            response = (
-                supabase.table('email_attachment')
-                .select('id, filename, mime_type, size, storage_path')
-                .eq('email_id', email_id)
-                .execute()
-            )
-            return response.data or []
+            return self.db_handler.list_email_attachments(email_id)
         except Exception as exc:
             print(f"[EmailRepository] Error listing attachments: {exc}")
             return []
@@ -2239,20 +2204,15 @@ class EmailRepository:
             User ID for authorization
         """
         try:
-            supabase = get_supabase_service()
-            attachment_response = supabase.table('email_attachment').select(
-                'id, email_id, storage_path, filename'
-            ).eq('id', attachment_id).single().execute()
-
-            if not attachment_response.data:
+            attachment = self.db_handler.get_attachment_by_id(attachment_id)
+            if not attachment:
                 return {"status": "error", "message": "Attachment not found"}
 
-            attachment = attachment_response.data
             email_id = attachment.get('email_id')
 
             if user_id:
-                email_response = supabase.table('email').select('id, user_id').eq('id', email_id).single().execute()
-                if not email_response.data or email_response.data.get('user_id') != user_id:
+                email_response = self.db_handler.get_email_owner(email_id)
+                if not email_response or email_response.get('user_id') != user_id:
                     return {"status": "error", "message": "Unauthorized"}
 
             storage_path = attachment.get('storage_path')
@@ -2262,7 +2222,7 @@ class EmailRepository:
                 except Exception as exc:
                     print(f"[EmailRepository] Failed to delete attachment file: {exc}")
 
-            supabase.table('email_attachment').delete().eq('id', attachment_id).execute()
+            self.db_handler.delete_attachment(attachment_id)
             return {"status": "ok", "deleted": attachment_id}
         except Exception as e:
             print(f"[EmailRepository] Error deleting attachment: {e}")
@@ -2284,21 +2244,15 @@ class EmailRepository:
             Status of deletion
         """
         try:
-            supabase = get_supabase_service()
-            
             # Get email to verify ownership
-            email_response = supabase.table('email').select('id, user_id').eq('id', email_id).single().execute()
-            
-            if not email_response.data:
+            email_response = self.db_handler.get_email_owner(email_id)
+            if not email_response:
                 return {"status": "error", "message": "Email not found"}
-            
-            email = email_response.data
-            if user_id and email.get('user_id') != user_id:
+            if user_id and email_response.get('user_id') != user_id:
                 return {"status": "error", "message": "Unauthorized"}
             
             # Get attachments to delete their files
-            attachments_response = supabase.table('email_attachment').select('id, storage_path').eq('email_id', email_id).execute()
-            attachments = attachments_response.data or []
+            attachments = self.db_handler.list_email_attachment_paths(email_id) or []
             
             # Delete attachment files from disk
             for attachment in attachments:
@@ -2311,7 +2265,7 @@ class EmailRepository:
                         print(f"[EmailRepository] Failed to delete attachment file: {exc}")
             
             # Delete all related records (cascade deletes will handle attachments, labels)
-            supabase.table('email').delete().eq('id', email_id).execute()
+            self.db_handler.delete_email(email_id)
             
             print(f"[EmailRepository] Deleted email {email_id} and all related records")
             return {"status": "ok", "deleted": email_id}
@@ -2351,19 +2305,14 @@ class EmailRepository:
             Status with result of resync operation
         """
         try:
-            supabase = get_supabase_service()
-            
             # Step 1: Verify ownership and get email details
-            email_response = supabase.table('email').select(
-                'id, user_id, provider_message_id'
-            ).eq('id', email_id).single().execute()
-            
-            if not email_response.data or email_response.data.get('user_id') != user_id:
+            email_response = self.db_handler.get_email_owner(email_id)
+            if not email_response or email_response.get('user_id') != user_id:
                 return {"status": "error", "message": "Unauthorized or email not found"}
             
             # Step 2: Delete the email (this will cascade delete attachments, labels, etc)
             print(f"[EmailRepository] Deleting email {email_id} for resync...")
-            supabase.table('email').delete().eq('id', email_id).execute()
+            self.db_handler.delete_email(email_id)
             
             # Step 3: Fetch the email fresh from Gmail
             print(f"[EmailRepository] Fetching email {provider_message_id} from Gmail...")
@@ -2600,8 +2549,7 @@ Return ONLY valid JSON, no additional text."""
                     update_data["account_id"] = account_id
 
                 try:
-                    supabase = get_supabase_service()
-                    supabase.table("email").update(update_data).eq("id", email_id).execute()
+                    self.db_handler.update_email_links(email_id, update_data)
                 except Exception as link_error:
                     if "contact_id" in str(link_error) or "account_id" in str(link_error):
                         print(
@@ -2649,52 +2597,25 @@ Return ONLY valid JSON, no additional text."""
             Account ID
         """
         try:
-            supabase = get_supabase_service()
             account_name = account_data.get("name", "").strip()
             
             if not account_name:
                 raise Exception("Account name is required") 
             
             print(f"[EmailRepository] Looking for existing account: {account_name}")
-            
-            # Try to find existing account by name
-            response = supabase.table('account').select('id').ilike('name', f'{account_name}').limit(1).execute()
-            
-            if response.data and len(response.data) > 0:
-                print(f"[EmailRepository] Found existing account: {response.data[0]['id']}")
-                return response.data[0]['id']
+            existing_account_id = self.db_handler.find_account_id_by_name(account_name)
+            if existing_account_id:
+                print(f"[EmailRepository] Found existing account: {existing_account_id}")
+                return existing_account_id
             
             print(f"[EmailRepository] Creating new account with user_id: {user_id}")
             
-            # Create new account.
-            # Some environments have a reduced account schema: if optional columns are
-            # unknown to PostgREST, retry with minimal payload.
-            new_account = {
-                "name": account_name,
-                "industry": account_data.get("industry"),
-                "address_line1": account_data.get("address"),
-                "city": account_data.get("city"),
-                "postal_code": account_data.get("zip_code"),
-                "country_code": account_data.get("country", "").upper()[:2] if account_data.get("country") else None,
-                "phone": account_data.get("phone"),
-                "website": account_data.get("website")
-            }
+            account_id = self.db_handler.create_account_from_data(account_data)
+            if account_id:
+                print(f"[EmailRepository] Created account: {account_id}")
+                return account_id
 
-            try:
-                response = supabase.table('account').insert(new_account).execute()
-            except Exception as insert_error:
-                error_text = str(insert_error)
-                if "schema cache" in error_text and "column" in error_text:
-                    print("[EmailRepository] Account schema mismatch; retrying insert with name only")
-                    response = supabase.table('account').insert({"name": account_name}).execute()
-                else:
-                    raise
-            
-            if response.data and len(response.data) > 0:
-                print(f"[EmailRepository] Created account: {response.data[0]['id']}")
-                return response.data[0]['id']
-            
-            print(f"[EmailRepository] Failed to create account, no data returned: {response}")
+            print(f"[EmailRepository] Failed to create account, no data returned")
             return None
             
         
@@ -2722,7 +2643,6 @@ Return ONLY valid JSON, no additional text."""
             Contact ID
         """
         try:
-            supabase = get_supabase_service()
             contact_email = contact_data.get("email")
             if not contact_email:
                 raise Exception("Contact email is required")
@@ -2732,18 +2652,10 @@ Return ONLY valid JSON, no additional text."""
                 raise ValueError("account_id is required to create or find contact")
 
             print(f"[EmailRepository] Looking for existing contact with email: {contact_email}")
-            response = (
-                supabase.table('contact')
-                .select('id')
-                .eq('email', contact_email)
-                .eq('account_id', account_id)
-                .limit(1)
-                .execute()
-            )
-
-            if response.data and len(response.data) > 0:
-                print(f"[EmailRepository] Found existing contact: {response.data[0]['id']}")
-                return response.data[0]['id']
+            existing_contact_id = self.db_handler.find_contact_id_by_email_and_account(contact_email, account_id)
+            if existing_contact_id:
+                print(f"[EmailRepository] Found existing contact: {existing_contact_id}")
+                return existing_contact_id
 
             print(f"[EmailRepository] Creating new contact for account: {account_id}")
             new_contact = {
@@ -2754,12 +2666,18 @@ Return ONLY valid JSON, no additional text."""
                 "account_id": account_id,
             }
 
-            response = supabase.table('contact').insert(new_contact).execute()
-            if response.data and len(response.data) > 0:
-                print(f"[EmailRepository] Created contact: {response.data[0]['id']}")
-                return response.data[0]['id']
+            contact_id = self.db_handler.create_contact(
+                name=new_contact["name"],
+                email=new_contact["email"],
+                account_id=account_id,
+                phone=new_contact.get("phone"),
+                role_title=new_contact.get("role_title"),
+            )
+            if contact_id:
+                print(f"[EmailRepository] Created contact: {contact_id}")
+                return contact_id
 
-            print(f"[EmailRepository] Failed to create contact, no data returned: {response}")
+            print(f"[EmailRepository] Failed to create contact, no data returned")
             raise Exception("Failed to create contact, no data returned")
 
         except Exception as e:
