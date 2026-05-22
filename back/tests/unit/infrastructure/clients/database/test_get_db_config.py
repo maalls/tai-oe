@@ -16,6 +16,7 @@ def test_get_db_config_reads_shared_supabase_env(monkeypatch, tmp_path):
         encoding="utf-8",
     )
     monkeypatch.setenv("SUPABASE_ENV_FILE", str(shared))
+    fake_database_service = object()
 
     handler = DatabaseHandler(
         config={
@@ -27,7 +28,8 @@ def test_get_db_config_reads_shared_supabase_env(monkeypatch, tmp_path):
                     "password": "yaml-pass",
                 }
             }
-        }
+        },
+        database_service=fake_database_service,
     )
 
     assert "env_user" == handler.db_config["user"]

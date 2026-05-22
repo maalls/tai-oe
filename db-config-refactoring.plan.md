@@ -330,7 +330,7 @@ Use micro-commits, one per consumer:
 - [x] `supabase.py` migrated to shared provider.
 - [x] all migration command paths migrated.
 - [ ] duplicate env loaders removed.
-- [ ] dependency inversion completed for database client/repository boundaries.
+- [x] dependency inversion completed for database client/repository boundaries.
 - [x] legacy singleton DB wiring reduced or removed.
 - [ ] docs/runbook updated.
 - [ ] full test suite green.
@@ -355,8 +355,7 @@ Phase 5 completed items:
 - [x] API routers now consume `get_database_repository` dependency injection instead of local DB constructors.
 
 Phase 5 remaining items:
-
-- [ ] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
+- [x] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
 
 Recent implementation commits:
 

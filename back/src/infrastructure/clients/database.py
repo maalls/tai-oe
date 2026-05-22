@@ -6,10 +6,11 @@ import yaml
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 from dotenv import find_dotenv
-from src.infrastructure.config.factory import DbProfileFactory
 from src.infrastructure.config.models import ResolvedRuntimeConfig
 from src.infrastructure.config.provider import ConfigProvider
 from src.infrastructure.config.service import DatabaseService
+
+
 def load_config_yaml(filename="config.yml"):
     # Try to find config.yml in common locations
     search_paths = [
@@ -44,12 +45,20 @@ except ImportError:
 class DatabaseHandler:
     """Handles PostgreSQL/Supabase database connections and queries."""
     
-    def __init__(self, config_path: Optional[str] = None, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        config_path: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
+        database_service: Optional[DatabaseService] = None,
+    ):
         """Initialize database handler with configuration.
         
         Args:
             config_path: Path to YAML config file. If None, uses default 'config.yml'
         """
+        if database_service is None:
+            raise ValueError("DatabaseHandler requires an injected database_service")
+
         if config is not None:
             self.config = config
             self.db_config = self._get_db_config()
@@ -57,7 +66,7 @@ class DatabaseHandler:
             self.config_path = config_path or self._find_config()
             self.config = self._load_config()
             self.db_config = self._get_db_config()
-        self._database_service = self._build_database_service()
+        self._database_service = database_service
         self._connection = None
         print(f"DatabaseHandler initialized with config: {self.db_config}")
         #print("connecting using the following config:", self.db_config, self.config_path, self.config)
@@ -139,11 +148,6 @@ class DatabaseHandler:
                 ssl_context=True if self.db_config.get("sslmode") != "disable" else None
             )
 
-    def _build_database_service(self) -> DatabaseService:
-        """Build an app-scoped DatabaseService from shared runtime config."""
-        runtime = self._resolve_runtime_config()
-        return DatabaseService(profile_factory=DbProfileFactory(runtime))
-    
     @contextmanager
     def get_connection(self, name: Optional[str] = None):
         """Context manager for database connections.
