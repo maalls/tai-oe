@@ -6,6 +6,9 @@ from urllib.parse import parse_qs, urlparse
 import yaml
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
+from src.infrastructure.config.factory import DbProfileFactory
+from src.infrastructure.config.models import DatabaseRuntimeHints, ResolvedRuntimeConfig, SharedSupabaseConfig
+from src.infrastructure.config.service import DatabaseService
 def load_config_yaml(filename="config.yml"):
     # Try to find config.yml in common locations
     search_paths = [
@@ -53,6 +56,7 @@ class DatabaseHandler:
             self.config_path = config_path or self._find_config()
             self.config = self._load_config()
             self.db_config = self._get_db_config()
+        self._database_service = self._build_database_service()
         self._connection = None
         print(f"DatabaseHandler initialized with config: {self.db_config}")
         #print("connecting using the following config:", self.db_config, self.config_path, self.config)
@@ -122,14 +126,18 @@ class DatabaseHandler:
     def _create_connection(self, name: Optional[str] = None):
         """Create a new database connection."""
         if _pg_driver == "psycopg2":
-            return psycopg2.connect(
-                host=self.db_config["host"],
-                port=self.db_config["port"],
-                database=name if name else self.db_config.get("database", "fabdis"),
-                user=self.db_config["user"],
-                password=self.db_config["password"],
-                sslmode=self.db_config.get("sslmode", "prefer")
-            )
+            conn = self._database_service.connect(profile_name="app")
+            if name and name != self.db_config.get("database", "fabdis"):
+                conn.close()
+                return psycopg2.connect(
+                    host=self.db_config["host"],
+                    port=self.db_config["port"],
+                    database=name,
+                    user=self.db_config["user"],
+                    password=self.db_config["password"],
+                    sslmode=self.db_config.get("sslmode", "prefer")
+                )
+            return conn
         else:  # pg8000
             return pg8000.connect(
                 host=self.db_config["host"],
@@ -139,6 +147,25 @@ class DatabaseHandler:
                 password=self.db_config["password"],
                 ssl_context=True if self.db_config.get("sslmode") != "disable" else None
             )
+
+    def _build_database_service(self) -> DatabaseService:
+        """Build an app-scoped DatabaseService from resolved db_config values."""
+        runtime = ResolvedRuntimeConfig(
+            shared=SharedSupabaseConfig(
+                postgres_password=self.db_config.get("password", ""),
+                postgres_host=self.db_config.get("host", "localhost"),
+                postgres_port=self.db_config.get("port", 5432),
+                postgres_db=self.db_config.get("database", "fabdis"),
+            ),
+            db_hints=DatabaseRuntimeHints(
+                host=self.db_config.get("host", "localhost"),
+                port=self.db_config.get("port", 5432),
+                database=self.db_config.get("database", "fabdis"),
+                username=self.db_config.get("user"),
+                sslmode=self.db_config.get("sslmode", "prefer"),
+            ),
+        )
+        return DatabaseService(profile_factory=DbProfileFactory(runtime))
     
     @contextmanager
     def get_connection(self, name: Optional[str] = None):
