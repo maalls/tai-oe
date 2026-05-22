@@ -13,11 +13,14 @@ import sys
 import hashlib
 from pathlib import Path
 from typing import List, Dict
+from urllib.parse import quote, urlparse
 from src.infrastructure.clients.supabase import get_supabase_service
 import psycopg2
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 load_dotenv()
+
+BACK_DIR = Path(__file__).resolve().parents[1]
 
 
 def get_migration_files() -> List[Dict[str, str]]:
@@ -55,18 +58,124 @@ def get_executed_migrations(supabase) -> set:
         return set()
 
 
+def get_shared_supabase_env() -> dict[str, str]:
+    """Load the shared Supabase env file referenced by SUPABASE_ENV_FILE."""
+    shared_env_rel = os.getenv("SUPABASE_ENV_FILE", "../supabase/.env.prod")
+    shared_env_path = Path(shared_env_rel)
+    if not shared_env_path.is_absolute():
+        shared_env_path = (BACK_DIR / shared_env_path).resolve()
+
+    if not shared_env_path.exists():
+        return {}
+
+    return {
+        str(key): str(value)
+        for key, value in dotenv_values(shared_env_path).items()
+        if key and value is not None
+    }
+
+
+def build_admin_db_url_from_shared_env() -> tuple[str, str] | None:
+    """Derive a migration URL from the shared Supabase env file when possible."""
+    shared_env = get_shared_supabase_env()
+    postgres_password = shared_env.get("POSTGRES_PASSWORD")
+    if not postgres_password:
+        return None
+
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        parsed = urlparse(database_url)
+        scheme = parsed.scheme or "postgresql"
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        database = (parsed.path or "").lstrip("/") or "postgres"
+        username = parsed.username or ""
+        tenant_suffix = username.split(".", 1)[1] if "." in username else ""
+        admin_username = f"supabase_admin.{tenant_suffix}" if tenant_suffix else "supabase_admin"
+        admin_url = (
+            f"{scheme}://{admin_username}:{quote(postgres_password, safe='')}"
+            f"@{host}:{port}/{database}"
+        )
+        return "SUPABASE_ENV_FILE", admin_url
+
+    host = shared_env.get("POSTGRES_HOST", "localhost")
+    port = shared_env.get("POSTGRES_PORT", "5432")
+    database = shared_env.get("POSTGRES_DB", "postgres")
+    admin_url = (
+        f"postgresql://supabase_admin:{quote(postgres_password, safe='')}"
+        f"@{host}:{port}/{database}"
+    )
+    return "SUPABASE_ENV_FILE", admin_url
+
+
+def get_migration_db_url() -> tuple[str, str]:
+    """Resolve the PostgreSQL URL used for schema migrations."""
+    candidates = [
+        "MIGRATION_DATABASE_URL",
+        "ADMIN_DATABASE_URL",
+    ]
+
+    for env_name in candidates:
+        db_url = os.getenv(env_name)
+        if db_url:
+            return env_name, db_url
+
+    derived_admin_url = build_admin_db_url_from_shared_env()
+    if derived_admin_url:
+        return derived_admin_url
+
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return "DATABASE_URL", database_url
+
+    raise ValueError(
+        "No PostgreSQL URL configured for migrations. "
+        "Set MIGRATION_DATABASE_URL, ADMIN_DATABASE_URL, DATABASE_URL, "
+        "or SUPABASE_ENV_FILE with POSTGRES_PASSWORD."
+    )
+
+
+def mask_db_url(db_url: str) -> str:
+    """Return a log-safe representation of a PostgreSQL URL."""
+    parsed = urlparse(db_url)
+    if not parsed.scheme:
+        return "<invalid database url>"
+
+    auth = parsed.username or "<unknown-user>"
+    if parsed.password:
+        auth = f"{auth}:***"
+
+    host = parsed.hostname or "<unknown-host>"
+    port = parsed.port or 5432
+    database = (parsed.path or "").lstrip("/") or "postgres"
+    return f"{parsed.scheme}://{auth}@{host}:{port}/{database}"
+
+
 def get_db_connection():
     """Get direct PostgreSQL connection with admin privileges."""
-    db_url = os.getenv('DATABASE_URL')
-    
-    if not db_url:
-        raise ValueError(
-            "DATABASE_URL not set in .env file. "
-            "Add: DATABASE_URL=postgresql://<admin_user>:<password>@localhost:5432/postgres"
+    env_name, db_url = get_migration_db_url()
+
+    print(f"ℹ Connecting to database with {env_name}: {mask_db_url(db_url)}")
+    conn = psycopg2.connect(db_url)
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT current_user, has_schema_privilege(current_user, 'public', 'CREATE')
+            """
         )
-    
-    print(f"ℹ Connecting to database with admin credentials...")
-    return psycopg2.connect(db_url)
+        current_user, can_create_public = cursor.fetchone()
+
+    if not can_create_public:
+        conn.close()
+        raise PermissionError(
+            "Connected as role "
+            f"'{current_user}', but it does not have CREATE privilege on schema 'public'. "
+            "Use MIGRATION_DATABASE_URL (or ADMIN_DATABASE_URL) with a schema-owning/admin role, "
+            "or grant CREATE on schema public to the configured role."
+        )
+
+    return conn
 
 
 def execute_migration(supabase, migration: Dict[str, str], auto_confirm: bool = False) -> bool:

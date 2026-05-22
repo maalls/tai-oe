@@ -46,3 +46,11 @@ migration:
 ```
 python -m script.run_migrations
 ```
+
+The migration runner uses PostgreSQL URLs in this order:
+
+1. `MIGRATION_DATABASE_URL`
+2. `ADMIN_DATABASE_URL`
+3. `DATABASE_URL`
+
+For schema changes, point `MIGRATION_DATABASE_URL` at a role that can create/alter objects in `public`.
