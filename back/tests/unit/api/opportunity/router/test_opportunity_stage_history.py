@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.opportunity.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDb:
@@ -21,7 +21,7 @@ class _FakeDb:
 
 def test_get_opportunity_stage_history_returns_rows():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-1/stage-history")

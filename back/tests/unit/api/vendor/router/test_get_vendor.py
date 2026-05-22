@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.vendor.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDbOk:
@@ -31,7 +31,7 @@ class _FakeDbMissing:
 
 def test_get_vendor_returns_row():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbOk()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbOk()
     client = TestClient(app)
 
     response = client.get("/api/vendor/v-1")
@@ -42,7 +42,7 @@ def test_get_vendor_returns_row():
 
 def test_get_vendor_returns_404_when_missing():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbMissing()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbMissing()
     client = TestClient(app)
 
     response = client.get("/api/vendor/missing")

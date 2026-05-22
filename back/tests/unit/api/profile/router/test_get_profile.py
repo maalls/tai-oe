@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
-import src.api.profile.router as profile_router
-from src.api.dependencies import get_auth_service
+from src.api.dependencies import get_auth_service, get_database_repository
 from src.api.main import create_app
 
 
@@ -16,10 +15,10 @@ class _FakeDbMissing:
         return None
 
 
-def test_get_profile_returns_profile(monkeypatch):
+def test_get_profile_returns_profile():
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: "user-1"
-    monkeypatch.setattr(profile_router, "DatabaseRepository", lambda: _FakeDbOk())
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbOk()
     client = TestClient(app)
 
     response = client.get("/api/profile")
@@ -28,10 +27,10 @@ def test_get_profile_returns_profile(monkeypatch):
     assert response.json()["id"] == "user-1"
 
 
-def test_get_profile_returns_404_when_missing(monkeypatch):
+def test_get_profile_returns_404_when_missing():
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: "user-1"
-    monkeypatch.setattr(profile_router, "DatabaseRepository", lambda: _FakeDbMissing())
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbMissing()
     client = TestClient(app)
 
     response = client.get("/api/profile")

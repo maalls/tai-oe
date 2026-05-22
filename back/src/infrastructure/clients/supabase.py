@@ -26,6 +26,7 @@ def _resolve_supabase_credentials(
         environ=effective_env,
         env_file_path=effective_env_file,
         current_file=str(Path(__file__).resolve()),
+        require_postgres_password=False,
     ).resolve()
 
     return (

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.api.family.router import get_db
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -18,7 +18,7 @@ class _FakeDb:
 def test_delete_family_returns_id():
     fake_db = _FakeDb()
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[get_database_repository] = lambda: fake_db
     client = TestClient(app)
 
     response = client.delete('/api/family/f-1')

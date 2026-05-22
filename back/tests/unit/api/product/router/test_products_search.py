@@ -7,7 +7,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.product.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDb:
@@ -35,7 +35,7 @@ class _FakeDb:
 def test_products_search_returns_payload_and_passes_filters():
     fake_db = _FakeDb()
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[get_database_repository] = lambda: fake_db
     client = TestClient(app)
 
     response = client.get(
@@ -91,7 +91,7 @@ def test_products_search_returns_empty_payload_when_no_rows():
             return []
 
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _EmptyDb()
+    app.dependency_overrides[get_database_repository] = lambda: _EmptyDb()
     client = TestClient(app)
 
     response = client.get("/api/products/search")
@@ -118,7 +118,7 @@ def test_products_search_serializes_decimal_tarif_values():
             ]
 
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _DecimalDb()
+    app.dependency_overrides[get_database_repository] = lambda: _DecimalDb()
     client = TestClient(app)
 
     response = client.get(

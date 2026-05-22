@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.vendor.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDb:
@@ -25,7 +25,7 @@ class _FakeDb:
 
 def test_create_vendor_returns_created_row():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.post("/api/vendor", json={"name": "ACME", "email": "hello@acme.com"})

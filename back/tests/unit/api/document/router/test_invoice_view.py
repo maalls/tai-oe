@@ -5,7 +5,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api.document.router import get_db
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -46,7 +46,7 @@ class _FakeDb:
 
 def test_invoice_view_requires_opportunity_id():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/invoice/inv-1/view")
@@ -57,7 +57,7 @@ def test_invoice_view_requires_opportunity_id():
 
 def test_invoice_view_returns_404_when_missing():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/invoice/missing/view?opportunity_id=opp-1")
@@ -68,7 +68,7 @@ def test_invoice_view_returns_404_when_missing():
 
 def test_invoice_view_returns_aggregated_payload():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/invoice/inv-1/view?opportunity_id=opp-1")

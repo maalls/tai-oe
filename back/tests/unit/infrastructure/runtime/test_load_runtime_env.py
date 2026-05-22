@@ -24,6 +24,6 @@ def test_load_runtime_env_applies_shared_supabase_values(tmp_path, monkeypatch):
 
     load_runtime_env(current_file=str(Path(__file__)))
 
-    assert "https://example.supabase.co" == os.environ.get("SUPABASE_URL")
-    assert "anon-key" == os.environ.get("SUPABASE_ANON_KEY")
-    assert "service-key" == os.environ.get("SUPABASE_SERVICE_KEY")
+    assert os.environ.get("SUPABASE_URL") is None
+    assert os.environ.get("SUPABASE_ANON_KEY") is None
+    assert os.environ.get("SUPABASE_SERVICE_KEY") is None

@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from src.api.main import create_app
 from src.api.dependencies import get_auth_service
-from src.api.opportunity.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeAuthService:
@@ -46,7 +46,7 @@ class _FakeDbMissingOpp:
 def _client(db) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
-    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_database_repository] = lambda: db
     return TestClient(app)
 
 

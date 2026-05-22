@@ -8,7 +8,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.product.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDb:
@@ -61,7 +61,7 @@ class _FakeDb:
 def test_products_quote_context_returns_grouped_payload():
     fake_db = _FakeDb()
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[get_database_repository] = lambda: fake_db
     client = TestClient(app)
 
     response = client.get("/api/products/quote-context", params=[("sku", "SKU-1"), ("sku", "SKU-2")])
@@ -126,7 +126,7 @@ def test_products_quote_context_returns_empty_payload_without_skus():
             raise AssertionError("db should not be called")
 
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _UnusedDb()
+    app.dependency_overrides[get_database_repository] = lambda: _UnusedDb()
     client = TestClient(app)
 
     response = client.get("/api/products/quote-context")
@@ -180,7 +180,7 @@ def test_products_quote_context_serializes_decimal_values():
             ]
 
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _DecimalDb()
+    app.dependency_overrides[get_database_repository] = lambda: _DecimalDb()
     client = TestClient(app)
 
     response = client.get("/api/products/quote-context", params=[("sku", "SKU-DEC")])

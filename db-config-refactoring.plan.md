@@ -263,7 +263,7 @@ Use micro-commits, one per consumer:
 
 ### TDD checklist
 
-- [ ] Run full backend tests.
+- [x] Run full backend tests.
 - [ ] Add regression tests that fail if legacy loaders are accidentally reintroduced.
 
 ### Commit reminder
@@ -333,7 +333,7 @@ Use micro-commits, one per consumer:
 - [x] dependency inversion completed for database client/repository boundaries.
 - [x] legacy singleton DB wiring reduced or removed.
 - [ ] docs/runbook updated.
-- [ ] full test suite green.
+- [x] full test suite green.
 - [ ] end-to-end migration validation complete.
 
 ## Progress Snapshot
@@ -355,6 +355,7 @@ Phase 5 completed items:
 - [x] API routers now consume `get_database_repository` dependency injection instead of local DB constructors.
 
 Phase 5 remaining items:
+
 - [x] Invert dependency direction in `src/infrastructure/clients/database.py` so the client does not compose `DbProfileFactory`/`DatabaseService` internally.
 
 Recent implementation commits:

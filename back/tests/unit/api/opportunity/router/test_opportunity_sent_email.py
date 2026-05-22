@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.opportunity.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDb:
@@ -38,7 +38,7 @@ class _FakeDbNoEmail:
 
 def test_get_opportunity_sent_email_from_latest_quote():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-1/sent-email")
@@ -49,7 +49,7 @@ def test_get_opportunity_sent_email_from_latest_quote():
 
 def test_get_opportunity_sent_email_with_document_id():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-1/sent-email?document_id=doc-1")
@@ -60,7 +60,7 @@ def test_get_opportunity_sent_email_with_document_id():
 
 def test_get_opportunity_sent_email_returns_null_without_quote():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbNoQuote()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbNoQuote()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-1/sent-email")
@@ -71,7 +71,7 @@ def test_get_opportunity_sent_email_returns_null_without_quote():
 
 def test_get_opportunity_sent_email_returns_null_without_sent_email():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbNoEmail()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbNoEmail()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-1/sent-email?document_id=doc-1")

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.opportunity.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDb:
@@ -59,7 +59,7 @@ class _FakeDbMissing:
 
 def test_get_opportunity_source_email_payload():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-1/source")
@@ -74,7 +74,7 @@ def test_get_opportunity_source_email_payload():
 
 def test_get_opportunity_source_document_payload():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbDocSource()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbDocSource()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/opp-2/source")
@@ -88,7 +88,7 @@ def test_get_opportunity_source_document_payload():
 
 def test_get_opportunity_source_returns_404_when_missing():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbMissing()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbMissing()
     client = TestClient(app)
 
     response = client.get("/api/opportunity/missing/source")

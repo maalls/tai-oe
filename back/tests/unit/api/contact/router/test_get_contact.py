@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.api.contact.router import get_db
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -27,7 +27,7 @@ class _FakeDbMissing:
 
 def test_get_contact_returns_row():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbOk()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbOk()
     client = TestClient(app)
 
     response = client.get("/api/contact/c-1")
@@ -38,7 +38,7 @@ def test_get_contact_returns_row():
 
 def test_get_contact_returns_404_when_missing():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbMissing()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbMissing()
     client = TestClient(app)
 
     response = client.get("/api/contact/missing")

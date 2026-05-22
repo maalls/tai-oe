@@ -6,7 +6,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.product.router import get_db
+from src.api.dependencies import get_database_repository
 
 
 class _FakeDB:
@@ -28,7 +28,7 @@ class _FakeDB:
 
 def _client(fake_db: _FakeDB) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[get_database_repository] = lambda: fake_db
     return TestClient(app)
 
 

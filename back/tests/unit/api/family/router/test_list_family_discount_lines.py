@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.api.family.router import get_db
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -34,7 +34,7 @@ class _FakeDbNoDoc:
 
 def test_list_family_discount_lines_returns_document_and_lines():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDb()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
     client = TestClient(app)
 
     response = client.get('/api/family/f-1/discount-lines')
@@ -48,7 +48,7 @@ def test_list_family_discount_lines_returns_document_and_lines():
 
 def test_list_family_discount_lines_returns_empty_when_document_missing():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbNoDoc()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbNoDoc()
     client = TestClient(app)
 
     response = client.get('/api/family/f-1/discount-lines')

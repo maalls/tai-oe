@@ -6,7 +6,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 from src.api.dependencies import get_auth_service
-from src.api.document.router import get_db
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -34,7 +34,7 @@ class _DbMissing:
 def test_document_update_status_requires_auth():
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _AuthService(valid=False)
-    app.dependency_overrides[get_db] = lambda: _DbFound()
+    app.dependency_overrides[get_database_repository] = lambda: _DbFound()
     client = TestClient(app)
 
     response = client.put("/api/document/doc-1/status", json={"status": "PAID"})
@@ -46,7 +46,7 @@ def test_document_update_status_requires_auth():
 def test_document_update_status_returns_404_when_missing():
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _AuthService(valid=True)
-    app.dependency_overrides[get_db] = lambda: _DbMissing()
+    app.dependency_overrides[get_database_repository] = lambda: _DbMissing()
     client = TestClient(app)
 
     response = client.put(
@@ -62,7 +62,7 @@ def test_document_update_status_returns_404_when_missing():
 def test_document_update_status_returns_row():
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _AuthService(valid=True)
-    app.dependency_overrides[get_db] = lambda: _DbFound()
+    app.dependency_overrides[get_database_repository] = lambda: _DbFound()
     client = TestClient(app)
 
     response = client.put(

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.api.brand.router import get_db
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -32,7 +32,7 @@ class _FakeDbMissing:
 
 def test_update_brand_returns_updated_row():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbOk()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbOk()
     client = TestClient(app)
 
     response = client.put('/api/brand/b-1', json={'name': 'Brand A Updated'})
@@ -43,7 +43,7 @@ def test_update_brand_returns_updated_row():
 
 def test_update_brand_returns_400_when_payload_empty():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbOk()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbOk()
     client = TestClient(app)
 
     response = client.put('/api/brand/b-1', json={})
@@ -54,7 +54,7 @@ def test_update_brand_returns_400_when_payload_empty():
 
 def test_update_brand_returns_404_when_missing():
     app = create_app()
-    app.dependency_overrides[get_db] = lambda: _FakeDbMissing()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbMissing()
     client = TestClient(app)
 
     response = client.put('/api/brand/missing', json={'name': 'X'})
