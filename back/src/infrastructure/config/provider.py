@@ -29,21 +29,12 @@ class ConfigProvider:
     def resolve(self) -> ResolvedRuntimeConfig:
         local_env_values = self._load_env_file_values(self._env_file_path)
 
-        shared_env_rel = (
-            self._environ.get("SUPABASE_ENV_FILE")
-            or local_env_values.get("SUPABASE_ENV_FILE")
-            or "../supabase/.env.prod"
-        )
+        shared_env_rel = self._resolve_supabase_env_file()
         shared_env_path = self._resolve_shared_env_path(shared_env_rel)
         shared_env_values = self._load_env_file_values(shared_env_path)
-        merged_shared_values = self._merge_postgres_overrides(
-            shared_env_values,
-            local_env_values,
-            self._environ,
-        )
 
         shared = parse_shared_supabase_config(
-            merged_shared_values,
+            shared_env_values,
             require_postgres_password=self._require_postgres_password,
         )
 
@@ -92,26 +83,15 @@ class ConfigProvider:
                 "Fix SUPABASE_ENV_FILE before starting the server."
             )
 
-    @staticmethod
-    def _merge_postgres_overrides(
-        shared_values: Mapping[str, str],
-        local_values: Mapping[str, str],
-        environ: Mapping[str, str],
-    ) -> dict[str, str]:
-        """Merge POSTGRES_* values with precedence: process env > local env > shared env."""
-        merged = dict(shared_values)
-        postgres_keys = (
-            "POSTGRES_PASSWORD",
-            "POSTGRES_USER",
-            "POSTGRES_HOST",
-            "POSTGRES_PORT",
-            "POSTGRES_DB",
-        )
-        for key in postgres_keys:
-            value = environ.get(key) or local_values.get(key)
-            if value:
-                merged[key] = value
-        return merged
+    def _resolve_supabase_env_file(self) -> str:
+        process_value = (self._environ.get("SUPABASE_ENV_FILE") or "").strip()
+        if not process_value:
+            raise ValueError(
+                "Missing SUPABASE_ENV_FILE. "
+                "Define it in process environment (single source of configuration)."
+            )
+
+        return process_value
 
     def _resolve_shared_env_path(self, shared_env_rel: str) -> Path:
         path = Path(shared_env_rel)

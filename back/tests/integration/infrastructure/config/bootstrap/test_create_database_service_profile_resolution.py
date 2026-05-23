@@ -14,6 +14,9 @@ def test_create_database_service_resolves_migration_profile_from_shared_env(monk
                 "POSTGRES_HOST=db.internal",
                 "POSTGRES_PORT=5544",
                 "POSTGRES_DB=ge_prod",
+                "SUPABASE_PUBLIC_URL=https://shared.example.com",
+                "ANON_KEY=shared-anon",
+                "SERVICE_ROLE_KEY=shared-service",
             ]
         ),
         encoding="utf-8",
@@ -50,6 +53,9 @@ def test_create_database_service_uses_app_profile_on_connect(monkeypatch, tmp_pa
                 "POSTGRES_HOST=db.internal",
                 "POSTGRES_PORT=5544",
                 "POSTGRES_DB=ge_prod",
+                "SUPABASE_PUBLIC_URL=https://shared.example.com",
+                "ANON_KEY=shared-anon",
+                "SERVICE_ROLE_KEY=shared-service",
             ]
         ),
         encoding="utf-8",

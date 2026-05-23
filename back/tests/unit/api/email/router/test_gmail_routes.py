@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone
 
 fastapi = pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
@@ -172,6 +173,32 @@ def test_gmail_messages_returns_400_without_user_or_token():
     response = client.get("/api/gmail/messages")
 
     assert response.status_code == 400
+
+
+def test_gmail_messages_serializes_datetime_values():
+    class _DatetimeGmailService(_FakeGmailService):
+        def list_messages(self, user_id: str, max_results: int = 20, force: bool = False) -> dict:
+            return {
+                "status": "ok",
+                "messages": [
+                    {
+                        "id": "m-1",
+                        "received_at": datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+                    }
+                ],
+            }
+
+    app = create_app()
+    app.dependency_overrides[get_gmail_service] = lambda: _DatetimeGmailService()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    client = TestClient(app)
+
+    response = client.get("/api/gmail/messages", headers={"Authorization": "Bearer valid"})
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["messages"][0]["received_at"].startswith("2026-01-01T12:00:00")
 
 
 def test_gmail_classify_unclassified_resolves_user_from_token():
