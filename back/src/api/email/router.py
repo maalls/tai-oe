@@ -3,6 +3,7 @@
 from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, Header
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from src.api.dependencies import get_auth_service, get_gmail_service, get_outlook_service
@@ -108,7 +109,7 @@ def make_email_provider_router(
             return JSONResponse({"status": "error", "message": "Missing user_id"}, status_code=400)
 
         result = service.list_messages(user_id=user_id, max_results=query.max_results, force=query.force)
-        return JSONResponse(result, status_code=_status_from_result(result))
+        return JSONResponse(jsonable_encoder(result), status_code=_status_from_result(result))
 
     for alias in callback_aliases or []:
         provider_router.add_api_route(
