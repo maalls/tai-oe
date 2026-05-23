@@ -47,21 +47,13 @@ class ConfigProvider:
             require_postgres_password=self._require_postgres_password,
         )
 
-        supabase_url = (
-            self._environ.get("SUPABASE_URL")
-            or local_env_values.get("SUPABASE_URL")
-            or shared.supabase_public_url
-        )
-        supabase_anon_key = (
-            self._environ.get("SUPABASE_ANON_KEY")
-            or local_env_values.get("SUPABASE_ANON_KEY")
-            or shared.anon_key
-        )
-        supabase_service_key = (
-            self._environ.get("SUPABASE_SERVICE_KEY")
-            or local_env_values.get("SUPABASE_SERVICE_KEY")
-            or shared.service_role_key
-        )
+        self._validate_required_supabase_settings(shared_env_path, shared)
+
+        # Single source of truth for Supabase runtime credentials:
+        # values parsed from SUPABASE_ENV_FILE.
+        supabase_url = shared.supabase_public_url
+        supabase_anon_key = shared.anon_key
+        supabase_service_key = shared.service_role_key
 
         db_hints = DatabaseRuntimeHints(
             host=shared.postgres_host,
@@ -80,6 +72,25 @@ class ConfigProvider:
             supabase_anon_key=supabase_anon_key,
             supabase_service_key=supabase_service_key,
         )
+
+    @staticmethod
+    def _validate_required_supabase_settings(shared_env_path: Path, shared) -> None:
+        missing: list[str] = []
+
+        if not shared.supabase_public_url:
+            missing.append("SUPABASE_PUBLIC_URL (or API_EXTERNAL_URL / SITE_URL)")
+        if not shared.anon_key:
+            missing.append("ANON_KEY")
+        if not shared.service_role_key:
+            missing.append("SERVICE_ROLE_KEY")
+
+        if missing:
+            missing_list = ", ".join(missing)
+            raise ValueError(
+                "Missing required Supabase settings in "
+                f"{shared_env_path}: {missing_list}. "
+                "Fix SUPABASE_ENV_FILE before starting the server."
+            )
 
     @staticmethod
     def _merge_postgres_overrides(
