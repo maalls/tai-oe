@@ -39,14 +39,16 @@ class GmailProviderRepository:
     ):
         self.email_db_handler = email_db_handler or EmailDatabaseHandler(db_handler=db_handler)
 
-    def _resolve_gmail_callback_url(self, redirect_url: Optional[str]) -> str:
-        default_origin = os.getenv("FRONTEND_BASE_URL", "http://localhost:7153")
-        candidate = redirect_url or default_origin
-        parsed = urlparse(candidate)
+    def _resolve_gmail_callback_url(self) -> str:
+        callback_url = os.getenv("GMAIL_OAUTH_CALLBACK_URL", "").strip()
+        parsed = urlparse(callback_url)
         if parsed.scheme and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}/api/gmail/oauth/callback"
+            return callback_url
 
-        return "http://localhost:7153/api/gmail/oauth/callback"
+        raise ValueError(
+            "Missing or invalid GMAIL_OAUTH_CALLBACK_URL. "
+            "Expected a full URL like https://api.example.com/api/gmail/oauth/callback"
+        )
 
     @staticmethod
     def _get_gmail_paths() -> tuple:
@@ -127,7 +129,7 @@ class GmailProviderRepository:
             if not redirect_url:
                 redirect_url = _resolve_frontend_redirect_url()
 
-            callback_url = self._resolve_gmail_callback_url(redirect_url)
+            callback_url = self._resolve_gmail_callback_url()
 
             try:
                 gmail_client = GmailClient(
@@ -166,7 +168,7 @@ class GmailProviderRepository:
                 return {"status": "error", "message": "Missing user_id"}
 
             resolved_redirect_url = redirect_url or _resolve_frontend_redirect_url()
-            callback_url = self._resolve_gmail_callback_url(resolved_redirect_url)
+            callback_url = self._resolve_gmail_callback_url()
             flow = Flow.from_client_secrets_file(
                 str(credentials_path),
                 scopes=GmailClient(
@@ -206,12 +208,11 @@ class GmailProviderRepository:
                 }
 
             redirect_url = _resolve_frontend_redirect_url()
-            callback_url = self._resolve_gmail_callback_url(redirect_url)
+            callback_url = self._resolve_gmail_callback_url()
             user_id = None
             if state:
                 payload = decode_oauth_state(state)
                 redirect_url = payload.get("redirect_url") or redirect_url
-                callback_url = payload.get("callback_url") or self._resolve_gmail_callback_url(redirect_url)
                 user_id = payload.get("user_id")
 
             flow = Flow.from_client_secrets_file(

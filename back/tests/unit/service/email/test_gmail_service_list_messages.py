@@ -60,3 +60,18 @@ def test_list_messages_requires_user_id():
     assert result["status"] == "error"
     assert result["message"] == "Missing user_id"
     assert repo.calls == []
+
+
+def test_list_messages_returns_error_when_repository_fails():
+    class _FailingRepo:
+        def fetch_emails(self, **kwargs):
+            raise RuntimeError("gmail api unavailable")
+
+    auth = _AuthServiceStub()
+    service = GmailService(repository=_FailingRepo(), auth_service=auth)
+
+    result = service.list_messages(user_id="u-1", max_results=10, force=False)
+
+    assert result["status"] == "error"
+    assert "Failed to load Gmail messages" in result["message"]
+    assert "gmail api unavailable" in result["message"]

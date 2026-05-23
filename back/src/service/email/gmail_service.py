@@ -58,12 +58,18 @@ class GmailService(EmailProviderService):
     def list_messages(self, user_id: str, max_results: int = 20, force: bool = False) -> dict[str, Any]:
         if not user_id:
             return {"status": "error", "message": "Missing user_id"}
-        return self.repository.fetch_emails(
-            user_id=user_id,
-            max_results=max_results,
-            force=force,
-            verify_sender_callback=self._verify_sender,
-        )
+        try:
+            return self.repository.fetch_emails(
+                user_id=user_id,
+                max_results=max_results,
+                force=force,
+                verify_sender_callback=self._verify_sender,
+            )
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": f"Failed to load Gmail messages: {exc}",
+            }
 
     def classify_unclassified(self, user_id: str, limit: int = 200) -> dict[str, Any]:
         if not user_id:

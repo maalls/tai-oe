@@ -50,6 +50,29 @@ def test_outlook_status_route_uses_query_user_id():
     assert response.json()["user_id"] == "u-1"
 
 
+def test_outlook_status_not_authorized_returns_200_with_payload():
+    class _NotAuthorizedOutlookService(_FakeOutlookService):
+        def get_status(self, user_id: str | None = None) -> dict:
+            return {
+                "status": "error",
+                "authorized": False,
+                "error_code": "OUTLOOK_NOT_AUTHORIZED",
+                "message": "Outlook not authorized. Please authorize first.",
+                "user_id": user_id,
+            }
+
+    app = create_app()
+    app.dependency_overrides[get_outlook_service] = lambda: _NotAuthorizedOutlookService()
+    client = TestClient(app)
+
+    response = client.get("/api/outlook/status?user_id=u-1")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["error_code"] == "OUTLOOK_NOT_AUTHORIZED"
+
+
 def test_outlook_oauth_start_route_supports_user_context():
     client = _client()
 
