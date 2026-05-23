@@ -29,6 +29,11 @@ def _status_from_result(result: dict[str, Any], default_status: int = 200) -> in
     raw_status = result.get("status")
     if isinstance(raw_status, int):
         return raw_status
+    error_code = result.get("error_code")
+    if isinstance(error_code, str) and error_code.endswith("_NOT_AUTHORIZED"):
+        return 200
+    if isinstance(error_code, str) and error_code.endswith("_NOT_CONFIGURED"):
+        return 200
     if raw_status == "error":
         return 400
     return default_status

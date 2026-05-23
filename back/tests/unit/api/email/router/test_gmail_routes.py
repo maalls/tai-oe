@@ -113,6 +113,30 @@ def test_gmail_status_route_uses_query_user_id():
     assert response.json()["user_id"] == "u-1"
 
 
+def test_gmail_status_not_authorized_returns_200_with_payload():
+    class _NotAuthorizedGmailService(_FakeGmailService):
+        def get_status(self, user_id: str | None = None) -> dict:
+            return {
+                "status": "error",
+                "authorized": False,
+                "error_code": "GMAIL_NOT_AUTHORIZED",
+                "message": "Gmail not authorized. Please authorize first.",
+                "user_id": user_id,
+            }
+
+    app = create_app()
+    app.dependency_overrides[get_gmail_service] = lambda: _NotAuthorizedGmailService()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    client = TestClient(app)
+
+    response = client.get("/api/gmail/status?user_id=u-1")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["error_code"] == "GMAIL_NOT_AUTHORIZED"
+
+
 def test_gmail_authorize_route_returns_auth_url():
     client = _client()
 
