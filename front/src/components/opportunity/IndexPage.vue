@@ -276,7 +276,7 @@ const sourceReferenceFilter = ref('');
 const selectedOpportunities = ref(new Set<string>());
 const showBatchMenu = ref(false);
 const showBatchDeleteConfirmation = ref(false);
-const { user, session } = useAuth();
+const { user, getValidToken } = useAuth();
 const router = useRouter();
 const route = useRoute();
 
@@ -394,12 +394,11 @@ const loadOpportunities = async () => {
    console.log(`[OpportunityPage] Loading opportunities for user ${user.value.id}`);
 
    try {
+      const token = await getValidToken();
       const headers: HeadersInit = {
          'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
       };
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
 
       // Build query params
       let url = apiUrl('opportunities/search');
@@ -480,12 +479,11 @@ const createOpportunityFromSearch = async () => {
    isLoading.value = true;
 
    try {
+      const token = await getValidToken();
       const headers: HeadersInit = {
          'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
       };
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
 
       const response = await fetch('/api/opportunities/create-manual', {
          method: 'POST',
@@ -548,12 +546,11 @@ const batchDelete = async () => {
    errorMessage.value = '';
 
    try {
+      const token = await getValidToken();
       const headers: HeadersInit = {
          'Content-Type': 'application/json',
+         Authorization: `Bearer ${token}`,
       };
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
 
       // Convert Set to comma-separated string of IDs
       const idsToDelete = Array.from(selectedOpportunities.value).join(',');

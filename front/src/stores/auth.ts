@@ -7,6 +7,16 @@ const user = ref<User | null>(null);
 const session = ref<Session | null>(null);
 const loading = ref(true);
 
+async function clearInvalidSession() {
+   user.value = null;
+   session.value = null;
+   try {
+      await supabase.auth.signOut();
+   } catch {
+      // Best effort cleanup only.
+   }
+}
+
 export function useAuth() {
    const isAuthenticated = computed(() => !!user.value);
 
@@ -92,16 +102,56 @@ export function useAuth() {
    }
 
    async function getValidToken(): Promise<string> {
-      // Get current session - this will refresh if needed
+      // Resolve current session and proactively refresh if token is missing/near expiry.
       const {
          data: { session: currentSession },
       } = await supabase.auth.getSession();
-      if (currentSession?.access_token) {
-         session.value = currentSession;
-         user.value = currentSession.user ?? null;
-         return currentSession.access_token;
+
+      let effectiveSession = currentSession;
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const expiresAt = currentSession?.expires_at ?? 0;
+      const shouldRefresh = !currentSession?.access_token || expiresAt <= nowSeconds + 60;
+
+      if (shouldRefresh) {
+         const { data: refreshed, error } = await supabase.auth.refreshSession();
+         if (error) {
+            await clearInvalidSession();
+            throw new Error('Session expired, please sign in again');
+         }
+         effectiveSession = refreshed.session;
       }
-      throw new Error('No valid authentication token');
+
+      if (effectiveSession?.access_token) {
+         // Important: a token can still be unexpired but revoked (session_not_found).
+         // Verify with auth service and attempt one refresh fallback when invalid.
+         const { error: verifyError } = await supabase.auth.getUser(effectiveSession.access_token);
+         if (verifyError) {
+            const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError || !refreshed.session?.access_token) {
+               await clearInvalidSession();
+               throw new Error('Session expired, please sign in again');
+            }
+
+            const { error: verifyRefreshedError } = await supabase.auth.getUser(
+               refreshed.session.access_token
+            );
+            if (verifyRefreshedError) {
+               await clearInvalidSession();
+               throw new Error('Session expired, please sign in again');
+            }
+
+            session.value = refreshed.session;
+            user.value = refreshed.session.user ?? null;
+            return refreshed.session.access_token;
+         }
+
+         session.value = effectiveSession;
+         user.value = effectiveSession.user ?? null;
+         return effectiveSession.access_token;
+      }
+
+      await clearInvalidSession();
+      throw new Error('Session expired, please sign in again');
    }
 
    return {

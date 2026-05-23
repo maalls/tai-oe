@@ -38,6 +38,7 @@ import AdminPage from '../components/admin/IndexPage.vue';
 import SettingsPage from '../components/settings/IndexPage.vue';
 import LoginPage from '../components/login/IndexPage.vue';
 import ResetPasswordPage from '../components/login/ResetPasswordPage.vue';
+import AuthTestPage from '../components/debug/AuthTestPage.vue';
 import { useAuth } from '../stores/auth';
 import i18n from '../i18n';
 
@@ -335,6 +336,11 @@ const router = createRouter({
          name: 'settings',
          component: SettingsPage,
          meta: { requiresAuth: true, titleKey: 'pageTitles.settings' },
+      },
+      {
+         path: '/debug/auth-test',
+         name: 'debug-auth-test',
+         component: AuthTestPage,
       },
    ],
 });
