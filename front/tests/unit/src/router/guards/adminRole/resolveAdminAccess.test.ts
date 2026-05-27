@@ -53,4 +53,30 @@ describe('resolveAdminAccess', () => {
 
       expect(result).toBe(false);
    });
+
+   it('reflects role transition across consecutive guard checks', async () => {
+      const fetchAuthUserMock = vi.spyOn(authUserApi, 'fetchAuthUser');
+      fetchAuthUserMock.mockResolvedValueOnce({
+         user: { id: 'u-1', role: 'user' },
+      });
+      fetchAuthUserMock.mockResolvedValueOnce({
+         user: { id: 'u-1', role: 'admin' },
+      });
+
+      const getValidToken = vi.fn().mockResolvedValue('token-1');
+
+      const denied = await resolveAdminAccess({
+         requiresAdmin: true,
+         getValidToken,
+      });
+      const allowed = await resolveAdminAccess({
+         requiresAdmin: true,
+         getValidToken,
+      });
+
+      expect(denied).toBe(false);
+      expect(allowed).toBe(true);
+      expect(getValidToken).toHaveBeenCalledTimes(2);
+      expect(fetchAuthUserMock).toHaveBeenCalledTimes(2);
+   });
 });
