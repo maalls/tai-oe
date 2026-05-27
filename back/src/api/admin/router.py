@@ -3,6 +3,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from src.api.dependencies import get_auth_service, get_database_repository
@@ -46,7 +47,7 @@ def admin_list_users(
         return JSONResponse({"status": "error", "message": "Forbidden"}, status_code=403)
 
     users = db.list_users(limit=100, offset=0)
-    return JSONResponse({"status": "ok", "users": users}, status_code=200)
+    return JSONResponse(jsonable_encoder({"status": "ok", "users": users}), status_code=200)
 
 
 @router.patch("/api/admin/users/{target_user_id}/role")
@@ -81,4 +82,4 @@ def admin_update_user_role(
     if not updated:
         return JSONResponse({"status": "error", "message": "User not found"}, status_code=404)
 
-    return JSONResponse({"status": "ok", "user": updated}, status_code=200)
+    return JSONResponse(jsonable_encoder({"status": "ok", "user": updated}), status_code=200)

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi.testclient import TestClient
 
 from src.api.dependencies import get_auth_service, get_database_repository
@@ -33,8 +35,20 @@ class _FakeDbAdmin:
         assert limit == 100
         assert offset == 0
         return [
-            {"id": "u-1", "email": "admin@example.com", "full_name": "Admin", "role": "admin"},
-            {"id": "u-2", "email": "user@example.com", "full_name": "User", "role": "user"},
+            {
+                "id": "u-1",
+                "email": "admin@example.com",
+                "full_name": "Admin",
+                "role": "admin",
+                "created_at": datetime(2026, 1, 1, 8, 30, tzinfo=timezone.utc),
+            },
+            {
+                "id": "u-2",
+                "email": "user@example.com",
+                "full_name": "User",
+                "role": "user",
+                "created_at": datetime(2026, 1, 2, 8, 30, tzinfo=timezone.utc),
+            },
         ]
 
 
@@ -75,3 +89,4 @@ def test_admin_users_list_returns_users_for_admin():
     assert payload["status"] == "ok"
     assert len(payload["users"]) == 2
     assert payload["users"][0]["role"] == "admin"
+    assert payload["users"][0]["created_at"].startswith("2026-01-01T08:30:00")
