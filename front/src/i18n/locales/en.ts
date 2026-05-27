@@ -19,6 +19,7 @@ export default {
       adminDatabaseCartouches: 'Admin - Database - Cartouches',
       adminDatabaseCommerce: 'Admin - Database - Commerce',
       adminFlow: 'Admin - Flow',
+      adminUsers: 'Admin - Users',
       chat: 'Chat',
       business: 'Business',
       mail: 'Mail',

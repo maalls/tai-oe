@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import SourcePage from '../components/admin/components/source/IndexPage.vue';
 import DatabasePage from '../components/admin/components/database/IndexPage.vue';
+import AdminUsersPage from '../components/admin/components/users/IndexPage.vue';
 import CartouchesPage from '../components/database/CartouchesPage.vue';
 import CommercePage from '../components/database/CommercePage.vue';
 import AdminFlowPage from '../components/admin/components/flow/IndexPage.vue';
@@ -92,6 +93,12 @@ const router = createRouter({
          name: 'admin-flow',
          component: AdminFlowPage,
          meta: { requiresAuth: true, titleKey: 'pageTitles.adminFlow' },
+      },
+      {
+         path: '/admin/users',
+         name: 'admin-users',
+         component: AdminUsersPage,
+         meta: { requiresAuth: true, titleKey: 'pageTitles.adminUsers' },
       },
       {
          path: '/source',
