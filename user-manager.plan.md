@@ -28,9 +28,10 @@ Out of scope (for now):
 ## Current Baseline (observed)
 
 - Backend has auth endpoints and profile endpoints.
-- Profile table currently has no role column.
-- Frontend has Admin routes but no role guard.
-- Auth currently checks authenticated/not authenticated only.
+- Profile table now includes `role` (`admin`|`user`) with migration `045_add_profile_role.sql` applied in local dev.
+- Frontend now includes `/admin/users` route, Admin nav entry, users table, and role update actions.
+- Frontend now enforces an admin UX guard on `/admin/users`.
+- Backend remains the source of truth for authorization on admin APIs.
 
 ## Milestones
 
@@ -219,24 +220,30 @@ Use this section during implementation.
 
 Milestone status:
 
-- [ ] M1 Role data model + read path
-- [ ] M2 Admin users API
-- [ ] M3 Frontend Admin Users UI
+- [x] M1 Role data model + read path
+- [x] M2 Admin users API
+- [x] M3 Frontend Admin Users UI
 - [ ] M4 Role-based access enforcement
 - [ ] M5 Hardening + docs
 
 Commit tracker:
 
-- [ ] 1.1 tests
-- [ ] 1.2 feature
-- [ ] 2.1 tests
-- [ ] 2.2 feature
-- [ ] 3.1 tests
-- [ ] 3.2 feature
+- [x] 1.1 tests
+- [x] 1.2 feature
+- [x] 2.1 tests
+- [x] 2.2 feature
+- [x] 3.1 tests
+- [x] 3.2 feature
 - [ ] 4.1 tests
 - [ ] 4.2 feature
 - [ ] 5.1 tests
 - [ ] 5.2 docs
+
+Current status notes:
+
+- `UM-001` to `UM-009` are implemented and validated with targeted tests.
+- `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
+- Remaining M4 work focuses on backend permission map and broader route coverage (`UM-010`, `UM-011`, complete `UM-012`).
 
 ## Ordered Ticket Backlog (Ready To Execute)
 
@@ -371,15 +378,15 @@ Estimation scale:
 
 ## Suggested Execution Sequence (Commit By Commit)
 
-- [ ] `UM-001` -> commit
-- [ ] `UM-002` -> commit
-- [ ] `UM-003` -> commit
-- [ ] `UM-004` -> commit
-- [ ] `UM-005` -> commit
-- [ ] `UM-006` -> commit
-- [ ] `UM-007` -> commit
-- [ ] `UM-008` -> commit
-- [ ] `UM-009` -> commit
+- [x] `UM-001` -> commit
+- [x] `UM-002` -> commit
+- [x] `UM-003` -> commit
+- [x] `UM-004` -> commit
+- [x] `UM-005` -> commit
+- [x] `UM-006` -> commit
+- [x] `UM-007` -> commit
+- [x] `UM-008` -> commit
+- [x] `UM-009` -> commit
 - [ ] `UM-010` -> commit
 - [ ] `UM-011` -> commit
 - [ ] `UM-012` -> commit
