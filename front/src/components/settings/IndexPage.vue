@@ -422,6 +422,7 @@ import LocaleSwitcher from '../LocaleSwitcher.vue';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
 import { API_BASE_URL, apiUrl } from '../../utils/api';
+import { authFetch } from '../../api/authFetch';
 import {
    getOutlookProfile,
    getOutlookStatus,
@@ -431,7 +432,7 @@ import {
 import { getOutlookDisplayEmail } from './outlookEmail';
 
 const router = useRouter();
-const { user, signOut, getValidToken, updateDisplayName } = useAuth();
+const { user, signOut, updateDisplayName } = useAuth();
 const { t } = useI18n();
 
 const LLM_API_URL = 'http://localhost:1234/v1/chat/completions';
@@ -589,17 +590,6 @@ async function handleSenderNameBlur() {
 
 async function handleSenderNameEnter() {
    await handleSaveSenderName();
-}
-
-async function getAuthHeaders(includeJson = false): Promise<Record<string, string>> {
-   const token = await getValidToken();
-   const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
-   };
-   if (includeJson) {
-      headers['Content-Type'] = 'application/json';
-   }
-   return headers;
 }
 
 async function loadGmailStatus() {
@@ -798,9 +788,7 @@ function setGmailError(rawMessage: unknown, fallback: string) {
 async function loadImapConfig() {
    imapError.value = '';
    try {
-      const res = await fetch(apiUrl('imap/config'), {
-         headers: await getAuthHeaders(),
-      });
+      const res = await authFetch(apiUrl('imap/config'));
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
          imapError.value = data?.message || 'Failed to load IMAP configuration.';
@@ -825,9 +813,7 @@ async function loadImapConfig() {
 
 async function loadImapStatus() {
    try {
-      const res = await fetch(apiUrl('imap/status'), {
-         headers: await getAuthHeaders(),
-      });
+      const res = await authFetch(apiUrl('imap/status'));
       const data = await res.json();
       if (!res.ok) {
          imapStatus.value = null;
@@ -846,9 +832,11 @@ async function handleImapSave() {
    imapError.value = '';
    imapSuccess.value = '';
    try {
-      const res = await fetch(apiUrl('imap/config'), {
+      const res = await authFetch(apiUrl('imap/config'), {
          method: 'POST',
-         headers: await getAuthHeaders(true),
+         headers: {
+            'Content-Type': 'application/json',
+         },
          body: JSON.stringify({
             host: imapForm.value.host,
             port: imapForm.value.port,
@@ -880,9 +868,8 @@ async function handleImapTest() {
    imapError.value = '';
    imapSuccess.value = '';
    try {
-      const res = await fetch(apiUrl('imap/test'), {
+      const res = await authFetch(apiUrl('imap/test'), {
          method: 'POST',
-         headers: await getAuthHeaders(),
       });
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
@@ -903,9 +890,8 @@ async function handleImapClear() {
    imapError.value = '';
    imapSuccess.value = '';
    try {
-      const res = await fetch(apiUrl('imap/config'), {
+      const res = await authFetch(apiUrl('imap/config'), {
          method: 'DELETE',
-         headers: await getAuthHeaders(),
       });
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
