@@ -5,11 +5,30 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import JSONResponse
 
+from src.api.authz.route_access import build_route_access_dependency
 from src.api.dependencies import get_action_service, get_auth_service
 from src.service.action.service import ActionService
 from src.service.auth.auth_service import AuthService
 
 router = APIRouter(tags=["action"])
+
+_action_execute_frontend_access = build_route_access_dependency(
+    route_path="/api/action/{action_id}/execute",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_action_execute_legacy_access = build_route_access_dependency(
+    route_path="/api/actions/{action_id}/execute",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_action_logs_access = build_route_access_dependency(
+    route_path="/api/actions/{action_id}/logs",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
 
 
 def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> str | None:
@@ -139,43 +158,37 @@ def _execute_action_response(action_id: str, user_id: str, action_service: Actio
 @router.post("/api/action/{action_id}/execute")
 def execute_action_frontend(
     action_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_execute_frontend_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    return _execute_action_response(action_id, user_id, action_service)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+    return _execute_action_response(action_id, requester_id, action_service)
 
 
 @router.post("/api/actions/{action_id}/execute")
 def execute_action_legacy_alias(
     action_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_execute_legacy_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    return _execute_action_response(action_id, user_id, action_service)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+    return _execute_action_response(action_id, requester_id, action_service)
 
 
 @router.get("/api/actions/{action_id}/logs")
 def get_action_logs(
     action_id: str,
     limit: int = Query(default=50),
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_logs_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        logs = action_service.get_action_logs(action_id, limit=limit, user_id=user_id)
+        logs = action_service.get_action_logs(action_id, limit=limit, user_id=requester_id)
         return JSONResponse({"status": "ok", "logs": logs}, status_code=200)
     except Exception as exc:
         return _error_response(str(exc), "GET_ACTION_LOGS_ERROR")

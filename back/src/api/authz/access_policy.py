@@ -21,6 +21,9 @@ _ACCESS_POLICY: Final[dict[str, set[str]]] = {
     "/api/fs/read": {"admin"},
     "/api/prompt/{relative_path:path}": {"admin"},
     "/api/storage/{raw_filename:path}": {"admin", "user"},
+    "/api/action/{action_id}/execute": {"admin"},
+    "/api/actions/{action_id}/execute": {"admin"},
+    "/api/actions/{action_id}/logs": {"admin"},
 }
 
 
