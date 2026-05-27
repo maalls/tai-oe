@@ -26,20 +26,33 @@ def _serialize_value(value):
 def _serialize_row(row: dict) -> dict:
     return {key: _serialize_value(value) for key, value in row.items()}
 
-_csv_query_access = build_route_access_dependency(
-    route_key="csv.query",
+_csv_access = build_route_access_dependency(
+    route_key="csv.access",
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
 
 
 @router.get("/api/csv/sources")
-def csv_sources(file_handler: CsvFileService = Depends(get_file_handler)):
+def csv_sources(
+    requester_id: str | JSONResponse = Depends(_csv_access),
+    file_handler: CsvFileService = Depends(get_file_handler),
+):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     return JSONResponse(file_handler.list_sources(), status_code=200)
 
 
 @router.get("/api/csv/files")
-def csv_files(source: str = Query(...), file_handler: CsvFileService = Depends(get_file_handler)):
+def csv_files(
+    source: str = Query(...),
+    requester_id: str | JSONResponse = Depends(_csv_access),
+    file_handler: CsvFileService = Depends(get_file_handler),
+):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     return JSONResponse({"files": file_handler.list_files_for_source(source)}, status_code=200)
 
 
@@ -50,8 +63,12 @@ def csv_preview(
     limit: int = Query(default=100),
     offset: int = Query(default=0),
     filter: str | None = Query(default=None),
+    requester_id: str | JSONResponse = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         filters = json.loads(filter) if filter else None
         if filters is not None and not isinstance(filters, dict):
@@ -72,7 +89,14 @@ def csv_preview(
 
 
 @router.get("/api/csv/source")
-def csv_source_download(source: str = Query(...), file_handler: CsvFileService = Depends(get_file_handler)):
+def csv_source_download(
+    source: str = Query(...),
+    requester_id: str | JSONResponse = Depends(_csv_access),
+    file_handler: CsvFileService = Depends(get_file_handler),
+):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         content = file_handler.read_source_file(source)
         ext = source.lower().split(".")[-1] if "." in source else ""
@@ -94,8 +118,12 @@ def csv_source_download(source: str = Query(...), file_handler: CsvFileService =
 def csv_raw(
     file: str = Query(...),
     source: str = Query(default=""),
+    requester_id: str | JSONResponse = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         csv_path = file_handler.safe_file_from_query(source, file)
         return Response(
@@ -111,8 +139,12 @@ def csv_raw(
 def csv_download(
     source: str = Query(...),
     file: str = Query(...),
+    requester_id: str | JSONResponse = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         csv_path = file_handler.safe_file_from_query(source, file)
         return Response(
@@ -133,7 +165,7 @@ def csv_query(
     sortBy: str = Query(default=""),
     limit: int = Query(default=100),
     offset: int = Query(default=0),
-    requester_id: str | JSONResponse = Depends(_csv_query_access),
+    requester_id: str | JSONResponse = Depends(_csv_access),
     database_repository: DatabaseRepository = Depends(get_database_repository),
 ):
     try:
@@ -188,8 +220,12 @@ def csv_query(
 @router.post("/api/csv/source")
 async def csv_source_upload(
     file: UploadFile = File(...),
+    requester_id: str | JSONResponse = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         file_data = await file.read()
         result = file_handler.handle_uploaded_file(filename=file.filename or "", file_data=file_data)

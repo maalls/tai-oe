@@ -243,7 +243,7 @@ Current status notes:
 
 - `UM-001` to `UM-009` are implemented and validated with targeted tests.
 - `UM-010` is completed: reusable backend route-access dependency now centralizes token+role checks and is used by admin routes.
-- `UM-011` is completed for `/api/csv/query`: RBAC backend enforcement is wired through the shared route-access dependency with preserved 401/403 responses.
+- `UM-011` is completed for the CSV router: RBAC backend enforcement now covers CSV endpoints via the shared route-access dependency with preserved 401/403 responses.
 - Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
 - Remaining M4 work focuses on backend permission map and broader route coverage (`UM-010`, `UM-011`, complete `UM-012`).

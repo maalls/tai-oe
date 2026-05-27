@@ -77,7 +77,8 @@ class _FakeDatabaseRepositoryNonAdmin(_FakeDatabaseRepository):
 
 class _FakeAuthServiceValid:
     def verify_token(self, auth_header: str):
-        _ = auth_header
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return False, None
         return True, {"id": "u-admin"}
 
 
@@ -92,7 +93,9 @@ def _client() -> TestClient:
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
     app.dependency_overrides[get_file_handler] = lambda: _FakeFileHandler()
     app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers.update({"Authorization": "Bearer valid"})
+    return client
 
 
 def test_csv_sources_returns_payload():
@@ -185,7 +188,33 @@ def test_csv_query_forbidden_for_non_admin_user():
     app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryNonAdmin()
     client = TestClient(app)
 
-    response = client.get("/api/csv/query?table=products")
+    response = client.get("/api/csv/query?table=products", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"
+
+
+def test_csv_sources_requires_valid_token():
+    app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceInvalid()
+    app.dependency_overrides[get_file_handler] = lambda: _FakeFileHandler()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
+    client = TestClient(app)
+
+    response = client.get("/api/csv/sources")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_csv_sources_forbidden_for_non_admin_user():
+    app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_file_handler] = lambda: _FakeFileHandler()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryNonAdmin()
+    client = TestClient(app)
+
+    response = client.get("/api/csv/sources", headers={"Authorization": "Bearer valid"})
 
     assert response.status_code == 403
     assert response.json()["error"] == "Forbidden"
