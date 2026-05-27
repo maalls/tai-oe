@@ -3,51 +3,14 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
-from src.api.authz.route_access import build_route_access_dependency
+from src.api.authz.route_access import build_current_route_access_dependency
 from src.api.dependencies import get_utility_service
 from src.api.utils.schemas import CurlRequest, FetchQuery, FsCreateRequest, FsReadRequest
 from src.service.utility.utility_service import UtilityService
 
 router = APIRouter(tags=["utils"])
 
-_unsafe_utils_access = build_route_access_dependency(
-    route_path="/api/fetch",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_curl_access = build_route_access_dependency(
-    route_path="/api/curl",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_fs_create_access = build_route_access_dependency(
-    route_path="/api/fs/create",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_fs_read_access = build_route_access_dependency(
-    route_path="/api/fs/read",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_email_fetch_loop_status_access = build_route_access_dependency(
-    route_path="/api/email-fetch-loop/status",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_prompt_read_access = build_route_access_dependency(
-    route_path="/api/prompt/{relative_path:path}",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_storage_read_access = build_route_access_dependency(
-    route_path="/api/storage/{raw_filename:path}",
+_route_access = build_current_route_access_dependency(
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
@@ -55,7 +18,7 @@ _storage_read_access = build_route_access_dependency(
 
 @router.get("/api/email-fetch-loop/status")
 def email_fetch_loop_status(
-    requester_id: str | JSONResponse = Depends(_email_fetch_loop_status_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -68,7 +31,7 @@ def email_fetch_loop_status(
 @router.get("/api/fetch")
 def fetch_url(
     query: FetchQuery = Depends(),
-    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -93,7 +56,7 @@ def fetch_url(
 @router.post("/api/curl")
 def curl_request(
     payload: CurlRequest,
-    requester_id: str | JSONResponse = Depends(_curl_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -129,7 +92,7 @@ def curl_request(
 @router.post("/api/fs/create")
 def fs_create(
     payload: FsCreateRequest,
-    requester_id: str | JSONResponse = Depends(_fs_create_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -153,7 +116,7 @@ def fs_create(
 @router.post("/api/fs/read")
 def fs_read(
     payload: FsReadRequest,
-    requester_id: str | JSONResponse = Depends(_fs_read_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -180,7 +143,7 @@ def fs_read(
 @router.get("/api/prompt/{relative_path:path}")
 def get_prompt_content(
     relative_path: str,
-    requester_id: str | JSONResponse = Depends(_prompt_read_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -200,7 +163,7 @@ def get_prompt_content(
 @router.head("/api/storage/{raw_filename:path}")
 def storage_head(
     raw_filename: str,
-    requester_id: str | JSONResponse = Depends(_storage_read_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -220,7 +183,7 @@ def storage_head(
 @router.get("/api/storage/{raw_filename:path}")
 def storage_get(
     raw_filename: str,
-    requester_id: str | JSONResponse = Depends(_storage_read_access),
+    requester_id: str | JSONResponse = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):

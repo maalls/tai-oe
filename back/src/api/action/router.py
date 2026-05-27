@@ -5,27 +5,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import JSONResponse
 
-from src.api.authz.route_access import build_route_access_dependency
+from src.api.authz.route_access import build_current_route_access_dependency
 from src.api.dependencies import get_action_service, get_auth_service
 from src.service.action.service import ActionService
 from src.service.auth.auth_service import AuthService
 
 router = APIRouter(tags=["action"])
 
-_action_execute_frontend_access = build_route_access_dependency(
-    route_path="/api/action/{action_id}/execute",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_action_execute_legacy_access = build_route_access_dependency(
-    route_path="/api/actions/{action_id}/execute",
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
-
-_action_logs_access = build_route_access_dependency(
-    route_path="/api/actions/{action_id}/logs",
+_action_access = build_current_route_access_dependency(
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
@@ -158,7 +145,7 @@ def _execute_action_response(action_id: str, user_id: str, action_service: Actio
 @router.post("/api/action/{action_id}/execute")
 def execute_action_frontend(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_execute_frontend_access),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -169,7 +156,7 @@ def execute_action_frontend(
 @router.post("/api/actions/{action_id}/execute")
 def execute_action_legacy_alias(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_execute_legacy_access),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -181,7 +168,7 @@ def execute_action_legacy_alias(
 def get_action_logs(
     action_id: str,
     limit: int = Query(default=50),
-    requester_id: str | JSONResponse = Depends(_action_logs_access),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
     if isinstance(requester_id, JSONResponse):
