@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from src.api.authz.access_policy import can_access_route
 from src.api.dependencies import get_auth_service, get_database_repository
 from src.repository.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
@@ -25,12 +26,12 @@ def _resolve_requester_id(
     return user_data.get("id")
 
 
-def _assert_admin_user(
+def _assert_route_access(
     requester_id: str,
     db: DatabaseRepository,
-) -> bool:
+) -> str | None:
     profile = db.fetch_profile(requester_id) or {}
-    return profile.get("role") == "admin"
+    return profile.get("role")
 
 
 @router.get("/api/admin/users")
@@ -43,7 +44,8 @@ def admin_list_users(
     if not requester_id:
         return JSONResponse({"status": "error", "message": "Unauthorized"}, status_code=401)
 
-    if not _assert_admin_user(requester_id, db):
+    role = _assert_route_access(requester_id, db)
+    if not can_access_route(role, "admin.users.list"):
         return JSONResponse({"status": "error", "message": "Forbidden"}, status_code=403)
 
     users = db.list_users(limit=100, offset=0)
@@ -62,7 +64,8 @@ def admin_update_user_role(
     if not requester_id:
         return JSONResponse({"status": "error", "message": "Unauthorized"}, status_code=401)
 
-    if not _assert_admin_user(requester_id, db):
+    role = _assert_route_access(requester_id, db)
+    if not can_access_route(role, "admin.users.update_role"):
         return JSONResponse({"status": "error", "message": "Forbidden"}, status_code=403)
 
     role = payload.get("role") if isinstance(payload, dict) else None
