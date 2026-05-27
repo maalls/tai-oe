@@ -7,6 +7,12 @@ def test_allowed_roles_for_route_returns_admin_for_admin_users_list():
     assert roles == {"admin"}
 
 
+def test_allowed_roles_for_route_returns_admin_for_csv_query():
+    roles = allowed_roles_for_route("csv.query")
+
+    assert roles == {"admin"}
+
+
 def test_allowed_roles_for_route_returns_empty_set_for_unknown_route():
     roles = allowed_roles_for_route("unknown.route")
 

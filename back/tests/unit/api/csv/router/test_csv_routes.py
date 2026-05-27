@@ -5,7 +5,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_database_repository, get_file_handler
+from src.api.dependencies import get_auth_service, get_database_repository, get_file_handler
 from src.api.main import create_app
 
 
@@ -47,6 +47,10 @@ class _FakeFileHandler:
 
 
 class _FakeDatabaseRepository:
+    def fetch_profile(self, user_id: str):
+        _ = user_id
+        return {"id": "u-admin", "role": "admin"}
+
     def query_table(self, table: str, columns_raw: str, where_clause: str, sort_by: str, limit: int, offset: int):
         return [{"table": table, "limit": limit, "offset": offset, "sort_by": sort_by, "where": where_clause}]
 
@@ -65,8 +69,27 @@ class _FakeDatabaseRepository:
         ]
 
 
+class _FakeDatabaseRepositoryNonAdmin(_FakeDatabaseRepository):
+    def fetch_profile(self, user_id: str):
+        _ = user_id
+        return {"id": "u-user", "role": "user"}
+
+
+class _FakeAuthServiceValid:
+    def verify_token(self, auth_header: str):
+        _ = auth_header
+        return True, {"id": "u-admin"}
+
+
+class _FakeAuthServiceInvalid:
+    def verify_token(self, auth_header: str):
+        _ = auth_header
+        return False, None
+
+
 def _client() -> TestClient:
     app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
     app.dependency_overrides[get_file_handler] = lambda: _FakeFileHandler()
     app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
     return TestClient(app)
@@ -140,6 +163,32 @@ def test_csv_query_tables_returns_payload():
 
     assert response.status_code == 200
     assert response.json()["tables"][0]["name"] == "products"
+
+
+def test_csv_query_requires_valid_token():
+    app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceInvalid()
+    app.dependency_overrides[get_file_handler] = lambda: _FakeFileHandler()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
+    client = TestClient(app)
+
+    response = client.get("/api/csv/query?table=products")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_csv_query_forbidden_for_non_admin_user():
+    app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_file_handler] = lambda: _FakeFileHandler()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryNonAdmin()
+    client = TestClient(app)
+
+    response = client.get("/api/csv/query?table=products")
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"
 
 
 def test_csv_source_upload_returns_payload():
