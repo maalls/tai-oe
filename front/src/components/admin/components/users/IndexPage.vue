@@ -14,7 +14,10 @@
             </button>
          </div>
 
-         <p v-if="errorMessage" class="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+         <p
+            v-if="errorMessage"
+            class="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3"
+         >
             {{ errorMessage }}
          </p>
          <p
@@ -68,7 +71,9 @@
                      </td>
                   </tr>
                   <tr v-if="!users.length">
-                     <td colspan="5" class="px-4 py-8 text-center text-gray-500">No users found.</td>
+                     <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                        No users found.
+                     </td>
                   </tr>
                </tbody>
             </table>
