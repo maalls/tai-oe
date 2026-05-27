@@ -31,17 +31,27 @@ _ACCESS_POLICY: Final[dict[str, set[str]]] = {
     "/api/actions/{action_id}/execute": {"admin"},
     "/api/actions/{action_id}/logs": {"admin"},
     "/api/document/{document_id}/status": {"admin"},
+    "/api/document/{document_id}/storage-key": {"admin"},
+    "/api/document/extract-rfp": {"admin"},
+    "/api/document/update-content": {"admin"},
+    "DELETE /api/document/{document_id}": {"admin"},
+    "/api/chat/attachments": {"admin"},
 }
 
 
-def allowed_roles_for_route(route_path: str) -> set[str]:
+def allowed_roles_for_route(route_path: str, method: str | None = None) -> set[str]:
     """Return allowed roles for a route path; empty set means deny by default."""
+    if method:
+        method_key = f"{method.upper()} {route_path}"
+        if method_key in _ACCESS_POLICY:
+            return set(_ACCESS_POLICY.get(method_key, set()))
+
     return set(_ACCESS_POLICY.get(route_path, set()))
 
 
-def can_access_route(role: str | None, route_path: str) -> bool:
+def can_access_route(role: str | None, route_path: str, method: str | None = None) -> bool:
     """Return True when role is allowed for the given route path."""
     if not role:
         return False
 
-    return role in allowed_roles_for_route(route_path)
+    return role in allowed_roles_for_route(route_path, method=method)

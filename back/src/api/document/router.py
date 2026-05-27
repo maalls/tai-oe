@@ -244,13 +244,10 @@ def document_get(
 def document_update_storage_key(
     document_id: str,
     payload: DocumentUpdateStorageKeyRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    _ = requester.get_user_id()
 
     rows = db.execute_dict_query(
         """
@@ -292,13 +289,10 @@ def document_update_status(
 @router.post("/api/document/extract-rfp")
 def document_extract_rfp(
     payload: DocumentExtractRfpRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    user_id = requester.get_user_id()
 
     result = document_service.handle_extract_rfp_from_document(document_id=payload.document_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -307,13 +301,10 @@ def document_extract_rfp(
 @router.post("/api/document/update-content")
 def document_update_content(
     payload: DocumentUpdateContentRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    user_id = requester.get_user_id()
 
     result = document_service.handle_update_document_content(
         document_id=payload.document_id,
@@ -326,13 +317,10 @@ def document_update_content(
 @router.delete("/api/document/{document_id}")
 def document_delete(
     document_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    user_id = requester.get_user_id()
 
     result = document_service.handle_delete_document(document_id=document_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -342,13 +330,10 @@ def document_delete(
 async def chat_attachments_upload(
     opportunity_id: str = Query(default=""),
     file: UploadFile = File(...),
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    user_id = requester.get_user_id()
 
     file_content = await file.read()
     result = document_service.handle_chat_attachment_upload(

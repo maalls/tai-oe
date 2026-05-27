@@ -60,6 +60,7 @@ def _authorize_request(
 
 def _authorize_request_or_raise(
     route_path: str,
+    method: str,
     authorization: str | None,
     auth_service: AuthService,
     db: DatabaseRepository,
@@ -75,7 +76,7 @@ def _authorize_request_or_raise(
 
     profile = db.fetch_profile(requester_id) or {}
     role = profile.get("role")
-    if not can_access_route(role, route_path):
+    if not can_access_route(role, route_path, method=method):
         raise RouteAccessError(status_code=forbidden_status_code, body=forbidden_body)
 
     return AccessContext(user_id=requester_id, role=role)
@@ -172,6 +173,7 @@ def build_access_context_dependency(
 
         return _authorize_request_or_raise(
             route_path=route_path,
+            method=str(getattr(request, "method", "")).upper(),
             authorization=authorization,
             auth_service=auth_service,
             db=db,
