@@ -14,6 +14,10 @@ from src.repository.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 
 
+DEFAULT_UNAUTHORIZED_BODY = {"error": "Unauthorized"}
+DEFAULT_FORBIDDEN_BODY = {"error": "Forbidden"}
+
+
 def _authorize_request(
     route_path: str,
     authorization: str | None,
@@ -96,3 +100,12 @@ def build_current_route_access_dependency(
         )
 
     return _dependency
+
+
+def build_default_route_access_dependency() -> Callable[..., str | JSONResponse]:
+    """Build a dependency using the default Unauthorized/Forbidden error payloads."""
+
+    return build_current_route_access_dependency(
+        unauthorized_body=DEFAULT_UNAUTHORIZED_BODY,
+        forbidden_body=DEFAULT_FORBIDDEN_BODY,
+    )
