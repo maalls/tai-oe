@@ -4,13 +4,12 @@ from datetime import date, datetime
 from decimal import Decimal
 import json
 
-from fastapi import APIRouter, Depends, File, Header, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from src.api.authz.access_policy import can_access_route
-from src.api.dependencies import get_auth_service, get_database_repository, get_file_handler
+from src.api.authz.route_access import build_route_access_dependency
+from src.api.dependencies import get_database_repository, get_file_handler
 from src.repository.repository import DatabaseRepository
-from src.service.auth.auth_service import AuthService
 from src.service.csv.file_service import CsvFileService
 
 router = APIRouter(tags=["csv"])
@@ -27,17 +26,11 @@ def _serialize_value(value):
 def _serialize_row(row: dict) -> dict:
     return {key: _serialize_value(value) for key, value in row.items()}
 
-
-def _resolve_requester_id(authorization: str | None, auth_service: AuthService) -> str | None:
-    is_valid, user_data = auth_service.verify_token(authorization or "")
-    if not is_valid or not user_data:
-        return None
-    return user_data.get("id")
-
-
-def _resolve_requester_role(requester_id: str, database_repository: DatabaseRepository) -> str | None:
-    profile = database_repository.fetch_profile(requester_id) or {}
-    return profile.get("role")
+_csv_query_access = build_route_access_dependency(
+    route_key="csv.query",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
 
 
 @router.get("/api/csv/sources")
@@ -140,18 +133,12 @@ def csv_query(
     sortBy: str = Query(default=""),
     limit: int = Query(default=100),
     offset: int = Query(default=0),
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_csv_query_access),
     database_repository: DatabaseRepository = Depends(get_database_repository),
 ):
     try:
-        requester_id = _resolve_requester_id(authorization, auth_service)
-        if not requester_id:
-            return JSONResponse({"error": "Unauthorized"}, status_code=401)
-
-        role = _resolve_requester_role(requester_id, database_repository)
-        if not can_access_route(role, "csv.query"):
-            return JSONResponse({"error": "Forbidden"}, status_code=403)
+        if isinstance(requester_id, JSONResponse):
+            return requester_id
 
         if tables is not None:
             rows = database_repository.list_public_tables_with_columns()

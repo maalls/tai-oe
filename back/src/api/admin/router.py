@@ -2,51 +2,38 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from src.api.authz.access_policy import can_access_route
-from src.api.dependencies import get_auth_service, get_database_repository
+from src.api.authz.route_access import build_route_access_dependency
+from src.api.dependencies import get_database_repository
 from src.repository.repository import DatabaseRepository
-from src.service.auth.auth_service import AuthService
 
 router = APIRouter(tags=["admin"])
 
 _ALLOWED_ROLES = {"admin", "user"}
 
+_admin_users_list_access = build_route_access_dependency(
+    route_key="admin.users.list",
+    unauthorized_body={"status": "error", "message": "Unauthorized"},
+    forbidden_body={"status": "error", "message": "Forbidden"},
+)
 
-def _resolve_requester_id(
-    authorization: str | None,
-    auth_service: AuthService,
-) -> str | None:
-    is_valid, user_data = auth_service.verify_token(authorization or "")
-    if not is_valid or not user_data:
-        return None
-    return user_data.get("id")
-
-
-def _assert_route_access(
-    requester_id: str,
-    db: DatabaseRepository,
-) -> str | None:
-    profile = db.fetch_profile(requester_id) or {}
-    return profile.get("role")
+_admin_users_update_role_access = build_route_access_dependency(
+    route_key="admin.users.update_role",
+    unauthorized_body={"status": "error", "message": "Unauthorized"},
+    forbidden_body={"status": "error", "message": "Forbidden"},
+)
 
 
 @router.get("/api/admin/users")
 def admin_list_users(
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_admin_users_list_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    requester_id = _resolve_requester_id(authorization, auth_service)
-    if not requester_id:
-        return JSONResponse({"status": "error", "message": "Unauthorized"}, status_code=401)
-
-    role = _assert_route_access(requester_id, db)
-    if not can_access_route(role, "admin.users.list"):
-        return JSONResponse({"status": "error", "message": "Forbidden"}, status_code=403)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     users = db.list_users(limit=100, offset=0)
     return JSONResponse(jsonable_encoder({"status": "ok", "users": users}), status_code=200)
@@ -56,17 +43,11 @@ def admin_list_users(
 def admin_update_user_role(
     target_user_id: str,
     payload: dict[str, Any],
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_admin_users_update_role_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    requester_id = _resolve_requester_id(authorization, auth_service)
-    if not requester_id:
-        return JSONResponse({"status": "error", "message": "Unauthorized"}, status_code=401)
-
-    role = _assert_route_access(requester_id, db)
-    if not can_access_route(role, "admin.users.update_role"):
-        return JSONResponse({"status": "error", "message": "Forbidden"}, status_code=403)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     role = payload.get("role") if isinstance(payload, dict) else None
     if role not in _ALLOWED_ROLES:
