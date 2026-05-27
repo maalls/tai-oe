@@ -248,6 +248,7 @@ Current status notes:
 - `UM-012` backend source-of-truth is extended on utility routes: prompt reads and email fetch-loop status now also require admin via the shared route-access dependency.
 - `UM-012` backend source-of-truth now includes storage route protection: `/api/storage/*` requires authentication (`admin` or `user`).
 - `UM-012` backend source-of-truth now covers action execute/log endpoints as admin-only with 401/403 test coverage.
+- `UM-012` backend source-of-truth now covers the full action router as admin-only (list/create/get/update/delete/pause/resume/execute/logs) with dedicated unit coverage.
 - Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
 - Remaining M4 work focuses on backend permission map and broader route coverage (`UM-010`, `UM-011`, complete `UM-012`).

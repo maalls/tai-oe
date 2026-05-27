@@ -2,13 +2,12 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
 from src.api.authz.route_access import build_current_route_access_dependency
-from src.api.dependencies import get_action_service, get_auth_service
+from src.api.dependencies import get_action_service
 from src.service.action.service import ActionService
-from src.service.auth.auth_service import AuthService
 
 router = APIRouter(tags=["action"])
 
@@ -16,13 +15,6 @@ _action_access = build_current_route_access_dependency(
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
-
-
-def _resolve_user_id(authorization: str | None, auth_service: AuthService) -> str | None:
-    is_valid, user_data = auth_service.verify_token(authorization or "")
-    if not is_valid or not user_data:
-        return None
-    return user_data.get("id")
 
 
 def _error_response(message: str, error_code: str, status_code: int = 400) -> JSONResponse:
@@ -35,16 +27,14 @@ def _error_response(message: str, error_code: str, status_code: int = 400) -> JS
 @router.get("/api/opportunities/{opportunity_id}/actions")
 def list_actions(
     opportunity_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        actions = action_service.list_actions(opportunity_id, user_id=user_id)
+        actions = action_service.list_actions(opportunity_id, user_id=requester_id)
         return JSONResponse({"status": "ok", "actions": actions}, status_code=200)
     except Exception as exc:
         return _error_response(str(exc), "LIST_ACTIONS_ERROR")
@@ -53,16 +43,14 @@ def list_actions(
 @router.post("/api/actions")
 def create_action(
     payload: dict[str, Any],
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        action = action_service.create_action(payload, user_id=user_id)
+        action = action_service.create_action(payload, user_id=requester_id)
         if not action:
             return _error_response("Failed to create action", "CREATE_FAILED")
         return JSONResponse({"status": "ok", "action": action}, status_code=200)
@@ -76,16 +64,14 @@ def create_action(
 @router.get("/api/actions/{action_id}")
 def get_action(
     action_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        action = action_service.get_action(action_id, user_id=user_id)
+        action = action_service.get_action(action_id, user_id=requester_id)
         if not action:
             return _error_response(f"Action {action_id} not found", "NOT_FOUND")
         return JSONResponse({"status": "ok", "action": action}, status_code=200)
@@ -96,16 +82,14 @@ def get_action(
 @router.post("/api/actions/{action_id}/pause")
 def pause_action(
     action_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        action = action_service.pause_action(action_id, user_id=user_id)
+        action = action_service.pause_action(action_id, user_id=requester_id)
         if not action:
             return _error_response(f"Action {action_id} not found", "NOT_FOUND")
         return JSONResponse({"status": "ok", "action": action}, status_code=200)
@@ -116,16 +100,14 @@ def pause_action(
 @router.post("/api/actions/{action_id}/resume")
 def resume_action(
     action_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        action = action_service.resume_action(action_id, user_id=user_id)
+        action = action_service.resume_action(action_id, user_id=requester_id)
         if not action:
             return _error_response(f"Action {action_id} not found", "NOT_FOUND")
         return JSONResponse({"status": "ok", "action": action}, status_code=200)
@@ -185,16 +167,14 @@ def get_action_logs(
 def update_action(
     action_id: str,
     payload: dict[str, Any],
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        action = action_service.update_action(action_id, payload, user_id=user_id)
+        action = action_service.update_action(action_id, payload, user_id=requester_id)
         if not action:
             return _error_response(f"Action {action_id} not found", "NOT_FOUND")
         return JSONResponse({"status": "ok", "action": action}, status_code=200)
@@ -205,16 +185,14 @@ def update_action(
 @router.delete("/api/actions/{action_id}")
 def delete_action(
     action_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester_id: str | JSONResponse = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
 
     try:
-        deleted = action_service.delete_action(action_id, user_id=user_id)
+        deleted = action_service.delete_action(action_id, user_id=requester_id)
         if not deleted:
             return _error_response(f"Action {action_id} not found", "NOT_FOUND")
         return JSONResponse({"status": "ok", "message": f"Action {action_id} deleted"}, status_code=200)
