@@ -124,7 +124,7 @@ Commit plan:
 Acceptance criteria:
 
 - [x] Admin can see/manage users in UI.
-- [ ] Non-admin cannot access or use Admin Users UI.
+- [x] Non-admin cannot access or use Admin Users UI.
 
 ---
 
@@ -147,20 +147,20 @@ Checklist:
 
 TDD steps:
 
-- [ ] Write failing backend authorization tests for representative routes.
+- [x] Write failing backend authorization tests for representative routes.
 - [x] Write failing frontend router guard tests for protected sections.
-- [ ] Implement guards and permission map.
+- [x] Implement guards and permission map.
 
 Commit plan:
 
-- [ ] Commit 4.1: `test(rbac): add failing backend/frontend authorization coverage`
-- [ ] Commit 4.2: `feat(rbac): enforce admin/user permissions on api and routes`
+- [x] Commit 4.1: `test(rbac): add failing backend/frontend authorization coverage`
+- [x] Commit 4.2: `feat(rbac): enforce admin/user permissions on api and routes`
 
 Acceptance criteria:
 
-- [ ] `user` cannot access Admin sections/routes/APIs.
-- [ ] `admin` still accesses all existing features.
-- [ ] Unauthorized access returns explicit errors.
+- [x] `user` cannot access Admin sections/routes/APIs.
+- [x] `admin` still accesses all existing features.
+- [x] Unauthorized access returns explicit errors.
 
 ---
 
@@ -223,7 +223,7 @@ Milestone status:
 - [x] M1 Role data model + read path
 - [x] M2 Admin users API
 - [x] M3 Frontend Admin Users UI
-- [ ] M4 Role-based access enforcement
+- [x] M4 Role-based access enforcement
 - [ ] M5 Hardening + docs
 
 Commit tracker:
@@ -234,8 +234,8 @@ Commit tracker:
 - [x] 2.2 feature
 - [x] 3.1 tests
 - [x] 3.2 feature
-- [ ] 4.1 tests
-- [ ] 4.2 feature
+- [x] 4.1 tests
+- [x] 4.2 feature
 - [ ] 5.1 tests
 - [ ] 5.2 docs
 
@@ -253,9 +253,10 @@ Current status notes:
 - `UM-012` backend RBAC coverage now also locks the full opportunity router behind admin access, with targeted unit tests updated to supply admin auth/profile context.
 - `UM-012` backend RBAC coverage now also locks the full quote router behind admin access, with targeted unit tests updated to supply admin auth/profile context.
 - `UM-012` backend RBAC coverage now also keeps the `utils` router protected at the router level while removing redundant handler-level no-op access checks.
+- `UM-012` backend RBAC coverage is now complete for the current scope, with representative backend authorization tests and frontend guard tests passing.
 - Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
-- Remaining M4 work focuses on any missing backend route coverage outside the currently protected routers, plus the final frontend/backend polish.
+- Remaining work now shifts to M5 hardening, docs, bootstrap safety, and rollout polish.
 
 ## Ordered Ticket Backlog (Ready To Execute)
 
