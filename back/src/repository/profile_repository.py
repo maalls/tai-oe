@@ -8,6 +8,8 @@ from typing import Any, Dict, Optional
 class ProfileRepositoryMixin:
     """Database profile read/update operations."""
 
+    _ALLOWED_ROLES = {"admin", "user"}
+
     def fetch_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         query = "SELECT id, email, full_name, role FROM profile WHERE id = %s LIMIT 1"
         rows = self.execute_dict_query(query, (user_id,))
@@ -24,4 +26,26 @@ class ProfileRepositoryMixin:
         params.append(user_id)
         query = f"UPDATE profile SET {', '.join(set_clauses)} WHERE id = %s RETURNING id, email, full_name, role"
         rows = self.execute_dict_query(query, tuple(params))
+        return rows[0] if rows else None
+
+    def list_users(self, limit: int = 100, offset: int = 0) -> list[Dict[str, Any]]:
+        query = (
+            "SELECT id, email, full_name, role, created_at "
+            "FROM profile "
+            "ORDER BY created_at DESC "
+            "LIMIT %s OFFSET %s"
+        )
+        return self.execute_dict_query(query, (limit, offset))
+
+    def set_user_role(self, user_id: str, role: str) -> Optional[Dict[str, Any]]:
+        if role not in self._ALLOWED_ROLES:
+            raise ValueError("Invalid role")
+
+        query = (
+            "UPDATE profile "
+            "SET role = %s "
+            "WHERE id = %s "
+            "RETURNING id, email, full_name, role, created_at"
+        )
+        rows = self.execute_dict_query(query, (role, user_id))
         return rows[0] if rows else None
