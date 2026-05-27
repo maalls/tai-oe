@@ -41,28 +41,28 @@ Goal: Introduce role in persistence and expose it safely in user/profile payload
 
 Checklist:
 
-- [ ] Add migration to extend `profile` with role (`admin` | `user`) and metadata (`updated_at` if needed).
-- [ ] Backfill existing users with deterministic default role.
-- [ ] Add DB constraint/check for valid role values.
-- [ ] Extend backend profile/auth DTOs to include role.
-- [ ] Keep compatibility for existing clients.
+- [x] Add migration to extend `profile` with role (`admin` | `user`) and metadata (`updated_at` if needed).
+- [x] Backfill existing users with deterministic default role.
+- [x] Add DB constraint/check for valid role values.
+- [x] Extend backend profile/auth DTOs to include role.
+- [x] Keep compatibility for existing clients.
 
 TDD steps:
 
-- [ ] Write failing migration/DAO tests for role read/write.
-- [ ] Implement migration and repository updates.
-- [ ] Write failing API tests for `/api/auth/user` and `/api/profile` including role.
-- [ ] Implement API serialization updates until tests pass.
+- [x] Write failing migration/DAO tests for role read/write.
+- [x] Implement migration and repository updates.
+- [x] Write failing API tests for `/api/auth/user` and `/api/profile` including role.
+- [x] Implement API serialization updates until tests pass.
 
 Commit plan:
 
-- [ ] Commit 1.1: `test(role): add failing tests for role persistence and api projection`
-- [ ] Commit 1.2: `feat(role): add profile role column and expose role in auth/profile responses`
+- [x] Commit 1.1: `test(role): add failing tests for role persistence and api projection`
+- [x] Commit 1.2: `feat(role): add profile role column and expose role in auth/profile responses`
 
 Acceptance criteria:
 
-- [ ] Role stored in DB and returned by user/profile APIs.
-- [ ] Invalid role values are rejected by DB/API.
+- [x] Role stored in DB and returned by user/profile APIs.
+- [x] Invalid role values are rejected by DB/API.
 
 ---
 
@@ -72,29 +72,29 @@ Goal: Provide admin-only endpoints to list users and update role.
 
 Checklist:
 
-- [ ] Add `GET /api/admin/users` (id, email, full_name, role, created_at).
-- [ ] Add `PATCH /api/admin/users/{id}/role` with role validation.
-- [ ] Add authorization guard: only `admin` can call admin user endpoints.
-- [ ] Return explicit errors for forbidden/invalid operations.
-- [ ] Prevent self-demotion edge case (optional now, recommended).
+- [x] Add `GET /api/admin/users` (id, email, full_name, role, created_at).
+- [x] Add `PATCH /api/admin/users/{id}/role` with role validation.
+- [x] Add authorization guard: only `admin` can call admin user endpoints.
+- [x] Return explicit errors for forbidden/invalid operations.
+- [x] Prevent self-demotion edge case (optional now, recommended).
 
 TDD steps:
 
-- [ ] Write failing tests for admin guard (`403` for non-admin, `200` for admin).
-- [ ] Write failing tests for list endpoint shape/pagination behavior.
-- [ ] Write failing tests for role update validation and persistence.
-- [ ] Implement services/repositories/routes.
+- [x] Write failing tests for admin guard (`403` for non-admin, `200` for admin).
+- [x] Write failing tests for list endpoint shape/pagination behavior.
+- [x] Write failing tests for role update validation and persistence.
+- [x] Implement services/repositories/routes.
 
 Commit plan:
 
-- [ ] Commit 2.1: `test(admin-users): add failing guard/list/update tests`
-- [ ] Commit 2.2: `feat(admin-users): add admin user listing and role update endpoints`
+- [x] Commit 2.1: `test(admin-users): add failing guard/list/update tests`
+- [x] Commit 2.2: `feat(admin-users): add admin user listing and role update endpoints`
 
 Acceptance criteria:
 
-- [ ] Non-admin users cannot access admin user APIs.
-- [ ] Admin can list users and change roles.
-- [ ] API responses are stable and validated by tests.
+- [x] Non-admin users cannot access admin user APIs.
+- [x] Admin can list users and change roles.
+- [x] API responses are stable and validated by tests.
 
 ---
 
@@ -104,26 +104,26 @@ Goal: Add a dedicated Admin subsection for user management.
 
 Checklist:
 
-- [ ] Add route `/admin/users`.
-- [ ] Add Admin navigation entry "Users".
-- [ ] Build users table with columns: email, full name, role, created at.
-- [ ] Add role update controls with optimistic UI or explicit refresh.
-- [ ] Handle errors/toasts/loading states.
+- [x] Add route `/admin/users`.
+- [x] Add Admin navigation entry "Users".
+- [x] Build users table with columns: email, full name, role, created at.
+- [x] Add role update controls with optimistic UI or explicit refresh.
+- [x] Handle errors/toasts/loading states.
 
 TDD steps:
 
-- [ ] Add failing frontend unit tests for API client + state handling.
-- [ ] Add failing component tests for list rendering and role change flow.
-- [ ] Implement API client and page/component until tests pass.
+- [x] Add failing frontend unit tests for API client + state handling.
+- [x] Add failing component tests for list rendering and role change flow.
+- [x] Implement API client and page/component until tests pass.
 
 Commit plan:
 
-- [ ] Commit 3.1: `test(front-admin-users): add failing ui/api tests for users management`
-- [ ] Commit 3.2: `feat(front-admin-users): add admin users subsection and role edit flow`
+- [x] Commit 3.1: `test(front-admin-users): add failing ui/api tests for users management`
+- [x] Commit 3.2: `feat(front-admin-users): add admin users subsection and role edit flow`
 
 Acceptance criteria:
 
-- [ ] Admin can see/manage users in UI.
+- [x] Admin can see/manage users in UI.
 - [ ] Non-admin cannot access or use Admin Users UI.
 
 ---
@@ -142,13 +142,13 @@ Checklist:
 - [ ] Define central permission map in backend (single source).
 - [ ] Add reusable role guard dependency/middleware.
 - [ ] Apply guard to sensitive admin/business routes.
-- [ ] Add frontend route guards to hide/redirect unauthorized areas.
+- [x] Add frontend route guards to hide/redirect unauthorized areas.
 - [ ] Ensure backend is the source of truth (frontend guard is UX only).
 
 TDD steps:
 
 - [ ] Write failing backend authorization tests for representative routes.
-- [ ] Write failing frontend router guard tests for protected sections.
+- [x] Write failing frontend router guard tests for protected sections.
 - [ ] Implement guards and permission map.
 
 Commit plan:
