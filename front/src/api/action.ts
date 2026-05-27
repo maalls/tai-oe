@@ -68,9 +68,9 @@ export async function createAction(
    const res = await authFetch(
       '/api/actions',
       {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(data),
+         method: 'POST',
+         headers: authHeaders(),
+         body: JSON.stringify(data),
       },
       token
    );
@@ -91,9 +91,9 @@ export async function updateAction(
    const res = await authFetch(
       `/api/actions/${actionId}`,
       {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(data),
+         method: 'PUT',
+         headers: authHeaders(),
+         body: JSON.stringify(data),
       },
       token
    );
@@ -110,7 +110,7 @@ export async function deleteAction(actionId: string, token: string): Promise<voi
    const res = await authFetch(
       `/api/actions/${actionId}`,
       {
-      method: 'DELETE',
+         method: 'DELETE',
       },
       token
    );
@@ -126,7 +126,7 @@ export async function pauseAction(actionId: string, token: string): Promise<Acti
    const res = await authFetch(
       `/api/actions/${actionId}/pause`,
       {
-      method: 'POST',
+         method: 'POST',
       },
       token
    );
@@ -141,7 +141,7 @@ export async function resumeAction(actionId: string, token: string): Promise<Act
    const res = await authFetch(
       `/api/actions/${actionId}/resume`,
       {
-      method: 'POST',
+         method: 'POST',
       },
       token
    );
@@ -161,7 +161,7 @@ export async function executeAction(
    const res = await authFetch(
       `/api/action/${actionId}/execute`,
       {
-      method: 'POST',
+         method: 'POST',
       },
       token
    );

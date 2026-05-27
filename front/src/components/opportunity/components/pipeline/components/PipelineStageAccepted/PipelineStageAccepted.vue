@@ -115,9 +115,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuth } from '../../../../../../stores/auth';
 import { listOpportunityDocuments } from '../../../../../../api/document';
 import { advanceOpportunityStage } from '../../../../../../api/opportunity';
+import { authFetch } from '../../../../../../api/authFetch';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -132,7 +132,6 @@ const emit = defineEmits<{
    (e: 'stageUpdated', stage: string, status: string): void;
 }>();
 
-const { getValidToken } = useAuth();
 const router = useRouter();
 const { t } = useI18n();
 const isGeneratingInvoice = ref(false);
@@ -166,17 +165,6 @@ const loadExistingInvoice = async () => {
    }
 };
 
-const buildAuthHeaders = async (includeContent = false) => {
-   const token = await getValidToken();
-   const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
-   };
-   if (includeContent) {
-      headers['Content-Type'] = 'application/json';
-   }
-   return headers;
-};
-
 const generateInvoice = async () => {
    if (!props.opportunity?.id) return;
 
@@ -185,11 +173,8 @@ const generateInvoice = async () => {
    invoiceMessage.value = '';
 
    try {
-      const headers = await buildAuthHeaders();
-
-      const response = await fetch(`/api/quote/${props.opportunity.id}/invoice`, {
+      const response = await authFetch(`/api/quote/${props.opportunity.id}/invoice`, {
          method: 'POST',
-         headers,
       });
 
       const result = await response.json();

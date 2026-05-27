@@ -107,7 +107,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { listOpportunityDocuments } from '../../../../../../api/document';
-import { useAuth } from '../../../../../../stores/auth';
+import { authFetch } from '../../../../../../api/authFetch';
 import { useI18n } from '../../../../../../i18n/useI18n';
 
 const props = defineProps<{
@@ -120,7 +120,6 @@ const props = defineProps<{
 
 const router = useRouter();
 const { t } = useI18n();
-const { getValidToken } = useAuth();
 const isGeneratingPdf = ref(false);
 const hasExistingQuote = ref(false);
 const quoteMessage = ref('');
@@ -151,12 +150,8 @@ const generateQuotePdf = async () => {
    quoteMessage.value = '';
 
    try {
-      const token = await getValidToken();
-      const response = await fetch(`/api/quote/${props.opportunity.id}/generate`, {
+      const response = await authFetch(`/api/quote/${props.opportunity.id}/generate`, {
          method: 'POST',
-         headers: {
-            Authorization: `Bearer ${token}`,
-         },
       });
 
       const result = await response.json();

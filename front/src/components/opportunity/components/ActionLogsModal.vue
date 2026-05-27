@@ -144,10 +144,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useAuth } from '../../../stores/auth';
+import { authFetch } from '../../../api/authFetch';
 
 const { t } = useI18n();
-const { getValidToken } = useAuth();
 
 interface Props {
    show: boolean;
@@ -180,12 +179,7 @@ async function loadLogs() {
       loading.value = true;
       error.value = null;
 
-      const token = await getValidToken();
-      const response = await fetch(`/api/actions/${props.actionId}/logs`, {
-         headers: {
-            Authorization: `Bearer ${token}`,
-         },
-      });
+      const response = await authFetch(`/api/actions/${props.actionId}/logs`);
 
       if (!response.ok) {
          throw new Error(t('opportunities.errors.failedToLoadLogs'));

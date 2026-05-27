@@ -250,6 +250,7 @@ import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
 import { listAccounts } from '../../api/account';
 import { apiUrl } from '../../utils/api';
+import { authFetch } from '../../api/authFetch';
 import ActionButton from '../common/ActionButton.vue';
 
 const { t, te } = useI18n();
@@ -276,7 +277,7 @@ const sourceReferenceFilter = ref('');
 const selectedOpportunities = ref(new Set<string>());
 const showBatchMenu = ref(false);
 const showBatchDeleteConfirmation = ref(false);
-const { user, getValidToken } = useAuth();
+const { user } = useAuth();
 const router = useRouter();
 const route = useRoute();
 
@@ -394,12 +395,6 @@ const loadOpportunities = async () => {
    console.log(`[OpportunityPage] Loading opportunities for user ${user.value.id}`);
 
    try {
-      const token = await getValidToken();
-      const headers: HeadersInit = {
-         'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
-      };
-
       // Build query params
       let url = apiUrl('opportunities/search');
       if (sourceReferenceFilter.value.trim()) {
@@ -412,7 +407,11 @@ const loadOpportunities = async () => {
             : `?name=${encodeURIComponent(trimmedValue)}`;
       }
 
-      const response = await fetch(url, { headers });
+      const response = await authFetch(url, {
+         headers: {
+            'Content-Type': 'application/json',
+         },
+      });
 
       // Some backend errors may return an empty body or non-JSON payload.
       const responseText = await response.text();
@@ -479,15 +478,11 @@ const createOpportunityFromSearch = async () => {
    isLoading.value = true;
 
    try {
-      const token = await getValidToken();
-      const headers: HeadersInit = {
-         'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
-      };
-
-      const response = await fetch('/api/opportunities/create-manual', {
+      const response = await authFetch('/api/opportunities/create-manual', {
          method: 'POST',
-         headers,
+         headers: {
+            'Content-Type': 'application/json',
+         },
          body: JSON.stringify({ name: trimmedValue }),
       });
 
@@ -546,21 +541,17 @@ const batchDelete = async () => {
    errorMessage.value = '';
 
    try {
-      const token = await getValidToken();
-      const headers: HeadersInit = {
-         'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
-      };
-
       // Convert Set to comma-separated string of IDs
       const idsToDelete = Array.from(selectedOpportunities.value).join(',');
       const url = `/api/opportunities/${idsToDelete}`;
 
       console.log('[OpportunityPage] Batch delete:', Array.from(selectedOpportunities.value));
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
          method: 'DELETE',
-         headers,
+         headers: {
+            'Content-Type': 'application/json',
+         },
       });
 
       const result = await response.json();

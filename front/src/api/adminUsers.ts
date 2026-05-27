@@ -50,11 +50,11 @@ export async function updateAdminUserRole(
    const res = await authFetch(
       url,
       {
-      method: 'PATCH',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ role }),
+         method: 'PATCH',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ role }),
       },
       token
    );

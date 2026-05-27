@@ -138,6 +138,7 @@ import {
    getOpportunitySummary,
    updateOpportunityStageState,
 } from '../../../../../api/opportunity';
+import { authFetch } from '../../../../../api/authFetch';
 import { useAuth } from '../../../../../stores/auth';
 import { useI18n } from '../../../../../i18n/useI18n';
 
@@ -475,12 +476,8 @@ const generateInvoiceAndOpen = async () => {
 
    isUpdating.value = true;
    try {
-      const token = await getValidToken();
-      const response = await fetch(`/api/quote/${props.opportunityId}/invoice`, {
+      const response = await authFetch(`/api/quote/${props.opportunityId}/invoice`, {
          method: 'POST',
-         headers: {
-            Authorization: `Bearer ${token}`,
-         },
       });
 
       const result = await response.json();
@@ -511,7 +508,12 @@ const updateStage = async (newStage: string, newStatus: string) => {
       const token = await getValidToken();
       if (!token) throw new Error('Unauthorized');
 
-      const updated = await updateOpportunityStageState(props.opportunityId, newStage, newStatus, token);
+      const updated = await updateOpportunityStageState(
+         props.opportunityId,
+         newStage,
+         newStatus,
+         token
+      );
 
       // Update local state
       currentStage.value = updated.stage || newStage;

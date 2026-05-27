@@ -53,11 +53,11 @@ export async function createManualOpportunity(
    const res = await authFetch(
       '/api/opportunities/create-manual',
       {
-      method: 'POST',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name }),
+         method: 'POST',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ name }),
       },
       token
    );
@@ -77,15 +77,15 @@ export async function createDraftOpportunity(
    const res = await authFetch(
       '/api/opportunities/create-draft',
       {
-      method: 'POST',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-         account_id: accountId,
-         name: options?.name ?? '',
-         source: options?.source ?? 'user_form',
-      }),
+         method: 'POST',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+            account_id: accountId,
+            name: options?.name ?? '',
+            source: options?.source ?? 'user_form',
+         }),
       },
       token
    );
@@ -105,11 +105,11 @@ export async function updateOpportunityName(
    const res = await authFetch(
       `/api/opportunity/${opportunityId}/name`,
       {
-      method: 'PUT',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name }),
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ name }),
       },
       token
    );
@@ -125,11 +125,11 @@ export async function updateOpportunityAccount(
    const res = await authFetch(
       `/api/opportunity/${opportunityId}/account`,
       {
-      method: 'PUT',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ account_id: accountId }),
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ account_id: accountId }),
       },
       token
    );
@@ -146,11 +146,11 @@ export async function extractOpportunityAuthorContact(
    const res = await authFetch(
       `/api/opportunity/${opportunityId}/extract-author-contact`,
       {
-      method: 'POST',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from_email: fromEmail, from_name: fromName }),
+         method: 'POST',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ from_email: fromEmail, from_name: fromName }),
       },
       token
    );
@@ -225,11 +225,11 @@ export async function updateOpportunityStageState(
    const res = await authFetch(
       `/api/opportunity/${opportunityId}/stage-state`,
       {
-      method: 'PUT',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ stage, status }),
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ stage, status }),
       },
       token
    );

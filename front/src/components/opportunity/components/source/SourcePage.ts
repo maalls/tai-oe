@@ -1,6 +1,7 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../../../../stores/auth';
+import { authFetch } from '../../../../api/authFetch';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useOpportunitySource } from '../../../../composables/useOpportunitySource';
@@ -101,16 +102,12 @@ export function useSourcePage() {
    const scanAttachmentForRFQ = async (attachmentId: string) => {
       isScanning.value = true;
       try {
-         const token = await getValidToken();
-
-         console.log('[SourcePage] Token available:', !!token);
          console.log('[SourcePage] Scanning attachment:', attachmentId);
 
-         const response = await fetch('/api/document/extract-rfp', {
+         const response = await authFetch('/api/document/extract-rfp', {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json',
-               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
                document_id: attachmentId,
@@ -225,14 +222,11 @@ export function useSourcePage() {
    };
 
    const saveDocumentContent = async (documentId: string, content: string) => {
-      const token = await getValidToken();
-
       try {
-         const response = await fetch('/api/document/update-content', {
+         const response = await authFetch('/api/document/update-content', {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json',
-               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
                document_id: documentId,
@@ -269,8 +263,6 @@ export function useSourcePage() {
          return;
       }
 
-      const token = await getValidToken();
-
       isCreatingRFQ.value = true;
       rfqErrorMessage.value = '';
       rfqSuccessMessage.value = '';
@@ -289,15 +281,11 @@ export function useSourcePage() {
             formData.append('file', rfqForm.value.file);
          }
 
-         const headers: HeadersInit = {};
-         headers['Authorization'] = `Bearer ${token}`;
-
          // Use the opportunity-specific RFQ endpoint
-         const response = await fetch(
+         const response = await authFetch(
             `/api/opportunity/${opportunityId.value}/rfq/create-from-text`,
             {
                method: 'POST',
-               headers,
                body: formData,
             }
          );

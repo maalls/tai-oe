@@ -1,16 +1,13 @@
 import { apiUrl } from '../utils/api';
-import { useAuth } from '../stores/auth';
+import { authFetch } from '../api/authFetch';
 
 type QueryValue = string | number | boolean | null | undefined;
 
 export function useApiQuery() {
-   const { getValidToken } = useAuth();
-
    async function fetchApiJson<T>(
       path: string,
       query: Record<string, QueryValue> = {}
    ): Promise<T> {
-      const token = await getValidToken();
       const url = new URL(apiUrl(path), window.location.origin);
 
       Object.entries(query).forEach(([key, value]) => {
@@ -19,11 +16,7 @@ export function useApiQuery() {
          }
       });
 
-      const response = await fetch(url.toString(), {
-         headers: {
-            Authorization: `Bearer ${token}`,
-         },
-      });
+      const response = await authFetch(url.toString());
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {

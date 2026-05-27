@@ -255,16 +255,15 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { getOpportunityInvoiceView } from '../../api/invoice';
+import { authFetch } from '../../api/authFetch';
 import PdfViewer from '../PdfViewer.vue';
 import OpportunityHeader from '../opportunity/OpportunityHeader.vue';
-import { useAuth } from '../../stores/auth';
 import EmailSentView from '../shared/EmailSentView.vue';
 import { useI18n } from '../../i18n/useI18n';
 
 const route = useRoute();
 const opportunityId = route.params.id as string;
 const invoiceId = route.params.invoiceId as string;
-const { getValidToken } = useAuth();
 const { locale } = useI18n();
 
 const invoice = ref<any>(null);
@@ -356,11 +355,9 @@ const generateInvoicePdf = async () => {
    successMessage.value = '';
 
    try {
-      const token = await getValidToken();
-      const response = await fetch(`/api/invoice/${invoice.value.id}/pdf`, {
+      const response = await authFetch(`/api/invoice/${invoice.value.id}/pdf`, {
          method: 'POST',
          headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
          },
       });
@@ -411,8 +408,6 @@ const submitSendInvoice = async () => {
    successMessage.value = '';
 
    try {
-      const token = await getValidToken();
-
       // Parse comma-separated emails
       const toEmails = emailForm.value.to
          .split(',')
@@ -432,10 +427,9 @@ const submitSendInvoice = async () => {
          body: emailForm.value.body,
       };
 
-      const response = await fetch(`/api/invoice/${invoice.value.id}/send`, {
+      const response = await authFetch(`/api/invoice/${invoice.value.id}/send`, {
          method: 'POST',
          headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
          },
          body: JSON.stringify(payload),

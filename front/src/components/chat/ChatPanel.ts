@@ -5,7 +5,7 @@ import { DEFAULT_MODEL, SYSTEM_MESSAGE } from './types';
 import { useChat } from './useChat';
 import { executeToolCalls } from './toolExecutor';
 import type { ChatMessage } from './types';
-import { useAuth } from '../../stores/auth';
+import { authFetch } from '../../api/authFetch';
 
 export function useChatPanel(props: {
    context?: Record<string, any>;
@@ -167,8 +167,6 @@ export function useChatPanel(props: {
       loadStoredHistory,
    } = useChat(model, systemPromptRef);
 
-   const { getValidToken } = useAuth();
-
    async function maybeScrollToBottom() {
       await nextTick();
       const el = scrollContainer.value;
@@ -213,24 +211,15 @@ export function useChatPanel(props: {
          return null;
       }
 
-      const token = await getValidToken();
-      if (!token) {
-         fileError.value = 'Missing auth token.';
-         return null;
-      }
-
       const formData = new FormData();
       formData.append('file', file);
 
       isUploading.value = true;
       try {
-         const response = await fetch(
+         const response = await authFetch(
             `/api/chat/attachments?opportunity_id=${encodeURIComponent(opportunityId)}`,
             {
                method: 'POST',
-               headers: {
-                  Authorization: `Bearer ${token}`,
-               },
                body: formData,
             }
          );

@@ -40,7 +40,7 @@ export async function deleteOpportunityDocument(documentId: string, token: strin
    const res = await authFetch(
       `/api/document/${documentId}`,
       {
-      method: 'DELETE',
+         method: 'DELETE',
       },
       token
    );
@@ -57,11 +57,11 @@ export async function clearDocumentStorageKey(
    const res = await authFetch(
       `/api/document/${documentId}/storage-key`,
       {
-      method: 'PUT',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ storage_key: null }),
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ storage_key: null }),
       },
       token
    );
@@ -80,11 +80,11 @@ export async function updateDocumentStatus(
    const res = await authFetch(
       `/api/document/${documentId}/status`,
       {
-      method: 'PUT',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status }),
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ status }),
       },
       token
    );

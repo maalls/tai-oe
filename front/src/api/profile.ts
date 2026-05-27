@@ -21,11 +21,11 @@ export async function updateProfile(
    const res = await authFetch(
       '/api/profile',
       {
-      method: 'PUT',
-      headers: {
-         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify(data),
       },
       token
    );
