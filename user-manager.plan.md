@@ -170,11 +170,11 @@ Goal: Finalize with safety checks, observability, docs, and rollout instructions
 
 Checklist:
 
-- [ ] Add edge-case tests (invalid token + role mismatch + deleted user).
-- [ ] Add integration tests for end-to-end role change effect.
-- [ ] Add seed/bootstrap helper to create first admin safely.
-- [ ] Document role model and operational runbook.
-- [ ] Add rollback strategy for migration and permission toggles.
+- [x] Add edge-case tests (invalid token + role mismatch + deleted user).
+- [x] Add integration tests for end-to-end role change effect.
+- [x] Add seed/bootstrap helper to create first admin safely.
+- [x] Document role model and operational runbook.
+- [x] Add rollback strategy for migration and permission toggles.
 
 TDD steps:
 
@@ -188,8 +188,8 @@ Commit plan:
 
 Acceptance criteria:
 
-- [ ] Test suite covers happy paths and common failures.
-- [ ] Team can operate role model safely in dev/staging/prod.
+- [x] Test suite covers happy paths and common failures.
+- [x] Team can operate role model safely in dev/staging/prod.
 
 ## Cross-Cutting TDD Rules
 
@@ -224,7 +224,7 @@ Milestone status:
 - [x] M2 Admin users API
 - [x] M3 Frontend Admin Users UI
 - [x] M4 Role-based access enforcement
-- [ ] M5 Hardening + docs
+- [x] M5 Hardening + docs
 
 Commit tracker:
 
@@ -236,8 +236,8 @@ Commit tracker:
 - [x] 3.2 feature
 - [x] 4.1 tests
 - [x] 4.2 feature
-- [ ] 5.1 tests
-- [ ] 5.2 docs
+- [x] 5.1 tests
+- [x] 5.2 docs
 
 Current status notes:
 
@@ -256,7 +256,11 @@ Current status notes:
 - `UM-012` backend RBAC coverage is now complete for the current scope, with representative backend authorization tests and frontend guard tests passing.
 - Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
-- Remaining work now shifts to M5 hardening, docs, bootstrap safety, and rollout polish.
+- `UM-013` backend integration coverage is now in place for admin route role transitions and auth edge cases (invalid token, role mismatch, deleted profile) in `back/tests/integration/api/authz/route_access/test_admin_route_role_transition_effect.py` and `back/tests/integration/api/authz/route_access/test_admin_route_auth_edge_cases.py`.
+- `UM-013` frontend regression coverage is extended for consecutive admin guard checks after role change in `front/tests/unit/src/router/guards/adminRole/resolveAdminAccess.test.ts`.
+- `UM-014` first-admin bootstrap helper is implemented with overwrite guardrails in `back/script/bootstrap_admin.py` and validated by `back/tests/unit/script/test_bootstrap_admin_run.py`.
+- `UM-014` runbook + rollback/recovery procedures are documented in `back/docs/user_management_runbook.md`.
+- Remaining work now focuses on commit/merge workflow and staging validation of the new runbook procedures.
 
 ## Ordered Ticket Backlog (Ready To Execute)
 
@@ -400,11 +404,78 @@ Estimation scale:
 - [x] `UM-007` -> commit
 - [x] `UM-008` -> commit
 - [x] `UM-009` -> commit
-- [ ] `UM-010` -> commit
-- [ ] `UM-011` -> commit
-- [ ] `UM-012` -> commit
+- [x] `UM-010` -> commit
+- [x] `UM-011` -> commit
+- [x] `UM-012` -> commit
 - [ ] `UM-013` -> commit
 - [ ] `UM-014` -> commit
+
+## Next Execution Plan (M5)
+
+Objective now: finish hardening + operational readiness through `UM-013` and `UM-014`.
+
+### UM-013 - Integration Regressions for Role Transitions
+
+Scope:
+
+- Add backend integration tests covering immediate effect after role change (`admin -> user`, `user -> admin`).
+- Add regression tests for edge cases:
+  - invalid/expired token -> `401`
+  - token valid but non-admin role on admin endpoints -> `403`
+  - profile deleted or missing while token still valid -> explicit auth error path
+- Add frontend integration checks for `/admin/users`:
+  - non-admin redirected/blocked
+  - admin role update reflects in subsequent protected calls
+
+Proposed test files:
+
+- `back/tests/integration/api/authz/route_access/test_admin_route_role_transition_effect.py`
+- `back/tests/integration/api/authz/route_access/test_admin_route_auth_edge_cases.py`
+- `front/tests/unit/src/router/guards/adminRole/resolveAdminAccess.test.ts`
+
+Acceptance evidence:
+
+- Targeted backend integration suite green for role transitions and auth edge cases.
+- Frontend integration test validates UX guard behavior after role changes.
+
+### UM-014 - Bootstrap + Runbook + Recovery
+
+Scope:
+
+- Add safe bootstrap helper for first admin (script/CLI or SQL recipe with guardrails).
+- Prevent unsafe bootstrap behaviors:
+  - no silent overwrite of existing role unless explicit force flag
+  - clear output when user not found
+- Document production-safe workflow and rollback instructions.
+
+Proposed deliverables:
+
+- Bootstrap helper:
+  - `back/script/bootstrap_admin.py` (or equivalent command entrypoint)
+- Operational docs:
+  - `back/docs/user_management_runbook.md`
+  - Update `back/docs/token_regeneration.md` (if role bootstrap intersects auth ops)
+
+Acceptance evidence:
+
+- Bootstrap helper tested for success + failure paths.
+- Runbook contains:
+  - first-admin bootstrap procedure
+  - role recovery procedure
+  - rollback strategy for role migration/policy toggles
+
+### Commit Sequence for Remaining Work
+
+- [x] Commit 5.1A: `test(rbac-hardening): add backend integration regressions for role transitions and auth edge cases`
+- [x] Commit 5.1B: `test(front-rbac-hardening): add admin-users integration guard regressions`
+- [x] Commit 5.2A: `feat(bootstrap-admin): add first-admin bootstrap helper with guardrails`
+- [x] Commit 5.2B: `docs(rbac): add user-management runbook and rollback/recovery procedures`
+
+### Exit Criteria to Close User-Management Integration
+
+- [ ] `UM-013` merged with passing targeted integration tests (backend + frontend).
+- [ ] `UM-014` merged with validated bootstrap path and reviewed runbook.
+- [x] Milestone `M5` checked complete in this plan.
 
 ## Effort Summary
 
@@ -413,6 +484,14 @@ Estimation scale:
 - RBAC rollout (`UM-010`..`UM-012`): ~4-6 dev-days
 - Hardening/docs (`UM-013`..`UM-014`): ~2-3 dev-days
 - Total: ~13-20 dev-days
+
+Remaining effort from current state: ~0.5-1 dev-day (commit/merge + staging validation)
+
+## Next Session Run Plan
+
+1. Commit and push `UM-013` + `UM-014` changes.
+2. Run broader backend/frontend smoke suites before release.
+3. Validate runbook steps in staging with real admin recovery drill.
 
 ## Definition of Done
 
