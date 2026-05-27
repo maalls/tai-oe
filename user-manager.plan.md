@@ -473,8 +473,8 @@ Acceptance evidence:
 
 ### Exit Criteria to Close User-Management Integration
 
-- [ ] `UM-013` merged with passing targeted integration tests (backend + frontend).
-- [ ] `UM-014` merged with validated bootstrap path and reviewed runbook.
+- [x] `UM-013` merged with passing targeted integration tests (backend + frontend).
+- [x] `UM-014` merged with validated bootstrap path and reviewed runbook.
 - [x] Milestone `M5` checked complete in this plan.
 
 ## Effort Summary
