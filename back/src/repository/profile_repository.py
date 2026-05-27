@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from src.repository.core_repository import CoreDatabaseRepository
 
-class ProfileRepositoryMixin:
+
+class ProfileRepository(CoreDatabaseRepository):
     """Database profile read/update operations."""
 
     _ALLOWED_ROLES = {"admin", "user"}

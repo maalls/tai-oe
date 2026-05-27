@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from src.repository.core_repository import CoreDatabaseRepository
 
-class SchemaRepositoryMixin:
+
+class SchemaRepository(CoreDatabaseRepository):
     """Schema metadata and dynamic query operations."""
 
     def list_public_tables_with_columns(self) -> List[Dict[str, Any]]:
