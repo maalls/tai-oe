@@ -6,6 +6,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 from src.api.dependencies import get_auth_service, get_invoice_handlers, get_quote_send_service, get_quote_service
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -14,6 +15,11 @@ class _FakeAuthService:
         if auth_header == "Bearer valid":
             return True, {"id": "u-1"}
         return False, None
+
+
+class _FakeDatabaseRepository:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
 
 
 def _client(monkeypatch) -> TestClient:
@@ -55,6 +61,7 @@ def _client(monkeypatch) -> TestClient:
 
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
     app.dependency_overrides[get_quote_send_service] = lambda: _FakeQuoteSendService()
     app.dependency_overrides[get_quote_service] = lambda: _FakeQuoteService()
     app.dependency_overrides[get_invoice_handlers] = lambda: _FakeInvoiceHandlers()
@@ -107,7 +114,7 @@ def test_quote_generate_from_opportunity_route(monkeypatch):
 def test_quote_download_route(monkeypatch):
     client = _client(monkeypatch)
 
-    response = client.get("/api/quotes/download/file.pdf?inline=1")
+    response = client.get("/api/quotes/download/file.pdf?inline=1", headers={"Authorization": "Bearer valid"})
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
@@ -116,7 +123,7 @@ def test_quote_download_route(monkeypatch):
 def test_quote_download_not_found(monkeypatch):
     client = _client(monkeypatch)
 
-    response = client.get("/api/quotes/download/missing.pdf")
+    response = client.get("/api/quotes/download/missing.pdf", headers={"Authorization": "Bearer valid"})
 
     assert response.status_code == 404
 
@@ -124,7 +131,7 @@ def test_quote_download_not_found(monkeypatch):
 def test_quote_submit_route(monkeypatch):
     client = _client(monkeypatch)
 
-    response = client.post("/api/quote", json={"products": [{"sku": "A"}]})
+    response = client.post("/api/quote", headers={"Authorization": "Bearer valid"}, json={"products": [{"sku": "A"}]})
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
@@ -135,6 +142,7 @@ def test_quote_send_route(monkeypatch):
 
     response = client.post(
         "/api/quote/send",
+        headers={"Authorization": "Bearer valid"},
         json={"pdf_filename": "quote_1.pdf", "email": "test@example.com", "body": "hello"},
     )
 
@@ -145,7 +153,7 @@ def test_quote_send_route(monkeypatch):
 def test_quotes_list_route(monkeypatch):
     client = _client(monkeypatch)
 
-    response = client.get("/api/quotes/list")
+    response = client.get("/api/quotes/list", headers={"Authorization": "Bearer valid"})
 
     assert response.status_code == 200
     assert response.json()["total"] == 1

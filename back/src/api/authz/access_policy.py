@@ -52,6 +52,16 @@ _ACCESS_POLICY: Final[dict[str, set[str]]] = {
     "/api/document/update-content": {"admin"},
     "DELETE /api/document/{document_id}": {"admin"},
     "/api/chat/attachments": {"admin"},
+    "/api/quote": {"admin"},
+    "/api/quote/send": {"admin"},
+    "/api/quote/{document_id}": {"admin"},
+    "/api/quotes/list": {"admin"},
+    "/api/quote/{document_id}/pdf": {"admin"},
+    "/api/quote/{opportunity_id}/generate": {"admin"},
+    "/api/quote/{quote_id}/invoice": {"admin"},
+    "/api/invoice/{invoice_id}/pdf": {"admin"},
+    "/api/invoice/{invoice_id}/send": {"admin"},
+    "/api/quotes/download/{filename}": {"admin"},
 }
 
 
