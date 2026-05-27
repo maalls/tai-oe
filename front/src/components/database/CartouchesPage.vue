@@ -38,12 +38,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAuth } from '../../stores/auth';
+import { authFetch } from '../../api/authFetch';
 
 const tableData = ref<any>(null);
 const loadingData = ref(false);
 const dataError = ref('');
-const { getValidToken } = useAuth();
 
 onMounted(() => {
    loadTableData();
@@ -55,14 +54,8 @@ async function loadTableData() {
    tableData.value = null;
 
    try {
-      const token = await getValidToken();
-      const response = await fetch(
-         `/api/csv/query?table=${encodeURIComponent('fabdis_cartouches')}`,
-         {
-            headers: {
-               Authorization: `Bearer ${token}`,
-            },
-         }
+      const response = await authFetch(
+         `/api/csv/query?table=${encodeURIComponent('fabdis_cartouches')}`
       );
       const data = await response.json();
       if (!response.ok) {

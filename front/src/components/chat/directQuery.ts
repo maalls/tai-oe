@@ -3,18 +3,7 @@
  */
 
 import { DB_API_URL } from './types';
-import { useAuth } from '../../stores/auth';
-
-async function fetchDbWithAuth(url: URL): Promise<Response> {
-   const { getValidToken } = useAuth();
-   const token = await getValidToken();
-
-   return fetch(url.toString(), {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
-}
+import { authFetch } from '../../api/authFetch';
 
 export interface ColumnInfo {
    name: string;
@@ -44,7 +33,7 @@ export async function fetchTables(): Promise<TableInfo[]> {
    const url = new URL(DB_API_URL);
    url.searchParams.set('tables', 'true');
 
-   const resp = await fetchDbWithAuth(url);
+   const resp = await authFetch(url.toString());
    if (!resp.ok) {
       throw new Error(`Failed to fetch tables: ${resp.status}`);
    }
@@ -71,7 +60,7 @@ export async function executeDirectQuery(params: QueryParams): Promise<any> {
 
    url.searchParams.set('limit', String(limit));
 
-   const resp = await fetchDbWithAuth(url);
+   const resp = await authFetch(url.toString());
    if (!resp.ok) {
       const text = await resp.text();
       throw new Error(`DB error ${resp.status}: ${text}`);
