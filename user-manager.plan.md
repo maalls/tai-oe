@@ -178,13 +178,13 @@ Checklist:
 
 TDD steps:
 
-- [ ] Add failing integration/regression tests.
-- [ ] Implement hardening changes until all pass.
+- [x] Add failing integration/regression tests.
+- [x] Implement hardening changes until all pass.
 
 Commit plan:
 
-- [ ] Commit 5.1: `test(rbac-hardening): add integration and edge-case regressions`
-- [ ] Commit 5.2: `docs(rbac): add user-manager runbook and bootstrap instructions`
+- [x] Commit 5.1: `test(rbac-hardening): add integration and edge-case regressions`
+- [x] Commit 5.2: `docs(rbac): add user-manager runbook and bootstrap instructions`
 
 Acceptance criteria:
 
@@ -193,11 +193,11 @@ Acceptance criteria:
 
 ## Cross-Cutting TDD Rules
 
-- [ ] For each feature step: write failing test first.
-- [ ] Implement smallest change to pass tests.
-- [ ] Refactor only after green tests.
-- [ ] Keep commits atomic and descriptive.
-- [ ] Run targeted tests in each step and milestone-level smoke tests.
+- [x] For each feature step: write failing test first.
+- [x] Implement smallest change to pass tests.
+- [x] Refactor only after green tests.
+- [x] Keep commits atomic and descriptive.
+- [x] Run targeted tests in each step and milestone-level smoke tests.
 
 ## Suggested Test Structure
 
