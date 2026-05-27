@@ -1,48 +1,60 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import SourcePage from '../components/admin/components/source/IndexPage.vue';
-import DatabasePage from '../components/admin/components/database/IndexPage.vue';
-import AdminUsersPage from '../components/admin/components/users/IndexPage.vue';
-import CartouchesPage from '../components/database/CartouchesPage.vue';
-import CommercePage from '../components/database/CommercePage.vue';
-import AdminFlowPage from '../components/admin/components/flow/IndexPage.vue';
-import ChatPage from '../components/chat/IndexPage.vue';
-import MailPage from '../components/mail/IndexPage.vue';
-import OpportunityPage from '../components/opportunity/IndexPage.vue';
-import OpportunitySourcePage from '../components/opportunity/components/source/SourcePage.vue';
-import OpportunityAccountPage from '../components/opportunity/components/account/AccountPage.vue';
-import OpportunityQuotePage from '../components/opportunity/components/quote/QuotePage.vue';
-import OpportunityPreviewPage from '../components/opportunity/components/preview/PreviewPage.vue';
-import OpportunitySendPage from '../components/opportunity/components/send/SendPage.vue';
-import OpportunityPipelinePage from '../components/opportunity/components/pipeline/PipelinePage.vue';
-import OpportunitySettingsPage from '../components/opportunity/components/settings/SettingsPage.vue';
-import OpportunityDocumentsPage from '../components/opportunity/components/documents/DocumentsPage.vue';
-import OpportunityDocumentDetailPage from '../components/opportunity/components/documents/DocumentDetailPage.vue';
-import OpportunityInvoicesPage from '../components/opportunity/components/invoices/InvoicesPage.vue';
-import OpportunityInvoiceDetailPage from '../components/opportunity/components/invoices/InvoiceDetailPage.vue';
-import OpportunityActionsPage from '../components/opportunity/components/actions/ActionsPage.vue';
-import OpportunityChatPage from '../components/opportunity/components/chat/ChatPage.vue';
-import AccountPage from '../components/account/IndexPage.vue';
-import AccountEditPage from '../components/account/Edit.vue';
-import ContactPage from '../components/contact/IndexPage.vue';
-import ContactDetailPage from '../components/contact/DetailPage.vue';
-import ClientPage from '../components/client/IndexPage.vue';
-import ProductPage from '../components/products/IndexPage.vue';
-import ProductDetailPage from '../components/products/DetailPage.vue';
-import ProductBrandPage from '../components/products/BrandPage.vue';
-import ProductBrandEditPage from '../components/products/BrandEditPage.vue';
-import ProductEditPage from '../components/products/edit.vue';
-import ProductFamilyPage from '../components/family/index.vue';
-import FamilyDiscountPage from '../components/family/show.vue';
-import VendorPage from '../components/vendor/index.vue';
-import VendorEditPage from '../components/vendor/Edit.vue';
-import AdminPage from '../components/admin/IndexPage.vue';
-import SettingsPage from '../components/settings/IndexPage.vue';
-import LoginPage from '../components/login/IndexPage.vue';
-import ResetPasswordPage from '../components/login/ResetPasswordPage.vue';
-import AuthTestPage from '../components/debug/AuthTestPage.vue';
 import { useAuth } from '../stores/auth';
 import { resolveAdminAccess } from './guards/adminRole';
 import i18n from '../i18n';
+
+const SourcePage = () => import('../components/admin/components/source/IndexPage.vue');
+const DatabasePage = () => import('../components/admin/components/database/IndexPage.vue');
+const AdminUsersPage = () => import('../components/admin/components/users/IndexPage.vue');
+const CartouchesPage = () => import('../components/database/CartouchesPage.vue');
+const CommercePage = () => import('../components/database/CommercePage.vue');
+const AdminFlowPage = () => import('../components/admin/components/flow/IndexPage.vue');
+const ChatPage = () => import('../components/chat/IndexPage.vue');
+const MailPage = () => import('../components/mail/IndexPage.vue');
+const OpportunityPage = () => import('../components/opportunity/IndexPage.vue');
+const OpportunitySourcePage = () =>
+   import('../components/opportunity/components/source/SourcePage.vue');
+const OpportunityAccountPage = () =>
+   import('../components/opportunity/components/account/AccountPage.vue');
+const OpportunityQuotePage = () =>
+   import('../components/opportunity/components/quote/QuotePage.vue');
+const OpportunityPreviewPage = () =>
+   import('../components/opportunity/components/preview/PreviewPage.vue');
+const OpportunitySendPage = () => import('../components/opportunity/components/send/SendPage.vue');
+const OpportunityPipelinePage = () =>
+   import('../components/opportunity/components/pipeline/PipelinePage.vue');
+const OpportunitySettingsPage = () =>
+   import('../components/opportunity/components/settings/SettingsPage.vue');
+const OpportunityDocumentsPage = () =>
+   import('../components/opportunity/components/documents/DocumentsPage.vue');
+const OpportunityDocumentDetailPage = () =>
+   import('../components/opportunity/components/documents/DocumentDetailPage.vue');
+const OpportunityInvoicesPage = () =>
+   import('../components/opportunity/components/invoices/InvoicesPage.vue');
+const OpportunityInvoiceDetailPage = () =>
+   import('../components/opportunity/components/invoices/InvoiceDetailPage.vue');
+const OpportunityActionsPage = () =>
+   import('../components/opportunity/components/actions/ActionsPage.vue');
+const OpportunityChatPage = () => import('../components/opportunity/components/chat/ChatPage.vue');
+const AccountPage = () => import('../components/account/IndexPage.vue');
+const AccountEditPage = () => import('../components/account/Edit.vue');
+const ContactPage = () => import('../components/contact/IndexPage.vue');
+const ContactDetailPage = () => import('../components/contact/DetailPage.vue');
+const ClientPage = () => import('../components/client/IndexPage.vue');
+const ProductPage = () => import('../components/products/IndexPage.vue');
+const ProductDetailPage = () => import('../components/products/DetailPage.vue');
+const ProductBrandPage = () => import('../components/products/BrandPage.vue');
+const ProductBrandEditPage = () => import('../components/products/BrandEditPage.vue');
+const ProductEditPage = () => import('../components/products/edit.vue');
+const ProductFamilyPage = () => import('../components/family/index.vue');
+const FamilyDiscountPage = () => import('../components/family/show.vue');
+const VendorPage = () => import('../components/vendor/index.vue');
+const VendorEditPage = () => import('../components/vendor/Edit.vue');
+const AdminPage = () => import('../components/admin/IndexPage.vue');
+const SettingsPage = () => import('../components/settings/IndexPage.vue');
+const LoginPage = () => import('../components/login/IndexPage.vue');
+const ResetPasswordPage = () => import('../components/login/ResetPasswordPage.vue');
+const AuthTestPage = () => import('../components/debug/AuthTestPage.vue');
 
 const router = createRouter({
    history: createWebHistory(),

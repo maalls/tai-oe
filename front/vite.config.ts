@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
          'Missing required VITE_API_URL. Define it in your .env/.env.local or environment before starting Vite.'
       );
    }
-   
+
    const apiProxyTargetEnv = localEnv.VITE_API_PROXY_TARGET || process.env.VITE_API_PROXY_TARGET;
    const apiProxyTarget = apiUrl.startsWith('http') ? apiUrl : apiProxyTargetEnv;
    if (!apiProxyTarget) {
@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
          'Missing required VITE_API_PROXY_TARGET when VITE_API_URL is relative. Define it in your .env/.env.local or environment.'
       );
    }
-   
+
    const sharedEnvRel = localEnv.SUPABASE_ENV_FILE || '../supabase/.env.prod';
    const sharedEnvPath = path.isAbsolute(sharedEnvRel)
       ? sharedEnvRel
@@ -81,6 +81,43 @@ export default defineConfig(({ mode }) => {
          'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(viteSupabaseAnon),
       },
       plugins: [vue()],
+      build: {
+         rollupOptions: {
+            output: {
+               manualChunks(id) {
+                  if (!id.includes('/node_modules/')) {
+                     return undefined;
+                  }
+
+                  if (id.includes('/pdfjs-dist/') || id.includes('/vue3-pdf-app/')) {
+                     return 'vendor-pdf';
+                  }
+
+                  if (id.includes('/@supabase/supabase-js/')) {
+                     return 'vendor-supabase';
+                  }
+
+                  if (id.includes('/marked/') || id.includes('/dompurify/')) {
+                     return 'vendor-text';
+                  }
+
+                  if (id.includes('/lucide-vue-next/')) {
+                     return 'vendor-icons';
+                  }
+
+                  if (
+                     id.includes('/vue/') ||
+                     id.includes('/vue-router/') ||
+                     id.includes('/vue-i18n/')
+                  ) {
+                     return 'vendor-vue';
+                  }
+
+                  return 'vendor-misc';
+               },
+            },
+         },
+      },
       server: {
          middlewareMode: false,
          allowedHosts: ['gme.ai-oe.co', 'localhost', '127.0.0.1'],
