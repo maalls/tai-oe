@@ -234,6 +234,38 @@ def test_prompt_route_returns_404_when_missing(tmp_path: Path):
     assert response.json()["error"] == "Prompt not found"
 
 
+def test_prompt_route_requires_valid_token(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceInvalid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryAdmin()
+    client = TestClient(app)
+
+    response = client.get("/api/prompt/sales/intro")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_prompt_route_forbidden_for_non_admin_user(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    prompt_path = prompt_base_dir / "sales" / "intro" / "prompt.md"
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text("hello prompt", encoding="utf-8")
+
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryUser()
+    client = TestClient(app)
+
+    response = client.get("/api/prompt/sales/intro", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"
+
+
 def test_email_fetch_loop_status_route_returns_payload(tmp_path: Path):
     client = _client(tmp_path)
 
@@ -241,6 +273,34 @@ def test_email_fetch_loop_status_route_returns_payload(tmp_path: Path):
 
     assert response.status_code == 200
     assert response.json()["running"] is False
+
+
+def test_email_fetch_loop_status_requires_valid_token(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceInvalid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryAdmin()
+    client = TestClient(app)
+
+    response = client.get("/api/email-fetch-loop/status")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_email_fetch_loop_status_forbidden_for_non_admin_user(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryUser()
+    client = TestClient(app)
+
+    response = client.get("/api/email-fetch-loop/status", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"
 
 
 def test_storage_head_route_returns_headers(tmp_path: Path):

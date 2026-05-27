@@ -19,6 +19,18 @@ def test_allowed_roles_for_route_returns_admin_for_csv_access():
     assert roles == {"admin"}
 
 
+def test_allowed_roles_for_route_returns_admin_for_utils_prompt_read():
+    roles = allowed_roles_for_route("utils.prompt.read")
+
+    assert roles == {"admin"}
+
+
+def test_allowed_roles_for_route_returns_admin_for_email_fetch_loop_status():
+    roles = allowed_roles_for_route("utils.email_fetch_loop.status")
+
+    assert roles == {"admin"}
+
+
 def test_allowed_roles_for_route_returns_empty_set_for_unknown_route():
     roles = allowed_roles_for_route("unknown.route")
 

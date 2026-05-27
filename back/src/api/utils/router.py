@@ -16,11 +16,27 @@ _unsafe_utils_access = build_route_access_dependency(
     forbidden_body={"error": "Forbidden"},
 )
 
+_email_fetch_loop_status_access = build_route_access_dependency(
+    route_key="utils.email_fetch_loop.status",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_prompt_read_access = build_route_access_dependency(
+    route_key="utils.prompt.read",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
 
 @router.get("/api/email-fetch-loop/status")
 def email_fetch_loop_status(
+    requester_id: str | JSONResponse = Depends(_email_fetch_loop_status_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     result = utility_service.get_email_fetch_loop_status()
     return JSONResponse(result, status_code=200)
 
@@ -140,8 +156,12 @@ def fs_read(
 @router.get("/api/prompt/{relative_path:path}")
 def get_prompt_content(
     relative_path: str,
+    requester_id: str | JSONResponse = Depends(_prompt_read_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         content = utility_service.get_prompt_content(relative_path=relative_path.strip("/"))
         return PlainTextResponse(content=content, media_type="text/plain; charset=utf-8")
