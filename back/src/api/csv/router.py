@@ -34,8 +34,6 @@ def csv_sources(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     return JSONResponse(file_handler.list_sources(), status_code=200)
 
 
@@ -45,8 +43,6 @@ def csv_files(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     return JSONResponse({"files": file_handler.list_files_for_source(source)}, status_code=200)
 
 
@@ -60,8 +56,6 @@ def csv_preview(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     try:
         filters = json.loads(filter) if filter else None
         if filters is not None and not isinstance(filters, dict):
@@ -87,8 +81,6 @@ def csv_source_download(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     try:
         content = file_handler.read_source_file(source)
         ext = source.lower().split(".")[-1] if "." in source else ""
@@ -113,8 +105,6 @@ def csv_raw(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     try:
         csv_path = file_handler.safe_file_from_query(source, file)
         return Response(
@@ -133,8 +123,6 @@ def csv_download(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     try:
         csv_path = file_handler.safe_file_from_query(source, file)
         return Response(
@@ -159,8 +147,6 @@ def csv_query(
     database_repository: DatabaseRepository = Depends(get_database_repository),
 ):
     try:
-        _ = requester.get_user_id()
-
         if tables is not None:
             rows = database_repository.list_public_tables_with_columns()
             tables_map: dict[str, dict] = {}
@@ -212,8 +198,6 @@ async def csv_source_upload(
     requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    _ = requester.get_user_id()
-
     try:
         file_data = await file.read()
         result = file_handler.handle_uploaded_file(filename=file.filename or "", file_data=file_data)

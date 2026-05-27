@@ -22,8 +22,6 @@ def admin_list_users(
     requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    _ = requester.get_user_id()
-
     users = db.list_users(limit=100, offset=0)
     return JSONResponse(jsonable_encoder({"status": "ok", "users": users}), status_code=200)
 

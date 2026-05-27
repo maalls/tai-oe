@@ -36,17 +36,11 @@ def _resolve_user_id(
     return user_data.get("id")
 
 
-def _require_admin_context(requester: AccessContext) -> str:
-    return requester.get_user_id()
-
-
 @router.post("/api/quote")
 def quote_submit(
     payload: QuoteSubmitRequest,
-    requester: AccessContext = Depends(_admin_access),
     quote_service: QuoteService = Depends(get_quote_service),
 ):
-    _ = _require_admin_context(requester)
     result = quote_service.handle_quote_submit(payload.model_dump())
     return JSONResponse(result, status_code=_status_from_result(result))
 
@@ -54,10 +48,8 @@ def quote_submit(
 @router.post("/api/quote/send")
 def quote_send(
     payload: QuoteSendRequest,
-    requester: AccessContext = Depends(_admin_access),
     quote_send_service: QuoteSendService = Depends(get_quote_send_service),
 ):
-    _ = _require_admin_context(requester)
     result = quote_send_service.handle_quote_send(
         body=payload.model_dump_json().encode("utf-8"),
         content_type="application/json",
@@ -69,13 +61,10 @@ def quote_send(
 def quote_update(
     document_id: str,
     payload: QuoteUpdateRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
     requester: AccessContext = Depends(_admin_access),
     quote_service: QuoteService = Depends(get_quote_service),
 ):
-    _ = _require_admin_context(requester)
-    user_id = _resolve_user_id(authorization, auth_service)
+    user_id = requester.get_user_id()
 
     result = quote_service.update(document_id=document_id, payload=payload.model_dump(), user_id=user_id)
     status = 400 if result.get("error") else 200
@@ -84,7 +73,6 @@ def quote_update(
 
 @router.get("/api/quotes/list")
 def quotes_list(quote_service: QuoteService = Depends(get_quote_service)):
-    _ = quote_service
     result = quote_service.handle_list_quotes()
     return JSONResponse(result, status_code=_status_from_result(result))
 
@@ -92,13 +80,10 @@ def quotes_list(quote_service: QuoteService = Depends(get_quote_service)):
 @router.post("/api/quote/{document_id}/pdf")
 def quote_generate_pdf(
     document_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
     requester: AccessContext = Depends(_admin_access),
     quote_service: QuoteService = Depends(get_quote_service),
 ):
-    _ = _require_admin_context(requester)
-    user_id = _resolve_user_id(authorization, auth_service)
+    user_id = requester.get_user_id()
 
     result = quote_service.handle_generate_quote_pdf(document_id=document_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -107,13 +92,10 @@ def quote_generate_pdf(
 @router.post("/api/quote/{opportunity_id}/generate")
 def quote_generate_from_opportunity(
     opportunity_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
     requester: AccessContext = Depends(_admin_access),
     quote_service: QuoteService = Depends(get_quote_service),
 ):
-    _ = _require_admin_context(requester)
-    user_id = _resolve_user_id(authorization, auth_service)
+    user_id = requester.get_user_id()
 
     result = quote_service.handle_generate_quote_pdf_from_opportunity(opportunity_id=opportunity_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -122,13 +104,10 @@ def quote_generate_from_opportunity(
 @router.post("/api/quote/{quote_id}/invoice")
 def quote_generate_invoice(
     quote_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
     requester: AccessContext = Depends(_admin_access),
     invoice_handlers: InvoiceService = Depends(get_invoice_handlers),
 ):
-    _ = _require_admin_context(requester)
-    user_id = _resolve_user_id(authorization, auth_service)
+    user_id = requester.get_user_id()
 
     result = invoice_handlers.handle_generate_invoice_from_quote(quote_id=quote_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -137,13 +116,10 @@ def quote_generate_invoice(
 @router.post("/api/invoice/{invoice_id}/pdf")
 def invoice_generate_pdf(
     invoice_id: str,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
     requester: AccessContext = Depends(_admin_access),
     invoice_handlers: InvoiceService = Depends(get_invoice_handlers),
 ):
-    _ = _require_admin_context(requester)
-    user_id = _resolve_user_id(authorization, auth_service)
+    user_id = requester.get_user_id()
 
     result = invoice_handlers.handle_generate_invoice_pdf(document_id=invoice_id, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -153,13 +129,10 @@ def invoice_generate_pdf(
 def invoice_send(
     invoice_id: str,
     payload: dict[str, Any],
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
     requester: AccessContext = Depends(_admin_access),
     invoice_handlers: InvoiceService = Depends(get_invoice_handlers),
 ):
-    _ = _require_admin_context(requester)
-    user_id = _resolve_user_id(authorization, auth_service)
+    user_id = requester.get_user_id()
 
     result = invoice_handlers.handle_send_invoice(invoice_id=invoice_id, payload=payload, user_id=user_id)
     return JSONResponse(result, status_code=_status_from_result(result))
@@ -169,10 +142,8 @@ def invoice_send(
 def quote_download(
     filename: str,
     query: QuoteDownloadQuery = Depends(),
-    requester: AccessContext = Depends(_admin_access),
     quote_service: QuoteService = Depends(get_quote_service),
 ):
-    _ = _require_admin_context(requester)
     is_inline = query.inline == 1
 
     try:

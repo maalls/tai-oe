@@ -247,8 +247,6 @@ def document_update_storage_key(
     requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    _ = requester.get_user_id()
-
     rows = db.execute_dict_query(
         """
         UPDATE document
@@ -270,8 +268,6 @@ def document_update_status(
     requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    _ = requester.get_user_id()
-
     rows = db.execute_dict_query(
         """
         UPDATE document

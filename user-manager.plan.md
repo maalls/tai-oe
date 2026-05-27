@@ -139,11 +139,11 @@ Initial policy:
 
 Checklist:
 
-- [ ] Define central permission map in backend (single source).
-- [ ] Add reusable role guard dependency/middleware.
-- [ ] Apply guard to sensitive admin/business routes.
+- [x] Define central permission map in backend (single source).
+- [x] Add reusable role guard dependency/middleware.
+- [x] Apply guard to sensitive admin/business routes.
 - [x] Add frontend route guards to hide/redirect unauthorized areas.
-- [ ] Ensure backend is the source of truth (frontend guard is UX only).
+- [x] Ensure backend is the source of truth (frontend guard is UX only).
 
 TDD steps:
 
@@ -244,9 +244,7 @@ Current status notes:
 - `UM-001` to `UM-009` are implemented and validated with targeted tests.
 - `UM-010` is completed: reusable backend route-access dependency now centralizes token+role checks and is used by admin routes.
 - `UM-011` is completed for the CSV router: RBAC backend enforcement now covers CSV endpoints via the shared route-access dependency with preserved 401/403 responses.
-- `UM-012` backend source-of-truth is progressing: unsafe utility routes (`/api/fetch`, `/api/curl`, `/api/fs/*`) now require admin via the shared route-access dependency.
-- `UM-012` backend source-of-truth is extended on utility routes: prompt reads and email fetch-loop status now also require admin via the shared route-access dependency.
-- `UM-012` backend source-of-truth now includes storage route protection: `/api/storage/*` requires authentication (`admin` or `user`).
+- `UM-012` backend source-of-truth now covers utility routes (`/api/fetch`, `/api/curl`, `/api/fs/*`, prompt reads, email fetch-loop status, and `/api/storage/*`) via the shared route-access dependency.
 - `UM-012` backend source-of-truth now covers action execute/log endpoints as admin-only with 401/403 test coverage.
 - `UM-012` backend source-of-truth now covers the full action router as admin-only (list/create/get/update/delete/pause/resume/execute/logs) with dedicated unit coverage.
 - `UM-012` backend RBAC dependency design is now migrated to `AccessContext + RouteAccessError` with top-level FastAPI handling for 401/403 on action/admin/csv/utils routers.
@@ -254,9 +252,10 @@ Current status notes:
 - `UM-012` backend RBAC coverage now also guards document mutation endpoints (`storage-key`, `extract-rfp`, `update-content`, `delete`, `chat attachments`) as admin-only, with method-aware policy support for DELETE vs public GET on the same path.
 - `UM-012` backend RBAC coverage now also locks the full opportunity router behind admin access, with targeted unit tests updated to supply admin auth/profile context.
 - `UM-012` backend RBAC coverage now also locks the full quote router behind admin access, with targeted unit tests updated to supply admin auth/profile context.
+- `UM-012` backend RBAC coverage now also keeps the `utils` router protected at the router level while removing redundant handler-level no-op access checks.
 - Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
-- Remaining M4 work focuses on backend permission map and broader route coverage (`UM-010`, `UM-011`, complete `UM-012`).
+- Remaining M4 work focuses on any missing backend route coverage outside the currently protected routers, plus the final frontend/backend polish.
 
 ## Ordered Ticket Backlog (Ready To Execute)
 

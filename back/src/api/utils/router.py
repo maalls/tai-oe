@@ -3,23 +3,20 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
-from src.api.authz.route_access import AccessContext, build_default_access_context_dependency
+from src.api.authz.route_access import build_default_access_context_dependency
 from src.api.dependencies import get_utility_service
 from src.api.utils.schemas import CurlRequest, FetchQuery, FsCreateRequest, FsReadRequest
 from src.service.utility.utility_service import UtilityService
 
-router = APIRouter(tags=["utils"])
-
 _route_access = build_default_access_context_dependency()
+
+router = APIRouter(tags=["utils"], dependencies=[Depends(_route_access)])
 
 
 @router.get("/api/email-fetch-loop/status")
 def email_fetch_loop_status(
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     result = utility_service.get_email_fetch_loop_status()
     return JSONResponse(result, status_code=200)
 
@@ -27,11 +24,8 @@ def email_fetch_loop_status(
 @router.get("/api/fetch")
 def fetch_url(
     query: FetchQuery = Depends(),
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     target_url = str(query.url or "").strip()
     if not target_url:
         return JSONResponse({"error": "Missing url parameter"}, status_code=400)
@@ -51,11 +45,8 @@ def fetch_url(
 @router.post("/api/curl")
 def curl_request(
     payload: CurlRequest,
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     target_url = str(payload.url or "").strip()
     if not target_url:
         return JSONResponse({"error": "Missing url"}, status_code=400)
@@ -86,11 +77,8 @@ def curl_request(
 @router.post("/api/fs/create")
 def fs_create(
     payload: FsCreateRequest,
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     raw_path = str(payload.path or "").strip()
     kind = payload.type or "dir"
 
@@ -109,11 +97,8 @@ def fs_create(
 @router.post("/api/fs/read")
 def fs_read(
     payload: FsReadRequest,
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     raw_path = str(payload.path or "").strip()
     max_chars = max(100, min(payload.max_chars, 50000))
 
@@ -135,11 +120,8 @@ def fs_read(
 @router.get("/api/prompt/{relative_path:path}")
 def get_prompt_content(
     relative_path: str,
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     try:
         content = utility_service.get_prompt_content(relative_path=relative_path.strip("/"))
         return PlainTextResponse(content=content, media_type="text/plain; charset=utf-8")
@@ -154,11 +136,8 @@ def get_prompt_content(
 @router.head("/api/storage/{raw_filename:path}")
 def storage_head(
     raw_filename: str,
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     try:
         storage_info = utility_service.resolve_storage_file(raw_filename)
     except FileNotFoundError:
@@ -173,11 +152,8 @@ def storage_head(
 @router.get("/api/storage/{raw_filename:path}")
 def storage_get(
     raw_filename: str,
-    requester: AccessContext = Depends(_route_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
-    _ = requester.get_user_id()
-
     try:
         storage_info = utility_service.resolve_storage_file(raw_filename)
     except FileNotFoundError:

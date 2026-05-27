@@ -204,8 +204,6 @@ def update_opportunity_stage_state(
     requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    user_id = requester.get_user_id()
-
     current_rows = db.execute_dict_query(
         "SELECT stage, status FROM opportunity WHERE id = %s",
         (opportunity_id,),
@@ -239,7 +237,7 @@ def update_opportunity_stage_state(
         )
         VALUES (%s, %s, %s, %s, now())
         """,
-        (opportunity_id, current_stage, payload.stage, user_id),
+        (opportunity_id, current_stage, payload.stage, requester.get_user_id()),
     )
 
     return rows[0]
