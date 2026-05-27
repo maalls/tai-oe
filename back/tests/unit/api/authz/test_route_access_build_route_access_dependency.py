@@ -1,6 +1,9 @@
 from fastapi.responses import JSONResponse
+import pytest
 
 from src.api.authz.route_access import (
+    RouteAccessError,
+    build_access_context_dependency,
     build_current_route_access_dependency,
     build_route_access_dependency,
 )
@@ -118,3 +121,56 @@ def test_build_current_route_access_dependency_returns_forbidden_when_role_disal
 
     assert isinstance(result, JSONResponse)
     assert result.status_code == 403
+
+
+def test_build_access_context_dependency_returns_context_when_authorized():
+    dependency = build_access_context_dependency(
+        unauthorized_body={"error": "Unauthorized"},
+        forbidden_body={"error": "Forbidden"},
+    )
+
+    result = dependency(
+        request=_FakeRequest("/api/admin/users"),
+        authorization="Bearer valid",
+        auth_service=_FakeAuthValid("u-admin"),
+        db=_FakeDbAdmin(),
+    )
+
+    assert result.get_user_id() == "u-admin"
+    assert result.role == "admin"
+
+
+def test_build_access_context_dependency_raises_unauthorized_when_token_invalid():
+    dependency = build_access_context_dependency(
+        unauthorized_body={"error": "Unauthorized"},
+        forbidden_body={"error": "Forbidden"},
+    )
+
+    with pytest.raises(RouteAccessError) as err:
+        dependency(
+            request=_FakeRequest("/api/admin/users"),
+            authorization=None,
+            auth_service=_FakeAuthInvalid(),
+            db=_FakeDbAdmin(),
+        )
+
+    assert err.value.status_code == 401
+    assert err.value.body == {"error": "Unauthorized"}
+
+
+def test_build_access_context_dependency_raises_forbidden_when_role_disallowed():
+    dependency = build_access_context_dependency(
+        unauthorized_body={"error": "Unauthorized"},
+        forbidden_body={"error": "Forbidden"},
+    )
+
+    with pytest.raises(RouteAccessError) as err:
+        dependency(
+            request=_FakeRequest("/api/admin/users"),
+            authorization="Bearer valid",
+            auth_service=_FakeAuthValid("u-user"),
+            db=_FakeDbUser(),
+        )
+
+    assert err.value.status_code == 403
+    assert err.value.body == {"error": "Forbidden"}

@@ -5,24 +5,23 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
-from src.api.authz.route_access import build_default_route_access_dependency
+from src.api.authz.route_access import AccessContext, build_default_access_context_dependency
 from src.api.common.responses import error_response
 from src.api.dependencies import get_action_service
 from src.service.action.service import ActionService
 
 router = APIRouter(tags=["action"])
 
-_action_access = build_default_route_access_dependency()
+_action_access = build_default_access_context_dependency()
 
 
 @router.get("/api/opportunities/{opportunity_id}/actions")
 def list_actions(
     opportunity_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         actions = action_service.list_actions(opportunity_id, user_id=requester_id)
@@ -34,11 +33,10 @@ def list_actions(
 @router.post("/api/actions")
 def create_action(
     payload: dict[str, Any],
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         action = action_service.create_action(payload, user_id=requester_id)
@@ -55,11 +53,10 @@ def create_action(
 @router.get("/api/actions/{action_id}")
 def get_action(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         action = action_service.get_action(action_id, user_id=requester_id)
@@ -73,11 +70,10 @@ def get_action(
 @router.post("/api/actions/{action_id}/pause")
 def pause_action(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         action = action_service.pause_action(action_id, user_id=requester_id)
@@ -91,11 +87,10 @@ def pause_action(
 @router.post("/api/actions/{action_id}/resume")
 def resume_action(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         action = action_service.resume_action(action_id, user_id=requester_id)
@@ -118,22 +113,20 @@ def _execute_action_response(action_id: str, user_id: str, action_service: Actio
 @router.post("/api/action/{action_id}/execute")
 def execute_action_frontend(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
     return _execute_action_response(action_id, requester_id, action_service)
 
 
 @router.post("/api/actions/{action_id}/execute")
 def execute_action_legacy_alias(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
     return _execute_action_response(action_id, requester_id, action_service)
 
 
@@ -141,11 +134,10 @@ def execute_action_legacy_alias(
 def get_action_logs(
     action_id: str,
     limit: int = Query(default=50),
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         logs = action_service.get_action_logs(action_id, limit=limit, user_id=requester_id)
@@ -158,11 +150,10 @@ def get_action_logs(
 def update_action(
     action_id: str,
     payload: dict[str, Any],
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         action = action_service.update_action(action_id, payload, user_id=requester_id)
@@ -176,11 +167,10 @@ def update_action(
 @router.delete("/api/actions/{action_id}")
 def delete_action(
     action_id: str,
-    requester_id: str | JSONResponse = Depends(_action_access),
+    requester: AccessContext = Depends(_action_access),
     action_service: ActionService = Depends(get_action_service),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     try:
         deleted = action_service.delete_action(action_id, user_id=requester_id)

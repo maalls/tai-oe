@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.api.action.router import router as action_router
 from src.api.admin.router import router as admin_router
@@ -20,6 +21,7 @@ from src.api.rfq.router import router as rfq_router
 from src.api.rfp.router import router as rfp_router
 from src.api.utils.router import router as utils_router
 from src.api.vendor.router import router as vendor_router
+from src.api.authz.route_access import RouteAccessError
 
 
 def create_app() -> FastAPI:
@@ -34,6 +36,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(RouteAccessError)
+    async def _route_access_error_handler(_request, exc: RouteAccessError):
+        return JSONResponse(exc.body, status_code=exc.status_code)
 
     app.include_router(action_router)
     app.include_router(admin_router)
