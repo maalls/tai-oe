@@ -1,6 +1,7 @@
 import type { Contact } from './contact';
 import type { OpportunityDocument } from './document';
 import type { SentEmailRecord } from './opportunity';
+import { apiFetch } from './apiFetch';
 
 export interface OpportunityInvoiceView {
    invoice: OpportunityDocument;
@@ -11,7 +12,7 @@ export interface OpportunityInvoiceView {
 export async function listOpportunityInvoices(
    opportunityId: string
 ): Promise<OpportunityDocument[]> {
-   const res = await fetch(`/api/invoice?opportunity_id=${encodeURIComponent(opportunityId)}`);
+   const res = await apiFetch(`/api/invoice?opportunity_id=${encodeURIComponent(opportunityId)}`);
    if (!res.ok) throw new Error('Erreur lors du chargement des factures');
    return await res.json();
 }
@@ -20,7 +21,7 @@ export async function getOpportunityInvoiceView(
    opportunityId: string,
    invoiceId: string
 ): Promise<OpportunityInvoiceView> {
-   const res = await fetch(
+   const res = await apiFetch(
       `/api/invoice/${invoiceId}/view?opportunity_id=${encodeURIComponent(opportunityId)}`
    );
    if (!res.ok) throw new Error('Erreur lors du chargement de la facture');

@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { authFetch } from '../api/authFetch';
 import { getOpportunitySource } from '../api/opportunitySource';
 
 type MaybeRef<T> = T | { value: T };
@@ -179,7 +180,7 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
                   if (doc.storage_key) {
                      try {
                         const url = `/api/storage/${doc.storage_key}`;
-                        const response = await fetch(url, { method: 'HEAD' });
+                        const response = await authFetch(url, { method: 'HEAD' });
                         const contentLength = response.headers.get('Content-Length');
                         if (contentLength) {
                            size = parseInt(contentLength, 10);
@@ -240,7 +241,7 @@ export const useOpportunitySource = (opportunityId: MaybeRef<string>) => {
          if (doc?.storage_key) {
             try {
                const url = `/api/storage/${doc.storage_key}`;
-               const response = await fetch(url, {
+               const response = await authFetch(url, {
                   signal: AbortSignal.timeout(10000),
                });
 

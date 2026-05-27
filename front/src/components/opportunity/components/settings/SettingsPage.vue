@@ -98,6 +98,7 @@ import { useAuth } from '../../../../stores/auth';
 import OpportunityHeader from '../../OpportunityHeader.vue';
 import { useI18n } from '../../../../i18n/useI18n';
 import { useApiQuery } from '../../../../composables/useApiQuery';
+import { authFetch } from '../../../../api/authFetch';
 import ActionButton from '../../../common/ActionButton.vue';
 
 const route = useRoute();
@@ -148,13 +149,6 @@ const deleteOpportunity = async () => {
    errorMessage.value = '';
 
    try {
-      const headers: HeadersInit = {
-         'Content-Type': 'application/json',
-      };
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
       const url = `/api/opportunities/${opportunityId.value}`;
       console.log('[SettingsPage] DELETE request to:', url);
       console.log(
@@ -162,9 +156,11 @@ const deleteOpportunity = async () => {
          session.value?.access_token?.substring(0, 20) + '...'
       );
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
          method: 'DELETE',
-         headers,
+         headers: {
+            'Content-Type': 'application/json',
+         },
       });
 
       console.log('[SettingsPage] Response status:', response.status);

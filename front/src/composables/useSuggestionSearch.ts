@@ -1,3 +1,5 @@
+import { apiFetch } from '../api/apiFetch';
+
 /**
  * Searches the product table by SKU with debouncing.
  * Used in both Quote and Family tables for product code/SKU suggestions.
@@ -10,7 +12,7 @@ export const searchProductBySku = async (
    onLoading(true);
 
    try {
-      const response = await fetch(`/api/products?sku=${encodeURIComponent(query)}&limit=5`);
+      const response = await apiFetch(`/api/products?sku=${encodeURIComponent(query)}&limit=5`);
       if (!response.ok) {
          throw new Error('Product search failed');
       }

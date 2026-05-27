@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 export interface ProductDetail {
    id: string | number;
    marque?: string;
@@ -87,7 +89,7 @@ export interface QuoteProductsContext {
 }
 
 export async function getProduct(productId: string): Promise<ProductDetail> {
-   const res = await fetch(`/api/products/${encodeURIComponent(productId)}`);
+   const res = await apiFetch(`/api/products/${encodeURIComponent(productId)}`);
    if (!res.ok) throw new Error('Erreur lors du chargement du produit');
    return await res.json();
 }
@@ -107,7 +109,7 @@ export async function searchProducts(
    if (typeof params.offset === 'number') query.set('offset', String(params.offset));
 
    const suffix = query.toString();
-   const res = await fetch(`/api/products/search${suffix ? `?${suffix}` : ''}`);
+   const res = await apiFetch(`/api/products/search${suffix ? `?${suffix}` : ''}`);
    if (!res.ok) throw new Error('Erreur lors du chargement des produits');
 
    const payload = await res.json();
@@ -126,7 +128,7 @@ export async function getQuoteProductsContext(skus: string[]): Promise<QuoteProd
    const query = new URLSearchParams();
    normalizedSkus.forEach((sku) => query.append('sku', sku));
 
-   const res = await fetch(`/api/products/quote-context?${query.toString()}`);
+   const res = await apiFetch(`/api/products/quote-context?${query.toString()}`);
    if (!res.ok) throw new Error('Erreur lors du chargement du contexte produit');
 
    const payload = await res.json();

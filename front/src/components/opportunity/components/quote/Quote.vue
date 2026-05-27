@@ -247,8 +247,8 @@ import { getAccount } from '../../../../api/account';
 import { listContacts } from '../../../../api/contact';
 import { listOpportunityDocuments, getOpportunityDocument } from '../../../../api/document';
 import { getOpportunitySummary } from '../../../../api/opportunity';
+import { authFetch } from '../../../../api/authFetch';
 import { useI18n } from '../../../../i18n/useI18n';
-import { buildAuthHeaders } from '../../utils/auth';
 import SourceViewer from '../source/SourceViewer.vue';
 import QuoteDocument from './QuoteDocument.vue';
 import { useOpportunitySource } from '../../../../composables/useOpportunitySource';
@@ -474,11 +474,9 @@ const generateQuote = async () => {
    isGeneratingQuote.value = true;
 
    try {
-      const headers = await buildAuthHeaders(true);
-
-      const response = await fetch(`/api/opportunity/${opportunityId}/rfq/generate`, {
+      const response = await authFetch(`/api/opportunity/${opportunityId}/rfq/generate`, {
          method: 'POST',
-         headers,
+         headers: { 'Content-Type': 'application/json' },
       });
 
       //console.log('[QuotePage] Generate quote response status:', response.status);
@@ -515,13 +513,12 @@ const saveQuotDocument = async () => {
    isSavingDraft.value = true;
 
    try {
-      const headers = await buildAuthHeaders(true);
       //console.log('[QuotePage] Saving quote with data:', quoteDocument.value);
 
       try {
-         const response = await fetch(`/api/quote/${quoteDocument.value.id}`, {
+         const response = await authFetch(`/api/quote/${quoteDocument.value.id}`, {
             method: 'POST',
-            headers,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(quoteDocument.value),
          });
 
@@ -570,11 +567,9 @@ const generateQuotePdf = async () => {
    isGeneratingPdf.value = true;
 
    try {
-      const headers = await buildAuthHeaders(true);
-
-      const response = await fetch(`/api/quote/${quoteDocument.value.id}/pdf`, {
+      const response = await authFetch(`/api/quote/${quoteDocument.value.id}/pdf`, {
          method: 'POST',
-         headers,
+         headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();

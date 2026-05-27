@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useAuth } from '../stores/auth';
+import { authFetch } from '../api/authFetch';
 
 interface Props {
    pdfUrl: string;
@@ -41,12 +42,7 @@ const loadPdfAsBlob = async () => {
       errorMessage.value = '';
       if (!props.pdfUrl) return;
 
-      const headers: HeadersInit = {};
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
-      const response = await fetch(props.pdfUrl, { headers });
+      const response = await authFetch(props.pdfUrl, {}, session.value?.access_token);
       if (!response.ok) {
          errorMessage.value = `Failed to load PDF: ${response.statusText}`;
          return;

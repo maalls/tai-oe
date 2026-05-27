@@ -599,7 +599,7 @@ async function loadGmailStatus() {
       const userId = user.value?.id;
       const url = new URL(apiUrl('gmail/status'), window.location.origin);
       url.searchParams.set('user_id', userId || '');
-      const res = await fetch(url.toString());
+      const res = await authFetch(url.toString());
       const data = await res.json();
       if (!res.ok) {
          setGmailError(data?.message, t('settings.gmailStatusLoadFailed'));
@@ -628,7 +628,7 @@ async function loadGmailProfile() {
       const userId = user.value?.id;
       const url = new URL(apiUrl('gmail/profile'), window.location.origin);
       url.searchParams.set('user_id', userId || '');
-      const res = await fetch(url.toString());
+      const res = await authFetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
          gmailProfile.value = null;
@@ -653,7 +653,7 @@ async function handleGmailAuthorize() {
       const url = new URL(apiUrl('gmail/oauth/start'), window.location.origin);
       url.searchParams.set('redirect_url', redirect_url);
       url.searchParams.set('user_id', user.value.id);
-      const res = await fetch(url.toString());
+      const res = await authFetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok' || !data?.auth_url) {
          setGmailError(data?.message, t('settings.gmailAuthorizeFailed'));
@@ -675,7 +675,7 @@ async function handleGmailRevoke() {
       const userId = user.value?.id;
       const url = new URL(apiUrl('gmail/revoke'), window.location.origin);
       url.searchParams.set('user_id', userId || '');
-      const res = await fetch(url.toString());
+      const res = await authFetch(url.toString());
       const data = await res.json();
       if (!res.ok || data?.status !== 'ok') {
          setGmailError(data?.message, t('settings.gmailDisconnectFailed'));
@@ -932,7 +932,7 @@ onMounted(() => {
 
 async function loadFetchLoopStatus() {
    try {
-      const res = await fetch(apiUrl('email-fetch-loop/status'));
+      const res = await authFetch(apiUrl('email-fetch-loop/status'));
       const data = await res.json();
       fetchLoopStatus.value = data;
    } catch (error) {

@@ -51,7 +51,7 @@ export function useSourcePage() {
 
    const loadSystemPrompt = async () => {
       try {
-         const response = await fetch('/api/prompt/opportunity/source');
+         const response = await authFetch('/api/prompt/opportunity/source');
          if (!response.ok) {
             console.error('[SourcePage] Failed to load system prompt:', response.status);
             return;

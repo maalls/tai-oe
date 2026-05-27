@@ -88,6 +88,7 @@
 import { ref, onMounted, markRaw, nextTick, computed, watch } from 'vue';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { authFetch } from '../api/authFetch';
 
 interface Props {
    pdfUrl: string;
@@ -495,7 +496,7 @@ const loadPdf = async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Fetch PDF data first to handle CORS/auth properly
-      const response = await fetch(props.pdfUrl);
+      const response = await authFetch(props.pdfUrl);
 
       if (!response.ok) {
          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);

@@ -1,4 +1,6 @@
 // API client for /api/account
+import { apiFetch } from './apiFetch';
+
 export interface Account {
    id: string;
    name: string;
@@ -21,19 +23,19 @@ export type AccountCreate = Omit<Account, 'id' | 'created_at' | 'updated_at'>;
 export type AccountUpdate = Partial<AccountCreate>;
 
 export async function listAccounts(): Promise<Account[]> {
-   const res = await fetch('/api/account');
+   const res = await apiFetch('/api/account');
    if (!res.ok) throw new Error('Erreur lors du chargement des comptes');
    return await res.json();
 }
 
 export async function getAccount(id: string): Promise<Account> {
-   const res = await fetch(`/api/account/${id}`);
+   const res = await apiFetch(`/api/account/${id}`);
    if (!res.ok) throw new Error('Compte introuvable');
    return await res.json();
 }
 
 export async function createAccount(data: AccountCreate): Promise<Account> {
-   const res = await fetch('/api/account', {
+   const res = await apiFetch('/api/account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -43,7 +45,7 @@ export async function createAccount(data: AccountCreate): Promise<Account> {
 }
 
 export async function updateAccount(id: string, data: AccountUpdate): Promise<Account> {
-   const res = await fetch(`/api/account/${id}`, {
+   const res = await apiFetch(`/api/account/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -53,7 +55,7 @@ export async function updateAccount(id: string, data: AccountUpdate): Promise<Ac
 }
 
 export async function deleteAccount(id: string): Promise<{ id: string }> {
-   const res = await fetch(`/api/account/${id}`, { method: 'DELETE' });
+   const res = await apiFetch(`/api/account/${id}`, { method: 'DELETE' });
    if (!res.ok) throw new Error('Erreur lors de la suppression du compte');
    return await res.json();
 }

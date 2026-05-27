@@ -1,4 +1,5 @@
 import { authFetch } from './authFetch';
+import { apiFetch } from './apiFetch';
 
 export interface OpportunitySummary {
    id: string;
@@ -37,7 +38,9 @@ export interface OpportunityStageTransition {
 }
 
 export async function getOpportunitySummary(opportunityId: string): Promise<OpportunitySummary> {
-   const res = await fetch(`/api/opportunity?opportunity_id=${encodeURIComponent(opportunityId)}`);
+   const res = await apiFetch(
+      `/api/opportunity?opportunity_id=${encodeURIComponent(opportunityId)}`
+   );
    if (!res.ok) throw new Error('Erreur lors du chargement de l’opportunité');
    const payload = await res.json();
    if (payload?.status !== 'ok' || !payload?.opportunity) {
@@ -163,7 +166,7 @@ export async function getOpportunitySentEmail(
    documentId?: string
 ): Promise<SentEmailRecord | null> {
    const query = documentId ? `?document_id=${encodeURIComponent(documentId)}` : '';
-   const res = await fetch(`/api/opportunity/${opportunityId}/sent-email${query}`);
+   const res = await apiFetch(`/api/opportunity/${opportunityId}/sent-email${query}`);
    if (!res.ok) throw new Error('Erreur lors du chargement de l’email envoyé');
    const payload = await res.json();
    return (payload?.sent_email as SentEmailRecord | null) || null;
@@ -191,7 +194,7 @@ export async function advanceOpportunityStage(
    opportunityId: string,
    stage: string
 ): Promise<OpportunityAdvanceResult> {
-   const res = await fetch('/api/opportunity/advance', {
+   const res = await apiFetch('/api/opportunity/advance', {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
@@ -209,7 +212,7 @@ export async function getOpportunityStageHistory(
    opportunityId: string,
    limit = 10
 ): Promise<OpportunityStageTransition[]> {
-   const res = await fetch(
+   const res = await apiFetch(
       `/api/opportunity/${opportunityId}/stage-history?limit=${encodeURIComponent(String(limit))}`
    );
    if (!res.ok) throw new Error('Erreur lors du chargement de l’historique des stages');

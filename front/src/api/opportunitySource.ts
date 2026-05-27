@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 export interface OpportunitySourceContact {
    id: string;
    name?: string | null;
@@ -32,7 +34,7 @@ export interface OpportunitySourcePayload {
 export async function getOpportunitySource(
    opportunityId: string
 ): Promise<OpportunitySourcePayload> {
-   const res = await fetch(`/api/opportunity/${opportunityId}/source`);
+   const res = await apiFetch(`/api/opportunity/${opportunityId}/source`);
    if (!res.ok) throw new Error('Erreur lors du chargement de la source opportunité');
    return await res.json();
 }

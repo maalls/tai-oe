@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 export interface Contact {
    id: string;
    account_id: string;
@@ -20,25 +22,25 @@ export type ContactCreate = Omit<Contact, 'id' | 'created_at' | 'account_name'>;
 export type ContactUpdate = Partial<ContactCreate>;
 
 export async function listContacts(): Promise<Contact[]> {
-   const res = await fetch('/api/contact');
+   const res = await apiFetch('/api/contact');
    if (!res.ok) throw new Error('Erreur lors du chargement des contacts');
    return await res.json();
 }
 
 export async function getContact(id: string): Promise<Contact> {
-   const res = await fetch(`/api/contact/${id}`);
+   const res = await apiFetch(`/api/contact/${id}`);
    if (!res.ok) throw new Error('Contact introuvable');
    return await res.json();
 }
 
 export async function listContactOpportunities(contactId: string): Promise<ContactOpportunity[]> {
-   const res = await fetch(`/api/contact/${contactId}/opportunities`);
+   const res = await apiFetch(`/api/contact/${contactId}/opportunities`);
    if (!res.ok) throw new Error('Erreur lors du chargement des opportunités liées');
    return await res.json();
 }
 
 export async function createContact(data: ContactCreate): Promise<Contact> {
-   const res = await fetch('/api/contact', {
+   const res = await apiFetch('/api/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -48,7 +50,7 @@ export async function createContact(data: ContactCreate): Promise<Contact> {
 }
 
 export async function updateContact(id: string, data: ContactUpdate): Promise<Contact> {
-   const res = await fetch(`/api/contact/${id}`, {
+   const res = await apiFetch(`/api/contact/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -58,7 +60,7 @@ export async function updateContact(id: string, data: ContactUpdate): Promise<Co
 }
 
 export async function deleteContact(id: string): Promise<{ id: string }> {
-   const res = await fetch(`/api/contact/${id}`, { method: 'DELETE' });
+   const res = await apiFetch(`/api/contact/${id}`, { method: 'DELETE' });
    if (!res.ok) throw new Error('Erreur lors de la suppression du contact');
    return await res.json();
 }

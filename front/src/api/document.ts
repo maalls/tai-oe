@@ -1,4 +1,5 @@
 import { authFetch } from './authFetch';
+import { apiFetch } from './apiFetch';
 
 export interface OpportunityDocument {
    id: string;
@@ -20,7 +21,7 @@ export interface OpportunityDocument {
 export async function listOpportunityDocuments(
    opportunityId: string
 ): Promise<OpportunityDocument[]> {
-   const res = await fetch(`/api/document?opportunity_id=${encodeURIComponent(opportunityId)}`);
+   const res = await apiFetch(`/api/document?opportunity_id=${encodeURIComponent(opportunityId)}`);
    if (!res.ok) throw new Error('Erreur lors du chargement des documents');
    return await res.json();
 }
@@ -29,7 +30,7 @@ export async function getOpportunityDocument(
    opportunityId: string,
    documentId: string
 ): Promise<OpportunityDocument> {
-   const res = await fetch(
+   const res = await apiFetch(
       `/api/document/${documentId}?opportunity_id=${encodeURIComponent(opportunityId)}`
    );
    if (!res.ok) throw new Error('Erreur lors du chargement du document');

@@ -100,6 +100,7 @@ import ActionButton from '../common/ActionButton.vue';
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBrandFamilyData } from './useBrandFamilyData';
+import { authFetch } from '../../api/authFetch';
 
 const route = useRoute();
 const router = useRouter();
@@ -131,7 +132,7 @@ onMounted(() => {
 onMounted(async () => {
    if (isEdit) {
       // Fetch product data by ID (replace with real API call)
-      const res = await fetch(`/api/products/${route.params.id}`);
+      const res = await authFetch(`/api/products/${route.params.id}`);
       if (res.ok) {
          const data = await res.json();
          form.value = {
@@ -176,11 +177,14 @@ async function handleSubmit() {
    form.value.marque = selectedBrand?.name || form.value.marque;
 
    try {
-      const response = await fetch(isEdit ? `/api/products/${route.params.id}` : '/api/products', {
-         method: isEdit ? 'PUT' : 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify(form.value),
-      });
+      const response = await authFetch(
+         isEdit ? `/api/products/${route.params.id}` : '/api/products',
+         {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form.value),
+         }
+      );
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -217,7 +221,7 @@ async function handleDelete() {
    successMessage.value = '';
 
    try {
-      const response = await fetch(`/api/products/${route.params.id}`, {
+      const response = await authFetch(`/api/products/${route.params.id}`, {
          method: 'DELETE',
       });
       const payload = await response.json().catch(() => ({}));

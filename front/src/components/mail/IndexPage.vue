@@ -103,6 +103,7 @@ import MailLoader from './MailLoader.vue';
 import MailList from './MailList.vue';
 import { useI18n } from '../../i18n/useI18n';
 import { apiUrl } from '../../utils/api';
+import { authFetch } from '../../api/authFetch';
 import {
    setupEmailRealtimeSubscription,
    cleanupEmailRealtimeSubscription,
@@ -199,14 +200,9 @@ const loadMessages = async (force = false) => {
    }
 
    try {
-      const headers: HeadersInit = {};
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
       // Only fetch from Gmail if force=true (refresh button), otherwise show cached DB results
       const url = `${apiUrl('gmail/messages')}?max_results=100${force ? '&force=true' : ''}`;
-      const response = await fetch(url, { headers });
+      const response = await authFetch(url);
       const result = await response.json();
 
       if (response.ok && result.status === 'ok') {
@@ -242,7 +238,7 @@ const authorizeGmail = async () => {
    errorMessage.value = '';
 
    try {
-      const response = await fetch(
+      const response = await authFetch(
          `${apiUrl('gmail/authorize')}?redirect_url=${encodeURIComponent(window.location.href)}`
       );
       const result = await response.json();
@@ -304,14 +300,7 @@ const fetchMessageBody = async (messageId: string) => {
    loadingMessageBody.value[messageId] = true;
 
    try {
-      const headers: HeadersInit = {};
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
-      const response = await fetch(apiUrl(`gmail/message/${messageId}`), {
-         headers,
-      });
+      const response = await authFetch(apiUrl(`gmail/message/${messageId}`));
       const result = await response.json();
 
       if (response.ok && result.status === 'ok') {
@@ -351,14 +340,8 @@ const classifyEmail = async (emailId: string) => {
    classifyingEmails.value[emailId] = true;
 
    try {
-      const headers: HeadersInit = {};
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
-      const response = await fetch(apiUrl(`emails/classify/${emailId}`), {
+      const response = await authFetch(apiUrl(`emails/classify/${emailId}`), {
          method: 'POST',
-         headers,
       });
       const result = await response.json();
 
@@ -401,15 +384,9 @@ const resyncEmail = async (emailId: string, providerMessageId: string) => {
    console.log(`Resyncing email: ${emailId} (Gmail ID: ${providerMessageId})`);
 
    try {
-      const headers: HeadersInit = {};
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-         headers['Content-Type'] = 'application/json';
-      }
-
-      const response = await fetch(apiUrl(`email/${emailId}/resync`), {
+      const response = await authFetch(apiUrl(`email/${emailId}/resync`), {
          method: 'POST',
-         headers,
+         headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ provider_message_id: providerMessageId }),
       });
       const result = await response.json();
@@ -435,14 +412,8 @@ const deleteEmail = async (emailId: string) => {
    console.log(`Deleting email: ${emailId}`);
 
    try {
-      const headers: HeadersInit = {};
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
-      const response = await fetch(apiUrl(`email/${emailId}`), {
+      const response = await authFetch(apiUrl(`email/${emailId}`), {
          method: 'DELETE',
-         headers,
       });
       const result = await response.json();
 
@@ -489,14 +460,9 @@ const cleanupRealtimeSubscription = () => {
 const createOpportunity = async (messageId: string) => {
    creatingOpportunity.value[messageId] = true;
    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
-      const response = await fetch(apiUrl('opportunities/create-from-email'), {
+      const response = await authFetch(apiUrl('opportunities/create-from-email'), {
          method: 'POST',
-         headers,
+         headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ message_id: messageId }),
       });
 

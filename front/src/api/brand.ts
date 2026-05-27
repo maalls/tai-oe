@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 export interface Brand {
    id: string;
    name: string;
@@ -50,13 +52,13 @@ export interface BrandFamily {
 }
 
 export async function getBrand(id: string): Promise<Brand> {
-   const res = await fetch(`/api/brand/${id}`);
+   const res = await apiFetch(`/api/brand/${id}`);
    if (!res.ok) throw new Error('Marque introuvable');
    return await res.json();
 }
 
 export async function createBrand(data: BrandCreate): Promise<Brand> {
-   const res = await fetch('/api/brand', {
+   const res = await apiFetch('/api/brand', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -66,7 +68,7 @@ export async function createBrand(data: BrandCreate): Promise<Brand> {
 }
 
 export async function updateBrand(id: string, data: BrandUpdate): Promise<Brand> {
-   const res = await fetch(`/api/brand/${id}`, {
+   const res = await apiFetch(`/api/brand/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -76,7 +78,7 @@ export async function updateBrand(id: string, data: BrandUpdate): Promise<Brand>
 }
 
 export async function listBrandFamilies(id: string): Promise<BrandFamily[]> {
-   const res = await fetch(`/api/brand/${id}/families`);
+   const res = await apiFetch(`/api/brand/${id}/families`);
    if (!res.ok) throw new Error('Erreur lors du chargement des familles de la marque');
    return await res.json();
 }

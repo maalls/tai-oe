@@ -228,6 +228,7 @@ import { listContacts } from '../../../../api/contact';
 import { listOpportunityDocuments } from '../../../../api/document';
 import { getOpportunitySentEmail, getOpportunitySummary } from '../../../../api/opportunity';
 import { getOpportunitySource } from '../../../../api/opportunitySource';
+import { authFetch } from '../../../../api/authFetch';
 import ActionButton from '../../../common/ActionButton.vue';
 const route = useRoute();
 const router = useRouter();
@@ -307,14 +308,9 @@ const loadQuoteDocument = async () => {
 
 const generateQuotePdf = async () => {
    console.log('[SendPage] Generating quote PDF...', quoteDocument.value.id);
-   const headers: HeadersInit = { 'Content-Type': 'application/json' };
-   if (session.value?.access_token) {
-      headers['Authorization'] = `Bearer ${session.value.access_token}`;
-   }
-
-   const response = await fetch(`/api/quote/${quoteDocument.value.id}/pdf`, {
+   const response = await authFetch(`/api/quote/${quoteDocument.value.id}/pdf`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
    });
 
    if (!response.ok) {
@@ -459,11 +455,6 @@ const sendEmail = async () => {
    successMessage.value = '';
 
    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (session.value?.access_token) {
-         headers['Authorization'] = `Bearer ${session.value.access_token}`;
-      }
-
       // Parse comma-separated emails
       const toEmails = emailForm.value.to
          .split(',')
@@ -486,9 +477,9 @@ const sendEmail = async () => {
          quote_id: quoteDocument.value?.id || null,
       };
 
-      const response = await fetch(`/api/opportunity/${opportunityId}/send-quote`, {
+      const response = await authFetch(`/api/opportunity/${opportunityId}/send-quote`, {
          method: 'POST',
-         headers,
+         headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify(payload),
       });
 

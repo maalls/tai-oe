@@ -124,6 +124,7 @@ import { onMounted, onActivated } from 'vue';
 import { useRoute } from 'vue-router';
 import AdminNavHeader from '../admin/AdminNavHeader.vue';
 import { API_BASE_URL } from '../../utils/api';
+import { authFetch } from '../../api/authFetch';
 
 const BASE = API_BASE_URL;
 const api = {
@@ -150,7 +151,7 @@ const route = useRoute();
 async function loadSources() {
    console.log('Loading sources from', api.sources);
 
-   const res = await fetch(api.sources);
+   const res = await authFetch(api.sources);
    if (!res.ok) throw new Error(`Sources HTTP ${res.status}`);
    const data = await res.json();
    console.log('Sources data:', data);
@@ -180,7 +181,7 @@ async function loadSources() {
 async function loadSheets() {
    console.log('Loading sheets for', currentSourceFile, 'from', api.sheets);
    setStatus('Loading sheets from', api.sheets);
-   const res = await fetch(api.sheets + `?source=${encodeURIComponent(currentSourceFile)}`);
+   const res = await authFetch(api.sheets + `?source=${encodeURIComponent(currentSourceFile)}`);
 
    if (!res.ok) throw new Error(`Files HTTP ${res.status}`);
    const data = await res.json();
@@ -291,7 +292,7 @@ async function loadPreview(offset = 0) {
    }
    currentOffset = offset;
    setStatus(`Loading ${file}...`);
-   const res = await fetch(api.preview(currentSourceFile, currentSheetName, limit, offset));
+   const res = await authFetch(api.preview(currentSourceFile, currentSheetName, limit, offset));
    if (!res.ok) throw new Error(`Preview HTTP ${res.status}`);
    const data = await res.json();
    const headers = data.headers || [];
@@ -384,7 +385,7 @@ async function openOneToMany(rel, keyVal) {
       const base = api.preview(currentSourceFile, rel.target, limit, 0);
       const filter = { [rel.foreign_key]: keyVal };
       const url = `${base}&filter=${encodeURIComponent(JSON.stringify(filter))}`;
-      const res = await fetch(url);
+      const res = await authFetch(url);
       if (!res.ok) throw new Error(`Related preview HTTP ${res.status}`);
       const data = await res.json();
       console.log('One-to-many related result', {
@@ -450,7 +451,7 @@ async function performSearch() {
 
       const filter = { [field]: { $icontains: text } };
       const filterParam = encodeURIComponent(JSON.stringify(filter));
-      const res = await fetch(
+      const res = await authFetch(
          api.preview(currentSourceFile, currentSheetName, limit, 0) + `&filter=${filterParam}`
       );
 
@@ -627,7 +628,7 @@ async function handleFileUpload(event) {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(BASE + '/api/csv/source', {
+      const res = await authFetch(BASE + '/api/csv/source', {
          method: 'POST',
          body: formData,
       });

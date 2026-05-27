@@ -296,7 +296,7 @@ export async function fetchUrl(args: any): Promise<any> {
       apiUrl.searchParams.set('max_chars', String(maxChars));
       apiUrl.searchParams.set('timeout_ms', String(timeoutMs));
 
-      const response = await fetch(apiUrl.toString(), { method: 'GET' });
+      const response = await authFetch(apiUrl.toString(), { method: 'GET' });
       const data = await response.json();
 
       if (!response.ok) {
@@ -316,7 +316,7 @@ export async function fsCreate(args: any): Promise<any> {
    const type = args?.type === 'file' ? 'file' : 'dir';
 
    try {
-      const response = await fetch('/api/fs/create', {
+      const response = await authFetch('/api/fs/create', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ path, type }),
@@ -339,7 +339,7 @@ export async function fsRead(args: any): Promise<any> {
    const maxChars = Number.isInteger(args?.max_chars) ? args.max_chars : 10000;
 
    try {
-      const response = await fetch('/api/fs/read', {
+      const response = await authFetch('/api/fs/read', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ path, max_chars: maxChars }),
@@ -369,7 +369,7 @@ export async function curlRequest(args: any): Promise<any> {
    };
 
    try {
-      const response = await fetch('/api/curl', {
+      const response = await authFetch('/api/curl', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify(payload),

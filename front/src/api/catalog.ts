@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 export interface CatalogBrand {
    id: string;
    name?: string | null;
@@ -15,13 +17,13 @@ export interface CatalogFamily {
 }
 
 export async function listCatalogBrands(): Promise<CatalogBrand[]> {
-   const res = await fetch('/api/catalog/brands');
+   const res = await apiFetch('/api/catalog/brands');
    if (!res.ok) throw new Error('Erreur lors du chargement des marques');
    return await res.json();
 }
 
 export async function listCatalogFamilies(): Promise<CatalogFamily[]> {
-   const res = await fetch('/api/catalog/families');
+   const res = await apiFetch('/api/catalog/families');
    if (!res.ok) throw new Error('Erreur lors du chargement des familles');
    return await res.json();
 }

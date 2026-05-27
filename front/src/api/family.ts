@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 export interface Family {
    id: string;
    name?: string | null;
@@ -53,13 +55,13 @@ export interface FamilyDiscountLinesResponse {
 }
 
 export async function getFamily(id: string): Promise<Family> {
-   const res = await fetch(`/api/family/${id}`);
+   const res = await apiFetch(`/api/family/${id}`);
    if (!res.ok) throw new Error('Famille introuvable');
    return await res.json();
 }
 
 export async function createFamily(data: FamilyCreate): Promise<Family> {
-   const res = await fetch('/api/family', {
+   const res = await apiFetch('/api/family', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -69,7 +71,7 @@ export async function createFamily(data: FamilyCreate): Promise<Family> {
 }
 
 export async function updateFamily(id: string, data: FamilyUpdate): Promise<Family> {
-   const res = await fetch(`/api/family/${id}`, {
+   const res = await apiFetch(`/api/family/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -79,14 +81,14 @@ export async function updateFamily(id: string, data: FamilyUpdate): Promise<Fami
 }
 
 export async function deleteFamily(id: string): Promise<void> {
-   const res = await fetch(`/api/family/${id}`, {
+   const res = await apiFetch(`/api/family/${id}`, {
       method: 'DELETE',
    });
    if (!res.ok) throw new Error('Erreur lors de la suppression de la famille');
 }
 
 export async function getFamilyDiscountLines(id: string): Promise<FamilyDiscountLinesResponse> {
-   const res = await fetch(`/api/family/${id}/discount-lines`);
+   const res = await apiFetch(`/api/family/${id}/discount-lines`);
    if (!res.ok) throw new Error('Erreur lors du chargement des lignes de remise');
    return await res.json();
 }
@@ -95,7 +97,7 @@ export async function saveFamilyDiscountLines(
    id: string,
    lines: FamilyDiscountLine[]
 ): Promise<FamilyDiscountLinesResponse> {
-   const res = await fetch(`/api/family/${id}/discount-lines`, {
+   const res = await apiFetch(`/api/family/${id}/discount-lines`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lines }),
