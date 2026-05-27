@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from src.api.authz.route_access import build_current_route_access_dependency
+from src.api.authz.route_access import AccessContext, build_default_access_context_dependency
 from src.api.dependencies import get_database_repository
 from src.repository.repository import DatabaseRepository
 
@@ -14,19 +14,15 @@ router = APIRouter(tags=["admin"])
 
 _ALLOWED_ROLES = {"admin", "user"}
 
-_admin_access = build_current_route_access_dependency(
-    unauthorized_body={"status": "error", "message": "Unauthorized"},
-    forbidden_body={"status": "error", "message": "Forbidden"},
-)
+_admin_access = build_default_access_context_dependency()
 
 
 @router.get("/api/admin/users")
 def admin_list_users(
-    requester_id: str | JSONResponse = Depends(_admin_access),
+    requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     users = db.list_users(limit=100, offset=0)
     return JSONResponse(jsonable_encoder({"status": "ok", "users": users}), status_code=200)
@@ -36,11 +32,10 @@ def admin_list_users(
 def admin_update_user_role(
     target_user_id: str,
     payload: dict[str, Any],
-    requester_id: str | JSONResponse = Depends(_admin_access),
+    requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    requester_id = requester.get_user_id()
 
     role = payload.get("role") if isinstance(payload, dict) else None
     if role not in _ALLOWED_ROLES:

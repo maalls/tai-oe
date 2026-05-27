@@ -7,7 +7,7 @@ import json
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from src.api.authz.route_access import build_current_route_access_dependency
+from src.api.authz.route_access import AccessContext, build_default_access_context_dependency
 from src.api.dependencies import get_database_repository, get_file_handler
 from src.repository.repository import DatabaseRepository
 from src.service.csv.file_service import CsvFileService
@@ -26,19 +26,15 @@ def _serialize_value(value):
 def _serialize_row(row: dict) -> dict:
     return {key: _serialize_value(value) for key, value in row.items()}
 
-_csv_access = build_current_route_access_dependency(
-    unauthorized_body={"error": "Unauthorized"},
-    forbidden_body={"error": "Forbidden"},
-)
+_csv_access = build_default_access_context_dependency()
 
 
 @router.get("/api/csv/sources")
 def csv_sources(
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     return JSONResponse(file_handler.list_sources(), status_code=200)
 
@@ -46,11 +42,10 @@ def csv_sources(
 @router.get("/api/csv/files")
 def csv_files(
     source: str = Query(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     return JSONResponse({"files": file_handler.list_files_for_source(source)}, status_code=200)
 
@@ -62,11 +57,10 @@ def csv_preview(
     limit: int = Query(default=100),
     offset: int = Query(default=0),
     filter: str | None = Query(default=None),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     try:
         filters = json.loads(filter) if filter else None
@@ -90,11 +84,10 @@ def csv_preview(
 @router.get("/api/csv/source")
 def csv_source_download(
     source: str = Query(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     try:
         content = file_handler.read_source_file(source)
@@ -117,11 +110,10 @@ def csv_source_download(
 def csv_raw(
     file: str = Query(...),
     source: str = Query(default=""),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     try:
         csv_path = file_handler.safe_file_from_query(source, file)
@@ -138,11 +130,10 @@ def csv_raw(
 def csv_download(
     source: str = Query(...),
     file: str = Query(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     try:
         csv_path = file_handler.safe_file_from_query(source, file)
@@ -164,12 +155,11 @@ def csv_query(
     sortBy: str = Query(default=""),
     limit: int = Query(default=100),
     offset: int = Query(default=0),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     database_repository: DatabaseRepository = Depends(get_database_repository),
 ):
     try:
-        if isinstance(requester_id, JSONResponse):
-            return requester_id
+        _ = requester.get_user_id()
 
         if tables is not None:
             rows = database_repository.list_public_tables_with_columns()
@@ -219,11 +209,10 @@ def csv_query(
 @router.post("/api/csv/source")
 async def csv_source_upload(
     file: UploadFile = File(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester: AccessContext = Depends(_csv_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
-    if isinstance(requester_id, JSONResponse):
-        return requester_id
+    _ = requester.get_user_id()
 
     try:
         file_data = await file.read()
