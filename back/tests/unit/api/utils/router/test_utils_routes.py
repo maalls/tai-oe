@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_utility_service
+from src.api.dependencies import get_auth_service, get_database_repository, get_utility_service
 from src.api.main import create_app
 
 
@@ -120,11 +120,38 @@ class _FakeUtilityService:
         return {"content_type": "text/plain", "body": b"Error reading file: x", "message": "x"}
 
 
+class _FakeAuthServiceValid:
+    def verify_token(self, auth_header: str):
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return False, None
+        return True, {"id": "u-admin"}
+
+
+class _FakeAuthServiceInvalid:
+    def verify_token(self, auth_header: str):
+        _ = auth_header
+        return False, None
+
+
+class _FakeDatabaseRepositoryAdmin:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
+class _FakeDatabaseRepositoryUser:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "user"}
+
+
 def _client(tmp_path: Path) -> TestClient:
     prompt_base_dir = tmp_path / "prompts"
     app = create_app()
     app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
-    return TestClient(app)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryAdmin()
+    client = TestClient(app)
+    client.headers.update({"Authorization": "Bearer valid"})
+    return client
 
 
 def test_fetch_route_returns_payload(tmp_path: Path):
@@ -143,6 +170,34 @@ def test_curl_route_rejects_invalid_method(tmp_path: Path):
 
     assert response.status_code == 400
     assert response.json()["error"] == "Invalid method"
+
+
+def test_fetch_route_requires_valid_token(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceInvalid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryAdmin()
+    client = TestClient(app)
+
+    response = client.get("/api/fetch?url=https://example.com")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_fetch_route_forbidden_for_non_admin_user(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryUser()
+    client = TestClient(app)
+
+    response = client.get("/api/fetch?url=https://example.com", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"
 
 
 def test_fs_create_and_read_routes(tmp_path: Path):

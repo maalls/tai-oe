@@ -3,11 +3,18 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
+from src.api.authz.route_access import build_route_access_dependency
 from src.api.dependencies import get_utility_service
 from src.api.utils.schemas import CurlRequest, FetchQuery, FsCreateRequest, FsReadRequest
 from src.service.utility.utility_service import UtilityService
 
 router = APIRouter(tags=["utils"])
+
+_unsafe_utils_access = build_route_access_dependency(
+    route_key="utils.unsafe",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
 
 
 @router.get("/api/email-fetch-loop/status")
@@ -21,8 +28,12 @@ def email_fetch_loop_status(
 @router.get("/api/fetch")
 def fetch_url(
     query: FetchQuery = Depends(),
+    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     target_url = str(query.url or "").strip()
     if not target_url:
         return JSONResponse({"error": "Missing url parameter"}, status_code=400)
@@ -42,8 +53,12 @@ def fetch_url(
 @router.post("/api/curl")
 def curl_request(
     payload: CurlRequest,
+    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     target_url = str(payload.url or "").strip()
     if not target_url:
         return JSONResponse({"error": "Missing url"}, status_code=400)
@@ -74,8 +89,12 @@ def curl_request(
 @router.post("/api/fs/create")
 def fs_create(
     payload: FsCreateRequest,
+    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     raw_path = str(payload.path or "").strip()
     kind = payload.type or "dir"
 
@@ -94,8 +113,12 @@ def fs_create(
 @router.post("/api/fs/read")
 def fs_read(
     payload: FsReadRequest,
+    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     raw_path = str(payload.path or "").strip()
     max_chars = max(100, min(payload.max_chars, 50000))
 

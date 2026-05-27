@@ -9,6 +9,7 @@ _ACCESS_POLICY: Final[dict[str, set[str]]] = {
     "admin.users.update_role": {"admin"},
     "csv.access": {"admin"},
     "csv.query": {"admin"},
+    "utils.unsafe": {"admin"},
 }
 
 
