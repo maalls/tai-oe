@@ -13,6 +13,9 @@ class _FakeAuthService:
 
 
 class _FakeDb:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "SELECT stage, status FROM opportunity" in query:
             return [{"stage": "PAID", "status": "OPEN"}]
@@ -26,10 +29,18 @@ class _FakeDb:
 
 
 class _FakeDbMissing:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "SELECT stage, status FROM opportunity" in query:
             return []
         return []
+
+
+class _FakeDbNonAdmin(_FakeDb):
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "user"}
 
 
 def _client(db) -> TestClient:
@@ -59,6 +70,19 @@ def test_update_opportunity_stage_state_returns_row():
     assert response.status_code == 200
     assert response.json()["stage"] == "CLOSED_WON"
     assert response.json()["status"] == "WON"
+
+
+def test_update_opportunity_stage_state_forbidden_for_non_admin():
+    client = _client(_FakeDbNonAdmin())
+
+    response = client.put(
+        "/api/opportunity/opp-1/stage-state",
+        json={"stage": "CLOSED_WON", "status": "WON"},
+        headers={"Authorization": "Bearer ok"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"
 
 
 def test_update_opportunity_stage_state_returns_404_when_missing():

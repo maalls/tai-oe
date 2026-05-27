@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Header, Query, UploadFile
 from fastapi.responses import JSONResponse
 
+from src.api.authz.route_access import AccessContext, build_default_access_context_dependency
 from src.api.dependencies import get_auth_service, get_database_repository, get_document_service
 from src.api.document.schemas import (
     DocumentExtractRfpRequest,
@@ -17,6 +18,7 @@ from src.service.auth.auth_service import AuthService
 from src.service.document.document_service import DocumentService
 
 router = APIRouter(tags=["document"])
+_admin_access = build_default_access_context_dependency()
 
 
 def _status_from_result(result: dict[str, Any], default_status: int = 200) -> int:
@@ -268,13 +270,10 @@ def document_update_storage_key(
 def document_update_status(
     document_id: str,
     payload: DocumentUpdateStatusRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    _ = requester.get_user_id()
 
     rows = db.execute_dict_query(
         """

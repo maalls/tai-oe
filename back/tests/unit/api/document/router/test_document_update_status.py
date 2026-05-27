@@ -21,14 +21,25 @@ class _AuthService:
 
 
 class _DbFound:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         assert params == ("PAID", "doc-1")
         return [{"id": "doc-1", "opportunity_id": "opp-1", "status": "PAID"}]
 
 
 class _DbMissing:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         return []
+
+
+class _DbNonAdmin(_DbFound):
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "user"}
 
 
 def test_document_update_status_requires_auth():
@@ -74,3 +85,19 @@ def test_document_update_status_returns_row():
     assert response.status_code == 200
     assert response.json()["id"] == "doc-1"
     assert response.json()["status"] == "PAID"
+
+
+def test_document_update_status_forbidden_for_non_admin():
+    app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _AuthService(valid=True)
+    app.dependency_overrides[get_database_repository] = lambda: _DbNonAdmin()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/document/doc-1/status",
+        json={"status": "PAID"},
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Forbidden"

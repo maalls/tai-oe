@@ -250,6 +250,7 @@ Current status notes:
 - `UM-012` backend source-of-truth now covers action execute/log endpoints as admin-only with 401/403 test coverage.
 - `UM-012` backend source-of-truth now covers the full action router as admin-only (list/create/get/update/delete/pause/resume/execute/logs) with dedicated unit coverage.
 - `UM-012` backend RBAC dependency design is now migrated to `AccessContext + RouteAccessError` with top-level FastAPI handling for 401/403 on action/admin/csv/utils routers.
+- `UM-012` backend RBAC coverage now also guards opportunity stage-state updates and document status updates as admin-only, with targeted 401/403 tests.
 - Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
 - Remaining M4 work focuses on backend permission map and broader route coverage (`UM-010`, `UM-011`, complete `UM-012`).

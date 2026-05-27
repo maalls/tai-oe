@@ -22,6 +22,7 @@ _ACCESS_POLICY: Final[dict[str, set[str]]] = {
     "/api/prompt/{relative_path:path}": {"admin"},
     "/api/storage/{raw_filename:path}": {"admin", "user"},
     "/api/opportunities/{opportunity_id}/actions": {"admin"},
+    "/api/opportunity/{opportunity_id}/stage-state": {"admin"},
     "/api/actions": {"admin"},
     "/api/actions/{action_id}": {"admin"},
     "/api/actions/{action_id}/pause": {"admin"},
@@ -29,6 +30,7 @@ _ACCESS_POLICY: Final[dict[str, set[str]]] = {
     "/api/action/{action_id}/execute": {"admin"},
     "/api/actions/{action_id}/execute": {"admin"},
     "/api/actions/{action_id}/logs": {"admin"},
+    "/api/document/{document_id}/status": {"admin"},
 }
 
 

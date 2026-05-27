@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from src.api.authz.route_access import AccessContext, build_default_access_context_dependency
 from src.api.dependencies import (
     get_auth_service,
     get_database_repository,
@@ -41,6 +42,7 @@ from src.service.email.quote_send_service import QuoteSendService
 from src.service.rfq.rfq_source_service import RfqSourceService
 
 router = APIRouter(tags=["opportunity"])
+_admin_access = build_default_access_context_dependency()
 
 
 def _serialize_opportunity(opportunity) -> dict:
@@ -199,13 +201,10 @@ def get_opportunity_stage_history(
 def update_opportunity_stage_state(
     opportunity_id: str,
     payload: OpportunityUpdateStageStateRequest,
-    authorization: str | None = Header(default=None),
-    auth_service: AuthService = Depends(get_auth_service),
+    requester: AccessContext = Depends(_admin_access),
     db: DatabaseRepository = Depends(get_database_repository),
 ):
-    user_id = _resolve_user_id(authorization, auth_service)
-    if not user_id:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    user_id = requester.get_user_id()
 
     current_rows = db.execute_dict_query(
         "SELECT stage, status FROM opportunity WHERE id = %s",
