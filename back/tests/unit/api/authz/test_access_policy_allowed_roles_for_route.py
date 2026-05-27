@@ -43,6 +43,18 @@ def test_allowed_roles_for_route_returns_admin_and_user_for_storage_read():
     assert roles == {"admin", "user"}
 
 
+def test_allowed_roles_for_route_supports_method_specific_keys():
+    roles = allowed_roles_for_route("/api/document/{document_id}", method="DELETE")
+
+    assert roles == {"admin"}
+
+
+def test_allowed_roles_for_route_returns_empty_set_for_unmapped_method_specific_route():
+    roles = allowed_roles_for_route("/api/document/{document_id}")
+
+    assert roles == set()
+
+
 def test_allowed_roles_for_route_returns_admin_for_action_execute_and_logs_routes():
     assert allowed_roles_for_route("/api/action/{action_id}/execute") == {"admin"}
     assert allowed_roles_for_route("/api/actions/{action_id}/execute") == {"admin"}
