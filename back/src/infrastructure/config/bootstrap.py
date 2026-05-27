@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Mapping, Optional
 
-from dotenv import find_dotenv
+from dotenv import find_dotenv, dotenv_values
 
 from .factory import DbProfileFactory
 from .models import ResolvedRuntimeConfig
@@ -28,6 +28,14 @@ def create_runtime_config(
     if effective_env_file_path is None:
         discovered_env = find_dotenv(usecwd=True)
         effective_env_file_path = Path(discovered_env).resolve() if discovered_env else None
+
+    # Keep process env as priority, but fill missing keys from discovered .env
+    # so CLI entrypoints (e.g. migrations) behave like dev_server startup.
+    if effective_env_file_path and effective_env_file_path.exists():
+        file_values = dotenv_values(effective_env_file_path)
+        for key, value in file_values.items():
+            if key and value is not None and key not in effective_environ:
+                effective_environ[key] = str(value)
 
     return ConfigProvider(
         environ=effective_environ,
