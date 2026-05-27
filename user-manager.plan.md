@@ -495,9 +495,9 @@ Remaining effort from current state: ~0.5-1 dev-day (commit/merge + staging vali
 
 ## Definition of Done
 
-- [ ] Role field exists and is used consistently backend/frontend.
-- [ ] Admin can manage users and roles from Admin > Users.
-- [ ] User role restrictions are enforced server-side.
-- [ ] Frontend reflects access limitations cleanly.
-- [ ] Test coverage added for all major behavior.
-- [ ] Documentation/runbook updated.
+- [x] Role field exists and is used consistently backend/frontend.
+- [x] Admin can manage users and roles from Admin > Users.
+- [x] User role restrictions are enforced server-side.
+- [x] Frontend reflects access limitations cleanly.
+- [x] Test coverage added for all major behavior.
+- [x] Documentation/runbook updated.
