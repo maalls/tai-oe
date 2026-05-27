@@ -407,8 +407,8 @@ Estimation scale:
 - [x] `UM-010` -> commit
 - [x] `UM-011` -> commit
 - [x] `UM-012` -> commit
-- [ ] `UM-013` -> commit
-- [ ] `UM-014` -> commit
+- [x] `UM-013` -> commit
+- [x] `UM-014` -> commit
 
 ## Next Execution Plan (M5)
 
@@ -489,9 +489,9 @@ Remaining effort from current state: ~0.5-1 dev-day (commit/merge + staging vali
 
 ## Next Session Run Plan
 
-1. Commit and push `UM-013` + `UM-014` changes.
-2. Run broader backend/frontend smoke suites before release.
-3. Validate runbook steps in staging with real admin recovery drill.
+1. Open/refresh PR for `user-management` and request review on UM-013/UM-014.
+2. Validate runbook steps in staging with a real admin recovery drill.
+3. Mark merge-level exit criteria once PR is merged.
 
 ## Definition of Done
 
