@@ -11,19 +11,37 @@ from src.service.utility.utility_service import UtilityService
 router = APIRouter(tags=["utils"])
 
 _unsafe_utils_access = build_route_access_dependency(
-    route_key="utils.unsafe",
+    route_path="/api/fetch",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_curl_access = build_route_access_dependency(
+    route_path="/api/curl",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_fs_create_access = build_route_access_dependency(
+    route_path="/api/fs/create",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_fs_read_access = build_route_access_dependency(
+    route_path="/api/fs/read",
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
 
 _email_fetch_loop_status_access = build_route_access_dependency(
-    route_key="utils.email_fetch_loop.status",
+    route_path="/api/email-fetch-loop/status",
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
 
 _prompt_read_access = build_route_access_dependency(
-    route_key="utils.prompt.read",
+    route_path="/api/prompt/{relative_path:path}",
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
@@ -69,7 +87,7 @@ def fetch_url(
 @router.post("/api/curl")
 def curl_request(
     payload: CurlRequest,
-    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
+    requester_id: str | JSONResponse = Depends(_curl_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -105,7 +123,7 @@ def curl_request(
 @router.post("/api/fs/create")
 def fs_create(
     payload: FsCreateRequest,
-    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
+    requester_id: str | JSONResponse = Depends(_fs_create_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -129,7 +147,7 @@ def fs_create(
 @router.post("/api/fs/read")
 def fs_read(
     payload: FsReadRequest,
-    requester_id: str | JSONResponse = Depends(_unsafe_utils_access),
+    requester_id: str | JSONResponse = Depends(_fs_read_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
     if isinstance(requester_id, JSONResponse):

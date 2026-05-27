@@ -5,24 +5,32 @@ from __future__ import annotations
 from typing import Final
 
 _ACCESS_POLICY: Final[dict[str, set[str]]] = {
-    "admin.users.list": {"admin"},
-    "admin.users.update_role": {"admin"},
-    "csv.access": {"admin"},
-    "csv.query": {"admin"},
-    "utils.email_fetch_loop.status": {"admin"},
-    "utils.prompt.read": {"admin"},
-    "utils.unsafe": {"admin"},
+    "/api/admin/users": {"admin"},
+    "/api/admin/users/{target_user_id}/role": {"admin"},
+    "/api/csv/sources": {"admin"},
+    "/api/csv/files": {"admin"},
+    "/api/csv/preview": {"admin"},
+    "/api/csv/source": {"admin"},
+    "/api/csv/raw": {"admin"},
+    "/api/csv/download": {"admin"},
+    "/api/csv/query": {"admin"},
+    "/api/email-fetch-loop/status": {"admin"},
+    "/api/fetch": {"admin"},
+    "/api/curl": {"admin"},
+    "/api/fs/create": {"admin"},
+    "/api/fs/read": {"admin"},
+    "/api/prompt/{relative_path:path}": {"admin"},
 }
 
 
-def allowed_roles_for_route(route_key: str) -> set[str]:
-    """Return allowed roles for a route key; empty set means deny by default."""
-    return set(_ACCESS_POLICY.get(route_key, set()))
+def allowed_roles_for_route(route_path: str) -> set[str]:
+    """Return allowed roles for a route path; empty set means deny by default."""
+    return set(_ACCESS_POLICY.get(route_path, set()))
 
 
-def can_access_route(role: str | None, route_key: str) -> bool:
-    """Return True when role is allowed for the given route key."""
+def can_access_route(role: str | None, route_path: str) -> bool:
+    """Return True when role is allowed for the given route path."""
     if not role:
         return False
 
-    return role in allowed_roles_for_route(route_key)
+    return role in allowed_roles_for_route(route_path)

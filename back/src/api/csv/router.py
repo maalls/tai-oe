@@ -27,7 +27,43 @@ def _serialize_row(row: dict) -> dict:
     return {key: _serialize_value(value) for key, value in row.items()}
 
 _csv_access = build_route_access_dependency(
-    route_key="csv.access",
+    route_path="/api/csv/sources",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_csv_files_access = build_route_access_dependency(
+    route_path="/api/csv/files",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_csv_preview_access = build_route_access_dependency(
+    route_path="/api/csv/preview",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_csv_source_download_access = build_route_access_dependency(
+    route_path="/api/csv/source",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_csv_raw_access = build_route_access_dependency(
+    route_path="/api/csv/raw",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_csv_download_access = build_route_access_dependency(
+    route_path="/api/csv/download",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
+_csv_query_access = build_route_access_dependency(
+    route_path="/api/csv/query",
     unauthorized_body={"error": "Unauthorized"},
     forbidden_body={"error": "Forbidden"},
 )
@@ -47,7 +83,7 @@ def csv_sources(
 @router.get("/api/csv/files")
 def csv_files(
     source: str = Query(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester_id: str | JSONResponse = Depends(_csv_files_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -63,7 +99,7 @@ def csv_preview(
     limit: int = Query(default=100),
     offset: int = Query(default=0),
     filter: str | None = Query(default=None),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester_id: str | JSONResponse = Depends(_csv_preview_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -91,7 +127,7 @@ def csv_preview(
 @router.get("/api/csv/source")
 def csv_source_download(
     source: str = Query(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester_id: str | JSONResponse = Depends(_csv_source_download_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -118,7 +154,7 @@ def csv_source_download(
 def csv_raw(
     file: str = Query(...),
     source: str = Query(default=""),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester_id: str | JSONResponse = Depends(_csv_raw_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -139,7 +175,7 @@ def csv_raw(
 def csv_download(
     source: str = Query(...),
     file: str = Query(...),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester_id: str | JSONResponse = Depends(_csv_download_access),
     file_handler: CsvFileService = Depends(get_file_handler),
 ):
     if isinstance(requester_id, JSONResponse):
@@ -165,7 +201,7 @@ def csv_query(
     sortBy: str = Query(default=""),
     limit: int = Query(default=100),
     offset: int = Query(default=0),
-    requester_id: str | JSONResponse = Depends(_csv_access),
+    requester_id: str | JSONResponse = Depends(_csv_query_access),
     database_repository: DatabaseRepository = Depends(get_database_repository),
 ):
     try:

@@ -30,7 +30,7 @@ class _FakeDbUser:
 
 def _build_dependency():
     return build_route_access_dependency(
-        route_key="admin.users.list",
+        route_path="/api/admin/users",
         unauthorized_body={"status": "error", "message": "Unauthorized"},
         forbidden_body={"status": "error", "message": "Forbidden"},
     )

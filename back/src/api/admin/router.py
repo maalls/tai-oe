@@ -15,13 +15,13 @@ router = APIRouter(tags=["admin"])
 _ALLOWED_ROLES = {"admin", "user"}
 
 _admin_users_list_access = build_route_access_dependency(
-    route_key="admin.users.list",
+    route_path="/api/admin/users",
     unauthorized_body={"status": "error", "message": "Unauthorized"},
     forbidden_body={"status": "error", "message": "Forbidden"},
 )
 
 _admin_users_update_role_access = build_route_access_dependency(
-    route_key="admin.users.update_role",
+    route_path="/api/admin/users/{target_user_id}/role",
     unauthorized_body={"status": "error", "message": "Unauthorized"},
     forbidden_body={"status": "error", "message": "Forbidden"},
 )

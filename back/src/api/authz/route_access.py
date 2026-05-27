@@ -15,7 +15,7 @@ from src.service.auth.auth_service import AuthService
 
 
 def build_route_access_dependency(
-    route_key: str,
+    route_path: str,
     unauthorized_body: dict[str, Any],
     forbidden_body: dict[str, Any],
     unauthorized_status_code: int = 401,
@@ -35,7 +35,7 @@ def build_route_access_dependency(
 
         profile = db.fetch_profile(requester_id) or {}
         role = profile.get("role")
-        if not can_access_route(role, route_key):
+        if not can_access_route(role, route_path):
             return JSONResponse(dict(forbidden_body), status_code=forbidden_status_code)
 
         return requester_id
