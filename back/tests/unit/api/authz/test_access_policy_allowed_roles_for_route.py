@@ -37,6 +37,12 @@ def test_allowed_roles_for_route_returns_admin_for_unsafe_utils_route():
     assert roles == {"admin"}
 
 
+def test_allowed_roles_for_route_returns_admin_and_user_for_storage_read():
+    roles = allowed_roles_for_route("/api/storage/{raw_filename:path}")
+
+    assert roles == {"admin", "user"}
+
+
 def test_allowed_roles_for_route_returns_empty_set_for_unknown_route():
     roles = allowed_roles_for_route("/api/unknown")
 

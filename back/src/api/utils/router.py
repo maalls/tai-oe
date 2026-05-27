@@ -46,6 +46,12 @@ _prompt_read_access = build_route_access_dependency(
     forbidden_body={"error": "Forbidden"},
 )
 
+_storage_read_access = build_route_access_dependency(
+    route_path="/api/storage/{raw_filename:path}",
+    unauthorized_body={"error": "Unauthorized"},
+    forbidden_body={"error": "Forbidden"},
+)
+
 
 @router.get("/api/email-fetch-loop/status")
 def email_fetch_loop_status(
@@ -194,8 +200,12 @@ def get_prompt_content(
 @router.head("/api/storage/{raw_filename:path}")
 def storage_head(
     raw_filename: str,
+    requester_id: str | JSONResponse = Depends(_storage_read_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         storage_info = utility_service.resolve_storage_file(raw_filename)
     except FileNotFoundError:
@@ -210,8 +220,12 @@ def storage_head(
 @router.get("/api/storage/{raw_filename:path}")
 def storage_get(
     raw_filename: str,
+    requester_id: str | JSONResponse = Depends(_storage_read_access),
     utility_service: UtilityService = Depends(get_utility_service),
 ):
+    if isinstance(requester_id, JSONResponse):
+        return requester_id
+
     try:
         storage_info = utility_service.resolve_storage_file(raw_filename)
     except FileNotFoundError:

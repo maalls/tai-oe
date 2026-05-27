@@ -327,3 +327,31 @@ def test_storage_get_route_returns_404_when_missing(tmp_path: Path):
     response = client.get("/api/storage/missing.txt")
 
     assert response.status_code == 404
+
+
+def test_storage_get_route_requires_valid_token(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceInvalid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryAdmin()
+    client = TestClient(app)
+
+    response = client.get("/api/storage/dummy.txt")
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "Unauthorized"
+
+
+def test_storage_get_route_allows_non_admin_user(tmp_path: Path):
+    prompt_base_dir = tmp_path / "prompts"
+    app = create_app()
+    app.dependency_overrides[get_utility_service] = lambda: _FakeUtilityService(prompt_base_dir=prompt_base_dir)
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthServiceValid()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepositoryUser()
+    client = TestClient(app)
+
+    response = client.get("/api/storage/dummy.txt", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert response.content == b"hello"
