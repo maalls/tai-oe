@@ -9,7 +9,7 @@ class ProfileRepositoryMixin:
     """Database profile read/update operations."""
 
     def fetch_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
-        query = "SELECT id, email, full_name FROM profile WHERE id = %s LIMIT 1"
+        query = "SELECT id, email, full_name, role FROM profile WHERE id = %s LIMIT 1"
         rows = self.execute_dict_query(query, (user_id,))
         return rows[0] if rows else None
 
@@ -22,6 +22,6 @@ class ProfileRepositoryMixin:
         if not set_clauses:
             return self.fetch_profile(user_id)
         params.append(user_id)
-        query = f"UPDATE profile SET {', '.join(set_clauses)} WHERE id = %s RETURNING id, email, full_name"
+        query = f"UPDATE profile SET {', '.join(set_clauses)} WHERE id = %s RETURNING id, email, full_name, role"
         rows = self.execute_dict_query(query, tuple(params))
         return rows[0] if rows else None

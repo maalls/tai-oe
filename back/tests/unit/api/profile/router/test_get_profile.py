@@ -7,7 +7,7 @@ from src.api.main import create_app
 class _FakeDbOk:
     def fetch_profile(self, user_id):
         assert user_id == "user-1"
-        return {"id": "user-1", "email": "user@example.com", "full_name": "Jane"}
+        return {"id": "user-1", "email": "user@example.com", "full_name": "Jane", "role": "admin"}
 
 
 class _FakeDbMissing:
@@ -25,6 +25,7 @@ def test_get_profile_returns_profile():
 
     assert response.status_code == 200
     assert response.json()["id"] == "user-1"
+    assert response.json()["role"] == "admin"
 
 
 def test_get_profile_returns_404_when_missing():

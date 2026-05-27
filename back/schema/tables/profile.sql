@@ -3,6 +3,7 @@ CREATE TABLE "public"."profile" (
     "id" uuid NOT NULL,
     "email" text,
     "full_name" text,
+    "role" text NOT NULL DEFAULT 'user',
     "created_at" timestamptz NOT NULL DEFAULT now(),
     "google_token_pickle" text,
     "imap_host" text,
@@ -12,5 +13,6 @@ CREATE TABLE "public"."profile" (
     "imap_mailbox" text,
     "imap_use_ssl" boolean NOT NULL DEFAULT true,
     "imap_enabled" boolean NOT NULL DEFAULT false,
+    CONSTRAINT "profile_role_check" CHECK (("role" = ANY (ARRAY['admin'::text, 'user'::text]))),
     PRIMARY KEY ("id")
 );

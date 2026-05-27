@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from src.api.auth.schemas import LoginRequest, OAuthCallbackQuery, OAuthLoginQuery, SignupRequest
-from src.api.dependencies import get_auth_service, get_oauth_service
+from src.api.dependencies import get_auth_service, get_database_repository, get_oauth_service
+from src.repository.repository import DatabaseRepository
 from src.service.auth.auth_service import AuthService
 from src.service.auth.oauth_service import OAuthService
 
@@ -60,8 +61,13 @@ def auth_logout(
 def auth_user(
     authorization: str | None = Header(default=None),
     auth_service: AuthService = Depends(get_auth_service),
+    db: DatabaseRepository = Depends(get_database_repository),
 ):
     result = auth_service.get_user(authorization or "")
+    user_payload = result.get("user") if isinstance(result.get("user"), dict) else None
+    if user_payload and user_payload.get("id"):
+        profile = db.fetch_profile(user_payload["id"]) or {}
+        user_payload["role"] = profile.get("role") or "user"
     payload, status = _pop_status(result, default_status=200)
     return JSONResponse(payload, status_code=status)
 

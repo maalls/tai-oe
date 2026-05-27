@@ -8,7 +8,12 @@ class _FakeDbOk:
     def update_profile(self, user_id, updates):
         assert user_id == "user-1"
         assert updates == {"full_name": "Jane Updated"}
-        return {"id": "user-1", "email": "user@example.com", "full_name": "Jane Updated"}
+        return {
+            "id": "user-1",
+            "email": "user@example.com",
+            "full_name": "Jane Updated",
+            "role": "user",
+        }
 
 
 class _FakeDbMissing:
@@ -26,6 +31,7 @@ def test_update_profile_returns_updated_profile():
 
     assert response.status_code == 200
     assert response.json()["full_name"] == "Jane Updated"
+    assert response.json()["role"] == "user"
 
 
 def test_update_profile_returns_404_when_missing():
