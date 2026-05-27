@@ -41,6 +41,7 @@ import LoginPage from '../components/login/IndexPage.vue';
 import ResetPasswordPage from '../components/login/ResetPasswordPage.vue';
 import AuthTestPage from '../components/debug/AuthTestPage.vue';
 import { useAuth } from '../stores/auth';
+import { resolveAdminAccess } from './guards/adminRole';
 import i18n from '../i18n';
 
 const router = createRouter({
@@ -98,7 +99,7 @@ const router = createRouter({
          path: '/admin/users',
          name: 'admin-users',
          component: AdminUsersPage,
-         meta: { requiresAuth: true, titleKey: 'pageTitles.adminUsers' },
+         meta: { requiresAuth: true, requiresAdmin: true, titleKey: 'pageTitles.adminUsers' },
       },
       {
          path: '/source',
@@ -439,6 +440,16 @@ router.beforeEach(async (to, _from, next) => {
 
    if (to.meta.requiresAuth && !authStore.isAuthenticated.value) {
       next('/login');
+   } else if (to.meta.requiresAdmin) {
+      const isAdmin = await resolveAdminAccess({
+         requiresAdmin: true,
+         getValidToken: authStore.getValidToken,
+      });
+      if (!isAdmin) {
+         next('/');
+         return;
+      }
+      next();
    } else if (to.meta.requiresGuest && authStore.isAuthenticated.value) {
       next('/');
    } else {
