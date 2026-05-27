@@ -244,6 +244,7 @@ Current status notes:
 - `UM-001` to `UM-009` are implemented and validated with targeted tests.
 - `UM-010` is started: centralized backend access policy module introduced for admin users routes.
 - `UM-011` is started: RBAC backend enforcement extended to `/api/csv/query` with 401/403 coverage.
+- Frontend consumers of `/api/csv/query` are aligned with RBAC by sending bearer token (Admin Database pages and Chat DB tools).
 - `UM-012` is started: frontend admin route UX guard is in place for `/admin/users`.
 - Remaining M4 work focuses on backend permission map and broader route coverage (`UM-010`, `UM-011`, complete `UM-012`).
 

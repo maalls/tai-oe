@@ -81,6 +81,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue';
+import { useAuth } from '../../stores/auth';
 
 const currentTable = ref('fabdis_commerce');
 
@@ -88,6 +89,7 @@ const tableData = ref<any>(null);
 const loadingData = ref(false);
 const dataError = ref('');
 const selectedColumns = ref<string[]>([]);
+const { getValidToken } = useAuth();
 
 const allColumns = computed(() => tableData.value?.columns || []);
 
@@ -156,10 +158,19 @@ async function loadTableData() {
    tableData.value = null;
 
    try {
+      const token = await getValidToken();
       const response = await fetch(
-         `/api/csv/query?table=${encodeURIComponent(currentTable.value)}`
+         `/api/csv/query?table=${encodeURIComponent(currentTable.value)}`,
+         {
+            headers: {
+               Authorization: `Bearer ${token}`,
+            },
+         }
       );
       const data = await response.json();
+      if (!response.ok) {
+         throw new Error(data?.error || `HTTP ${response.status}`);
+      }
       console.log('Fetched table data:', data);
       tableData.value = data;
    } catch (e) {
