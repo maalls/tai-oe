@@ -1,7 +1,14 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
-from src.api.dependencies import get_database_repository
+from src.api.dependencies import get_auth_service, get_database_repository
+
+
+class _FakeAuthService:
+    def verify_token(self, authorization: str):
+        if authorization == "Bearer ok":
+            return True, {"id": "user-1"}
+        return False, None
 
 
 class _FakeDb:
@@ -57,12 +64,28 @@ class _FakeDbMissing:
         return []
 
 
+class _FakeDbAdmin(_FakeDb):
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
+class _FakeDbDocSource(_FakeDbDocSource):
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
+class _FakeDbMissing(_FakeDbMissing):
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
 def test_get_opportunity_source_email_payload():
     app = create_app()
-    app.dependency_overrides[get_database_repository] = lambda: _FakeDb()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDbAdmin()
     client = TestClient(app)
 
-    response = client.get("/api/opportunity/opp-1/source")
+    response = client.get("/api/opportunity/opp-1/source", headers={"Authorization": "Bearer ok"})
 
     assert response.status_code == 200
     body = response.json()
@@ -74,10 +97,11 @@ def test_get_opportunity_source_email_payload():
 
 def test_get_opportunity_source_document_payload():
     app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_database_repository] = lambda: _FakeDbDocSource()
     client = TestClient(app)
 
-    response = client.get("/api/opportunity/opp-2/source")
+    response = client.get("/api/opportunity/opp-2/source", headers={"Authorization": "Bearer ok"})
 
     assert response.status_code == 200
     body = response.json()
@@ -88,10 +112,11 @@ def test_get_opportunity_source_document_payload():
 
 def test_get_opportunity_source_returns_404_when_missing():
     app = create_app()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_database_repository] = lambda: _FakeDbMissing()
     client = TestClient(app)
 
-    response = client.get("/api/opportunity/missing/source")
+    response = client.get("/api/opportunity/missing/source", headers={"Authorization": "Bearer ok"})
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Opportunity not found"

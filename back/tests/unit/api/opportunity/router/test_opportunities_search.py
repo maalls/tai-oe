@@ -7,6 +7,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 
 from src.api.dependencies import get_auth_service, get_opportunity_repository
+from src.api.dependencies import get_database_repository
 from src.api.main import create_app
 
 
@@ -27,10 +28,16 @@ class _FakeOpportunityHandlers:
         }
 
 
+class _FakeDatabaseRepository:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
 def _client() -> TestClient:
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_opportunity_repository] = lambda: _FakeOpportunityHandlers()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
     return TestClient(app)
 
 
@@ -70,6 +77,7 @@ def test_opportunities_search_serializes_decimal_values():
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_opportunity_repository] = lambda: _Repo()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
     client = TestClient(app)
     response = client.get(
         "/api/opportunities/search?name=deal",

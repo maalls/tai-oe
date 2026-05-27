@@ -13,6 +13,9 @@ class _FakeAuthService:
 
 
 class _FakeDb:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "UPDATE opportunity" in query:
             if params[1] == "missing":

@@ -13,6 +13,9 @@ class _FakeAuthService:
 
 
 class _FakeDbCreateContact:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "SELECT id, account_id FROM opportunity" in query:
             return [{"id": "opp-1", "account_id": "a-1"}]
@@ -26,6 +29,9 @@ class _FakeDbCreateContact:
 
 
 class _FakeDbExistingContact:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "SELECT id, account_id FROM opportunity" in query:
             return [{"id": "opp-1", "account_id": "a-1"}]
@@ -37,6 +43,9 @@ class _FakeDbExistingContact:
 
 
 class _FakeDbMissingOpp:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "SELECT id, account_id FROM opportunity" in query:
             return []

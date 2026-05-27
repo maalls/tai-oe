@@ -5,7 +5,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_auth_service, get_rfq_source_service
+from src.api.dependencies import get_auth_service, get_database_repository, get_rfq_source_service
 from src.api.main import create_app
 
 
@@ -29,10 +29,16 @@ class _FakeRfqSourceService:
         }
 
 
+class _FakeDatabaseRepository:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
 def _client() -> TestClient:
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_rfq_source_service] = lambda: _FakeRfqSourceService()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
     return TestClient(app)
 
 

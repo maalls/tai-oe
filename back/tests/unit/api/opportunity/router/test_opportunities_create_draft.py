@@ -18,6 +18,9 @@ class _FakeAuthService:
 
 
 class _FakeDb:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
     def execute_dict_query(self, query, params=None):
         if "INSERT INTO opportunity" in query:
             return [

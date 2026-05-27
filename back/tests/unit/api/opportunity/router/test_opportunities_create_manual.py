@@ -5,7 +5,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_auth_service, get_opportunity_repository
+from src.api.dependencies import get_auth_service, get_database_repository, get_opportunity_repository
 from src.api.main import create_app
 
 
@@ -21,10 +21,16 @@ class _FakeOpportunityHandlers:
         return {"status": "ok", "opportunity": {"id": "opp-2", "name": name, "owner_user_id": user_id}}
 
 
+class _FakeDatabaseRepository:
+    def fetch_profile(self, user_id: str):
+        return {"id": user_id, "role": "admin"}
+
+
 def _client() -> TestClient:
     app = create_app()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_opportunity_repository] = lambda: _FakeOpportunityHandlers()
+    app.dependency_overrides[get_database_repository] = lambda: _FakeDatabaseRepository()
     return TestClient(app)
 
 

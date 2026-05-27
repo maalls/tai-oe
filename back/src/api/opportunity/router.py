@@ -41,8 +41,8 @@ from src.service.email.opportunity_from_email_service import OpportunityFromEmai
 from src.service.email.quote_send_service import QuoteSendService
 from src.service.rfq.rfq_source_service import RfqSourceService
 
-router = APIRouter(tags=["opportunity"])
 _admin_access = build_default_access_context_dependency()
+router = APIRouter(tags=["opportunity"], dependencies=[Depends(_admin_access)])
 
 
 def _serialize_opportunity(opportunity) -> dict:
