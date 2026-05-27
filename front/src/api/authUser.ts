@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+
 export type AuthUser = {
    id: string;
    role?: string | null;
@@ -8,11 +10,7 @@ export type AuthUserResponse = {
 };
 
 export async function fetchAuthUser(token: string): Promise<AuthUserResponse> {
-   const res = await fetch('/api/auth/user', {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
+   const res = await authFetch('/api/auth/user', {}, token);
 
    const data = await res.json();
 

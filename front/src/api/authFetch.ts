@@ -1,5 +1,3 @@
-import { useAuth } from '../stores/auth';
-
 function toHeadersObject(headers?: HeadersInit): Record<string, string> {
    if (!headers) {
       return {};
@@ -18,10 +16,11 @@ function toHeadersObject(headers?: HeadersInit): Record<string, string> {
 
 export async function authFetch(
    input: RequestInfo | URL,
-   init: RequestInit = {}
+   init: RequestInit = {},
+   tokenOverride?: string
 ): Promise<Response> {
-   const { getValidToken } = useAuth();
-   const token = await getValidToken();
+   const token =
+      tokenOverride ?? (await (await import('../stores/auth')).useAuth().getValidToken());
 
    const mergedHeaders = {
       ...toHeadersObject(init.headers),

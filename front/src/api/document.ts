@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+
 export interface OpportunityDocument {
    id: string;
    opportunity_id?: string | null;
@@ -35,12 +37,13 @@ export async function getOpportunityDocument(
 }
 
 export async function deleteOpportunityDocument(documentId: string, token: string): Promise<void> {
-   const res = await fetch(`/api/document/${documentId}`, {
+   const res = await authFetch(
+      `/api/document/${documentId}`,
+      {
       method: 'DELETE',
-      headers: {
-         Authorization: `Bearer ${token}`,
       },
-   });
+      token
+   );
    if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
       throw new Error(payload?.message || 'Erreur lors de la suppression du document');
@@ -51,14 +54,17 @@ export async function clearDocumentStorageKey(
    documentId: string,
    token: string
 ): Promise<OpportunityDocument> {
-   const res = await fetch(`/api/document/${documentId}/storage-key`, {
+   const res = await authFetch(
+      `/api/document/${documentId}/storage-key`,
+      {
       method: 'PUT',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ storage_key: null }),
-   });
+      },
+      token
+   );
    if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
       throw new Error(payload?.message || payload?.error || 'Erreur lors de la suppression du PDF');
@@ -71,14 +77,17 @@ export async function updateDocumentStatus(
    status: string,
    token: string
 ): Promise<OpportunityDocument> {
-   const res = await fetch(`/api/document/${documentId}/status`, {
+   const res = await authFetch(
+      `/api/document/${documentId}/status`,
+      {
       method: 'PUT',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ status }),
-   });
+      },
+      token
+   );
    if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
       throw new Error(

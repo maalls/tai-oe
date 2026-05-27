@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+
 export interface EmailAttachment {
    id: string;
    filename?: string | null;
@@ -10,11 +12,7 @@ export async function listEmailAttachments(
    emailId: string,
    token: string
 ): Promise<EmailAttachment[]> {
-   const res = await fetch(`/api/email/${encodeURIComponent(emailId)}/attachments`, {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
+   const res = await authFetch(`/api/email/${encodeURIComponent(emailId)}/attachments`, {}, token);
 
    if (!res.ok) {
       const payload = await res.json().catch(() => ({}));

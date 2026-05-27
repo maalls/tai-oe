@@ -1,4 +1,5 @@
 import { apiUrl } from '../utils/api';
+import { authFetch } from './authFetch';
 
 export type AdminUserRole = 'admin' | 'user';
 
@@ -29,11 +30,7 @@ export async function listAdminUsers(
    });
    const url = `${apiUrl('admin/users')}?${query.toString()}`;
 
-   const res = await fetch(url, {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
+   const res = await authFetch(url, {}, token);
    const data = await res.json();
 
    if (!res.ok) {
@@ -50,14 +47,17 @@ export async function updateAdminUserRole(
 ): Promise<UpdateAdminUserRoleResponse> {
    const url = apiUrl(`admin/users/${userId}/role`);
 
-   const res = await fetch(url, {
+   const res = await authFetch(
+      url,
+      {
       method: 'PATCH',
       headers: {
-         Authorization: `Bearer ${token}`,
          'Content-Type': 'application/json',
       },
       body: JSON.stringify({ role }),
-   });
+      },
+      token
+   );
    const data = await res.json();
 
    if (!res.ok) {

@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+
 export interface OpportunitySummary {
    id: string;
    account_id?: string | null;
@@ -48,14 +50,17 @@ export async function createManualOpportunity(
    name: string,
    token: string
 ): Promise<OpportunitySummary> {
-   const res = await fetch('/api/opportunities/create-manual', {
+   const res = await authFetch(
+      '/api/opportunities/create-manual',
+      {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ name }),
-   });
+      },
+      token
+   );
    if (!res.ok) throw new Error('Erreur lors de la création de l’opportunité');
    const payload = await res.json();
    if (payload?.status !== 'ok' || !payload?.opportunity) {
@@ -69,18 +74,21 @@ export async function createDraftOpportunity(
    token: string,
    options?: { name?: string; source?: string }
 ): Promise<OpportunitySummary> {
-   const res = await fetch('/api/opportunities/create-draft', {
+   const res = await authFetch(
+      '/api/opportunities/create-draft',
+      {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
          account_id: accountId,
          name: options?.name ?? '',
          source: options?.source ?? 'user_form',
       }),
-   });
+      },
+      token
+   );
    if (!res.ok) throw new Error('Erreur lors de la création de l’opportunité brouillon');
    const payload = await res.json();
    if (payload?.status !== 'ok' || !payload?.opportunity) {
@@ -94,14 +102,17 @@ export async function updateOpportunityName(
    name: string,
    token: string
 ): Promise<OpportunitySummary> {
-   const res = await fetch(`/api/opportunity/${opportunityId}/name`, {
+   const res = await authFetch(
+      `/api/opportunity/${opportunityId}/name`,
+      {
       method: 'PUT',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ name }),
-   });
+      },
+      token
+   );
    if (!res.ok) throw new Error('Erreur lors de la mise à jour de l’opportunité');
    return await res.json();
 }
@@ -111,14 +122,17 @@ export async function updateOpportunityAccount(
    accountId: string,
    token: string
 ): Promise<OpportunitySummary> {
-   const res = await fetch(`/api/opportunity/${opportunityId}/account`, {
+   const res = await authFetch(
+      `/api/opportunity/${opportunityId}/account`,
+      {
       method: 'PUT',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ account_id: accountId }),
-   });
+      },
+      token
+   );
    if (!res.ok) throw new Error('Erreur lors de la mise à jour du compte de l’opportunité');
    return await res.json();
 }
@@ -129,14 +143,17 @@ export async function extractOpportunityAuthorContact(
    fromName: string | null,
    token: string
 ): Promise<{ status: string; contact_id: string; linked: boolean }> {
-   const res = await fetch(`/api/opportunity/${opportunityId}/extract-author-contact`, {
+   const res = await authFetch(
+      `/api/opportunity/${opportunityId}/extract-author-contact`,
+      {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ from_email: fromEmail, from_name: fromName }),
-   });
+      },
+      token
+   );
    if (!res.ok) throw new Error('Erreur lors de l’extraction du contact auteur');
    return await res.json();
 }
@@ -164,11 +181,7 @@ export async function searchOpportunities(
       query.set('source_reference_id', params.sourceReferenceId);
    }
    const suffix = query.size > 0 ? `?${query.toString()}` : '';
-   const res = await fetch(`/api/opportunities/search${suffix}`, {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
+   const res = await authFetch(`/api/opportunities/search${suffix}`, {}, token);
    if (!res.ok) throw new Error('Erreur lors du chargement des opportunités');
    const payload = await res.json();
    return (payload?.opportunities as OpportunitySummary[]) || [];
@@ -209,14 +222,17 @@ export async function updateOpportunityStageState(
    status: string,
    token: string
 ): Promise<{ id: string; stage: string; status: string }> {
-   const res = await fetch(`/api/opportunity/${opportunityId}/stage-state`, {
+   const res = await authFetch(
+      `/api/opportunity/${opportunityId}/stage-state`,
+      {
       method: 'PUT',
       headers: {
          'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ stage, status }),
-   });
+      },
+      token
+   );
    const payload = await res.json();
    if (!res.ok) {
       throw new Error(

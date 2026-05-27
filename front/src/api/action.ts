@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+
 export interface ActionRecord {
    id: string;
    opportunity_id?: string | null;
@@ -31,10 +33,9 @@ export interface ActionUpsertPayload {
    max_executions?: number | null;
 }
 
-function authHeaders(token: string): HeadersInit {
+function authHeaders(): HeadersInit {
    return {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
    };
 }
 
@@ -46,11 +47,11 @@ export async function listOpportunityActions(
    opportunityId: string,
    token: string
 ): Promise<ActionRecord[]> {
-   const res = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/actions`, {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
+   const res = await authFetch(
+      `/api/opportunities/${encodeURIComponent(opportunityId)}/actions`,
+      {},
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
@@ -64,11 +65,15 @@ export async function createAction(
    data: ActionUpsertPayload,
    token: string
 ): Promise<ActionRecord> {
-   const res = await fetch('/api/actions', {
+   const res = await authFetch(
+      '/api/actions',
+      {
       method: 'POST',
-      headers: authHeaders(token),
+      headers: authHeaders(),
       body: JSON.stringify(data),
-   });
+      },
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
@@ -83,11 +88,15 @@ export async function updateAction(
    data: ActionUpsertPayload,
    token: string
 ): Promise<ActionRecord> {
-   const res = await fetch(`/api/actions/${actionId}`, {
+   const res = await authFetch(
+      `/api/actions/${actionId}`,
+      {
       method: 'PUT',
-      headers: authHeaders(token),
+      headers: authHeaders(),
       body: JSON.stringify(data),
-   });
+      },
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
@@ -98,12 +107,13 @@ export async function updateAction(
 }
 
 export async function deleteAction(actionId: string, token: string): Promise<void> {
-   const res = await fetch(`/api/actions/${actionId}`, {
+   const res = await authFetch(
+      `/api/actions/${actionId}`,
+      {
       method: 'DELETE',
-      headers: {
-         Authorization: `Bearer ${token}`,
       },
-   });
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
@@ -113,12 +123,13 @@ export async function deleteAction(actionId: string, token: string): Promise<voi
 }
 
 export async function pauseAction(actionId: string, token: string): Promise<ActionRecord> {
-   const res = await fetch(`/api/actions/${actionId}/pause`, {
+   const res = await authFetch(
+      `/api/actions/${actionId}/pause`,
+      {
       method: 'POST',
-      headers: {
-         Authorization: `Bearer ${token}`,
       },
-   });
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(payload?.message || payload?.error || 'Erreur lors de la pause de l’action');
@@ -127,12 +138,13 @@ export async function pauseAction(actionId: string, token: string): Promise<Acti
 }
 
 export async function resumeAction(actionId: string, token: string): Promise<ActionRecord> {
-   const res = await fetch(`/api/actions/${actionId}/resume`, {
+   const res = await authFetch(
+      `/api/actions/${actionId}/resume`,
+      {
       method: 'POST',
-      headers: {
-         Authorization: `Bearer ${token}`,
       },
-   });
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
@@ -146,12 +158,13 @@ export async function executeAction(
    actionId: string,
    token: string
 ): Promise<Record<string, unknown>> {
-   const res = await fetch(`/api/action/${actionId}/execute`, {
+   const res = await authFetch(
+      `/api/action/${actionId}/execute`,
+      {
       method: 'POST',
-      headers: {
-         Authorization: `Bearer ${token}`,
       },
-   });
+      token
+   );
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
@@ -166,11 +179,7 @@ export async function getActionLogs(
    token: string,
    limit: number = 50
 ): Promise<ActionLogRecord[]> {
-   const res = await fetch(`/api/actions/${actionId}/logs?limit=${limit}`, {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-   });
+   const res = await authFetch(`/api/actions/${actionId}/logs?limit=${limit}`, {}, token);
    const payload = await readPayload(res);
    if (!res.ok) {
       throw new Error(
