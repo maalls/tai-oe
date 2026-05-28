@@ -2,6 +2,7 @@
    <ProductsSubHeader class="mb-6">
       <template #actions>
          <RouterLink
+            v-if="userRole === 'admin'"
             :to="`/products/${route.params.id}/edit`"
             class="shrink-0 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
          >
@@ -238,6 +239,9 @@ import { getProduct } from '../../api/product';
 import { useI18n } from '../../i18n/useI18n';
 import ProductsSubHeader from './ProductsSubHeader.vue';
 import { useBrandFamilyData } from './useBrandFamilyData';
+import { useAuthWithProfile } from '../../composables/useAuthWithProfile';
+
+const { userRole } = useAuthWithProfile();
 import {
    applyFamilyPricingToListPrice,
    selectBestFamilyPricing,
