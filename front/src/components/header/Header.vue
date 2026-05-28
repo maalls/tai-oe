@@ -85,7 +85,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { useAuthWithProfile } from '../../stores/useAuthWithProfile';
+import { useAuthWithProfile } from '../../composables/useAuthWithProfile';
 import { useI18n } from '../../i18n/useI18n';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { computed } from 'vue';

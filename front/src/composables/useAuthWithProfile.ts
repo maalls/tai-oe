@@ -1,5 +1,5 @@
 import { ref, computed, onMounted } from 'vue';
-import { useAuth } from './auth';
+import { useAuth } from '../stores/auth';
 import { fetchAuthUser } from '../api/authUser';
 
 export function useAuthWithProfile() {

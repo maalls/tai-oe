@@ -326,7 +326,8 @@ def product_get(
         product = product_service.get_product_by_id(product_id)
         if not product:
             return JSONResponse({"status": "error", "message": "Product not found"}, status_code=404)
-        return JSONResponse(_to_front_product(product), status_code=200)
+        # Correction : encoder pour gérer Decimal
+        return JSONResponse(jsonable_encoder(_to_front_product(product)), status_code=200)
     except Exception as exc:
         result = {"status": "error", "message": str(exc)}
         return JSONResponse(result, status_code=_status_from_result(result))

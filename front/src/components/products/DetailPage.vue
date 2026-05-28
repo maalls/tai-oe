@@ -221,12 +221,12 @@
             </div>
          </div>
 
-         <div v-if="rawPayload" class="mt-6">
+         <!--div v-if="rawPayload" class="mt-6">
             <div class="text-sm text-gray-500 mb-2">{{ t('products.detail.rawPayload') }}</div>
             <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">{{
                rawPayload
             }}</pre>
-         </div>
+         </div-->
       </div>
    </div>
 </template>
