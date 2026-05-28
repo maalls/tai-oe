@@ -10,16 +10,26 @@
                </div>
                <div v-else class="flex gap-4 mt-2 text-gray-600">
                   <span class="text-gray-500">
-                     {{ t('products.brand.minimumMargin') }}: {{ formData.minimum_margin || '0' }}%
+                     {{ t('products.brand.minimumMargin') }}:
+                     {{
+                        formData.minimum_margin !== null && formData.minimum_margin !== undefined
+                           ? formData.minimum_margin + '%'
+                           : '-'
+                     }}
                   </span>
                   <span class="text-gray-500">
-                     {{ t('products.brand.targetMargin') }}: {{ formData.target_margin }}%
+                     {{ t('products.brand.targetMargin') }}:
+                     {{
+                        formData.target_margin !== null && formData.target_margin !== undefined
+                           ? formData.target_margin + '%'
+                           : '-'
+                     }}
                   </span>
                </div>
             </div>
             <div class="flex gap-2">
                <ActionButton
-                  v-if="!isNewBrand"
+                  v-if="!isNewBrand && userRole === 'admin'"
                   type="button"
                   :variant="showForm ? 'neutral' : 'primary'"
                   @click="showForm = !showForm"
@@ -182,7 +192,10 @@
                         >
                            {{ t('products.brand.columns.targetMargin') }}
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                        <th
+                           v-if="userRole === 'admin'"
+                           class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase"
+                        >
                            {{ t('common.edit') }}
                         </th>
                      </tr>
@@ -200,13 +213,45 @@
                         <td class="px-6 py-4 text-sm text-right text-gray-600">
                            {{ family.discount ? family.discount + '%' : '-' }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-right text-gray-600">
-                           {{ family.minimum_margin ? family.minimum_margin + '%' : '-' }}
+                        <td class="px-6 py-4 text-sm text-right">
+                           <span
+                              v-if="
+                                 typeof family.minimum_margin === 'number' &&
+                                 family.minimum_margin !== null &&
+                                 family.minimum_margin !== 0
+                              "
+                           >
+                              {{ family.minimum_margin + '%' }}
+                           </span>
+                           <span v-else class="text-gray-400 italic">
+                              {{
+                                 formData.minimum_margin !== null &&
+                                 formData.minimum_margin !== undefined
+                                    ? formData.minimum_margin + '%'
+                                    : '-'
+                              }}
+                           </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-right text-gray-600">
-                           {{ family.target_margin ? family.target_margin + '%' : '-' }}
+                        <td class="px-6 py-4 text-sm text-right">
+                           <span
+                              v-if="
+                                 typeof family.target_margin === 'number' &&
+                                 family.target_margin !== null &&
+                                 family.target_margin !== 0
+                              "
+                           >
+                              {{ family.target_margin + '%' }}
+                           </span>
+                           <span v-else class="text-gray-400 italic">
+                              {{
+                                 formData.target_margin !== null &&
+                                 formData.target_margin !== undefined
+                                    ? formData.target_margin + '%'
+                                    : '-'
+                              }}
+                           </span>
                         </td>
-                        <td class="px-6 py-4 text-sm">
+                        <td v-if="userRole === 'admin'" class="px-6 py-4 text-sm">
                            <router-link
                               :to="getFamilyEditLink(family)"
                               class="text-blue-600 hover:text-blue-800 hover:underline font-medium"
@@ -251,6 +296,9 @@ import {
    type BrandFamily,
 } from '../../api/brand';
 import { listVendors, type Vendor } from '../../api/vendor';
+import { useAuthWithProfile } from '../../composables/useAuthWithProfile';
+
+const { userRole } = useAuthWithProfile();
 
 const route = useRoute();
 const router = useRouter();
