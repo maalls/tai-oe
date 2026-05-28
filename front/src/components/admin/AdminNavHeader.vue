@@ -7,14 +7,14 @@ import { computed } from 'vue';
 import NavHeader from '../shared/NavHeader.vue';
 
 const navItems = computed(() => [
-   {
+   /*{
       label: 'Dashboard',
       path: '/admin',
       exact: true,
    },
    { path: '/admin/source', label: 'Source', matchChildren: true },
    { path: '/admin/database', label: 'Database', matchChildren: true },
-   { path: '/admin/flow', label: 'Flow', matchChildren: true },
+   { path: '/admin/flow', label: 'Flow', matchChildren: true },*/
    { path: '/admin/users', label: 'Users', matchChildren: true },
 ]);
 </script>

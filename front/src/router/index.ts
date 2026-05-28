@@ -76,6 +76,10 @@ const router = createRouter({
          redirect: '/vendors',
       },
       {
+         path: '/admin',
+         redirect: '/admin/users',
+      },
+      {
          path: '/admin/source',
          name: 'admin-source',
          component: SourcePage,
@@ -348,7 +352,7 @@ const router = createRouter({
       {
          path: '/admin',
          name: 'admin',
-         component: AdminPage,
+         component: AdminUsersPage,
          meta: { requiresAuth: true, titleKey: 'pageTitles.admin' },
       },
       {

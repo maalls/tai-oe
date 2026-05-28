@@ -2,7 +2,7 @@
    <div>
       <AdminNavHeader />
       <div class="p-6 space-y-4">
-         <div class="flex items-center justify-between gap-4">
+         <!--div class="flex items-center justify-between gap-4">
             <h1 class="text-2xl font-bold">Users</h1>
             <button
                type="button"
@@ -12,7 +12,7 @@
             >
                Refresh
             </button>
-         </div>
+         </div-->
 
          <p
             v-if="errorMessage"
