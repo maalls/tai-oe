@@ -1,5 +1,9 @@
 <template>
-   <NavHeader :items="navItems" />
+   <NavHeader :items="navItems">
+      <template #actions>
+         <slot name="actions" />
+      </template>
+   </NavHeader>
 </template>
 
 <script setup lang="ts">

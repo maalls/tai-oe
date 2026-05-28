@@ -118,6 +118,12 @@ const router = createRouter({
          meta: { requiresAuth: true, requiresAdmin: true, titleKey: 'pageTitles.adminUsers' },
       },
       {
+         path: '/admin/users/new',
+         name: 'admin-users-new',
+         component: () => import('../components/admin/components/users/UserFormPage.vue'),
+         meta: { requiresAuth: true, requiresAdmin: true, titleKey: 'pageTitles.adminUsersNew' },
+      },
+      {
          path: '/source',
          redirect: '/admin/source',
       },

@@ -1,9 +1,11 @@
 import { ref } from 'vue';
 
 import {
+   createAdminUser,
    listAdminUsers,
    updateAdminUserRole,
    type AdminUser,
+   type CreateAdminUserPayload,
    type AdminUserRole,
 } from '../../../../api/adminUsers';
 
@@ -15,6 +17,7 @@ type UseAdminUsersDeps = {
       userId: string,
       role: AdminUserRole
    ) => Promise<{ user: AdminUser }>;
+   createUser?: (token: string, payload: CreateAdminUserPayload) => Promise<{ user: AdminUser }>;
 };
 
 export const useAdminUsers = (deps: UseAdminUsersDeps = {}) => {
@@ -25,10 +28,12 @@ export const useAdminUsers = (deps: UseAdminUsersDeps = {}) => {
    const getValidToken = deps.getValidToken;
    const listUsers = deps.listUsers ?? listAdminUsers;
    const updateUserRole = deps.updateUserRole ?? updateAdminUserRole;
+   const createUser = deps.createUser ?? createAdminUser;
 
    const users = ref<AdminUser[]>([]);
    const isLoading = ref(false);
    const isUpdating = ref(false);
+   const isCreating = ref(false);
    const updatingUserId = ref<string | null>(null);
    const errorMessage = ref('');
    const successMessage = ref('');
@@ -71,14 +76,33 @@ export const useAdminUsers = (deps: UseAdminUsersDeps = {}) => {
       }
    };
 
+   const addUser = async (payload: CreateAdminUserPayload) => {
+      isCreating.value = true;
+      errorMessage.value = '';
+      successMessage.value = '';
+
+      try {
+         const token = await getValidToken();
+         const response = await createUser(token, payload);
+         users.value = [response.user, ...users.value];
+         successMessage.value = 'User created successfully.';
+      } catch (error) {
+         errorMessage.value = error instanceof Error ? error.message : 'Failed to create user.';
+      } finally {
+         isCreating.value = false;
+      }
+   };
+
    return {
       users,
       isLoading,
       isUpdating,
+      isCreating,
       updatingUserId,
       errorMessage,
       successMessage,
       loadUsers,
       changeRole,
+      addUser,
    };
 };

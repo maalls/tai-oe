@@ -1,6 +1,10 @@
 <template>
    <div>
-      <AdminNavHeader />
+      <AdminNavHeader>
+         <template #actions>
+            <ActionButton to="/admin/users/new" variant="dark" size="sm"> Add user </ActionButton>
+         </template>
+      </AdminNavHeader>
       <div class="p-6 space-y-4">
          <!--div class="flex items-center justify-between gap-4">
             <h1 class="text-2xl font-bold">Users</h1>
@@ -29,7 +33,7 @@
 
          <div v-if="isLoading" class="text-gray-600">Loading users...</div>
 
-         <div v-else class="overflow-x-auto bg-white rounded-lg border border-gray-200">
+         <div v-if="!isLoading" class="overflow-x-auto bg-white rounded-lg border border-gray-200">
             <table class="min-w-full text-sm">
                <thead class="bg-gray-50 text-gray-700">
                   <tr>
@@ -84,6 +88,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
+import ActionButton from '../../../common/ActionButton.vue';
 
 import AdminNavHeader from '../../AdminNavHeader.vue';
 import { useAdminUsers } from './useAdminUsers';

@@ -19,6 +19,17 @@ export interface UpdateAdminUserRoleResponse {
    user: AdminUser;
 }
 
+export interface CreateAdminUserPayload {
+   email: string;
+   password: string;
+   full_name?: string;
+   role?: AdminUserRole;
+}
+
+export interface CreateAdminUserResponse {
+   user: AdminUser;
+}
+
 export async function listAdminUsers(
    token: string,
    limit = 50,
@@ -62,6 +73,32 @@ export async function updateAdminUserRole(
 
    if (!res.ok) {
       throw new Error(data?.message || 'Failed to update user role.');
+   }
+
+   return data;
+}
+
+export async function createAdminUser(
+   token: string,
+   payload: CreateAdminUserPayload
+): Promise<CreateAdminUserResponse> {
+   const url = apiUrl('admin/users');
+
+   const res = await authFetch(
+      url,
+      {
+         method: 'POST',
+         headers: {
+            'Content-Type': 'application/json',
+         },
+         body: JSON.stringify(payload),
+      },
+      token
+   );
+   const data = await res.json();
+
+   if (!res.ok) {
+      throw new Error(data?.message || 'Failed to create user.');
    }
 
    return data;

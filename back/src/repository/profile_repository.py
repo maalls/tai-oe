@@ -1,10 +1,9 @@
-"""Profile-oriented repository operations."""
-
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
 from src.repository.core_repository import CoreDatabaseRepository
+
 
 
 class ProfileRepository(CoreDatabaseRepository):
@@ -39,6 +38,16 @@ class ProfileRepository(CoreDatabaseRepository):
         )
         return self.execute_dict_query(query, (limit, offset))
 
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        query = (
+            "SELECT id, email, full_name, role, created_at "
+            "FROM profile "
+            "WHERE id = %s "
+            "LIMIT 1"
+        )
+        rows = self.execute_dict_query(query, (user_id,))
+        return rows[0] if rows else None
+
     def set_user_role(self, user_id: str, role: str) -> Optional[Dict[str, Any]]:
         if role not in self._ALLOWED_ROLES:
             raise ValueError("Invalid role")
@@ -51,3 +60,16 @@ class ProfileRepository(CoreDatabaseRepository):
         )
         rows = self.execute_dict_query(query, (role, user_id))
         return rows[0] if rows else None
+
+    def insert_profile(self, user_id: str, email: str, full_name: str = None, role: str = "user") -> Optional[Dict[str, Any]]:
+        query = (
+            "INSERT INTO profile (id, email, full_name, role) "
+            "VALUES (%s, %s, %s, %s) "
+            "ON CONFLICT (id) DO NOTHING "
+            "RETURNING id, email, full_name, role, created_at"
+        )
+        params = (user_id, email, full_name, role)
+        rows = self.execute_dict_query(query, params)
+        if rows:
+            return rows[0]
+        return self.get_user_by_id(user_id)
