@@ -2,7 +2,7 @@
    <div>
       <ProductsSubHeader>
          <template #actions>
-            <ActionButton to="/vendors/new" variant="dark">
+            <ActionButton v-if="userRole === 'admin'" to="/vendors/new" variant="dark">
                {{ t('vendors.new') }}
             </ActionButton>
          </template>
@@ -104,6 +104,9 @@ import ProductsSubHeader from '../products/ProductsSubHeader.vue';
 import ActionButton from '../common/ActionButton.vue';
 import { listVendors, type Vendor } from '../../api/vendor';
 import { useI18n } from '../../i18n/useI18n';
+import { useAuthWithProfile } from '../../composables/useAuthWithProfile';
+
+const { userRole } = useAuthWithProfile();
 
 const vendors = ref<Vendor[]>([]);
 const isLoading = ref(false);

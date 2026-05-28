@@ -3,6 +3,7 @@
       <ProductsSubHeader>
          <template #actions>
             <ActionButton
+               v-if="userRole === 'admin'"
                type="button"
                variant="dark"
                :disabled="isCreatingFamily"
@@ -208,7 +209,7 @@
                         >
                            Products
                         </th>
-                        <th class="px-4 py-2 text-right">Actions</th>
+                        <th v-if="userRole === 'admin'" class="px-4 py-2 text-right">Actions</th>
                      </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-200">
@@ -306,8 +307,12 @@
                               min="0"
                               step="0.001"
                               placeholder="Quantity"
-                              :class="{ 'saved-flash': savedFlashById[family.id] }"
+                              :class="{
+                                 'saved-flash': savedFlashById[family.id] && userRole === 'admin',
+                              }"
                               @blur="saveFamily(family)"
+                              :readonly="userRole !== 'admin'"
+                              :tabindex="userRole !== 'admin' ? -1 : 0"
                            />
                         </td>
                         <td
@@ -361,7 +366,9 @@
                               min="0"
                               step="0.0001"
                               placeholder="Net price"
-                              :class="{ 'saved-flash': savedFlashById[family.id] }"
+                              :class="{
+                                 'saved-flash': savedFlashById[family.id] && userRole === 'admin',
+                              }"
                               @blur="saveFamily(family)"
                            />
                            <span v-else class="text-gray-400">-</span>
@@ -380,8 +387,12 @@
                               max="100"
                               step="0.01"
                               placeholder="Discount"
-                              :class="{ 'saved-flash': savedFlashById[family.id] }"
+                              :class="{
+                                 'saved-flash': savedFlashById[family.id] && userRole === 'admin',
+                              }"
                               @blur="saveFamily(family)"
+                              :readonly="userRole !== 'admin'"
+                              :tabindex="userRole !== 'admin' ? -1 : 0"
                            />
                            <span v-else class="text-gray-400">-</span>
                         </td>
@@ -394,8 +405,12 @@
                               max="100"
                               step="0.01"
                               placeholder="Minimum Margin"
-                              :class="{ 'saved-flash': savedFlashById[family.id] }"
+                              :class="{
+                                 'saved-flash': savedFlashById[family.id] && userRole === 'admin',
+                              }"
                               @blur="saveFamily(family)"
+                              :readonly="userRole !== 'admin'"
+                              :tabindex="userRole !== 'admin' ? -1 : 0"
                            />
                         </td>
                         <td class="px-4 py-2 text-gray-600 text-right">
@@ -409,6 +424,8 @@
                               placeholder="Target Margin"
                               :class="{ 'saved-flash': savedFlashById[family.id] }"
                               @blur="saveFamily(family)"
+                              :readonly="userRole !== 'admin'"
+                              :tabindex="userRole !== 'admin' ? -1 : 0"
                            />
                         </td>
 
@@ -463,7 +480,7 @@
                               1
                            </RouterLink>
                         </td>
-                        <td class="px-4 py-2 text-right">
+                        <td v-if="userRole === 'admin'" class="px-4 py-2 text-right">
                            <ActionButton
                               type="button"
                               variant="danger-outline"
@@ -523,6 +540,9 @@ import { useBrandFamilyData } from '../products/useBrandFamilyData';
 import { searchProductBySku } from '../../composables/useSuggestionSearch';
 import { useI18n } from '../../i18n/useI18n';
 import { createFamily, deleteFamily as deleteFamilyApi, updateFamily } from '../../api/family';
+import { useAuthWithProfile } from '../../composables/useAuthWithProfile';
+
+const { userRole } = useAuthWithProfile();
 
 const router = useRouter();
 const route = useRoute();
