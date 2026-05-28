@@ -103,10 +103,10 @@ const message = ref<HeaderMessage | null>(null);
 let clearMessageTimeout: ReturnType<typeof window.setTimeout> | null = null;
 
 const pages = [
-   { path: '/mail', labelKey: 'nav.mail', role: 'user' },
+   { path: '/mail', labelKey: 'nav.mail', role: 'admin' },
    //{ path: '/business', labelKey: 'nav.business' },
-   { path: '/opportunities', labelKey: 'nav.opportunities', role: 'user' },
-   { path: '/client', labelKey: 'nav.client', role: 'user' },
+   { path: '/opportunities', labelKey: 'nav.opportunities', role: 'admin' },
+   { path: '/client', labelKey: 'nav.client', role: 'admin' },
    { path: '/vendors', labelKey: 'nav.vendors', role: 'user' },
    { path: '/admin', labelKey: 'nav.admin', role: 'admin' },
 ];
