@@ -6,7 +6,7 @@
             <span class="text-xl font-semibold text-white">GME</span>
          </RouterLink>
          <router-link
-            v-for="page in pages"
+            v-for="page in visiblePages"
             :key="page.path"
             :to="page.path"
             class="px-4 py-2 rounded-lg font-medium transition-all duration-200 text-gray-300 hover:bg-slate-800 hover:text-white"
@@ -44,6 +44,7 @@
          </div>
       </nav>
    </header>
+
    <div>
       <div
          style="
@@ -84,12 +85,13 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { useAuth } from '../../stores/auth';
+import { useAuthWithProfile } from '../../stores/useAuthWithProfile';
 import { useI18n } from '../../i18n/useI18n';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed } from 'vue';
 
 const route = useRoute();
-const { user } = useAuth();
+const { user, userRole, getValidToken, fetchUserRole } = useAuthWithProfile();
 const { t } = useI18n();
 
 type HeaderMessage = {
@@ -101,23 +103,22 @@ const message = ref<HeaderMessage | null>(null);
 let clearMessageTimeout: ReturnType<typeof window.setTimeout> | null = null;
 
 const pages = [
-   { path: '/mail', labelKey: 'nav.mail' },
+   { path: '/mail', labelKey: 'nav.mail', role: 'user' },
    //{ path: '/business', labelKey: 'nav.business' },
-   { path: '/opportunities', labelKey: 'nav.opportunities' },
-   { path: '/client', labelKey: 'nav.client' },
-   { path: '/vendors', labelKey: 'nav.vendors' },
-   { path: '/admin', labelKey: 'nav.admin' },
+   { path: '/opportunities', labelKey: 'nav.opportunities', role: 'user' },
+   { path: '/client', labelKey: 'nav.client', role: 'user' },
+   { path: '/vendors', labelKey: 'nav.vendors', role: 'user' },
+   { path: '/admin', labelKey: 'nav.admin', role: 'admin' },
 ];
 
 onMounted(() => {
    window.addEventListener('header-notification', onHeaderNotification);
+   fetchUserRole();
 });
-onBeforeUnmount(() => {
-   if (clearMessageTimeout) {
-      window.clearTimeout(clearMessageTimeout);
-   }
-   window.removeEventListener('header-notification', onHeaderNotification);
-});
+
+const visiblePages = computed(() =>
+   pages.filter((page) => page.role !== 'admin' || userRole.value === 'admin')
+);
 
 function scheduleMessageClear() {
    if (clearMessageTimeout) {
