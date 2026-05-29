@@ -181,6 +181,7 @@ export default {
                batch: 'Batch',
                families: 'Families',
                purchase_price: 'Purchase Price',
+               sale_price: 'Sale Price',
             },
          },
          detail: {

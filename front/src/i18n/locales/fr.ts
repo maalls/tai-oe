@@ -198,6 +198,7 @@ export default {
             batch: 'Lot',
             families: 'Familles',
             purchase_price: "Prix d'achat",
+            sale_price: 'Prix de vente',
          },
       },
       detail: {
