@@ -48,7 +48,10 @@
                      {{ t('products.table.columns.families') }}
                   </th>
                   <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">
-                     {{ t('products.table.columns.price') }}
+                     {{ t('products.table.columns.purchase_price') }}
+                  </th>
+                  <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                     {{ t('products.table.columns.sale_price') }}
                   </th>
                </tr>
             </thead>
@@ -100,6 +103,9 @@
                      </div>
                      <div v-else class="font-semibold">{{ formatPrice(product.tarif) }}</div>
                   </td>
+                  <td class="px-6 py-4 text-sm text-right text-gray-900">
+                     <div class="font-semibold">{{ formatPrice(getSalePrice(product)) }}</div>
+                  </td>
                </tr>
             </tbody>
          </table>
@@ -146,6 +152,7 @@ const props = defineProps<{
    ) => { label: string; hasDiscount: boolean; isNetPrice: boolean; href: string }[];
    getDiscountedPrice: (product: any) => { original: number; discounted: number } | null;
    formatPrice: (price: string | number) => string;
+   getSalePrice: (product: any) => number;
    goToPage: (page: number) => void;
 }>();
 </script>

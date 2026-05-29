@@ -84,6 +84,7 @@ export default {
          empty: 'Aucune marque associée trouvée',
          loadFailed: 'Échec du chargement des marques associées : {message}',
          columns: {
+            sale_price: 'Prix de vente',
             name: 'Nom',
             marque: 'Marque',
             website: 'Site web',
@@ -180,6 +181,7 @@ export default {
             marque: 'Marque (Fabricant)',
             refciale: 'Refciale (Référence)',
             tarif: 'Tarif (Prix)',
+            purchase_price: "Prix d'achat",
             family: 'Code famille',
          },
       },
@@ -195,7 +197,7 @@ export default {
             description: 'Description',
             batch: 'Lot',
             families: 'Familles',
-            price: 'Prix',
+            purchase_price: "Prix d'achat",
          },
       },
       detail: {

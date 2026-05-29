@@ -120,6 +120,7 @@
             :getFamilyTags="getFamilyTags"
             :getDiscountedPrice="getDiscountedPrice"
             :formatPrice="formatPrice"
+            :getSalePrice="getSalePrice"
             :goToPage="goToPage"
          />
       </div>
@@ -583,6 +584,51 @@ async function syncQueryToUrl() {
       await nextTick();
       window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' });
    }
+}
+
+// Calcule le prix de vente à partir du prix d'achat et de la target margin (famille ou fallback marque)
+
+function getSalePrice(product: Product): number {
+   const purchasePrice =
+      typeof product.tarif === 'string' ? parseFloat(product.tarif) : product.tarif;
+   if (!Number.isFinite(purchasePrice)) return NaN;
+
+   const skuLower = String(product.refciale || '')
+      .trim()
+      .toLowerCase();
+   const brandIdLower = String(product.brand_id || '')
+      .trim()
+      .toLowerCase();
+   const codes = (product.family_codes || []).map((code) => String(code).trim()).filter(Boolean);
+
+   // Cherche la meilleure famille liée
+   const linkedFamilies = codes
+      .map((code) => familiesByBrandAndCode.value[`${brandIdLower}::${code.toLowerCase()}`])
+      .filter(Boolean) as FamilyPricing[];
+   const directNetPriceFamily = skuLower
+      ? netPriceFamilyByBrandAndSku.value[`${brandIdLower}::${skuLower}`] || null
+      : null;
+   const bestFamily = selectBestFamilyPricing({ directNetPriceFamily, linkedFamilies });
+
+   // Cherche la target margin famille ou fallback sur marque
+   let targetMargin = 0;
+   if (
+      bestFamily &&
+      typeof bestFamily.target_margin !== 'undefined' &&
+      bestFamily.target_margin !== null
+   ) {
+      targetMargin = Number(bestFamily.target_margin) || 0;
+   } else {
+      // Fallback sur la marque
+      const brand = brands.value.find(
+         (b) => String(b.id) === product.brand_id || b.name === product.brand_name
+      );
+      if (brand && typeof brand.target_margin !== 'undefined' && brand.target_margin !== null) {
+         targetMargin = Number(brand.target_margin) || 0;
+      }
+   }
+   // Prix de vente = prix d'achat * (1 + target_margin/100)
+   return Math.round(purchasePrice * (1 + targetMargin / 100) * 100) / 100;
 }
 
 onMounted(() => {

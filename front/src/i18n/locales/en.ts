@@ -81,6 +81,7 @@ export default {
          empty: 'No related brands found',
          loadFailed: 'Failed to load related brands: {message}',
          columns: {
+            sale_price: 'Sale Price',
             name: 'Name',
             marque: 'Marque',
             website: 'Website',
@@ -179,7 +180,7 @@ export default {
                description: 'Description',
                batch: 'Batch',
                families: 'Families',
-               price: 'Price',
+               purchase_price: 'Purchase Price',
             },
          },
          detail: {

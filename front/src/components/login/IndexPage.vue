@@ -58,9 +58,11 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../../stores/auth';
 import { useI18n } from '../../i18n/useI18n';
+import { useAuthWithProfile } from '../../composables/useAuthWithProfile';
 
 const router = useRouter();
 const { signIn } = useAuth();
+const { fetchUserRole } = useAuthWithProfile();
 const { t } = useI18n();
 
 const email = ref('');
@@ -74,6 +76,7 @@ async function handleSubmit() {
 
    try {
       await signIn(email.value, password.value);
+      await fetchUserRole(); // Rafraîchit le rôle utilisateur immédiatement après connexion
       router.push('/');
    } catch (err: any) {
       error.value = err.message || t('login.errorOccurred');
