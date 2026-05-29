@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class FabdisImporter:
-	def __init__(self, pandas_module: object, supabase_client: object | None):
+	def __init__(self, pandas_module: object, supabase_client: object | None, col_map: dict = None):
 		self.pd = pandas_module
 		self.supabase_client = supabase_client
 		self.workbook = None
@@ -19,6 +19,7 @@ class FabdisImporter:
 		self._family_cache = {}
 		self._product_family_cache = set()
 		self.media_rows = []
+		self.col_map = col_map or {}
 
 	def run(self) -> list[dict[str, str | None]]:
 		self.load_cartouche()
@@ -142,18 +143,59 @@ class FabdisImporter:
 
 		self.workbook = self.pd.ExcelFile(fabdis_file)
 
+	def _find_sheet(self, suffix: str) -> str:
+		"""
+		Find the first sheet whose name ends with the given suffix (case-insensitive, with or without leading underscore).
+		Example: suffix="_CARTOUCHE" will match "B00_CARTOUCHE", "00_CaRTOUCHE", etc.
+		"""
+		if self.workbook is None:
+			raise RuntimeError("Workbook not loaded")
+		suffix = suffix.upper()
+		for sheet in self.workbook.sheet_names:
+			name = sheet.upper()
+			if name.endswith(suffix) or name.endswith("_" + suffix.lstrip("_")):
+				return sheet
+		raise ValueError(f"No sheet found ending with '{suffix}' (case-insensitive)")
+
+
 	def load_cartouche(self) -> list[dict[str, str | None]]:
 		if self.workbook is None:
 			raise RuntimeError("Workbook not loaded")
 
-		cartouche_columns = ["FABRICANT", "CARMARQUE", "CARMARQUEURLT", "CAREMAIL"]
-		cartouche_df = self.pd.read_excel(
-			self.workbook,
-			sheet_name="B00_CARTOUCHE",
-			usecols=cartouche_columns,
-		)
+		required_cols = ["FABRICANT"]
+		preferred_brand_cols = ["CARMARQUE", "MARQUE"]
+		optional_cols = ["CARMARQUEURLT", "CAREMAIL"]
+		all_cols = required_cols + preferred_brand_cols + optional_cols
+		sheet_name = self._find_sheet("_CARTOUCHE")
+
+		# Try to read all columns, fallback if some are missing
+		try:
+			cartouche_df = self.pd.read_excel(
+				self.workbook,
+				sheet_name=sheet_name,
+				usecols=all_cols,
+			)
+		except Exception as e:
+			# Try to get available columns in the sheet
+			try:
+				preview = self.pd.read_excel(self.workbook, sheet_name=sheet_name, nrows=0)
+				available_cols = set(preview.columns)
+			except Exception:
+				raise e
+			missing_required = [col for col in required_cols if col not in available_cols]
+			if missing_required:
+				raise ValueError(f"Missing required columns in sheet '{sheet_name}': {missing_required}")
+			# Only use available columns
+			use_cols = [col for col in all_cols if col in available_cols]
+			cartouche_df = self.pd.read_excel(
+				self.workbook,
+				sheet_name=sheet_name,
+				usecols=use_cols,
+			)
+
 		cartouche_rows = []
 		seen_pairs = set()
+
 
 		for index, row in enumerate(
 			cartouche_df.to_dict("records"),
@@ -161,6 +203,8 @@ class FabdisImporter:
 		):
 			vendor_name = self._normalize_text(row.get("FABRICANT"))
 			brand_name = self._normalize_text(row.get("CARMARQUE"))
+			if not brand_name:
+				brand_name = self._normalize_text(row.get("MARQUE"))
 
 			if not vendor_name:
 				raise ValueError(
@@ -169,7 +213,7 @@ class FabdisImporter:
 
 			if not brand_name:
 				raise ValueError(
-					f"B00_CARTOUCHE row {index}: CARMARQUE is required"
+					f"B00_CARTOUCHE row {index}: CARMARQUE or MARQUE is required"
 				)
 
 			pair_key = (vendor_name.casefold(), brand_name.casefold())
@@ -181,8 +225,8 @@ class FabdisImporter:
 				{
 					"vendor_name": vendor_name,
 					"brand_name": brand_name,
-					"brand_website": self._normalize_text(row.get("CARMARQUEURLT")),
-					"brand_email": self._normalize_text(row.get("CAREMAIL")),
+					"brand_website": self._normalize_text(row.get("CARMARQUEURLT")) if "CARMARQUEURLT" in row else None,
+					"brand_email": self._normalize_text(row.get("CAREMAIL")) if "CAREMAIL" in row else None,
 				}
 			)
 
@@ -193,14 +237,13 @@ class FabdisImporter:
 		if self.workbook is None:
 			raise RuntimeError("Workbook not loaded")
 
-		commerce_columns = [
-			"MARQUE",
+		# Colonnes de base
+		base_columns = [
 			"REFCIALE",
 			"LIBELLE40",
 			"LIBELLE80",
 			"LIBELLE240",
 			"TARIF",
-			"QT",
 			"TVA",
 			"FAM1",
 			"FAM1L",
@@ -209,11 +252,56 @@ class FabdisImporter:
 			"FAM3",
 			"FAM3L",
 		]
+		sheet_name = self._find_sheet("_COMMERCE")
+		preview = self.pd.read_excel(self.workbook, sheet_name=sheet_name, nrows=0)
+		available_cols = list(preview.columns)
+		available_cols_set = set(available_cols)
+		has_marque = "MARQUE" in available_cols_set
+
+		# Fallback colonne quantité
+		qt_col = None
+		for candidate in ["QT", "QTE", "QTY"]:
+			if candidate in available_cols_set:
+				qt_col = candidate
+				break
+
+		# Gestion du mapping forcé (ex: TARIF=J)
+		forced_col_indices = {}
+		for logical_col, col_letter in self.col_map.items():
+			idx = ord(col_letter.upper()) - ord("A")
+			if 0 <= idx < len(available_cols):
+				forced_col_indices[logical_col] = idx
+
+		# Construction des colonnes à lire
+		use_cols = (["MARQUE"] if has_marque else []) + base_columns.copy()
+		if qt_col and qt_col not in use_cols:
+			use_cols.append(qt_col)
+		# Ajoute les colonnes forcées si non déjà présentes
+		for logical_col, idx in forced_col_indices.items():
+			col_name = available_cols[idx]
+			if col_name not in use_cols:
+				use_cols.append(col_name)
+		use_cols = [col for col in use_cols if col in available_cols_set]
+
 		commerce_df = self.pd.read_excel(
 			self.workbook,
-			sheet_name="B01_COMMERCE",
-			usecols=commerce_columns,
+			sheet_name=sheet_name,
+			usecols=use_cols,
 		)
+
+		# Fallback: if MARQUE is missing, try to get the only brand from cartouche
+		fallback_brand = None
+		if not has_marque:
+			if not self.cartouche_rows:
+				self.load_cartouche()
+			unique_brands = {row["brand_name"] for row in self.cartouche_rows if row["brand_name"]}
+			if len(unique_brands) == 1:
+				fallback_brand = list(unique_brands)[0]
+			else:
+				raise ValueError(
+					f"Feuille {sheet_name}: colonne MARQUE absente et impossible de déduire la marque (trouvé {len(unique_brands)} marques dans le cartouche)"
+				)
+
 		commerce_rows = []
 		seen_products = set()
 
@@ -221,16 +309,24 @@ class FabdisImporter:
 			commerce_df.to_dict("records"),
 			start=2,
 		):
-			brand_name = self._normalize_text(row.get("MARQUE"))
-			sku = self._normalize_text(row.get("REFCIALE"))
+			# Utilise le mapping forcé si présent, sinon le nom logique
+			def get_val(logical_col, default=None):
+				if logical_col in forced_col_indices:
+					idx = forced_col_indices[logical_col]
+					col_name = available_cols[idx]
+					return row.get(col_name, default)
+				return row.get(logical_col, default)
+
+			brand_name = self._normalize_text(get_val("MARQUE")) if has_marque else fallback_brand
+			sku = self._normalize_text(get_val("REFCIALE"))
 			name = (
-				self._normalize_text(row.get("LIBELLE80"))
-				or self._normalize_text(row.get("LIBELLE40"))
-				or self._normalize_text(row.get("LIBELLE240"))
+				self._normalize_text(get_val("LIBELLE80"))
+				or self._normalize_text(get_val("LIBELLE40"))
+				or self._normalize_text(get_val("LIBELLE240"))
 			)
 
 			if not brand_name:
-				raise ValueError(f"B01_COMMERCE row {index}: MARQUE is required")
+				raise ValueError(f"B01_COMMERCE row {index}: MARQUE is required (colonne manquante et aucune marque unique trouvée)")
 
 			if not sku:
 				raise ValueError(f"B01_COMMERCE row {index}: REFCIALE is required")
@@ -240,16 +336,18 @@ class FabdisImporter:
 					f"B01_COMMERCE row {index}: one of LIBELLE80/LIBELLE40/LIBELLE240 is required"
 				)
 
-			tarif = self._normalize_number(row.get("TARIF"))
-			qt = self._normalize_number(row.get("QT"))
-			if qt is not None and qt <= 0:
-				raise ValueError(f"B01_COMMERCE row {index}: QT must be > 0 when provided")
+			tarif = self._normalize_number(get_val("TARIF"))
+			qt_value = None
+			if qt_col:
+				qt_value = self._normalize_number(get_val(qt_col))
+			if qt_value is not None and qt_value <= 0:
+				raise ValueError(f"B01_COMMERCE row {index}: {qt_col} must be > 0 when provided")
 
-			batch = self._normalize_batch(qt)
+			batch = self._normalize_batch(qt_value)
 
 			unit_price = tarif
-			if tarif is not None and qt not in (None, 0):
-				unit_price = tarif / qt
+			if tarif is not None and qt_value not in (None, 0):
+				unit_price = tarif / qt_value
 
 			product_key = (brand_name.casefold(), sku.casefold())
 			if product_key in seen_products:
@@ -258,9 +356,9 @@ class FabdisImporter:
 				)
 			seen_products.add(product_key)
 
-			self._validate_family_pair(index, 1, row.get("FAM1"), row.get("FAM1L"))
-			self._validate_family_pair(index, 2, row.get("FAM2"), row.get("FAM2L"))
-			self._validate_family_pair(index, 3, row.get("FAM3"), row.get("FAM3L"))
+			self._validate_family_pair(index, 1, get_val("FAM1"), get_val("FAM1L"))
+			self._validate_family_pair(index, 2, get_val("FAM2"), get_val("FAM2L"))
+			self._validate_family_pair(index, 3, get_val("FAM3"), get_val("FAM3L"))
 
 			commerce_rows.append(
 				{
@@ -270,13 +368,13 @@ class FabdisImporter:
 					"name": name,
 					"price": unit_price,
 					"batch": batch,
-					"tax_rate": self._normalize_number(row.get("TVA")),
-					"fam1_code": self._normalize_text(row.get("FAM1")),
-					"fam1_name": self._normalize_text(row.get("FAM1L")),
-					"fam2_code": self._normalize_text(row.get("FAM2")),
-					"fam2_name": self._normalize_text(row.get("FAM2L")),
-					"fam3_code": self._normalize_text(row.get("FAM3")),
-					"fam3_name": self._normalize_text(row.get("FAM3L")),
+					"tax_rate": self._normalize_number(get_val("TVA")),
+					"fam1_code": self._normalize_text(get_val("FAM1")),
+					"fam1_name": self._normalize_text(get_val("FAM1L")),
+					"fam2_code": self._normalize_text(get_val("FAM2")),
+					"fam2_name": self._normalize_text(get_val("FAM2L")),
+					"fam3_code": self._normalize_text(get_val("FAM3")),
+					"fam3_name": self._normalize_text(get_val("FAM3L")),
 				}
 			)
 
@@ -287,30 +385,58 @@ class FabdisImporter:
 		if self.workbook is None:
 			raise RuntimeError("Workbook not loaded")
 
-		media_columns = ["MARQUE", "REFCIALE", "MTYP", "MNUM", "MURL"]
+		# Colonnes principales et fallback
+		main_columns = ["MARQUE", "REFCIALE", "MTYP", "MNUM", "MURL"]
+		fallback_map = {"MTYP": "TYPM", "MURL": "URL", "MNUM": "NUM"}
+		sheet_name = self._find_sheet("_MEDIA")
+		# Preview columns to detect available ones
+		preview = self.pd.read_excel(self.workbook, sheet_name=sheet_name, nrows=0)
+		available_cols = set(preview.columns)
+		use_cols = []
+		col_mapping = {}  # mapping from expected to actual
+		for col in main_columns:
+			if col in available_cols:
+				use_cols.append(col)
+				col_mapping[col] = col
+			elif col in fallback_map and fallback_map[col] in available_cols:
+				use_cols.append(fallback_map[col])
+				col_mapping[col] = fallback_map[col]
+			else:
+				# MARQUE, REFCIALE doivent être présents
+				if col in ("MARQUE", "REFCIALE"):
+					use_cols.append(col)
+					col_mapping[col] = col
 		media_df = self.pd.read_excel(
 			self.workbook,
-			sheet_name="B03_MEDIA",
-			usecols=media_columns,
+			sheet_name=sheet_name,
+			usecols=use_cols,
 		)
 		media_rows = []
+
 		for row in media_df.to_dict("records"):
-			brand_name = self._normalize_text(row.get("MARQUE"))
-			sku = self._normalize_text(row.get("REFCIALE"))
-			media_type = self._normalize_text(row.get("MTYP"))
-			url = self._normalize_text(row.get("MURL"))
+			brand_name = self._normalize_text(row.get(col_mapping.get("MARQUE", "MARQUE")))
+			sku = self._normalize_text(row.get(col_mapping.get("REFCIALE", "REFCIALE")))
+			media_type = self._normalize_text(row.get(col_mapping.get("MTYP", "MTYP")))
+			url = self._normalize_text(row.get(col_mapping.get("MURL", "MURL")))
 
 			if not brand_name or not sku or not url:
 				continue
 
-			position_raw = self._normalize_number(row.get("MNUM"))
+			# Gestion des types spéciaux
+			media_type_norm = (media_type or "PHOTO").upper()
+			if media_type_norm == "PHOTOBD":
+				continue  # ignorer PHOTOBD
+			if media_type_norm == "PHOTOHD":
+				media_type_norm = "PHOTO"  # convertir PHOTOHD en PHOTO
+
+			position_raw = self._normalize_number(row.get(col_mapping.get("MNUM", "MNUM")))
 			position = int(round(position_raw)) if position_raw is not None else 0
 
 			media_rows.append(
 				{
 					"brand_name": brand_name,
 					"sku": sku,
-					"type": (media_type or "PHOTO").upper(),
+					"type": media_type_norm,
 					"url": url,
 					"position": position,
 				}

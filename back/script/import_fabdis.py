@@ -25,6 +25,12 @@ def parse_args() -> argparse.Namespace:
 		action="store_true",
 		help="Only import product media (skip products, brands, etc)",
 	)
+	parser.add_argument(
+		"--col-map",
+		action="append",
+		help="Force column mapping, e.g. TARIF=J (can be used multiple times)",
+		default=[],
+	)
 	return parser.parse_args()
 
 
@@ -41,7 +47,14 @@ def main() -> int:
 		print(f"Error: could not initialize database handler: {exc}")
 		return 1
 
-	importer = FabdisImporter(pd, supabase_client)
+	# Parse col_map argument into a dict
+	col_map = {}
+	for mapping in getattr(args, "col_map", []):
+		if mapping and "=" in mapping:
+			key, val = mapping.split("=", 1)
+			col_map[key.strip().upper()] = val.strip().upper()
+
+	importer = FabdisImporter(pd, supabase_client, col_map=col_map)
 
 	try:
 		importer.load(args.fabdis_file)
