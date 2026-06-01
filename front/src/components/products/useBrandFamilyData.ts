@@ -46,7 +46,10 @@ export const useBrandFamilyData = () => {
    const isLoading = ref(false);
    const errorMessage = ref('');
 
-   const loadData = async () => {
+   // Ajout pour pagination et filtre
+   const totalFamilies = ref(0);
+
+   const loadData = async (params?: { brand_id?: string; limit?: number; offset?: number }) => {
       isLoading.value = true;
       errorMessage.value = '';
 
@@ -54,7 +57,7 @@ export const useBrandFamilyData = () => {
          const [vendorData, brandData, familyData] = await Promise.all([
             listVendors(),
             listCatalogBrands(),
-            listCatalogFamilies(),
+            listCatalogFamilies(params),
          ]);
 
          const vendorMap = (vendorData || []).reduce((acc: Record<string, string>, v: any) => {

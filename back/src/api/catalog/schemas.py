@@ -40,3 +40,8 @@ class CatalogFamilyResponse(BaseModel):
     net_price: float | None = None
     product_family_count: int = 0
     product: CatalogFamilyProductResponse | None = None
+
+
+class CatalogFamilyListResponse(BaseModel):
+    items: list[CatalogFamilyResponse]
+    total: int
